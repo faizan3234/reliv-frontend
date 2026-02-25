@@ -4,6 +4,7 @@ import mqtt from "mqtt";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
 import TopEllipseBackground from "../components/TopEllipseBackground";
+import oxygenImg from "../assets/oxygen.png";
 import { useHealth } from "../context/HealthContext";
 
 /**
@@ -79,6 +80,7 @@ const OxygenPulsePage = () => {
   const mqttClient = useRef(null);
   const measurementTimeout = useRef(null);
   const hasReceivedData = useRef(false);
+  const measurementStarted = useRef(false); // Guard: ignore retained MQTT data
   const wifiCheckInterval = useRef(null);
 
   // Derived state: both must be connected
@@ -208,7 +210,8 @@ const OxygenPulsePage = () => {
           }
 
           if (topic === "kiosk/sensor/oxygen") {
-            // Only process data once
+            // Guard: ignore retained / stale messages before user clicks Measure
+            if (!measurementStarted.current) return;
             if (!hasReceivedData.current) {
               try {
                 const data = JSON.parse(payload);
@@ -326,6 +329,7 @@ const OxygenPulsePage = () => {
     setBpm(null);
     setStatusMessage("Starting measurement...");
     hasReceivedData.current = false;
+    measurementStarted.current = true;
 
     // Publish command to start measurement (QoS 2 for exactly-once delivery)
     mqttClient.current.publish("kiosk/command", "oxygen", { qos: 2 }, (err) => {
@@ -362,6 +366,7 @@ const OxygenPulsePage = () => {
       });
     }
     
+    measurementStarted.current = false;
     // Full page refresh after 1 second delay
     setTimeout(() => {
       window.location.reload();
@@ -440,6 +445,14 @@ const OxygenPulsePage = () => {
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        @keyframes pulse-ring {
+          0%   { transform: scale(1);   opacity: 0.6; }
+          100% { transform: scale(1.4); opacity: 0;   }
+        }
+        .pulse-ring {
+          animation: pulse-ring 1.5s cubic-bezier(0.215,0.61,0.355,1) infinite;
         }
 
         .status-dot {
@@ -552,7 +565,7 @@ const OxygenPulsePage = () => {
               
               {/* Central Illustration */}
               <div className="flex flex-col items-center space-y-6 flex-grow justify-center">
-                <div className={`relative w-56 h-56 md:w-64 md:h-64 bg-gradient-to-br from-orange-50 to-orange-100 rounded-full flex items-center justify-center border-4 ${
+                <div className={`relative w-56 h-56 md:w-64 md:h-64 bg-gradient-to-br from-orange-50 to-orange-100 rounded-full flex items-center justify-center border-4 overflow-hidden ${
                   measurementState === "measuring" ? "border-orange-400 pulse-animation" : 
                   measurementState === "completed" ? "border-green-400 shimmer celebrate-bounce" : "border-orange-200"
                 } shadow-lg transition-all duration-500`}>
@@ -560,7 +573,15 @@ const OxygenPulsePage = () => {
                   <div className="absolute w-48 h-48 md:w-56 md:h-56 rounded-full border-2 border-orange-200/60" />
                   <div className="absolute w-40 h-40 md:w-48 md:h-48 rounded-full border-2 border-orange-200/40" />
                   
-                  {/* Conditional Content: Finger Icon OR Data Display */}
+                  {/* Pulse rings while measuring */}
+                  {measurementState === "measuring" && (
+                    <>
+                      <div className="absolute inset-0 rounded-full border-4 border-orange-400 pulse-ring" />
+                      <div className="absolute inset-0 rounded-full border-4 border-orange-300 pulse-ring" style={{ animationDelay: "0.5s" }} />
+                    </>
+                  )}
+
+                  {/* Conditional Content: Image OR Data Display */}
                   {measurementState === "completed" && oxygen !== null && bpm !== null ? (
                     // Data Display in Circle
                     <div className="relative z-10 flex flex-col items-center justify-center fade-in">
@@ -575,9 +596,9 @@ const OxygenPulsePage = () => {
                       </div>
                     </div>
                   ) : (
-                    // Hand Icon - Place Finger Here
-                    <div className={`text-8xl relative z-10 ${measurementState === "measuring" ? "fade-out" : "fade-in"}`}>
-                      👇
+                    // Oxygen image from assets — sized to fit inside the circle
+                    <div className="relative z-10 flex flex-col items-center justify-center">
+                      <img src={oxygenImg} alt="Oxygen" className="w-48 h-48 md:w-56 md:h-56 object-contain" />
                     </div>
                   )}
                 </div>
@@ -586,7 +607,7 @@ const OxygenPulsePage = () => {
                 {measurementState === "completed" && oxygen !== null && bpm !== null ? (
                   <p className="text-xl font-bold text-green-600 fade-in">✓ Measurement Complete!</p>
                 ) : (
-                  <p className="text-xl font-semibold text-gray-800">Place Finger Here</p>
+                  <p className="text-xl font-semibold text-gray-800">Place Your Finger on the Sensor</p>
                 )}
               </div>
               

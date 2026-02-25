@@ -1,10 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import mqtt from "mqtt";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
 import TopEllipseBackground from "../components/TopEllipseBackground";
-import TemparatureGun from "../assets/TemparatureGun.mp4";
+import temperatureImg from "../assets/temperature.png";
 import { useHealth } from "../context/HealthContext";
+
+/**
+ * MQTT TOPICS — Temperature
+ *
+ * SUBSCRIBE → kiosk/sensor/temperature   JSON: { "temperature_f": 98.6 }
+ *           → kiosk/status               human-readable status strings
+ * PUBLISH   → kiosk/command              "temperature"  (start)
+ *           → kiosk/command              "stop"         (abort / cleanup)
+ */
+
+const COUNTDOWN_SECONDS = 30;
 
 const Splash = ({ onComplete }) => {
   useEffect(() => {
@@ -31,12 +43,12 @@ const Splash = ({ onComplete }) => {
 
         <div className="max-w-xs text-center">
           <h2 className="text-[18px] font-normal leading-snug text-gray-800 mb-4">
-            Now we’ll be checking your{" "}
+            Now we'll be checking your{" "}
             <span className="font-bold">Body Temperature</span>
           </h2>
 
           <h3 className="text-[28px] font-extrabold text-gray-900 mb-6">
-            Let’s <span className="text-[#E85C25]">Get</span>
+            Let's <span className="text-[#E85C25]">Get</span>
             <br />
             <span className="text-[#E85C25]">Started!</span>
           </h3>
@@ -54,214 +66,565 @@ const Splash = ({ onComplete }) => {
 
 const BodyTemperaturePage = () => {
   const [temperatureF, setTemperatureF] = useState(null);
-  const [status, setStatus] = useState("ready"); // ready, measuring, success
-  // Removed connectionStatus since no MQTT; assume always connected for simulation
-  const { update } = useHealth();
+  const [measurementState, setMeasurementState] = useState("idle");
+  // idle | measuring | completed | error
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+  const [statusMessage, setStatusMessage] = useState("Ready to begin measurement");
+  const [deviceStatus, setDeviceStatus] = useState("Connecting...");
+  const [isMqttConnected, setIsMqttConnected] = useState(false);
+  const [isWifiConnected, setIsWifiConnected] = useState(false);
+
+  const { data, update } = useHealth();
   const navigate = useNavigate();
-  // Removed clientRef, intervalRef, timeoutRef as no MQTT
 
-  // Removed useEffect for MQTT connection; no need for real device connection
+  const mqttClient = useRef(null);
+  const measurementTimeout = useRef(null);
+  const hasReceivedData = useRef(false);
+  const measurementStarted = useRef(false);
+  const wifiCheckInterval = useRef(null);
 
-  const startMeasurement = () => {
-    // Simulate measurement without MQTT
-    if (status === "ready") {
-      setStatus("measuring");
-      setTemperatureF(null);
+  const isFullyConnected = isMqttConnected && isWifiConnected;
 
-      // Simulate delay for measurement (2-4 seconds random delay)
-      const delay = Math.random() * 2000 + 2000; // Between 2000ms and 4000ms
-      setTimeout(() => {
-        // Generate random temperature between 97 and 100°F, with one decimal place
-        const randomTemp = (Math.random() * (100 - 97) + 97).toFixed(1);
-        const tempF = parseFloat(randomTemp);
+  // ── WiFi connectivity check ──────────────────────────────
+  useEffect(() => {
+    const checkWiFi = () => setIsWifiConnected(navigator.onLine);
+    checkWiFi();
+    const onOnline = () => setIsWifiConnected(true);
+    const onOffline = () => {
+      setIsWifiConnected(false);
+      setDeviceStatus("WiFi Disconnected");
+    };
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    wifiCheckInterval.current = setInterval(checkWiFi, 5000);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      if (wifiCheckInterval.current) clearInterval(wifiCheckInterval.current);
+    };
+  }, []);
 
-        // Check if in valid range (as per original code, but adjusted for random)
-        if (tempF >= 90 && tempF <= 110) {
-          setTemperatureF(tempF);
-          setStatus("success");
-        } else {
-          // Fallback retry (though unlikely with our random range)
-          setStatus("ready");
+  // ── Update device status label ───────────────────────────
+  useEffect(() => {
+    if (isMqttConnected && isWifiConnected)
+      setDeviceStatus("Connected (Signal Strong)");
+    else if (!isWifiConnected && !isMqttConnected)
+      setDeviceStatus("WiFi & MQTT Disconnected");
+    else if (!isWifiConnected) setDeviceStatus("WiFi Disconnected");
+    else setDeviceStatus("MQTT Disconnected");
+  }, [isMqttConnected, isWifiConnected]);
+
+  // ── MQTT Connection ──────────────────────────────────────
+  useEffect(() => {
+    const brokerUrl = import.meta.env.VITE_MQTT_BROKER;
+    const username = import.meta.env.VITE_MQTT_USERNAME;
+    const password = import.meta.env.VITE_MQTT_PASSWORD;
+
+    if (!brokerUrl || !username || !password) {
+      console.error("❌ MQTT config missing (.env)");
+      setDeviceStatus("Configuration Error");
+      setStatusMessage("Configuration error. Contact support.");
+      return;
+    }
+
+    const client = mqtt.connect(brokerUrl, {
+      username,
+      password,
+      clientId: `reliv_temp_${Math.random().toString(16).slice(2, 8)}`,
+      clean: true,
+      reconnectPeriod: 5000,
+      connectTimeout: 30000,
+    });
+    mqttClient.current = client;
+
+    client.on("connect", () => {
+      if (import.meta.env.DEV)
+        console.log("✅ MQTT Connected (Temperature)");
+      setIsMqttConnected(true);
+      client.subscribe("kiosk/status", { qos: 1 });
+      client.subscribe("kiosk/sensor/temperature", { qos: 1 });
+    });
+
+    client.on("message", (topic, message) => {
+      const payload = message.toString();
+      if (import.meta.env.DEV)
+        console.log(`📨 [Temp] ${topic}:`, payload);
+
+      if (topic === "kiosk/status") {
+        if (measurementStarted.current) setStatusMessage(payload);
+      }
+
+      if (topic === "kiosk/sensor/temperature") {
+        // Guard: ignore retained / stale messages
+        if (!measurementStarted.current) return;
+        if (hasReceivedData.current) return;
+
+        try {
+          const d = JSON.parse(payload);
+          const tempF = parseFloat(d.temperature_f);
+          if (!isNaN(tempF) && tempF >= 90 && tempF <= 110) {
+            setTemperatureF(tempF);
+            setMeasurementState("completed");
+            setStatusMessage("Measurement Complete");
+            hasReceivedData.current = true;
+            if (measurementTimeout.current)
+              clearTimeout(measurementTimeout.current);
+          }
+        } catch (err) {
+          if (import.meta.env.DEV)
+            console.error("❌ Parse error (temperature):", err);
         }
-      }, delay);
+      }
+    });
+
+    client.on("error", () => setIsMqttConnected(false));
+    client.on("reconnect", () => {
+      setIsMqttConnected(false);
+      setDeviceStatus("Reconnecting...");
+    });
+    client.on("close", () => setIsMqttConnected(false));
+    client.on("offline", () => setIsMqttConnected(false));
+
+    return () => {
+      client.end();
+      if (measurementTimeout.current)
+        clearTimeout(measurementTimeout.current);
+    };
+  }, []);
+
+  // ── Countdown timer ──────────────────────────────────────
+  useEffect(() => {
+    let timer;
+    if (measurementState === "measuring" && countdown > 0) {
+      timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    } else if (countdown === 0 && measurementState === "measuring") {
+      setMeasurementState("error");
+      setStatusMessage("Timeout — sensor not responding. Try again.");
+      hasReceivedData.current = false;
+      measurementStarted.current = false;
+      if (measurementTimeout.current)
+        clearTimeout(measurementTimeout.current);
+    }
+    return () => clearTimeout(timer);
+  }, [measurementState, countdown]);
+
+  // ── Start measurement ────────────────────────────────────
+  const startMeasurement = () => {
+    if (!isFullyConnected || !mqttClient.current) {
+      setMeasurementState("error");
+      setStatusMessage("Device not connected — cannot start measurement");
+      return;
+    }
+
+    setMeasurementState("measuring");
+    setCountdown(COUNTDOWN_SECONDS);
+    setTemperatureF(null);
+    setStatusMessage("Starting measurement…");
+    hasReceivedData.current = false;
+    measurementStarted.current = true;
+
+    mqttClient.current.publish(
+      "kiosk/command",
+      "temperature",
+      { qos: 2 },
+      (err) => {
+        if (err) {
+          setMeasurementState("error");
+          setStatusMessage("Failed to send command to sensor");
+        } else if (import.meta.env.DEV) {
+          console.log("✅ Temperature command sent");
+        }
+      }
+    );
+
+    measurementTimeout.current = setTimeout(() => {
+      if (!hasReceivedData.current) {
+        setMeasurementState("error");
+        setStatusMessage("Safety timeout (45 s) — no response from sensor");
+        measurementStarted.current = false;
+      }
+    }, 45000);
+  };
+
+  // ── Refresh / stop ───────────────────────────────────────
+  const handleRefresh = () => {
+    if (mqttClient.current && mqttClient.current.connected) {
+      mqttClient.current.publish("kiosk/command", "stop", { qos: 2 });
+    }
+    measurementStarted.current = false;
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
+  // ── Proceed ──────────────────────────────────────────────
+  const handleProceed = () => {
+    update({ vitals: { ...data.vitals, temperature: temperatureF } });
+    navigate("/eyesight");
+  };
+
+  const canProceed =
+    measurementState === "completed" && temperatureF !== null;
+
+  // ── Button label ─────────────────────────────────────────
+  const getButtonText = () => {
+    switch (measurementState) {
+      case "idle":
+        return "Measure Temperature";
+      case "measuring":
+        return "Measuring…";
+      case "completed":
+        return "Re-measure";
+      case "error":
+        return "Try Again";
+      default:
+        return "Measure Temperature";
     }
   };
 
-  const handleProceed = () => {
-    update({ vitals: { temperature: temperatureF } });
-    navigate("/eyesight"); // Change to your actual next route
-  };
-
-  const canProceed = status === "success" && temperatureF !== null;
-
-  // Removed isButtonDisabled based on connection; assume always enabled except during measuring
-  const isButtonDisabled = status === "measuring";
-
-  // Always show as connected since no real device
-  const getConnectionDisplay = () => {
-    return { icon: "🟢", text: "Device Connected", color: "text-green-600" };
-  };
-
-  const conn = getConnectionDisplay();
-
   return (
-    <div className="relative w-full h-screen bg-white font-sans overflow-y-auto scrollable-container flex flex-col">
-      <TopEllipseBackground color="#FFF1EA" height="50%" />
+    <div className="relative w-full h-screen bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] overflow-y-auto scrollable-container font-sans flex flex-col">
+      {/* ── Animations ── */}
+      <style>{`
+        @keyframes pulse-ring {
+          0%   { transform: scale(1);   opacity: 0.6; }
+          100% { transform: scale(1.4); opacity: 0;   }
+        }
+        .pulse-ring {
+          animation: pulse-ring 1.5s cubic-bezier(0.215,0.61,0.355,1) infinite;
+        }
+        @keyframes pulse-circle {
+          0%, 100% { transform: scale(1);    }
+          50%      { transform: scale(1.06); }
+        }
+        .pulse-circle {
+          animation: pulse-circle 2s ease-in-out infinite;
+        }
+        @keyframes waveform {
+          0%, 100% { transform: scaleY(1);   }
+          50%      { transform: scaleY(1.3); }
+        }
+        .waveform-bar {
+          animation: waveform 1.5s ease-in-out infinite;
+        }
+        .circular-progress {
+          position: relative; width: 120px; height: 120px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 4px 15px rgba(240,105,34,0.15);
+        }
+        .circular-progress::before {
+          content: ""; position: absolute; width: 100px; height: 100px;
+          border-radius: 50%; background: white;
+        }
+        .fade-in { animation: fadeIn 0.8s ease-in-out; }
+        @keyframes fadeIn {
+          from { opacity:0; transform:scale(0.8); }
+          to   { opacity:1; transform:scale(1);   }
+        }
+        .shimmer { animation: shimmer 2s ease-in-out infinite; }
+        @keyframes shimmer {
+          0%,100% { box-shadow:0 0 20px rgba(240,105,34,0.3); }
+          50%     { box-shadow:0 0 40px rgba(240,105,34,0.6); }
+        }
+      `}</style>
 
-      <header className="relative z-10 flex items-center px-4 md:px-6 pt-4">
+      {/* Back */}
+      <header className="flex-shrink-0 flex items-center p-5">
         <button
           onClick={() => window.history.back()}
-          className="text-3xl text-gray-800"
+          className="text-3xl text-gray-700 hover:text-gray-900 transition-colors"
           aria-label="back"
         >
           ←
         </button>
       </header>
 
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 md:px-6">
-        <div className="w-full max-w-xs">
+      <div className="flex-grow flex flex-col items-center justify-start px-4 md:px-6 lg:px-10 pb-8">
+        {/* Header */}
+        <header className="w-full max-w-7xl mx-auto mb-8">
           <div className="flex justify-center mb-6">
             <Logo />
           </div>
-
-          <h2 className="text-2xl font-bold text-gray-800 mt-4 mb-3 text-center">
+          <h1 className="text-center text-4xl md:text-5xl font-bold text-gray-800 tracking-tight mb-6">
             Body Temperature
-          </h2>
+          </h1>
 
-          <p className="text-base text-gray-700 mb-3 text-center">
-            Point the thermometer at your forehead
-          </p>
-
-          <div className="text-center mb-5">
-            <p className={`text-sm font-semibold ${conn.color} flex items-center justify-center gap-2`}>
-              <span className="text-lg">{conn.icon}</span>
-              {conn.text}
-            </p>
-          </div>
-
-          <div className="flex justify-center mb-8">
+          {/* Device Status */}
+          <div className="flex justify-start mb-6">
             <div
-              className={`relative w-64 h-64 rounded-full flex flex-col items-center justify-center shadow-xl border-8 transition-all duration-700
-                ${status === "success"
-                  ? "bg-gradient-to-br from-orange-500 to-red-600 border-orange-400"
-                  : status === "measuring"
-                  ? "bg-gradient-to-br from-yellow-400 to-orange-500 border-yellow-300 animate-subtlePulse"
-                  : "bg-gradient-to-br from-gray-200 to-gray-300 border-gray-300"
-                }`}
-            >
-              {status === "measuring" && (
-                <div className="absolute inset-0 rounded-full bg-white opacity-20 animate-ping"></div>
-              )}
-
-              {status === "ready" && (
-                <div className="text-center text-gray-600">
-                  <div className="text-6xl mb-3">🌡️</div>
-                  <p className="text-lg font-medium">Aim at Forehead</p>
-                </div>
-              )}
-
-              {status === "measuring" && (
-                <div className="text-white text-center">
-                  <div className="text-5xl mb-4">🌡️</div>
-                  <p className="text-xl font-semibold">Measuring...</p>
-                  <p className="text-sm mt-2 opacity-90">Hold still</p>
-                </div>
-              )}
-
-              {status === "success" && (
-                <div className="text-white text-center px-4">
-                  <div className="text-6xl font-black leading-tight">
-                    {temperatureF}°F
-                  </div>
-                  <p className="text-xl font-bold mt-4 opacity-90">Body Temperature</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="text-center mb-6">
-            <button
-              onClick={startMeasurement}
-              disabled={isButtonDisabled}
-              className={`w-full max-w-xs bg-orange-500 hover:bg-orange-600 transition-all duration-300 text-white font-bold px-8 py-2 rounded-lg shadow-lg text-[1.1rem] ${
-                isButtonDisabled ? "opacity-60 cursor-not-allowed" : ""
+              className={`inline-flex items-center space-x-3 backdrop-blur-sm rounded-full px-5 py-3 shadow-md border transition-all duration-300 ${
+                isFullyConnected
+                  ? "bg-white/80 border-green-100"
+                  : "bg-red-50/80 border-red-200"
               }`}
             >
-              {status === "measuring" ? "Measuring..." : "Measure Temperature"}
-            </button>
-          </div>
-
-          <div className="bg-white rounded-xl p-5 shadow-md border border-orange-100">
-            <h3 className="text-base font-bold text-gray-800 mb-3 text-center">
-              📋 Important Instructions
-            </h3>
-            <ul className="text-sm text-gray-700 space-y-2 leading-relaxed">
-              <li>• Keep forehead <strong>clean, dry, and uncovered</strong> (no hair, sweat, hats, or makeup)</li>
-              <li>• Hold sensor <strong>1–2 cm away</strong> from forehead or clean hand</li>
-              <li>• <strong>Hold still</strong> during measurement</li>
-              <li>• If no reading appears, <strong>gently touch</strong> sensor to forehead</li>
-              <li className="font-semibold text-orange-700">
-                • Wait until valid temperature appears on screen
-              </li>
-              <li className="font-medium text-red-600 mt-3">
-                ⚠️ Make sure device is connected before starting
-              </li>
-            </ul>
-          </div>
-        </div>
-      </main>
-
-      <footer className="relative z-10 px-4 md:px-6 pb-6 pt-4">
-        <div className="w-full max-w-xs mx-auto">
-          <div className="w-full h-28 mb-3">
-            <video
-              src={TemparatureGun}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-contain rounded-xl"
-            />
-          </div>
-
-          <div className="flex flex-col items-center space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-2.5 h-2.5 bg-gray-300 rounded-full"></div>
-              <div className="w-2.5 h-2.5 bg-gray-300 rounded-full"></div>
-              <div className="w-2.5 h-2.5 bg-[#E85C25] rounded-full"></div>
-              <div className="w-2.5 h-2.5 bg-gray-300 rounded-full"></div>
-              <div className="w-2.5 h-2.5 bg-gray-300 rounded-full"></div>
-              <span className="text-xs text-gray-500 ml-2">3/6 complete</span>
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  isFullyConnected
+                    ? "bg-green-500 animate-pulse"
+                    : "bg-red-500 animate-pulse"
+                }`}
+              />
+              <span className="text-sm font-semibold text-gray-800">
+                Device:{" "}
+                <span
+                  className={
+                    isFullyConnected
+                      ? "text-green-600 font-bold"
+                      : "text-red-600 font-bold"
+                  }
+                >
+                  {deviceStatus}
+                </span>
+              </span>
+              <div className="flex items-center gap-2 ml-2 text-xs">
+                <span
+                  className={`px-2 py-1 rounded-full ${
+                    isWifiConnected
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  WiFi
+                </span>
+                <span
+                  className={`px-2 py-1 rounded-full ${
+                    isMqttConnected
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  MQTT
+                </span>
+              </div>
             </div>
-
-            {canProceed && (
-              <PrimaryButton
-                onClick={handleProceed}
-                className="w-full justify-center animate-fadeIn"
-              >
-                Proceed →
-              </PrimaryButton>
-            )}
           </div>
-        </div>
-      </footer>
+        </header>
 
-      <style jsx>{`
-        @keyframes subtlePulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        .animate-subtlePulse {
-          animation: subtlePulse 2s ease-in-out infinite;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.6s ease-out;
-        }
-      `}</style>
+        {/* Dashboard */}
+        <main className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* ── Left — Control Panel ── */}
+          <section className="lg:col-span-5 flex flex-col">
+            <div className="bg-white/90 backdrop-blur-sm shadow-2xl rounded-3xl p-8 md:p-10 flex flex-col items-center justify-between space-y-8 h-full border border-white/50">
+              {/* Circle */}
+              <div className="flex flex-col items-center space-y-6 flex-grow justify-center">
+                <div
+                  className={`relative w-56 h-56 md:w-64 md:h-64 bg-gradient-to-br from-orange-50 to-orange-100 rounded-full flex items-center justify-center border-4 shadow-lg transition-all duration-500 ${
+                    measurementState === "measuring"
+                      ? "border-orange-400 pulse-circle"
+                      : measurementState === "completed"
+                      ? "border-green-400 shimmer"
+                      : "border-orange-200"
+                  }`}
+                >
+                  {/* Concentric rings */}
+                  <div className="absolute w-48 h-48 md:w-56 md:h-56 rounded-full border-2 border-orange-200/60" />
+                  <div className="absolute w-40 h-40 md:w-48 md:h-48 rounded-full border-2 border-orange-200/40" />
+
+                  {/* Pulse rings while measuring */}
+                  {measurementState === "measuring" && (
+                    <>
+                      <div className="absolute inset-0 rounded-full border-4 border-orange-400 pulse-ring" />
+                      <div
+                        className="absolute inset-0 rounded-full border-4 border-orange-300 pulse-ring"
+                        style={{ animationDelay: "0.5s" }}
+                      />
+                    </>
+                  )}
+
+                  {/* Content inside circle */}
+                  {measurementState === "completed" && temperatureF !== null ? (
+                    <div className="relative z-10 flex flex-col items-center justify-center fade-in">
+                      <div className="text-5xl md:text-6xl font-black text-[#F06922] leading-none">
+                        {temperatureF}°F
+                      </div>
+                      <div className="text-sm text-gray-600 font-semibold mt-2">
+                        Body Temperature
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative z-10 flex flex-col items-center justify-center">
+                      <img
+                        src={temperatureImg}
+                        alt="Temperature"
+                        className="w-60 h-60 md:w-64 md:h-64 object-contain"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Label */}
+                {measurementState === "completed" && temperatureF !== null ? (
+                  <p className="text-xl font-bold text-green-600 fade-in">
+                    ✓ Measurement Complete!
+                  </p>
+                ) : measurementState === "measuring" ? (
+                  <p className="text-xl font-semibold text-orange-600">
+                    Measuring… hold still
+                  </p>
+                ) : (
+                  <p className="text-xl font-semibold text-gray-800">
+                    Point at Forehead
+                  </p>
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div className="w-full space-y-4">
+                <button
+                  onClick={startMeasurement}
+                  disabled={
+                    measurementState === "measuring" || !isFullyConnected
+                  }
+                  className={`w-full font-semibold text-lg py-4 px-6 rounded-full shadow-lg transition-all duration-300 ${
+                    measurementState === "measuring" || !isFullyConnected
+                      ? "bg-gray-400 text-white cursor-not-allowed opacity-70"
+                      : "bg-gradient-to-r from-[#F06922] to-[#E85C25] hover:from-[#E85C25] hover:to-[#D45513] text-white transform hover:scale-105"
+                  }`}
+                >
+                  {!isFullyConnected
+                    ? "Device Not Connected"
+                    : getButtonText()}
+                </button>
+
+                {canProceed && (
+                  <button
+                    onClick={handleProceed}
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold text-lg py-4 px-6 rounded-full shadow-lg hover:opacity-90 transition-all duration-300"
+                  >
+                    Save & Proceed →
+                  </button>
+                )}
+
+                <button
+                  onClick={handleRefresh}
+                  className="w-full bg-white border-2 border-[#F06922] text-[#F06922] hover:bg-orange-50 font-semibold text-lg py-4 px-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
+                >
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Right — Status & Info ── */}
+          <section className="lg:col-span-7 flex flex-col gap-6">
+            {/* Live Status */}
+            <article className="bg-white/90 backdrop-blur-sm shadow-xl rounded-3xl p-8 border border-white/50">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">
+                Live Device Status
+              </h2>
+
+              <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-6">
+                {/* Waveform */}
+                <div className="flex-grow w-full md:w-auto h-24 flex items-center justify-start">
+                  {measurementState === "measuring" && isFullyConnected ? (
+                    <div className="flex items-end space-x-1 h-full">
+                      {[...Array(20)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-2 bg-gradient-to-t from-orange-400 to-orange-600 rounded-t waveform-bar"
+                          style={{
+                            height: `${Math.random() * 60 + 20}px`,
+                            animationDelay: `${i * 0.1}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-1 h-full opacity-40">
+                      {[...Array(20)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-2 bg-gray-300 rounded-t"
+                          style={{ height: "30px" }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Circular Timer */}
+                <div className="flex-shrink-0">
+                  <div
+                    className="circular-progress"
+                    style={{
+                      background: `conic-gradient(#F06922 ${
+                        ((COUNTDOWN_SECONDS - countdown) / COUNTDOWN_SECONDS) *
+                        360
+                      }deg, #f0f0f0 0deg)`,
+                    }}
+                  >
+                    <div className="relative z-10 flex flex-col items-center justify-center">
+                      <span className="text-4xl font-bold text-gray-800 leading-none">
+                        {countdown}s
+                      </span>
+                      <span className="text-sm text-gray-500 font-medium mt-1">
+                        remaining
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-base font-semibold text-gray-700 mb-4">
+                {measurementState === "idle" &&
+                  "Status: Ready for Measurement"}
+                {measurementState === "measuring" &&
+                  "Status: Measuring in Progress"}
+                {measurementState === "completed" &&
+                  "Status: Measurement Complete"}
+                {measurementState === "error" &&
+                  "Status: Error — Please Try Again"}
+              </p>
+
+              {measurementState === "error" && (
+                <div className="text-red-600 text-center font-semibold mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                  {statusMessage}
+                </div>
+              )}
+            </article>
+
+            {/* Live Message */}
+            <article className="bg-gradient-to-br from-white to-orange-50/50 backdrop-blur-sm shadow-xl rounded-3xl p-8 border-2 border-orange-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-2xl">💬</span> Live Message
+              </h2>
+              <p className="text-xl md:text-2xl font-bold text-[#F06922] leading-snug">
+                {statusMessage}
+              </p>
+            </article>
+
+            {/* Instructions */}
+            <article className="bg-white/90 backdrop-blur-sm shadow-xl rounded-3xl p-8 border border-white/50">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-3xl">📋</span>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Important Instructions
+                </h2>
+              </div>
+              <ul className="list-disc list-outside pl-6 space-y-3 text-gray-700 font-medium text-base">
+                <li>
+                  Keep forehead{" "}
+                  <strong>clean, dry, and uncovered</strong> (no hair, sweat,
+                  hats, or makeup)
+                </li>
+                <li>
+                  Hold sensor <strong>1–2 cm away</strong> from forehead
+                </li>
+                <li>
+                  <strong>Hold still</strong> during measurement
+                </li>
+                <li>
+                  If no reading appears, <strong>gently touch</strong> sensor to
+                  forehead
+                </li>
+                <li className="text-red-600 font-bold">
+                  Wait until valid temperature appears on screen
+                </li>
+                <li>Make sure device is connected before starting</li>
+              </ul>
+            </article>
+          </section>
+        </main>
+      </div>
     </div>
   );
 };
@@ -271,7 +634,9 @@ export default function BodyTemperature() {
 
   return (
     <>
-      {currentPage === "splash" && <Splash onComplete={() => setCurrentPage("main")} />}
+      {currentPage === "splash" && (
+        <Splash onComplete={() => setCurrentPage("main")} />
+      )}
       {currentPage === "main" && <BodyTemperaturePage />}
     </>
   );
