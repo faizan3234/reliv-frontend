@@ -565,7 +565,7 @@ const OxygenPulsePage = () => {
               
               {/* Central Illustration */}
               <div className="flex flex-col items-center space-y-6 flex-grow justify-center">
-                <div className={`relative w-56 h-56 md:w-64 md:h-64 bg-gradient-to-br from-orange-50 to-orange-100 rounded-full flex items-center justify-center border-4 overflow-hidden ${
+                <div className={`relative w-56 h-56 md:w-64 md:h-64 bg-gradient-to-br from-orange-50 to-orange-100 rounded-full flex items-center justify-center border-4 ${
                   measurementState === "measuring" ? "border-orange-400 pulse-animation" : 
                   measurementState === "completed" ? "border-green-400 shimmer celebrate-bounce" : "border-orange-200"
                 } shadow-lg transition-all duration-500`}>
@@ -596,9 +596,9 @@ const OxygenPulsePage = () => {
                       </div>
                     </div>
                   ) : (
-                    // Oxygen image from assets — sized to fit inside the circle
+                    // Oxygen image from assets
                     <div className="relative z-10 flex flex-col items-center justify-center">
-                      <img src={oxygenImg} alt="Oxygen" className="w-48 h-48 md:w-56 md:h-56 object-contain" />
+                      <img src={oxygenImg} alt="Oxygen" className="w-68 h-64 md:w-62 md:h-72 object-contain" />
                     </div>
                   )}
                 </div>
@@ -740,6 +740,7 @@ const OxygenPulsePage = () => {
 /**
  * Wrapper with splash logic + navigation to BodyTemperature
  */
+// OxygenPulse page — MQTT integrated, image sized to fit circle
 export default function OxygenPulse() {
   const [currentPage, setCurrentPage] = useState("splash");
 
