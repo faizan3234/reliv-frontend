@@ -66,11 +66,55 @@ const BodyComposition = () => {
   const navigate = useNavigate();
   const { update } = useHealth();
 
-  const clientRef             = useRef(null);
-  const countdownInterval     = useRef(null);
-  const measurementTimeout    = useRef(null);
-  const hasReceivedHeight     = useRef(false);
-  const hasReceivedWeight     = useRef(false);
+  const clientRef          = useRef(null);
+  const countdownRef       = useRef(null);
+  const timeoutRef         = useRef(null);
+  const hasHeight          = useRef(false);
+  const hasWeight          = useRef(false);
+  const measurementStarted = useRef(false); // Guard: ignore retained/stale MQTT data before user clicks Start
+  // Always-current refs — lets MQTT useEffect ([] deps) call latest logic
+  // without stale closure on re-measure
+  const onHeightReceivedRef = useRef(null);
+  const onWeightReceivedRef = useRef(null);
+
+  // Updated every render so MQTT handler always uses current state/functions
+  onHeightReceivedRef.current = (heightVal) => {
+    if (hasWeight.current) {
+      // Both arrived — auto-save to context immediately so report pages have data
+      update({
+        vitals: {
+          height:    parseFloat(heightVal),
+          weight:    parseFloat(weight),
+          impedance: parseFloat(impedance) || 500,
+        },
+      });
+      setMeasurementState("completed");
+      setStatusMessage(`✅ Height: ${heightVal} cm  |  Weight: ${weight} kg`);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (timeoutRef.current)   clearTimeout(timeoutRef.current);
+    } else {
+      setStatusMessage(`Height recorded: ${heightVal} cm. Now step on the scale.`);
+    }
+  };
+
+  onWeightReceivedRef.current = (weightVal) => {
+    if (hasHeight.current) {
+      // Both arrived — auto-save to context immediately so report pages have data
+      update({
+        vitals: {
+          height:    parseFloat(height),
+          weight:    parseFloat(weightVal),
+          impedance: parseFloat(impedance) || 500,
+        },
+      });
+      setMeasurementState("completed");
+      setStatusMessage(`✅ Height: ${height} cm  |  Weight: ${weightVal} kg`);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (timeoutRef.current)   clearTimeout(timeoutRef.current);
+    } else {
+      setStatusMessage(`Weight recorded: ${weightVal} kg. Height sensor still measuring...`);
+    }
+  };
 
   // ─── MQTT CONNECT ────────────────────────────────────────────
   useEffect(() => {
@@ -101,15 +145,18 @@ const BodyComposition = () => {
 
       // ── kiosk/status — live progress messages ──────────────────
       if (topic === "kiosk/status") {
-        // Filter out internal system/developer messages
-        if (!isInternalMessage(msg)) {
-          setStatusMessage(msg);
-        }
+        if (isInternalMessage(msg)) return;
+        // Once height received, firmware fires one final kiosk/status ~50ms later.
+        // Block it — we already set the "step on scale" instruction.
+        if (hasHeight.current) return;
+        setStatusMessage(msg);
         return;
       }
 
       // ── kiosk/sensor/height — FINAL height result ──────────────
       // Key is height_cm (not "height") — matches firmware output
+      // Guard: ignore retained/stale messages if user hasn't started measurement
+      if (topic === "kiosk/sensor/height" && !measurementStarted.current) return;
       if (topic === "kiosk/sensor/height") {
         try {
           const parsed = JSON.parse(msg);
@@ -123,13 +170,9 @@ const BodyComposition = () => {
             console.log(`   TOF: ${parsed.tof_cm} cm | US: ${parsed.us_cm} cm | confidence: ${parsed.confidence}`);
 
             setHeight(heightVal);
-            hasReceivedHeight.current = true;
-
-            if (hasReceivedWeight.current) {
-              completeMeasurement(`Measurement complete! Height: ${heightVal} cm.`);
-            } else {
-              setStatusMessage(`Height recorded: ${heightVal} cm. Now step on the scale.`);
-            }
+            hasHeight.current = true;
+            // Call via ref — uses latest render's logic (safe on re-measure)
+            onHeightReceivedRef.current?.(heightVal);
           } else {
             console.warn("⚠️ Height payload missing height_cm:", msg);
           }
@@ -162,8 +205,8 @@ const BodyComposition = () => {
 
   // ─── HELPERS ─────────────────────────────────────────────────
   const clearTimers = () => {
-    if (countdownInterval.current)  clearInterval(countdownInterval.current);
-    if (measurementTimeout.current) clearTimeout(measurementTimeout.current);
+    if (countdownRef.current)  clearInterval(countdownRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
   };
 
   const completeMeasurement = (msg) => {
@@ -192,13 +235,8 @@ const BodyComposition = () => {
         console.log(`⚖️ Weight received: ${w} kg`);
         setWeight(w);
         setImpedance(data.impedance || 500);
-        hasReceivedWeight.current = true;
-
-        if (hasReceivedHeight.current) {
-          completeMeasurement(`Measurement complete! Height & Weight recorded.`);
-        } else {
-          setStatusMessage(`Weight recorded: ${w} kg. Waiting for height sensor...`);
-        }
+        hasWeight.current = true;
+        onWeightReceivedRef.current?.(w);
       }
     } catch (e) {
       console.error("❌ Weight fetch failed:", e);
@@ -209,7 +247,7 @@ const BodyComposition = () => {
   useEffect(() => {
     if (measurementState !== "measuring") return;
     const interval = setInterval(() => {
-      if (!hasReceivedWeight.current) fetchWeight();
+      if (!hasWeight.current) fetchWeight();
     }, 1000);
     return () => clearInterval(interval);
   }, [measurementState]);
@@ -227,8 +265,9 @@ const BodyComposition = () => {
     setWeight(null);
     setImpedance(null);
     setCountdown(COUNTDOWN_SECONDS);
-    hasReceivedHeight.current = false;
-    hasReceivedWeight.current = false;
+    hasHeight.current = false;
+    hasWeight.current = false;
+    measurementStarted.current = true;
     setStatusMessage("Starting height measurement... Stand straight and look forward.");
 
     // ONE command → both TOF and Ultrasonic sensors start simultaneously on their boards
@@ -236,15 +275,15 @@ const BodyComposition = () => {
 
     // Countdown timer
     clearTimers();
-    countdownInterval.current = setInterval(() => {
+    countdownRef.current = setInterval(() => {
       setCountdown((prev) => {
-        if (prev <= 1) { clearInterval(countdownInterval.current); return 0; }
+        if (prev <= 1) { clearInterval(countdownRef.current); return 0; }
         return prev - 1;
       });
     }, 1000);
 
     // Safety timeout (generous buffer beyond max measurement time)
-    measurementTimeout.current = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setMeasurementState("error");
       setStatusMessage("Measurement timed out. Please try again.");
       clearTimers();
@@ -256,6 +295,7 @@ const BodyComposition = () => {
 
   // ─── STOP / REFRESH ──────────────────────────────────────────
   const handleRefresh = () => {
+    measurementStarted.current = false;
     publishCommand("stop"); // tells both ESP32s to halt immediately
     setTimeout(() => window.location.reload(), 800);
   };
@@ -263,6 +303,7 @@ const BodyComposition = () => {
   // ─── SAVE & PROCEED ──────────────────────────────────────────
   const handleProceed = () => {
     if (height && weight) {
+      // Update context with confirmed final values (auto-save may have already done this)
       update({
         vitals: {
           height:    parseFloat(height),
@@ -270,6 +311,7 @@ const BodyComposition = () => {
           impedance: parseFloat(impedance) || 500,
         },
       });
+      console.log(`✅ Proceeding with Height=${height} cm, Weight=${weight} kg`);
       navigate("/payment", { state: { fromPaymentGate: true, cart: [], totalPrice: 0 } });
     }
   };
@@ -337,8 +379,28 @@ const BodyComposition = () => {
                   <div className="absolute w-48 h-48 md:w-56 md:h-56 rounded-full border-2 border-orange-200/60" />
                   <div className="absolute w-40 h-40 md:w-48 md:h-48 rounded-full border-2 border-orange-200/40" />
 
-                  {(height !== null || weight !== null) ? (
-                    // Show live data as it arrives
+                  {measurementState === "completed" && height && weight ? (
+                    // ── COMPLETED: large final values, green ✓ badge ──────
+                    <div className="relative z-10 flex flex-col items-center justify-center px-2">
+                      {/* Green checkmark badge */}
+                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-md z-20">
+                        <span className="text-white text-sm font-bold">✓</span>
+                      </div>
+                      <div className="text-center mb-1">
+                        <div className="text-[10px] text-green-600 font-bold uppercase tracking-widest mb-1">Height</div>
+                        <div className="text-5xl font-extrabold text-[#F06922] leading-none">{height}</div>
+                        <div className="text-sm text-gray-500 font-semibold mt-1">cm</div>
+                      </div>
+                      <div className="w-16 h-0.5 bg-gradient-to-r from-orange-200 via-orange-400 to-orange-200 my-2" />
+                      <div className="text-center mt-1">
+                        <div className="text-[10px] text-green-600 font-bold uppercase tracking-widest mb-1">Weight</div>
+                        <div className="text-5xl font-extrabold text-[#F06922] leading-none">{weight}</div>
+                        <div className="text-sm text-gray-500 font-semibold mt-1">kg</div>
+                      </div>
+                    </div>
+
+                  ) : (height !== null || weight !== null) ? (
+                    // ── MEASURING: show values as they arrive ─────────────
                     <div className="relative z-10 flex flex-col items-center justify-center px-4">
                       {height !== null ? (
                         <div className="text-center mb-2">
@@ -368,7 +430,9 @@ const BodyComposition = () => {
                         </div>
                       )}
                     </div>
+
                   ) : (
+                    // ── IDLE: illustration ────────────────────────────────
                     <img
                       src={heightImage}
                       alt="Height Measurement"
