@@ -51,7 +51,7 @@ const isInternalMessage = (msg) => {
 };
 
 // Countdown covers one measurement attempt (20s) + possible retry (20s) + buffer
-const COUNTDOWN_SECONDS = 50;
+const COUNTDOWN_SECONDS = 120;
 
 const BodyComposition = () => {
   const [weight, setWeight]                 = useState(null);
