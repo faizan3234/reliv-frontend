@@ -356,6 +356,7 @@ export default function MedicineDispensingWithAdmin() {
         alert("Admin panel is locked for 2 minutes due to multiple failed attempts.");
       } else {
         setIsAdminOpen(true);
+        setKeyboardState({ visible: true, inputName: "passwordInput", inputs: { passwordInput: "" } });
       }
       setClickCount(0);
     }
@@ -363,11 +364,12 @@ export default function MedicineDispensingWithAdmin() {
   }, [clickCount, lockUntil]);
 
   const handleInputFocus = (e) => {
-    setKeyboardState({
-      ...keyboardState,
+    const name = e.target.name;
+    setKeyboardState(prev => ({
+      ...prev,
       visible: true,
-      inputName: e.target.name,
-    });
+      inputName: name,
+    }));
     // Scroll input into view smoothly after keyboard appears
     setTimeout(() => {
       e.target.scrollIntoView({ 
@@ -1157,7 +1159,7 @@ export default function MedicineDispensingWithAdmin() {
                       type="password"
                       name="passwordInput"
                       value={passwordInput}
-                      onFocus={handleInputFocus}
+                      onFocus={handleInputFocus} onClick={handleInputFocus}
                       onChange={(e) => handleKeyboardChange("passwordInput", e.target.value)}
                       className="w-full rounded-md border px-3 py-2"
                       placeholder="Enter admin password"
@@ -1217,7 +1219,7 @@ export default function MedicineDispensingWithAdmin() {
                         <input
                           name="verificationCodeInput"
                           value={verificationCodeInput}
-                          onFocus={handleInputFocus}
+                          onFocus={handleInputFocus} onClick={handleInputFocus}
                           onChange={(e) => handleKeyboardChange("verificationCodeInput", e.target.value)}
                           className="w-full rounded-md border px-3 py-2"
                           placeholder="Enter the code you received via email"
@@ -1229,7 +1231,7 @@ export default function MedicineDispensingWithAdmin() {
                           type="password"
                           name="newPassword"
                           value={newPassword}
-                          onFocus={handleInputFocus}
+                          onFocus={handleInputFocus} onClick={handleInputFocus}
                           onChange={(e) => handleKeyboardChange("newPassword", e.target.value)}
                           className="w-full rounded-md border px-3 py-2"
                           placeholder="Set a new password"
@@ -1339,7 +1341,7 @@ export default function MedicineDispensingWithAdmin() {
                       step="1"
                       name="reportPriceInput"
                       value={adminReportPrice}
-                      onFocus={handleInputFocus}
+                      onFocus={handleInputFocus} onClick={handleInputFocus}
                       onChange={(e) => {
                         setAdminReportPrice(e.target.value);
                         handleKeyboardChange('reportPriceInput', e.target.value);
@@ -1415,7 +1417,7 @@ export default function MedicineDispensingWithAdmin() {
                                 min="0"
                                 step="0.5"
                                 value={keyboardState.inputs[`margin-${kit.id}`] ?? kitMargins[kit.id] ?? ''}
-                                onFocus={handleInputFocus}
+                                onFocus={handleInputFocus} onClick={handleInputFocus}
                                 onChange={(e) => {
                                   handleKeyboardChange(`margin-${kit.id}`, e.target.value);
                                   handleUpdateMargin(kit.id, e.target.value);
@@ -1477,7 +1479,7 @@ export default function MedicineDispensingWithAdmin() {
                             <input
                               name={`kit-${kit.id}-name`}
                               value={keyboardState.inputs[`kit-${kit.id}-name`] ?? kit.name}
-                              onFocus={handleInputFocus}
+                              onFocus={handleInputFocus} onClick={handleInputFocus}
                               onChange={(e) =>
                                 handleKeyboardChange(`kit-${kit.id}-name`, e.target.value)
                               }
@@ -1522,7 +1524,7 @@ export default function MedicineDispensingWithAdmin() {
                               rows={3}
                               name={`kit-${kit.id}-description`}
                               value={keyboardState.inputs[`kit-${kit.id}-description`] ?? kit.description}
-                              onFocus={handleInputFocus}
+                              onFocus={handleInputFocus} onClick={handleInputFocus}
                               onChange={(e) =>
                                 handleKeyboardChange(`kit-${kit.id}-description`, e.target.value)
                               }
@@ -1567,7 +1569,7 @@ export default function MedicineDispensingWithAdmin() {
                               type="number"
                               name={`kit-${kit.id}-price`}
                               value={keyboardState.inputs[`kit-${kit.id}-price`] ?? kit.price}
-                              onFocus={handleInputFocus}
+                              onFocus={handleInputFocus} onClick={handleInputFocus}
                               onChange={(e) =>
                                 handleKeyboardChange(`kit-${kit.id}-price`, e.target.value)
                               }
@@ -1612,7 +1614,7 @@ export default function MedicineDispensingWithAdmin() {
                               type="number"
                               name={`kit-${kit.id}-quantity`}
                               value={keyboardState.inputs[`kit-${kit.id}-quantity`] ?? kit.quantity}
-                              onFocus={handleInputFocus}
+                              onFocus={handleInputFocus} onClick={handleInputFocus}
                               onChange={(e) =>
                                 handleKeyboardChange(`kit-${kit.id}-quantity`, e.target.value)
                               }
@@ -1657,7 +1659,7 @@ export default function MedicineDispensingWithAdmin() {
                               type="date"
                               name={`kit-${kit.id}-expiryDate`}
                               value={keyboardState.inputs[`kit-${kit.id}-expiryDate`] ?? kit.expiryDate}
-                              onFocus={handleInputFocus}
+                              onFocus={handleInputFocus} onClick={handleInputFocus}
                               onChange={(e) =>
                                 handleKeyboardChange(`kit-${kit.id}-expiryDate`, e.target.value)
                               }
@@ -1699,7 +1701,7 @@ export default function MedicineDispensingWithAdmin() {
                             <input
                               name={`kit-${kit.id}-folderUrl`}
                               value={keyboardState.inputs[`kit-${kit.id}-folderUrl`] ?? (kit.folderUrl || '')}
-                              onFocus={handleInputFocus}
+                              onFocus={handleInputFocus} onClick={handleInputFocus}
                               onChange={(e) =>
                                 handleKeyboardChange(`kit-${kit.id}-folderUrl`, e.target.value)
                               }
@@ -1783,7 +1785,7 @@ export default function MedicineDispensingWithAdmin() {
                               <input
                                 name={`kit-${kit.id}-name`}
                                 value={keyboardState.inputs[`kit-${kit.id}-name`] ?? kit.name}
-                                onFocus={handleInputFocus}
+                                onFocus={handleInputFocus} onClick={handleInputFocus}
                                 onChange={(e) =>
                                   handleKeyboardChange(`kit-${kit.id}-name`, e.target.value)
                                 }
@@ -1810,7 +1812,7 @@ export default function MedicineDispensingWithAdmin() {
                                 rows={3}
                                 name={`kit-${kit.id}-description`}
                                 value={keyboardState.inputs[`kit-${kit.id}-description`] ?? kit.description}
-                                onFocus={handleInputFocus}
+                                onFocus={handleInputFocus} onClick={handleInputFocus}
                                 onChange={(e) =>
                                   handleKeyboardChange(`kit-${kit.id}-description`, e.target.value)
                                 }
@@ -1837,7 +1839,7 @@ export default function MedicineDispensingWithAdmin() {
                                 type="number"
                                 name={`kit-${kit.id}-price`}
                                 value={keyboardState.inputs[`kit-${kit.id}-price`] ?? kit.price}
-                                onFocus={handleInputFocus}
+                                onFocus={handleInputFocus} onClick={handleInputFocus}
                                 onChange={(e) =>
                                   handleKeyboardChange(`kit-${kit.id}-price`, e.target.value)
                                 }
@@ -1864,7 +1866,7 @@ export default function MedicineDispensingWithAdmin() {
                                 type="number"
                                 name={`kit-${kit.id}-quantity`}
                                 value={keyboardState.inputs[`kit-${kit.id}-quantity`] ?? kit.quantity}
-                                onFocus={handleInputFocus}
+                                onFocus={handleInputFocus} onClick={handleInputFocus}
                                 onChange={(e) =>
                                   handleKeyboardChange(`kit-${kit.id}-quantity`, e.target.value)
                                 }
@@ -1891,7 +1893,7 @@ export default function MedicineDispensingWithAdmin() {
                                 type="date"
                                 name={`kit-${kit.id}-expiryDate`}
                                 value={keyboardState.inputs[`kit-${kit.id}-expiryDate`] ?? kit.expiryDate}
-                                onFocus={handleInputFocus}
+                                onFocus={handleInputFocus} onClick={handleInputFocus}
                                 onChange={(e) =>
                                   handleKeyboardChange(`kit-${kit.id}-expiryDate`, e.target.value)
                                 }
@@ -1917,7 +1919,7 @@ export default function MedicineDispensingWithAdmin() {
                               <input
                                 name={`kit-${kit.id}-folderUrl`}
                                 value={keyboardState.inputs[`kit-${kit.id}-folderUrl`] ?? (kit.folderUrl || '')}
-                                onFocus={handleInputFocus}
+                                onFocus={handleInputFocus} onClick={handleInputFocus}
                                 onChange={(e) =>
                                   handleKeyboardChange(`kit-${kit.id}-folderUrl`, e.target.value)
                                 }
@@ -1975,7 +1977,7 @@ export default function MedicineDispensingWithAdmin() {
                 inputName={keyboardState.inputName}
                 inputs={keyboardState.inputs}
                 onChange={handleKeyboardChange}
-                onClose={() => setKeyboardState({ ...keyboardState, visible: false })}
+                onClose={() => setKeyboardState(prev => ({ ...prev, visible: false }))}
               />
             </div>
           )}

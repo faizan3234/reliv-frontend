@@ -242,8 +242,10 @@ function CustomerDetails() {
               type="text"
               name="name"
               value={form.name}
+              readOnly
               onChange={handleChange}
               onFocus={() => openKeyboard("name")}
+              onClick={() => openKeyboard("name")}
               className={`w-full border ${
                 errors.name ? "border-red-500" : "border-gray-300"
               } rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400`}
@@ -264,10 +266,10 @@ function CustomerDetails() {
               <button
                 type="button"
                 onClick={handleAgeDecrement}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 hover:from-orange-200 hover:to-orange-300 active:from-orange-300 active:to-orange-400 text-orange-700 rounded-lg border border-orange-300 shadow-sm transition-all duration-150 touch-manipulation"
+                className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 hover:from-orange-200 hover:to-orange-300 active:from-orange-300 active:to-orange-400 text-orange-700 rounded-xl border-2 border-orange-300 shadow-md transition-all duration-150 touch-manipulation text-2xl font-bold"
                 aria-label="Decrease age"
               >
-                <Minus size={18} strokeWidth={2.5} />
+                <Minus size={26} strokeWidth={3} />
               </button>
               
               {/* Age Input */}
@@ -277,8 +279,10 @@ function CustomerDetails() {
                 pattern="[0-9]*"
                 name="age"
                 value={form.age}
+                readOnly
                 onChange={handleChange}
                 onFocus={() => openKeyboard("age")}
+                onClick={() => openKeyboard("age")}
                 className={`flex-1 border ${
                   errors.age ? "border-red-500" : "border-gray-300"
                 } rounded-lg px-4 py-3 text-xl font-bold text-center focus:ring-2 focus:ring-orange-400`}
@@ -290,10 +294,10 @@ function CustomerDetails() {
               <button
                 type="button"
                 onClick={handleAgeIncrement}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200 hover:from-green-200 hover:to-green-300 active:from-green-300 active:to-green-400 text-green-700 rounded-lg border border-green-300 shadow-sm transition-all duration-150 touch-manipulation"
+                className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200 hover:from-green-200 hover:to-green-300 active:from-green-300 active:to-green-400 text-green-700 rounded-xl border-2 border-green-300 shadow-md transition-all duration-150 touch-manipulation text-2xl font-bold"
                 aria-label="Increase age"
               >
-                <Plus size={18} strokeWidth={2.5} />
+                <Plus size={26} strokeWidth={3} />
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1 text-center">Tap +/- or enter age (1-120)</p>
@@ -311,8 +315,10 @@ function CustomerDetails() {
               type="email"
               name="email"
               value={form.email}
+              readOnly
               onChange={handleChange}
               onFocus={() => openKeyboard("email")}
+              onClick={() => openKeyboard("email")}
               className={`w-full border ${
                 errors.email ? "border-red-500" : "border-gray-300"
               } rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400`}
@@ -350,8 +356,11 @@ function CustomerDetails() {
               type="tel"
               name="phone"
               value={form.phone}
+              readOnly
               onChange={handleChange}
               onFocus={() => openKeyboard("phone")}
+              onClick={() => openKeyboard("phone")}
+              onTouchStart={() => openKeyboard("phone")}
               className={`w-full border ${
                 errors.phone ? "border-red-500" : "border-gray-300"
               } rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400`}

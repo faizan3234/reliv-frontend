@@ -1,44 +1,68 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import Keyboard from 'react-simple-keyboard';
 import 'react-simple-keyboard/build/css/index.css';
 
+/**
+ * VirtualKeyboard — pure "button grid" wrapper around react-simple-keyboard.
+ *
+ * We intentionally do NOT use react-simple-keyboard's internal input tracking
+ * (no inputName / inputs / onChange props on the Keyboard widget).
+ * Every key press is handled manually in handleKeyPress, computing the new
+ * value from inputs[inputName] — the parent's single source of truth.
+ *
+ * This eliminates the internal-state-divergence bug that caused backspace to
+ * appear broken: the library kept its own buffer that diverged from the parent
+ * after each re-render. Now there is only one buffer — the parent's state.
+ */
 const VirtualKeyboard = ({ inputName, inputs, onChange, onClose }) => {
   const keyboard = useRef();
   const [layoutName, setLayoutName] = useState('default');
 
-  // Determine if we should use numeric layout based on input name
+  // Keep a ref to the latest inputs so handleKeyPress always reads fresh values,
+  // even when keys are pressed faster than React can re-render (rapid backspace, etc.)
+  const inputsRef = useRef(inputs);
+  inputsRef.current = inputs;        // update on every render — always current
+
+  const inputNameRef = useRef(inputName);
+  inputNameRef.current = inputName;  // same for inputName
+
   const isNumericInput = useMemo(() => {
     const numericFields = ['age', 'phone', 'otp', 'pin', 'zip', 'zipcode', 'verificationCode', 'verificationCodeInput'];
-    return numericFields.some(field => 
+    return numericFields.some(field =>
       inputName?.toLowerCase().includes(field.toLowerCase())
     );
   }, [inputName]);
 
-  useEffect(() => {
-    if (keyboard.current) {
-      keyboard.current.setInput(inputs[inputName] || '');
-    }
-  }, [inputName, inputs]);
-
-  const handleKeyboardChange = (input) => {
-    onChange(inputName, input);
-  };
-
-  const onKeyPress = (button) => {
+  // ─── All key-press logic — no internal KB state is used ──────────────────
+  const handleKeyPress = (button) => {
     if (button === '{shift}' || button === '{lock}') {
-      handleShift();
+      setLayoutName((prev) => (prev === 'default' ? 'shift' : 'default'));
+      return;
     }
     if (button === '{close}') {
       onClose();
+      return;
     }
+    if (button === '{enter}' || button === '{tab}') return;
+
+    // Use refs — always the freshest value even during rapid keypresses
+    const activeInput = inputNameRef.current;
+    const current = inputsRef.current?.[activeInput] ?? '';
+
+    let next;
+    if (button === '{bksp}') {
+      next = current.slice(0, -1);
+    } else if (button === '{space}') {
+      next = current + ' ';
+    } else {
+      if (layoutName === 'shift') setLayoutName('default'); // auto-revert after uppercase
+      next = current + button;
+    }
+
+    onChange(activeInput, next);
   };
 
-  const handleShift = () => {
-    const newLayoutName = layoutName === 'default' ? 'shift' : 'default';
-    setLayoutName(newLayoutName);
-  };
-
-  // Numeric layout for age, phone, etc.
+  // ─── Layouts ──────────────────────────────────────────────────────────────
   const numericLayout = {
     default: [
       '1 2 3',
@@ -49,7 +73,6 @@ const VirtualKeyboard = ({ inputName, inputs, onChange, onClose }) => {
     ],
   };
 
-  // Full keyboard layout
   const fullLayout = {
     default: [
       '` 1 2 3 4 5 6 7 8 9 0 - = {bksp}',
@@ -75,25 +98,25 @@ const VirtualKeyboard = ({ inputName, inputs, onChange, onClose }) => {
 
   const fullDisplay = {
     '{close}': 'Hide Keyboard',
-    '{bksp}': 'Backspace',
-    '{enter}': 'Enter',
-    '{shift}': 'Shift',
-    '{lock}': 'Caps Lock',
+    '{bksp}': '⌫ Backspace',
+    '{enter}': '↵ Enter',
+    '{shift}': '⇧ Shift',
+    '{lock}': 'Caps',
     '{tab}': 'Tab',
-    '{space}': ' '
+    '{space}': ' ',
   };
 
   return (
     <div className={`virtual-keyboard ${isNumericInput ? 'numeric-keyboard' : ''}`}>
       <Keyboard
         keyboardRef={(r) => (keyboard.current = r)}
-        inputName={inputName}
         layoutName={isNumericInput ? 'default' : layoutName}
-        onChange={handleKeyboardChange}
-        onKeyPress={onKeyPress}
+        onKeyPress={handleKeyPress}
         layout={isNumericInput ? numericLayout : fullLayout}
         display={isNumericInput ? numericDisplay : fullDisplay}
         theme={isNumericInput ? 'hg-theme-default numeric-theme' : 'hg-theme-default'}
+        /* Intentionally omitted: inputName, inputs, onChange
+           Keyboard is a pure button grid; all state lives in the parent. */
       />
     </div>
   );
