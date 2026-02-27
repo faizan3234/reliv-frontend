@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Plus, Minus, Sparkles, X } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft } from "lucide-react";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
 import { KeyboardWrapper } from "../components/KeyboardWrapper";
@@ -958,7 +958,17 @@ export default function MedicineDispensingWithAdmin() {
   return (
     <AuraBackground>
       <div className={`kiosk-content ${cart.length === 0 ? 'no-cart' : ''}`}>
-        {/* HEADER - BIGGER */}
+        {/* BACK BUTTON */}
+        <button
+          onClick={() => navigate(-1)}
+          className="kiosk-back-btn"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={22} />
+          <span>Back</span>
+        </button>
+
+        {/* HEADER - BIGGER */}}
         <header className="kiosk-header">
           <div className="kiosk-logo" onClick={handleAdminToggle}>
             <Logo size="text-5xl md:text-6xl" />

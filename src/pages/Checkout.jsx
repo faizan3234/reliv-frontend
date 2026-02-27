@@ -6,6 +6,7 @@ import "./Checkout.css";
 import Logo from "../components/Logo";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import PrimaryButton from "../components/PrimaryButton";
+import { ArrowLeft } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -205,6 +206,16 @@ export default function Checkout() {
   // ...existing UI/UX code remains unchanged...
   return (
     <div className="relative h-screen bg-gradient-to-b from-gray-50 to-white font-serif overflow-y-auto scrollable-container">
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => navigate(-1)}
+        className="kiosk-back-btn"
+        aria-label="Go back"
+      >
+        <ArrowLeft size={22} />
+        <span>Back</span>
+      </button>
+
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-16">
         {/* Header */}
         <header className="text-center mb-16">

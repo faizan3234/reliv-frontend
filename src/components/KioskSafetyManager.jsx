@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 
 /**
  * KioskSafetyManager
@@ -13,9 +13,6 @@ import React, { useEffect, useRef } from 'react';
  */
 
 export default function KioskSafetyManager() {
-  const inactivityTimeout = useRef(null);
-  const INACTIVITY_TIME = 5 * 60 * 1000; // 5 minutes (adjust as needed)
-
   useEffect(() => {
     // ============================================
     // 1. DISABLE RIGHT-CLICK (Context Menu)
@@ -112,18 +109,9 @@ export default function KioskSafetyManager() {
     // ============================================
     // 4. INACTIVITY TIMEOUT HANDLER
     // ============================================
-    const resetInactivityTimer = () => {
-      // Clear existing timeout
-      if (inactivityTimeout.current) {
-        clearTimeout(inactivityTimeout.current);
-      }
-
-      // Set new timeout
-      inactivityTimeout.current = setTimeout(() => {
-        console.log('🕐 Kiosk inactivity timeout reached - returning to home');
-        window.location.href = '/'; // Go back to home
-      }, INACTIVITY_TIME);
-    };
+    // Removed: inactivity timeout is owned by KioskGuardian (120s) with
+    // proper page exceptions and activity reset. Having two timers caused
+    // them to fire independently, kicking users home at unexpected times.
 
     // ============================================
     // 5. ATTACH EVENT LISTENERS
@@ -138,15 +126,6 @@ export default function KioskSafetyManager() {
     // Disable drag & drop
     document.addEventListener('dragover', handleDragOver, false);
     document.addEventListener('drop', handleDrop, false);
-
-    // Inactivity tracking
-    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
-    activityEvents.forEach((event) => {
-      document.addEventListener(event, resetInactivityTimer, true);
-    });
-
-    // Initialize inactivity timer
-    resetInactivityTimer();
 
     // ============================================
     // 6. BACK BUTTON - ALLOW FUNCTIONAL BACK NAVIGATION
@@ -177,13 +156,6 @@ export default function KioskSafetyManager() {
       document.removeEventListener('drop', handleDrop);
       document.removeEventListener('wheel', handleWheel);
       
-      activityEvents.forEach((event) => {
-        document.removeEventListener(event, resetInactivityTimer, true);
-      });
-
-      if (inactivityTimeout.current) {
-        clearTimeout(inactivityTimeout.current);
-      }
     };
   }, []);
 

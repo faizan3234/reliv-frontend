@@ -32,7 +32,8 @@ export default function KioskGuardian() {
     const INACTIVITY_TIMEOUT = 120000; // 120 seconds
     
     // Pages where inactivity timer should be disabled
-    const noTimerPages = ['/order-success', '/report-1', '/report-2', '/report-3', '/report-4', '/report-5'];
+    // /payment manages its own smarter timer (pauses during Razorpay modal)
+    const noTimerPages = ['/order-success', '/report-1', '/report-2', '/report-3', '/report-4', '/report-5', '/payment'];
     const disableTimer = noTimerPages.some(page => currentPath.startsWith(page));
     
     console.log('[KioskGuardian] 🔒 KIOSK MODE ACTIVE on:', currentPath);

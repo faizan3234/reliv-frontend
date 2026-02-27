@@ -276,24 +276,38 @@ const PaymentGate = () => {
 
           {/* Main Action Area */}
           {paymentStatus === "idle" && (
-            <button
-              onClick={initiatePayment}
-              disabled={isProcessing}
-              className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-[#E85C25] to-[#f97316] px-8 py-5 text-lg font-bold text-white shadow-lg transition-all hover:shadow-orange-500/30 hover:scale-[1.02] active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <span className="relative z-10 flex items-center justify-center gap-2.5">
-                Pay ₹{finalAmount}
-                <svg
-                  className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+            <>
+              <button
+                onClick={initiatePayment}
+                disabled={isProcessing}
+                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-[#E85C25] to-[#f97316] px-8 py-5 text-lg font-bold text-white shadow-lg transition-all hover:shadow-orange-500/30 hover:scale-[1.02] active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2.5">
+                  Pay ₹{finalAmount}
+                  <svg
+                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+                <div className="absolute inset-0 scale-x-0 bg-white/20 transition-transform group-hover:scale-x-100 group-active:scale-x-110 origin-left" />
+              </button>
+
+              {cart.length > 0 && (
+                <button
+                  onClick={() => navigate('/checkout', { state: { cart, totalPrice, fromPaymentGate } })}
+                  className="mt-4 w-full rounded-xl bg-white border-2 border-gray-200 px-6 py-3.5 font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                </svg>
-              </span>
-              <div className="absolute inset-0 scale-x-0 bg-white/20 transition-transform group-hover:scale-x-100 group-active:scale-x-110 origin-left" />
-            </button>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to Checkout
+                </button>
+              )}
+            </>
           )}
 
           {/* Status messages */}
@@ -358,13 +372,6 @@ const PaymentGate = () => {
                     ← Back to Checkout
                   </button>
                 )}
-                
-                <button
-                  onClick={() => navigate('/', { replace: true })}
-                  className="w-full text-sm text-gray-500 hover:text-gray-700 py-2 transition-colors"
-                >
-                  Return to Home
-                </button>
               </div>
             </div>
           )}
@@ -378,16 +385,7 @@ const PaymentGate = () => {
             <div className="mt-1.5">All major cards, UPI, Netbanking</div>
           </div>
 
-          {/* Cancel escape hatch - only when idle */}
-          {paymentStatus === "idle" && (
-            <button
-              onClick={() => navigate("/", { replace: true })}
-              className="mt-6 text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center justify-center mx-auto gap-1.5"
-            >
-              <span>←</span>
-              <span>Cancel and return to home</span>
-            </button>
-          )}
+
         </div>
 
         {/* Optional kits upsell */}

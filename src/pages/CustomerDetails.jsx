@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
@@ -27,33 +27,8 @@ function CustomerDetails() {
 
   const [errors, setErrors] = useState({});
 
-  const INACTIVITY_TIMEOUT = 60 * 1000;
-  const timeoutRef = useRef(null);
-
-  const resetTimer = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => {
-      reset();
-      navigate("/");
-    }, INACTIVITY_TIMEOUT);
-  };
-
-  /* Inactivity timeout setup */
-  useEffect(() => {
-    const events = ["mousemove", "keydown", "touchstart", "click", "scroll"];
-    events.forEach((event) => document.addEventListener(event, resetTimer));
-
-    resetTimer(); // Start the timer initially
-
-    return () => {
-      events.forEach((event) => document.removeEventListener(event, resetTimer));
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+  // Inactivity timeout is handled globally by KioskGuardian (120s)
+  // No per-page timer needed here — avoids conflicting timeouts
 
   /* Slide-up animation */
   useEffect(() => {
@@ -92,7 +67,6 @@ function CustomerDetails() {
   const openKeyboard = (inputName) => {
     setActiveInputName(inputName);
     setKeyboardVisible(true);
-    resetTimer();
   };
 
   // Close keyboard
@@ -110,7 +84,6 @@ function CustomerDetails() {
       setKeyboardInputs(prev => ({ ...prev, age: newAge }));
       setErrors(prev => ({ ...prev, age: "" }));
     }
-    resetTimer();
   };
 
   const handleAgeDecrement = () => {
@@ -121,7 +94,6 @@ function CustomerDetails() {
       setKeyboardInputs(prev => ({ ...prev, age: newAge }));
       setErrors(prev => ({ ...prev, age: "" }));
     }
-    resetTimer();
   };
 
   /* Validation */
