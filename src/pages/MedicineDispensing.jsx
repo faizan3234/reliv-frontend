@@ -992,7 +992,7 @@ export default function MedicineDispensingWithAdmin() {
             textAlign: 'center'
           }}>
             <p style={{ fontSize: '13px', color: '#92400E', margin: 0, lineHeight: '1.6' }}>
-              🎉 <span style={{ fontWeight: '600', color: '#B45309' }}>First Kiosk Ever - We're Celebrating!</span> <span style={{ color: '#78350F' }}>These prices are our joy gift to you. After Feb 18, market rates return (we can't afford these discounts long-term!)</span> 💛
+              🎉 <span style={{ fontWeight: '600', color: '#B45309' }}>First Kiosk Ever - We're Celebrating!</span> <span style={{ color: '#78350F' }}>These prices are our joy gift to you. After 17th April, market rates return (we can't afford these discounts long-term!)</span> 💛
             </p>
           </div>
         </header>

@@ -238,7 +238,7 @@ export default function Checkout() {
             <div>
               <p className="text-gray-800 text-sm leading-relaxed">
                 <span className="font-semibold text-amber-700">Our First Kiosk - Celebration Pricing!</span> We're so happy to launch our very first kiosk that we're sharing our joy with you through special prices. 
-                <span className="text-gray-600">From <span className="font-bold text-gray-700">Feb 18</span>, these will move to market rates as we can't sustain these prices forever - but today, it's our gift to you for being here first! 💛</span>
+                <span className="text-gray-600">From <span className="font-bold text-gray-700">17th April</span>, these will move to market rates as we can't sustain these prices forever - but today, it's our gift to you for being here first! 💛</span>
               </p>
             </div>
           </div>
