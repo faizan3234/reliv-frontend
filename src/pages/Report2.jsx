@@ -888,7 +888,8 @@ const Report2 = () => {
 
     // SCAN COUNT CALCULATION
     const history = data.history || [];
-    const confidenceStage = getConfidenceStage(history.length + 1);
+    const scanCount = history.length + 1;
+    const confidenceStage = getConfidenceStage(scanCount);
 
     // SYSTEM ASSESSMENTS
     const bmi = assessBMI(vitals, patient, history);
