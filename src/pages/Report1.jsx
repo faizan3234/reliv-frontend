@@ -345,7 +345,7 @@ const Report1 = () => {
                 {bodyScoreData.score !== null ? (
                   <div className="relative flex flex-col items-center">
                     <div className="flex items-center gap-2">
-                      <span className="text-9xl font-extrabold text-gray-900 tracking-tighter leading-none">
+                      <span className="text-6xl font-extrabold text-gray-900 tracking-tighter leading-none">
                         {bodyScoreData.score}
                       </span>
                       <div className="relative">

@@ -1079,18 +1079,18 @@ const Report2 = () => {
   }, [shouldShowConfetti]);
 
   return (
-    <div className="h-screen bg-[#FDFAF5] flex flex-col items-center justify-center px-6 py-8 overflow-y-auto scrollable-container">
+    <div className="min-h-screen bg-[#FDFAF5] flex flex-col items-center px-2 py-4 overflow-y-auto scrollable-container">
       {shouldShowConfetti && <Confetti numberOfPieces={200} recycle={false} />}
       <div className="w-full max-w-5xl">
         {/* HEADER */}
-        <div className="text-center mb-10">
-          <Logo className="flex justify-center mb-6" size="text-3xl" />
+        <div className="text-center mb-6">
+          <Logo className="flex justify-center mb-4" size="text-2xl" />
 
           <p className="text-xs uppercase tracking-widest text-gray-500 font-medium mb-2">
             SCREEN 2 OF 5 • SCAN {scanCount}
           </p>
 
-          <h1 className="text-4xl font-bold text-gray-900 leading-tight mb-2">
+          <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-2">
             Body Composition Fundamentals
           </h1>
 
@@ -1104,14 +1104,14 @@ const Report2 = () => {
         </div>
 
         {/* SYSTEM CARDS */}
-        <div className="space-y-5">
+        <div className="space-y-3">
           {systems.map((system, idx) => (
             <motion.div
               key={system.name}
               initial={{ opacity: 0, y: 35 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.12, duration: 0.7 }}
-              className={`bg-white rounded-2xl p-8 flex items-center relative overflow-hidden transition-all duration-300 ${
+              className={`bg-white rounded-2xl p-4 flex flex-col md:flex-row items-center relative transition-all duration-300 ${
                 system.hasStatus
                   ? "shadow-[0_10px_40px_-12px_rgba(0,0,0,0.08)]"
                   : "shadow-sm opacity-75 scale-[0.985]"
@@ -1124,9 +1124,9 @@ const Report2 = () => {
                 />
               )}
 
-              <div className="w-[22%] flex items-center gap-8">
+              <div className="w-full md:w-[22%] flex items-center gap-4 md:gap-8 mb-2 md:mb-0">
                 <div
-                  className={`size-20 rounded-2xl flex items-center justify-center text-5xl transition-all ${
+                  className={`size-16 md:size-20 rounded-2xl flex items-center justify-center text-3xl md:text-5xl transition-all ${
                     system.isStrongest
                       ? "bg-[#F28C38]/10 text-[#F28C38]"
                       : system.hasStatus
@@ -1143,13 +1143,13 @@ const Report2 = () => {
                       Strongest
                     </div>
                   )}
-                  <h3 className="text-2xl font-bold text-gray-900">{system.name}</h3>
+                  <h3 className="text-lg md:text-2xl font-bold text-gray-900">{system.name}</h3>
                 </div>
               </div>
 
-              <div className="w-[56%] px-14">
+              <div className="w-full md:w-[56%] px-2 md:px-14">
                 <p
-                  className={`text-lg font-medium leading-relaxed ${
+                  className={`text-base md:text-lg font-medium leading-relaxed ${
                     system.hasStatus ? "text-gray-800" : "text-gray-400 italic"
                   }`}
                 >
@@ -1157,7 +1157,7 @@ const Report2 = () => {
                 </p>
               </div>
 
-              <div className="w-[22%] flex flex-col items-end gap-2.5">
+              <div className="w-full md:w-[22%] flex flex-col items-end gap-2.5 mt-2 md:mt-0">
                 {system.category ? (
                   <>
                     <div
