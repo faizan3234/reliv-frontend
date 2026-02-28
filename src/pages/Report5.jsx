@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useHealth } from "../context/HealthContext";
 import { useNavigate } from "react-router-dom";
 import { useHealth } from "../context/HealthContext";
 import { motion } from "framer-motion";
@@ -740,9 +741,17 @@ export default function Report5() {
     await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
+      // Dynamically set scale based on report data size
+      let dataLength = 0;
+      try {
+        dataLength = JSON.stringify(metrics || {}).length + JSON.stringify(history || {}).length;
+      } catch {}
+      let scale = 2;
+      if (dataLength > 4000) scale = 1.2;
+      else if (dataLength > 2000) scale = 1.5;
       // Capture Report5 UI as screenshot
       const canvas = await html2canvas(reportContainerRef.current, {
-        scale: 3,
+        scale,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -752,7 +761,7 @@ export default function Report5() {
         windowHeight: reportContainerRef.current.scrollHeight,
       });
       
-      const reportImage = canvas.toDataURL('image/png');
+      const reportImage = canvas.toDataURL('image/jpeg', 0.8);
       
       // Use backend-compatible field names
       const response = await fetch(`${API_BASE}/api/send-report`, {
@@ -930,6 +939,9 @@ export default function Report5() {
   const pulseStatus = getPulseStatus();
   const temperatureStatus = getTemperatureStatus();
 
+  // Check for missing health data after refresh
+  const healthDataMissing = !data || !data.patient?.email || !data.vitals?.systolic;
+
   return (
     <div style={{ 
       height: "100vh", 
@@ -941,6 +953,21 @@ export default function Report5() {
       WebkitOverflowScrolling: "touch"
     }} className="scrollable-container">
       <div ref={reportContainerRef} style={{ maxWidth: "1000px", margin: "0 auto" }}>
+        {healthDataMissing && (
+          <div style={{
+            background: "#fee2e2",
+            color: "#991b1b",
+            padding: "18px",
+            borderRadius: "12px",
+            marginBottom: "32px",
+            textAlign: "center",
+            fontWeight: "bold",
+            fontSize: "18px",
+            border: "2px solid #dc2626"
+          }}>
+            ⚠️ Health data is missing or incomplete. Please complete a scan before sending your report. Data will persist across refreshes unless reset.
+          </div>
+        )}
         
         {/* Header with Logo and QR Code */}
         <div style={{ position: "relative", textAlign: "center", marginBottom: "60px", minHeight: "180px" }}>
