@@ -54,9 +54,9 @@ export default function TwoOptions() {
         {/* Radio button options */}
         <div className="space-y-4 mb-8">
           <label
-            className={`flex items-center p-4 border rounded-lg cursor-pointer transition-colors ${
+            className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all ${
               selectedOption === "health-checkup"
-                ? "border-orange-500 bg-orange-50"
+                ? "border-orange-500 bg-orange-50 shadow-md"
                 : "border-gray-300"
             }`}
           >
@@ -66,16 +66,16 @@ export default function TwoOptions() {
               value="health-checkup"
               checked={selectedOption === "health-checkup"}
               onChange={(e) => setSelectedOption(e.target.value)}
-              className="h-5 w-5 text-orange-600 focus:ring-orange-500"
+              className="h-6 w-6 text-orange-600 focus:ring-orange-500"
             />
-            <span className="ml-3 font-medium">
+            <span className="ml-3 text-lg font-medium">
               {t("health_checkup")}
             </span>
           </label>
           <label
-            className={`flex items-center p-4 border rounded-lg cursor-pointer transition-colors ${
+            className={`flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all ${
               selectedOption === "medicine-dispensing"
-                ? "border-orange-500 bg-orange-50"
+                ? "border-orange-500 bg-orange-50 shadow-md"
                 : "border-gray-300"
             }`}
           >
@@ -85,9 +85,9 @@ export default function TwoOptions() {
               value="medicine-dispensing"
               checked={selectedOption === "medicine-dispensing"}
               onChange={(e) => setSelectedOption(e.target.value)}
-              className="h-5 w-5 text-orange-600 focus:ring-orange-500"
+              className="h-6 w-6 text-orange-600 focus:ring-orange-500"
             />
-            <span className="ml-3 font-medium">
+            <span className="ml-3 text-lg font-medium">
               {t("medicine_dispensing")}
             </span>
           </label>

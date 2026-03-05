@@ -79,7 +79,7 @@ function EmailSendAnimation({ onComplete }) {
       </motion.div>
 
       <AnimatePresence mode="wait">
-        {phase === 'sending' && (
+        {phase === 'sending' ? (
           <motion.p
             key="sending"
             initial={{ opacity: 0 }}
@@ -89,16 +89,30 @@ function EmailSendAnimation({ onComplete }) {
           >
             Sending your health receipt...
           </motion.p>
+        ) : (
+          <motion.div
+            key="sent"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mt-10 flex flex-col items-center"
+          >
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-2xl font-semibold text-green-700">Receipt Sent!</p>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      <p className="text-sm text-gray-400 mt-16">Step 1 of 4</p>
+      <p className="text-sm text-gray-400 mt-16">Step 1 of 5</p>
     </motion.div>
   );
 }
 
 // 2. Payment Success
-function PaymentSuccess({ onComplete }) {
+function PaymentSuccess({ cart, onComplete }) {
   useEffect(() => {
     const timer = setTimeout(onComplete, 3800);
     return () => clearTimeout(timer);
@@ -133,14 +147,167 @@ function PaymentSuccess({ onComplete }) {
         <p className="text-gray-600 mt-6 text-2xl">
           Receipt sent to your registered email.<br />Thank you!
         </p>
+
+        {cart.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.2 }}
+            className="mt-8 bg-green-50 rounded-xl px-6 py-4 border border-green-200"
+          >
+            <p className="text-green-800 font-bold text-xl flex items-center justify-center gap-2">
+              <span>💊</span> Your kits are being dispensed!
+            </p>
+            <p className="text-green-700 mt-2 text-base">
+              Please wait — collect your items from the tray below.
+            </p>
+          </motion.div>
+        )}
       </div>
 
-      <p className="text-sm text-gray-400 mt-10">Step 2 of 4</p>
+      <p className="text-sm text-gray-400 mt-10">Step 2 of 5</p>
     </motion.div>
   );
 }
 
-// 3. System Sanitized (after UV animation)
+// 3. Dispensing Animation — happy message while kits are being dispensed
+function DispensingAnimation({ cart, onComplete }) {
+  const [dispensedCount, setDispensedCount] = useState(0);
+  const totalItems = cart.reduce((sum, item) => sum + (item.cartQuantity || 1), 0);
+
+  // Build a flat list so we can track per-item completion
+  // e.g. cart=[{id:1,cartQuantity:2},{id:3,cartQuantity:1}] → [1,1,3]
+  const flatItems = cart.flatMap(item =>
+    Array.from({ length: item.cartQuantity || 1 }, () => item.id)
+  );
+
+  // Track which kits are fully done (all their items dispensed)
+  const kitDoneCount = (kitId) => {
+    let done = 0;
+    for (let i = 0; i < dispensedCount && i < flatItems.length; i++) {
+      if (flatItems[i] === kitId) done++;
+    }
+    return done;
+  };
+
+  useEffect(() => {
+    if (totalItems === 0) { onComplete(); return; }
+    // Each motor rotation on ESP32 takes ~4s (2s ON + 2s OFF)
+    const interval = setInterval(() => {
+      setDispensedCount(prev => {
+        if (prev >= totalItems) { clearInterval(interval); return prev; }
+        return prev + 1;
+      });
+    }, 4000);
+
+    // Auto-advance after all items + generous buffer
+    const timer = setTimeout(onComplete, totalItems * 4000 + 3000);
+    return () => { clearInterval(interval); clearTimeout(timer); };
+  }, [totalItems, onComplete]);
+
+  const allDone = dispensedCount >= totalItems;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 1.05 }}
+      className="relative h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-orange-50 flex flex-col items-center justify-center text-center px-6 overflow-y-auto scrollable-container"
+    >
+      <TopEllipseBackground color="#ECFDF5" height="50%" />
+
+      <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 max-w-lg w-full border border-green-200">
+        <Logo />
+
+        {/* Animated pill icon */}
+        <motion.div
+          animate={allDone ? { scale: [1, 1.2, 1] } : { y: [0, -20, 0], rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          className="text-8xl mt-6"
+        >
+          {allDone ? '🎉' : '💊'}
+        </motion.div>
+
+        <h1 className="text-4xl font-bold text-gray-800 mt-6">
+          {allDone ? '✅ All Kits Dispensed!' : 'Dispensing Your Kits!'}
+        </h1>
+
+        <p className="text-gray-600 mt-3 text-lg leading-relaxed">
+          {allDone
+            ? 'All done! Please collect your items from the tray below.'
+            : 'Your wellness kits are being dispensed — please wait a moment.'}
+        </p>
+
+        {allDone && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 bg-green-50 rounded-lg px-4 py-3 border border-green-200"
+          >
+            <p className="text-green-800 text-base font-semibold flex items-center justify-center gap-2">
+              🎉 Thank you for your purchase!
+            </p>
+          </motion.div>
+        )}
+
+        {/* Assurance banner */}
+        {!allDone && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-5 bg-green-50 rounded-lg px-4 py-2.5 border border-green-200"
+          >
+            <p className="text-green-800 text-sm font-medium flex items-center justify-center gap-2">
+              <span>✅</span>
+              Payment confirmed — your items are dispensing now. Please wait!
+            </p>
+          </motion.div>
+        )}
+
+        {/* Per-kit progress */}
+        <div className="mt-6 space-y-3">
+          {cart.map((item) => {
+            const itemQty = item.cartQuantity || 1;
+            const done = kitDoneCount(item.id);
+            const isDone = done >= itemQty;
+            return (
+              <div key={item.id} className={`flex items-center gap-3 rounded-xl px-5 py-3 transition-colors duration-500 ${isDone ? 'bg-green-100 border border-green-300' : 'bg-green-50'}`}>
+                <span className="text-2xl">
+                  {isDone ? '✅' : '⏳'}
+                </span>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-gray-800">{item.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {isDone ? `${itemQty} of ${itemQty} dispensed` : `Dispensing... ${done} of ${itemQty}`}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-7 bg-gray-200 rounded-full h-3.5 overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
+            initial={{ width: '0%' }}
+            animate={{ width: totalItems > 0 ? `${Math.min((dispensedCount / totalItems) * 100, 100)}%` : '100%' }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+          />
+        </div>
+        <p className="mt-3 text-sm font-semibold text-green-700">
+          {allDone
+            ? '✨ All done — enjoy your wellness kits!'
+            : `Dispensing item ${Math.min(dispensedCount + 1, totalItems)} of ${totalItems}…`}
+        </p>
+      </div>
+
+      <p className="text-sm text-gray-400 mt-10">Step 3 of 5</p>
+    </motion.div>
+  );
+}
+
+// 4. System Sanitized (after UV animation)
 function SystemSanitized({ onComplete }) {
   useEffect(() => {
     const timer = setTimeout(onComplete, 4200);
@@ -176,13 +343,13 @@ function SystemSanitized({ onComplete }) {
           </p>
         </div>
 
-        <p className="text-sm text-gray-400 mt-12">Step 3 of 4</p>
+        <p className="text-sm text-gray-400 mt-12">Step 4 of 5</p>
       </motion.div>
     </>
   );
 }
 
-// 4. Thank You + Retention
+// 5. Thank You + Retention
 function RetentionScreen({ onShareFeedback }) {
   const navigate = useNavigate();
 
@@ -228,7 +395,7 @@ function RetentionScreen({ onShareFeedback }) {
         </button>
       </div>
 
-      <p className="text-sm text-gray-400 mt-10">Step 4 of 4</p>
+      <p className="text-sm text-gray-400 mt-10">Step 5 of 5</p>
     </motion.div>
   );
 }
@@ -250,12 +417,16 @@ export default function OrderSuccess() {
     navigate('/feedback');
   };
 
+  const hasKits = cart.length > 0;
+
   return (
     <div className="relative min-h-screen">
       <AnimatePresence mode="wait">
         {step === 'email' && <EmailSendAnimation key="email" onComplete={() => setStep('payment')} />}
 
-        {step === 'payment' && <PaymentSuccess key="payment" onComplete={() => setStep('uv')} />}
+        {step === 'payment' && <PaymentSuccess key="payment" cart={cart} onComplete={() => setStep(hasKits ? 'dispensing' : 'uv')} />}
+
+        {step === 'dispensing' && <DispensingAnimation key="dispensing" cart={cart} onComplete={() => setStep('uv')} />}
 
         {step === 'uv' && <UVCleansingAnimation key="uv" onComplete={() => setStep('sanitized')} />}
 

@@ -17,7 +17,6 @@ import BodyComposition from "./pages/BodyComposition.jsx";
 import Feedback from "./pages/feedback.jsx";
 import KioskGuardian from "./components/KioskGuardian.jsx";
 import KioskSafetyManager from "./components/KioskSafetyManager.jsx";
-import DispensingProgress from "./pages/DispensingProgress.jsx";
 
 // Import your new Report pages
 import Report1 from "./pages/Report1.jsx";
@@ -55,7 +54,6 @@ export default function App() {
 
       <Route path="/wellness-recommendations" element={<WellnessRecommendations />} />
       <Route path="/checkout" element={<Checkout />} />
-      <Route path="/dispensing" element={<DispensingProgress />} />
       <Route path="/order-success" element={<OrderSuccess />} />
       <Route path="/feedback" element={<Feedback />} />
       <Route path="/team" element={<Team />} />

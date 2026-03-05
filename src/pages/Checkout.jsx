@@ -494,7 +494,7 @@ export default function Checkout() {
                 <div className="border-t-2 border-gray-200 pt-4 mt-4">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-900">Total Amount</span>
-                    <span className="text-2xl font-bold text-orange-600">₹{finalTotalPrice.toFixed(1)}</span>
+                    <span className="text-2xl font-bold text-orange-600">₹{Math.round(finalTotalPrice)}</span>
                   </div>
                   {/* Launch Savings Summary */}
                   <div className="mt-3 flex items-center justify-end gap-2">

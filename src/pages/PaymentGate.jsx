@@ -88,33 +88,40 @@ const PaymentGate = () => {
 
   // ── Send receipt & navigate after success ───────
   const completeSuccessfulPayment = useCallback(async () => {
-    const patient = healthData?.patient;
-
-    if ((needsReport || cart.length > 0) && patient?.email) {
-      try {
-        await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/send-receipt`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            patient,
-            cart,
-            totalPrice: finalAmount,
-            needsReport,
-          }),
-        });
-      } catch (err) {
-        if (import.meta.env.DEV) console.error("Receipt email failed (non-blocking):", err);
-      }
-    }
-
+    // Show success IMMEDIATELY — no flicker back to idle/button
     setPaymentStatus("success");
 
-    // Force navigation after a brief delay to show success message
+    const patient = healthData?.patient;
+
+    // Send receipt email (non-blocking, don't delay UI)
+    if ((needsReport || cart.length > 0) && patient?.email) {
+      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/send-receipt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient,
+          cart,
+          totalPrice: finalAmount,
+          needsReport,
+        }),
+      }).catch(() => {});
+    }
+
+    // DISPENSE: Send MQTT command to rotate motors (only after payment confirmed)
+    if (hasKits && cart.length > 0) {
+      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/dispense`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cart }),
+      }).catch(() => {});
+    }
+
+    // Navigate after a brief delay to show success message
     setTimeout(() => {
       isProcessingRef.current = false;
       setIsProcessing(false);
       
-      // If user bought kits along with report, store cart for later dispensing
+      // If user bought kits along with report, store cart for later
       if (hasKits && needsReport) {
         localStorage.setItem('reliv_pending_kits', JSON.stringify(cart));
       }
@@ -124,8 +131,8 @@ const PaymentGate = () => {
         // Report only - go to report flow
         navigate("/report-1", { replace: true });
       } else if (hasKits) {
-        // Has physical kits - go to dispensing progress page
-        navigate("/dispensing", { replace: true, state: { cart } });
+        // Has physical kits - go to order success
+        navigate("/order-success", { replace: true, state: { cart } });
       } else {
         navigate("/order-success", { replace: true });
       }
@@ -328,7 +335,16 @@ const PaymentGate = () => {
               </div>
               <h3 className="text-2xl font-bold text-green-800">Payment Successful!</h3>
               <p className="mt-2 text-green-700">Thank you for choosing Reliv</p>
-              <p className="mt-4 text-sm text-gray-600">Redirecting you now...</p>
+              {hasKits ? (
+                <div className="mt-5 rounded-lg bg-green-100/60 px-4 py-3 border border-green-200">
+                  <p className="text-green-800 font-semibold flex items-center justify-center gap-2">
+                    <span className="text-xl">💊</span> Your medicine kits are being prepared!
+                  </p>
+                  <p className="text-sm text-green-700 mt-1">Please wait — dispensing will begin shortly.</p>
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-gray-600">Preparing your report...</p>
+              )}
             </div>
           )}
 

@@ -15,9 +15,9 @@ export default function PrimaryButton({
       onClick={onClick}
       aria-label={ariaLabel}
       disabled={disabled}
-      className={`inline-flex items-center justify-center px-6 py-2 rounded-lg font-medium
-                  shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400
-                  ${disabled ? "opacity-60 cursor-not-allowed" : "bg-orange-500 text-white hover:bg-orange-600"}
+      className={`inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-base
+                  shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all
+                  ${disabled ? "bg-orange-300 text-white cursor-not-allowed opacity-60" : "bg-orange-500 text-white hover:bg-orange-600 hover:shadow-lg active:scale-[0.98]"}
                   ${className}`}
     >
       {children}

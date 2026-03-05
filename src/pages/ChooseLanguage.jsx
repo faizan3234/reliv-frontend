@@ -67,12 +67,13 @@ export default function ChooseLanguage() {
               <button
                 key={code}
                 onClick={() => handleLanguageSelect(code)}
-                className={`w-full border rounded-lg py-2 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 ${
+                className={`w-full border-2 rounded-xl py-4 text-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all ${
                   selectedLanguage === code
-                    ? "border-orange-500 bg-orange-50"
+                    ? "border-orange-500 bg-orange-50 shadow-md"
                     : "border-gray-300"
                 }`}
               >
+                {selectedLanguage === code && <span className="mr-2">✓</span>}
                 {label}
               </button>
             ))}

@@ -12,24 +12,12 @@ const Splash = () => {
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Animation phases: 0=nothing, 1=Relief & Re-live visible, 3=swap to tagline
-  const [phase, setPhase] = useState(0);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setSliding(true);
       setTextVisible(true);
     }, 20);
-
-    // Phase timeline
-    const t1 = setTimeout(() => setPhase(1), 500);    // "Relief & Re-live" appears with text
-    const t2 = setTimeout(() => setPhase(3), 4000);   // Swap to "Health Checkup & Medicine Dispenser"
-
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    return () => clearTimeout(timer);
   }, []);
 
   const handleProceed = () => {
@@ -101,25 +89,35 @@ const Splash = () => {
             </span>
           </h1>
 
-          {/* Crossfade tagline: Relief & Re-live ↔ Health Checkup & Medicine Dispenser */}
-          <div className="mt-4 relative h-8 md:h-10 w-full max-w-2xl">
-            <p
-              className="absolute inset-0 flex items-center justify-center text-base md:text-lg lg:text-xl text-gray-700 italic text-center transition-opacity duration-[1500ms] ease-in-out"
-              style={{ opacity: textVisible && phase < 3 ? 1 : 0 }}
-            >
-              Relief &amp; Re-live
-            </p>
-            <p
-              className="absolute inset-0 flex items-center justify-center text-base md:text-lg lg:text-xl text-gray-700 italic text-center transition-opacity duration-[1500ms] ease-in-out"
-              style={{ opacity: phase >= 3 ? 1 : 0 }}
-            >
-              Your Personalized Health Checkup &amp; Medicine Dispenser
-            </p>
-          </div>
+          {/* Reliv meaning — Transcity font */}
+          <p
+            className={`mt-3 text-center transition-opacity duration-[2500ms] ease-in-out ${
+              textVisible ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              fontFamily: "'Transcity', sans-serif",
+              fontSize: "clamp(1.1rem, 3vw, 1.6rem)",
+              letterSpacing: "0.12em",
+              color: "#1C0D00",
+              lineHeight: 1.6,
+            }}
+          >
+            <span style={{ color: "#F97316", fontWeight: 700 }}>Relief</span>
+            <span style={{ margin: "0 8px", opacity: 0.35 }}>&</span>
+            <span style={{ color: "#F97316", fontWeight: 700 }}>Re-live</span>
+          </p>
+
+          <p
+            className={`mt-4 text-base md:text-lg lg:text-xl text-gray-700 italic text-center max-w-2xl transition-opacity duration-[2500ms] ease-in-out ${
+              textVisible ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            Your Personalized Health Checkup & Medicine Dispenser
+          </p>
           
           {/* Error Message */}
           {errorMessage && (
-            <div className="mt-4 px-6 py-3 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-md animate-pulse">
+            <div className="mt-4 px-6 py-3 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-md">
               {errorMessage}
             </div>
           )}
