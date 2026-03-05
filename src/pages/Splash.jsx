@@ -12,12 +12,25 @@ const Splash = () => {
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Phase: 0=hidden, 1="Relief & Re-live" fading in, 2=fading out, 3="Health Checkup & Medicine Dispenser" fading in
+  const [phase, setPhase] = useState(0);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setSliding(true);
       setTextVisible(true);
     }, 20);
-    return () => clearTimeout(timer);
+
+    const t1 = setTimeout(() => setPhase(1), 500);    // "Relief & Re-live" fades in
+    const t2 = setTimeout(() => setPhase(2), 3500);   // "Relief & Re-live" starts fading out
+    const t3 = setTimeout(() => setPhase(3), 5000);   // "Health Checkup & Medicine Dispenser" fades in
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, []);
 
   const handleProceed = () => {
@@ -30,7 +43,7 @@ const Splash = () => {
 
   const handleOpenTerms = () => {
     setShowTerms(true);
-    setHasOpenedTerms(true); // Once opened, agreement becomes mandatory
+    setHasOpenedTerms(true);
   };
 
   const handleDisagree = () => {
@@ -89,32 +102,28 @@ const Splash = () => {
             </span>
           </h1>
 
-          {/* Reliv meaning — Transcity font */}
-          <p
-            className={`mt-3 text-center transition-opacity duration-[2500ms] ease-in-out ${
-              textVisible ? "opacity-100" : "opacity-0"
-            }`}
-            style={{
-              fontFamily: "'Transcity', sans-serif",
-              fontSize: "clamp(1.1rem, 3vw, 1.6rem)",
-              letterSpacing: "0.12em",
-              color: "#1C0D00",
-              lineHeight: 1.6,
-            }}
-          >
-            <span style={{ color: "#F97316", fontWeight: 700 }}>Relief</span>
-            <span style={{ margin: "0 8px", opacity: 0.35 }}>&</span>
-            <span style={{ color: "#F97316", fontWeight: 700 }}>Re-live</span>
-          </p>
+          {/* Crossfade tagline: "Relief & Re-live" ↔ "Health Checkup & Medicine Dispenser" */}
+          <div className="mt-4 relative h-8 md:h-10 w-full max-w-2xl">
+            <p
+              className="absolute inset-0 flex items-center justify-center text-base md:text-lg lg:text-xl text-gray-700 italic text-center"
+              style={{
+                opacity: phase === 1 ? 1 : 0,
+                transition: 'opacity 2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              Relief &amp; Re-live
+            </p>
+            <p
+              className="absolute inset-0 flex items-center justify-center text-base md:text-lg lg:text-xl text-gray-700 italic text-center"
+              style={{
+                opacity: phase >= 3 ? 1 : 0,
+                transition: 'opacity 2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              Your Personalized Health Checkup &amp; Medicine Dispenser
+            </p>
+          </div>
 
-          <p
-            className={`mt-4 text-base md:text-lg lg:text-xl text-gray-700 italic text-center max-w-2xl transition-opacity duration-[2500ms] ease-in-out ${
-              textVisible ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            Your Personalized Health Checkup & Medicine Dispenser
-          </p>
-          
           {/* Error Message */}
           {errorMessage && (
             <div className="mt-4 px-6 py-3 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-md">
@@ -152,39 +161,30 @@ const Splash = () => {
                     <p>
                       Reliv is a personalized health screening and medicine dispensing platform designed to assist users in monitoring health metrics and accessing medication conveniently.
                     </p>
-
                     <p>
                       <strong>Medical Disclaimer:</strong> Reliv does not replace professional medical advice, diagnosis, or treatment. All health insights, recommendations, and dispensed medications are for informational and supportive purposes only. Always consult a qualified healthcare professional for medical concerns.
                     </p>
-
                     <p>
                       <strong>User Responsibility:</strong> You are solely responsible for the accuracy of personal and medical information provided. Incorrect inputs may lead to inaccurate results or inappropriate medication dispensing.
                     </p>
-
                     <p className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg">
                       <strong>⚠️ Important - Credential Consistency:</strong> Please enter the same credentials (name, email, age, gender) each time you use Reliv. This allows our system to recognize you, track your health history, and provide personalized reports with progressive insights based on your scan history.
                     </p>
-
                     <p>
                       <strong>Medication Use:</strong> Dispensed medications must be used strictly as per labeled instructions and medical guidelines. Reliv is not liable for misuse, overdose, allergic reactions, or adverse effects resulting from improper use.
                     </p>
-
                     <p>
                       <strong>Age Restriction:</strong> This application is intended for users aged 13 and above. Users under 13 must have parental or guardian supervision.
                     </p>
-
                     <p>
                       <strong>Data Privacy & Security:</strong> Your health and personal data are processed securely and in compliance with applicable privacy laws (including GDPR/HIPAA where relevant). We do not share your data with third parties without explicit consent, except as required by law.
                     </p>
-
                     <p>
                       <strong>Service Availability:</strong> Reliv does not guarantee uninterrupted access. We may suspend or restrict access for maintenance, updates, or unforeseen issues.
                     </p>
-
                     <p>
                       <strong>Limitation of Liability:</strong> To the fullest extent permitted by law, Reliv and its operators shall not be liable for any direct, indirect, or consequential damages arising from use of the platform.
                     </p>
-
                     <p className="font-semibold">
                       By agreeing, you confirm that you have read, understood, and accept these Terms & Conditions.
                     </p>
@@ -226,7 +226,6 @@ const Splash = () => {
                   Let's find your best option →
                 </button>
 
-                {/* Optional Team Link */}
                 <p className="text-white text-center text-sm mt-6 opacity-75">
                   <span
                     onClick={() => navigate('/team')}
