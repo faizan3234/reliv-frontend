@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import logo from "../assets/relivlogo.jpeg";
+import chatGptImg from "../assets/ChatGPT Image Mar 26, 2026, 05_00_20 AM.png";
 
 const Splash = () => {
   const navigate = useNavigate();
@@ -11,9 +12,35 @@ const Splash = () => {
   const [agreed, setAgreed] = useState(false);
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isInactive, setIsInactive] = useState(false);
 
   // Phase: 0=hidden, 1="Relief & Re-live" fading in, 2=fading out, 3="Health Checkup & Medicine Dispenser" fading in
   const [phase, setPhase] = useState(0);
+
+  // Inactivity Timer
+  useEffect(() => {
+    let inactivityTimer;
+
+    const resetTimer = () => {
+      setIsInactive(false);
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        setIsInactive(true);
+      }, 30000); // 30 seconds
+    };
+
+    // Attach event listeners to detect user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
+    // Initialize timer
+    resetTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -57,7 +84,22 @@ const Splash = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container">
+    <>
+      {/* INACTIVITY OVERLAY */}
+      {isInactive && (
+        <div 
+          className="fixed inset-0 z-[9999] bg-black flex items-center justify-center cursor-pointer"
+          onClick={() => setIsInactive(false)}
+        >
+          <img 
+            src={chatGptImg} 
+            alt="ChatGPT Fullscreen" 
+            className="w-full h-full object-cover" 
+          />
+        </div>
+      )}
+
+      <div className="h-screen bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container">
       <div className="w-full min-h-screen relative overflow-hidden">
 
         {/* TOP WAVE */}
@@ -240,6 +282,7 @@ const Splash = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
