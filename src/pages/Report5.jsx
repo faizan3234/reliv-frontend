@@ -352,29 +352,6 @@ function assessPhysiologicalEfficiency(vitals, patient, scanCount) {
   
   return { status, value: efficiency, remedy, comment };
 }
-  
-  let status, remedy, comment;
-  
-  if (efficiency >= 85) {
-    status = "Elite Efficiency";
-    remedy = "Maintain excellence";
-    comment = `${userName}, ${efficiency.toFixed(1)}% efficiency! Peak performance!`;
-  } else if (efficiency >= 70) {
-    status = "Good Efficiency";
-    remedy = "Continue healthy habits";
-    comment = `${userName}, ${efficiency.toFixed(1)}% efficiency. Strong body!`;
-  } else if (efficiency >= 50) {
-    status = "Average Efficiency";
-    remedy = "Improve fitness routine";
-    comment = `${userName}, ${efficiency.toFixed(1)}% efficiency. Room to grow!`;
-  } else {
-    status = "Low Efficiency";
-    remedy = "Complete lifestyle overhaul";
-    comment = `${userName}, ${efficiency.toFixed(1)}% - body struggling. Act now!`;
-  }
-  
-  return { status, value: efficiency, remedy, comment };
-}
 
 // Mass Calculations (Scan 5+) - Water, Muscle, Fat, Subcutaneous Fat
 function assessBodyMasses(vitals, patient, scanCount) {
