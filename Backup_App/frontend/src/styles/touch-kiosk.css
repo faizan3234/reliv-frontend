@@ -1,0 +1,323 @@
+/* ====================================
+   TOUCH & KIOSK OPTIMIZATION
+   1280x800 (10.1 inch) Touch Screen
+   ==================================== */
+
+/* GLOBAL TOUCH SETTINGS */
+:root {
+  /* Touch settings */
+  --touch-target-min: 44px; /* Minimum touch target size */
+  --touch-spacing: 16px; /* Space between touch elements */
+  
+  /* Responsive breakpoints for 1280x800 */
+  --mobile-break: 480px;
+  --tablet-break: 768px;
+  --kiosk-break: 1024px;
+  
+  /* Smooth scrolling for touch */
+  scroll-behavior: smooth;
+}
+
+/* ============================================
+   1. TOUCH RESPONSIVENESS
+   ============================================ */
+
+/* Enable momentum scrolling on iOS/touch devices */
+html, body {
+  -webkit-user-select: none;
+  user-select: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: pan-y;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  font-size: 16px;
+}
+
+/* Touch scrolling for scrollable containers */
+.scrollable-container {
+  -webkit-overflow-scrolling: touch; /* Momentum scrolling iOS */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -ms-scroll-chaining: none; /* Disable scroll chaining on Windows */
+}
+
+/* ============================================
+   2. BUTTON & INTERACTIVE ELEMENT SIZING
+   ============================================ */
+
+/* Ensure all buttons are touch-friendly (44px minimum) */
+button, a, input[type="button"], input[type="submit"], 
+.btn, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 20px;
+  font-size: 16px; /* Prevents iOS zoom on input focus */
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation; /* Allow pinch-zoom but not double-tap zoom */
+}
+
+/* Touch button hover/active states */
+button:active, a:active, [role="button"]:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+/* ============================================
+   3. FORM INPUTS & KEYBOARD OPTIMIZATION
+   ============================================ */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea,
+select {
+  font-size: 16px; /* Prevents iOS auto-zoom on focus */
+  padding: 12px 16px;
+  min-height: 44px;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+  touch-action: manipulation;
+  -webkit-appearance: none; /* Remove iOS default styling */
+  appearance: none;
+}
+
+/* Remove focus outline (we'll use custom styling) */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #E85C25;
+  box-shadow: 0 0 0 3px rgba(232, 92, 37, 0.1);
+}
+
+/* ============================================
+   4. KIOSK-SPECIFIC LAYOUT (1280x800)
+   ============================================ */
+
+/* For 1280x800 kiosk screen */
+@media (min-width: 1024px) and (max-width: 1280px) {
+  html, body {
+    font-size: 16px;
+  }
+
+  /* Optimize content width for 1280px */
+  .kiosk-content, .page-container, main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+  }
+
+  /* Ensure readable text sizes */
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; }
+  h3 { font-size: 20px; }
+  p { font-size: 16px; line-height: 1.6; }
+
+  /* Touch-friendly spacing */
+  .spacing-sm { margin: 8px; }
+  .spacing-md { margin: 16px; }
+  .spacing-lg { margin: 24px; }
+}
+
+/* ============================================
+   5. SMOOTH SCROLLING & MOBILE-LIKE FEEL
+   ============================================ */
+
+/* Smooth scroll on all scrollable elements */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for better visibility on touch */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  border: 3px solid #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================
+   6. DISABLE UNWANTED GESTURES (KIOSK SAFETY)
+   ============================================ */
+
+/* Disable context menu (right-click) */
+body {
+  touch-action: pan-y;
+}
+
+/* Allow specific elements to scroll */
+.scrollable-container, 
+[role="listbox"],
+textarea,
+input[type="text"] {
+  touch-action: pan-y pinch-zoom;
+}
+
+/* ============================================
+   7. SAFE TEXT SELECTION
+   ============================================ */
+
+/* Prevent accidental text selection on buttons/interactive elements */
+button, a, .btn, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection only in content areas */
+p, .content, .description {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ============================================
+   8. VIEWPORT & ZOOM SETTINGS
+   ============================================ */
+
+/* Prevent pinch zoom (optional - for full kiosk mode) */
+/* Uncomment if you want to disable user zoom */
+/* html {
+  touch-action: none;
+} */
+
+/* Better viewport for mobile/kiosk */
+@viewport {
+  width: device-width;
+  zoom: 1;
+}
+
+/* ============================================
+   9. PAGE TRANSITIONS & ANIMATIONS
+   ============================================ */
+
+/* Smooth page transitions for touch */
+.page-enter {
+  animation: slideUp 0.3s ease-out;
+}
+
+.page-exit {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   10. RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+/* Small screens (mobile) */
+@media (max-width: 480px) {
+  button, a, input, textarea, select {
+    padding: 14px 18px;
+    font-size: 16px;
+  }
+  
+  h1 { font-size: 24px; }
+  h2 { font-size: 18px; }
+  p { font-size: 14px; }
+}
+
+/* Medium screens (tablet) */
+@media (min-width: 481px) and (max-width: 768px) {
+  button, a, input, textarea, select {
+    padding: 12px 18px;
+    font-size: 16px;
+  }
+  
+  h1 { font-size: 28px; }
+  h2 { font-size: 20px; }
+  p { font-size: 15px; }
+}
+
+/* Large screens (1280x800 kiosk) */
+@media (min-width: 1024px) {
+  body {
+    font-size: 16px;
+  }
+  
+  button, a, input, textarea, select {
+    padding: 12px 20px;
+    font-size: 16px;
+  }
+  
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; }
+  h3 { font-size: 20px; }
+  p { font-size: 16px; }
+}
+
+/* ============================================
+   11. KIOSK-SPECIFIC TWEAKS
+   ============================================ */
+
+/* Remove focus outline that might confuse users */
+*:focus {
+  outline: 2px solid #E85C25;
+  outline-offset: 2px;
+}
+
+/* Reduce motion for older/less capable touch devices */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hide browser UI elements if needed */
+input[type="range"] {
+  -webkit-appearance: slider-horizontal;
+  appearance: slider-horizontal;
+}
+
+/* ============================================
+   12. DEBUG MODE (Development only)
+   ============================================ */
+
+/* Uncomment to see touch targets */
+/* 
+button, input, a, [role="button"] {
+  outline: 2px dashed red;
+} 
+*/
