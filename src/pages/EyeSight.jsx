@@ -19,7 +19,7 @@ export default function EyeSight() {
       
       body{background:#fff;margin:0;font-family:'Inter',system-ui,sans-serif}
       
-      .vision-container{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;background:linear-gradient(135deg,#fff5eb 0%,#ffffff 50%,#fef3e8 100%)}
+      .vision-container{height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;background:linear-gradient(135deg,#fff5eb 0%,#ffffff 50%,#fef3e8 100%);overflow-y:auto;-webkit-overflow-scrolling:touch}
       .vision-container::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 20% 50%,rgba(255,106,0,0.08),transparent 50%),radial-gradient(circle at 80% 80%,rgba(255,140,66,0.08),transparent 50%);pointer-events:none}
       
       .vision-app{max-width:580px;width:100%;margin:0 auto;background:#ffffff;border-radius:24px;box-shadow:0 20px 60px rgba(255,106,0,.12),0 0 0 1px rgba(255,106,0,.1);padding:36px;position:relative;animation:fadeIn .6s ease-out;transform:scale(1.05);transform-origin:center}
