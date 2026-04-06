@@ -337,7 +337,7 @@ const BodyTemperaturePage = () => {
   // ── Proceed ──────────────────────────────────────────────
   const handleProceed = () => {
     update({ vitals: { ...data.vitals, temperature: temperatureF } });
-    navigate("/eyesight");
+    navigate("/body-composition");
   };
 
   const canProceed =
