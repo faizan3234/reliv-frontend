@@ -452,10 +452,13 @@ function assessWeightControl(vitals, patient, history, scanCount) {
   
   const weight = Number(vitals.weight);
   const height = Number(vitals.height);
+  const sex = patient.gender?.toLowerCase() === "male" ? 1 : 0; 
   if (!weight || !height) return { status: null, gap: null, remedy: null, comment: null };
   
   const standardWeight = bodyComposition.calc_standard_weight(height, sex);
   const gap = bodyComposition.calc_weight_control(standardWeight, weight);
+
+
   
   let status, remedy, comment;
   const absGap = Math.abs(gap);
@@ -895,12 +898,17 @@ const Report2 = () => {
   const confettiShownRef = useRef(false);
 
   const systemsData = useMemo(() => {
-    if (!vitals || !patient) return null;
+   
+    try {
+      if (!vitals || !patient) return null;
 
     // SCAN COUNT CALCULATION
     const history = data.history || [];
     const scanCount = history.length || 1;
     const confidenceStage = getConfidenceStage(scanCount);
+
+
+    
 
     // SYSTEM ASSESSMENTS
     const bmi = assessBMI(vitals, patient, history);
@@ -1079,6 +1087,10 @@ const Report2 = () => {
         strongestSystem, // Pass this to identify which system is strongest
       };
     });
+    } catch (err) {
+      console.error("Report2 systemsData crash:", err);
+      return null;
+    }
   }, [data, vitals, patient]);
 
   const systems = systemsData || [];
