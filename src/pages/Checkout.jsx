@@ -1,4 +1,4 @@
-// src/pages/Checkout.jsx
+// src/pages/Checkout.jsx//
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
