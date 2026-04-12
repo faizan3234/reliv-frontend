@@ -1,0 +1,309 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   KIOSK TOUCH SCROLLING FIX
+   Prevents text selection on touch drag
+   Enables smooth touch scrolling
+   ============================================ */
+
+/* Disable text selection globally - prevents copy on scroll */
+*, *::before, *::after {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-user-drag: none !important;
+}
+
+/* Disable text highlighting/selection color */
+::selection {
+  background: transparent !important;
+}
+::-moz-selection {
+  background: transparent !important;
+}
+
+/* Allow text selection only in input fields */
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+input::selection, textarea::selection {
+  background: #b3d4fc !important;
+}
+
+/* Enable smooth touch scrolling - MOBILE LIKE */
+html, body {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Scrollable containers - enable touch scrolling */
+.overflow-y-auto,
+.overflow-auto,
+.overflow-scroll,
+.min-h-screen,
+[style*="overflow"] {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+/* Hide scrollbar but keep functionality (cleaner kiosk look) */
+::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 122, 0, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 122, 0, 0.6);
+}
+
+/* Prevent drag on images and links */
+img, a {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: auto;
+}
+
+/* ============================================
+   KIOSK TOUCH OPTIMIZATION
+   Extra touch-friendly settings
+   ============================================ */
+
+/* All buttons and interactive elements - larger touch targets */
+button, a, [role="button"], .cursor-pointer {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* MOBILE-LIKE SCROLLING - Allow vertical scrolling everywhere */
+html, body, * {
+  touch-action: pan-y pan-x;
+}
+
+/* Scrollable containers need full touch support */
+.overflow-y-auto,
+.overflow-auto,
+.min-h-screen,
+[class*="overflow"] {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: auto !important;
+}
+
+/* Allow pinch zoom only on specific elements if needed */
+input, textarea, select {
+  touch-action: manipulation;
+}
+
+/* Prevent pull-to-refresh on mobile */
+html {
+  overscroll-behavior-y: contain;
+}
+
+/* Disable long-press popup on iOS */
+* {
+  -webkit-touch-callout: none;
+}
+
+/* Make all clickable elements more responsive */
+button, a, input, select, textarea, [onclick], [role="button"] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+/* Styles applied only during PDF generation */
+.pdf-render {
+  width: 900px !important;
+  max-width: 900px !important;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+}
+
+/* ============================================
+   KIOSK BACK BUTTON - Big & Prominent
+   For 10.1" screen (1280x800)
+   ============================================ */
+.kiosk-back-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+}
+
+.kiosk-back-btn:hover {
+  background: #FF7A00;
+  color: white;
+  border-color: #FF7A00;
+  transform: translateX(-2px);
+}
+
+.kiosk-back-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Ensure content doesn't hide behind keyboard on 1280x800 */
+@media (max-height: 850px) {
+  .virtual-keyboard {
+    max-height: 240px;
+  }
+  
+  .hg-theme-default .hg-button {
+    height: 42px !important;
+    font-size: 0.95rem;
+  }
+}
+
+/* Kiosk-specific scrolling when keyboard is open */
+.keyboard-open {
+  padding-bottom: 300px !important;
+  overflow-y: auto !important;
+}
+
+.keyboard-open .min-h-screen {
+  min-height: auto !important;
+}
+
+/* Virtual Keyboard Styles - Optimized for 10.1" Kiosk (1280x800) */
+.virtual-keyboard {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10000;
+  background: linear-gradient(180deg, #f8f9fa 0%, #e5e7eb 100%);
+  padding: 8px 12px 12px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  border-top: 2px solid #FF7A00;
+  max-height: 280px; /* Limit height so content is visible */
+}
+
+/* Bigger touch-friendly buttons for kiosk */
+.hg-theme-default .hg-button {
+  height: 48px !important;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 8px !important;
+  margin: 2px !important;
+  background: white !important;
+  border: 1px solid #d1d5db !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+  transition: all 0.15s ease !important;
+}
+
+.hg-theme-default .hg-button:active {
+  background: #FF7A00 !important;
+  color: white !important;
+  transform: scale(0.97);
+}
+
+.hg-theme-default .hg-button.hg-standardBtn {
+  min-width: 44px;
+}
+
+/* Special keys styling */
+.hg-theme-default .hg-button[data-skbtn="{close}"] {
+  background: linear-gradient(135deg, #FF7A00, #FF9A40) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  min-width: 120px !important;
+}
+
+.hg-theme-default .hg-button[data-skbtn="{enter}"] {
+  background: #10B981 !important;
+  color: white !important;
+}
+
+.hg-theme-default .hg-button[data-skbtn="{bksp}"] {
+  background: #EF4444 !important;
+  color: white !important;
+}
+
+.hg-theme-default .hg-button[data-skbtn="{space}"] {
+  min-width: 200px !important;
+}
+
+/* ============================================
+   NUMERIC KEYBOARD STYLES
+   Compact layout for age, phone, PIN inputs
+   ============================================ */
+.numeric-keyboard {
+  max-height: 320px !important;
+  padding: 12px 20px 16px !important;
+}
+
+.numeric-keyboard .simple-keyboard {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.numeric-keyboard .hg-button {
+  height: 56px !important;
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  min-width: 75px !important;
+  border-radius: 12px !important;
+  margin: 3px !important;
+}
+
+.numeric-keyboard .hg-button:active {
+  background: #FF7A00 !important;
+  color: white !important;
+  transform: scale(0.95);
+}
+
+.numeric-keyboard .hg-button[data-skbtn="{close}"] {
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  color: white !important;
+  font-size: 1.1rem !important;
+}
+
+.numeric-keyboard .hg-button[data-skbtn="{bksp}"] {
+  background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+  color: white !important;
+  font-size: 1.3rem !important;
+}
+
+/* Touch manipulation for all keyboard buttons */
+.hg-button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
