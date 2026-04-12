@@ -16,14 +16,50 @@ function MobileEntry() {
   });
 
   const [errors, setErrors] = useState({});
+  const [rememberMe, setRememberMe] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
+  // Load saved data from localStorage on component mount
   useEffect(() => {
+    const savedData = localStorage.getItem('reliv_customer_data');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        setForm(prev => ({
+          ...prev,
+          ...parsedData,
+          // Don't auto-fill sensitive data unless rememberMe was true
+          email: parsedData.email || "",
+          phone: parsedData.phone || "",
+        }));
+        setRememberMe(parsedData.rememberMe !== false); // Default to true
+        setDataLoaded(true);
+      } catch (error) {
+        console.error('Error loading saved data:', error);
+      }
+    }
+
     if (!sessionId) {
       // Invalid access
       navigate('/');
     }
   }, [sessionId, navigate]);
+
+  // Auto-focus first input on mobile
+  useEffect(() => {
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const firstInput = document.querySelector('input[name="name"]');
+      if (firstInput && !dataLoaded) {
+        firstInput.focus();
+        // Scroll to top to ensure input is visible
+        window.scrollTo(0, 0);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [dataLoaded]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -75,6 +111,19 @@ function MobileEntry() {
     if (!validateForm()) return;
 
     try {
+      // Save to localStorage if rememberMe is checked
+      if (rememberMe) {
+        const dataToSave = {
+          ...form,
+          rememberMe: true,
+          lastSaved: new Date().toISOString()
+        };
+        localStorage.setItem('reliv_customer_data', JSON.stringify(dataToSave));
+      } else {
+        // Clear saved data if rememberMe is unchecked
+        localStorage.removeItem('reliv_customer_data');
+      }
+
       const response = await fetch(`${API_BASE}/api/save-customer-data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,7 +166,15 @@ function MobileEntry() {
             Enter Your Details
           </h1>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {dataLoaded && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+              <p className="text-green-800 text-sm">
+                📱 Your previous details have been auto-filled. Please review and update if needed.
+              </p>
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
             {/* Name */}
             <div>
               <label className="block text-sm font-medium mb-1">Name</label>
@@ -126,6 +183,7 @@ function MobileEntry() {
                 name="name"
                 value={form.name}
                 onChange={handleChange}
+                autoComplete="name"
                 className={`w-full border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-400`}
                 placeholder="Enter your name"
                 required
@@ -143,6 +201,7 @@ function MobileEntry() {
                 onChange={handleChange}
                 min="1"
                 max="120"
+                autoComplete="bday"
                 className={`w-full border ${errors.age ? "border-red-500" : "border-gray-300"} rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-400`}
                 placeholder="Enter your age"
                 required
@@ -158,6 +217,7 @@ function MobileEntry() {
                 name="email"
                 value={form.email}
                 onChange={handleChange}
+                autoComplete="email"
                 className={`w-full border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-400`}
                 placeholder="your.email@example.com"
                 required
@@ -173,9 +233,20 @@ function MobileEntry() {
                 name="phone"
                 value={form.phone}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-400"
+                autoComplete="tel"
+                inputMode="tel"
+                pattern="[0-9+\-\s\(\)]*"
+                maxLength="15"
+                className="w-full border border-gray-300 rounded-lg px-3 py-3 text-base focus:ring-2 focus:ring-orange-400 focus:outline-none touch-manipulation"
                 placeholder="+91 98765 43210"
+                style={{
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
+                  fontSize: '16px', // Prevents zoom on iOS
+                  lineHeight: '1.2'
+                }}
               />
+              <p className="text-xs text-gray-500 mt-1">Enter your mobile number for SMS updates</p>
             </div>
 
             {/* Gender */}
@@ -198,6 +269,20 @@ function MobileEntry() {
                 ))}
               </div>
               {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
+            </div>
+
+            {/* Remember Me */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 accent-orange-500"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-gray-600 cursor-pointer">
+                Remember my details for next time
+              </label>
             </div>
 
             <button
