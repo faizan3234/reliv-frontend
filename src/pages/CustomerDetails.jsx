@@ -12,7 +12,7 @@ import { QRCodeSVG } from "qrcode.react";
 function CustomerDetails() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { update, reset } = useHealth();
+  const { update, resetHealth } = useHealth();
 
   const [slideUp, setSlideUp] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -171,7 +171,7 @@ function CustomerDetails() {
   };
 
   const handleClear = () => {
-    reset();
+    resetHealth();
     setForm({
       name: "",
       age: "",
@@ -436,7 +436,7 @@ function CustomerDetails() {
             <button
               type="button"
               onClick={() => {
-                reset();
+                resetHealth();
                 setForm({
                   name: "",
                   age: "",
