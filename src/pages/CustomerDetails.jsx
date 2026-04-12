@@ -12,7 +12,7 @@ import { QRCodeSVG } from "qrcode.react";
 function CustomerDetails() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { update, reset } = useHealth();
+  const { update, resetHealth } = useHealth();
 
   const [slideUp, setSlideUp] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -171,7 +171,7 @@ function CustomerDetails() {
   };
 
   const handleClear = () => {
-    reset();
+    resetHealth();
     setForm({
       name: "",
       age: "",
@@ -253,7 +253,7 @@ function CustomerDetails() {
   }, []); // Empty dependency array to run only on mount
 
   return (
-    <div className={`h-screen bg-white flex flex-col overflow-y-auto scrollable-container ${keyboardVisible ? 'pb-80' : 'pb-20 md:pb-64'}`}>
+    <div className={`h-screen bg-white flex flex-col overflow-y-auto scrollable-container ${keyboardVisible ? 'pb-80' : 'pb-20 md:pb-64'}`}> 
       {/* BIG PROMINENT BACK BUTTON */}
       <button
         onClick={() => navigate(-1)}
@@ -278,7 +278,7 @@ function CustomerDetails() {
           slideUp ? "translate-y-0" : "translate-y-full"
         }`}
       >
-        <div className="bg-white rounded-t-3xl shadow-2xl border border-gray-300 px-6 py-8 max-w-lg mx-auto md:max-w-2xl">
+        <div className="bg-white rounded-t-3xl shadow-2xl border border-gray-300 px-6 py-8 max-w-lg mx-auto md:max-w-2xl"> 
           <h2 className="text-lg md:text-xl font-semibold mb-6 text-center">
             {t("whoIsReliv")}
           </h2>
@@ -436,7 +436,7 @@ function CustomerDetails() {
             <button
               type="button"
               onClick={() => {
-                reset();
+                resetHealth();
                 setForm({
                   name: "",
                   age: "",
@@ -483,7 +483,7 @@ function CustomerDetails() {
           <div className="mb-6">
             <p className="mb-2 font-medium text-sm">{t("selectGender")}</p>
             <div className="flex gap-4 flex-wrap">
-              {["male", "female", "others"].map((g) => (
+              {['male', 'female', 'others'].map((g) => (
                 <label key={g} className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border-2 border-gray-200 hover:border-orange-300 transition-colors">
                   <input
                     type="radio"
