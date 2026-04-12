@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
 
@@ -19,6 +19,29 @@ function MobileEntry() {
   const [rememberMe, setRememberMe] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(true);
+
+  // Attempt to enter fullscreen / standalone mode to hide the browser URL bar
+  const enterFullscreen = useCallback(() => {
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch((err) => {
+        console.log('Fullscreen request failed:', err);
+      });
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    } else if (el.mozRequestFullScreen) {
+      el.mozRequestFullScreen();
+    } else {
+      // Fallback: scroll down 1px to hide the address bar on older mobile browsers
+      window.scrollTo(0, 1);
+    }
+  }, []);
+
+  const handleOverlayTap = useCallback(() => {
+    enterFullscreen();
+    setShowOverlay(false);
+  }, [enterFullscreen]);
 
   // Load saved data from localStorage on component mount
   useEffect(() => {
@@ -48,6 +71,7 @@ function MobileEntry() {
 
   // Auto-focus first input on mobile
   useEffect(() => {
+    if (showOverlay) return;
     // Small delay to ensure DOM is ready
     const timer = setTimeout(() => {
       const firstInput = document.querySelector('input[name="name"]');
@@ -59,7 +83,7 @@ function MobileEntry() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [dataLoaded]);
+  }, [dataLoaded, showOverlay]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -143,7 +167,10 @@ function MobileEntry() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white flex flex-col items-center justify-center p-4">
+      <div
+        className="flex flex-col items-center justify-center p-4 bg-gradient-to-b from-orange-50 to-white"
+        style={{ minHeight: '100dvh', paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+      >
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
           <div className="text-green-500 text-6xl mb-4">✓</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Details Saved!</h2>
@@ -159,20 +186,85 @@ function MobileEntry() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white p-4">
-      <div className="max-w-md mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
-            Enter Your Details
+    <>
+      {/* Fullscreen tap-to-continue overlay */}
+      {showOverlay && (
+        <div
+          onClick={handleOverlayTap}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'linear-gradient(160deg, #f97316 0%, #fb923c 40%, #fff7ed 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <div style={{ marginBottom: '1.5rem' }}>
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="36" cy="36" r="36" fill="white" fillOpacity="0.25" />
+              <text x="50%" y="54%" dominantBaseline="middle" textAnchor="middle" fontSize="36" fill="white">❤️</text>
+            </svg>
+          </div>
+          <h1 style={{ color: 'white', fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
+            Reliv Health
           </h1>
-          
-          {dataLoaded && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-              <p className="text-green-800 text-sm">
-                📱 Your previous details have been auto-filled. Please review and update if needed.
-              </p>
-            </div>
-          )}
+          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1rem', marginBottom: '3rem' }}>
+            Your personal health kiosk
+          </p>
+          <div style={{
+            background: 'white',
+            color: '#f97316',
+            borderRadius: '2rem',
+            padding: '0.9rem 2.5rem',
+            fontWeight: 700,
+            fontSize: '1.05rem',
+            boxShadow: '0 4px 24px rgba(249,115,22,0.25)',
+            animation: 'pulse 1.8s ease-in-out infinite',
+          }}>
+            Tap anywhere to continue
+          </div>
+          <style>{`
+            @keyframes pulse {
+              0%, 100% { transform: scale(1); opacity: 1; }
+              50% { transform: scale(1.05); opacity: 0.85; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      <div
+        className="bg-gradient-to-b from-orange-50 to-white"
+        style={{ minHeight: '100dvh', paddingTop: 'max(0px, env(safe-area-inset-top))' }}
+      >
+        {/* Branded header */}
+        <div
+          className="bg-orange-500 text-white text-center px-4"
+          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.75rem' }}
+        >
+          <span className="font-bold text-lg tracking-tight">❤️ Reliv Health</span>
+        </div>
+
+        <div className="p-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
+              Enter Your Details
+            </h1>
+            
+            {dataLoaded && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <p className="text-green-800 text-sm">
+                  📱 Your previous details have been auto-filled. Please review and update if needed.
+                </p>
+              </div>
+            )}
           
           <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
             {/* Name */}
@@ -294,7 +386,9 @@ function MobileEntry() {
           </form>
         </div>
       </div>
-    </div>
+        </div>
+      </div>
+    </>
   );
 }
 
