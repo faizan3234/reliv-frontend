@@ -43,6 +43,17 @@ function MobileEntry() {
     setShowOverlay(false);
   }, [enterFullscreen]);
 
+  // Hide the domain / URL bar content: replace visible URL with clean root path
+  // and set a branded document title so no deployment details are exposed
+  useEffect(() => {
+    document.title = 'Reliv Health';
+    try {
+      window.history.replaceState({}, 'Reliv Health', '/');
+    } catch (e) {
+      // Ignore SecurityError in cross-origin iframes
+    }
+  }, []);
+
   // Load saved data from localStorage on component mount
   useEffect(() => {
     const savedData = localStorage.getItem('reliv_customer_data');
@@ -52,12 +63,17 @@ function MobileEntry() {
         setForm(prev => ({
           ...prev,
           ...parsedData,
-          // Don't auto-fill sensitive data unless rememberMe was true
+          // Auto-fill all fields including email and phone
+          name: parsedData.name || "",
+          age: parsedData.age || "",
           email: parsedData.email || "",
           phone: parsedData.phone || "",
+          gender: parsedData.gender || "",
         }));
-        setRememberMe(parsedData.rememberMe !== false); // Default to true
+        setRememberMe(true); // Always keep remember me checked
         setDataLoaded(true);
+        // Returning user: skip overlay and go straight to the form
+        setShowOverlay(false);
       } catch (error) {
         console.error('Error loading saved data:', error);
       }
@@ -75,7 +91,7 @@ function MobileEntry() {
     // Small delay to ensure DOM is ready
     const timer = setTimeout(() => {
       const firstInput = document.querySelector('input[name="name"]');
-      if (firstInput && !dataLoaded) {
+      if (firstInput) {
         firstInput.focus();
         // Scroll to top to ensure input is visible
         window.scrollTo(0, 0);
@@ -83,7 +99,7 @@ function MobileEntry() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [dataLoaded, showOverlay]);
+  }, [showOverlay]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -135,18 +151,13 @@ function MobileEntry() {
     if (!validateForm()) return;
 
     try {
-      // Save to localStorage if rememberMe is checked
-      if (rememberMe) {
-        const dataToSave = {
-          ...form,
-          rememberMe: true,
-          lastSaved: new Date().toISOString()
-        };
-        localStorage.setItem('reliv_customer_data', JSON.stringify(dataToSave));
-      } else {
-        // Clear saved data if rememberMe is unchecked
-        localStorage.removeItem('reliv_customer_data');
-      }
+      // Always save to localStorage for auto-fill on next visit
+      const dataToSave = {
+        ...form,
+        rememberMe: true,
+        lastSaved: new Date().toISOString()
+      };
+      localStorage.setItem('reliv_customer_data', JSON.stringify(dataToSave));
 
       const response = await fetch(`${API_BASE}/api/save-customer-data`, {
         method: 'POST',
@@ -363,17 +374,17 @@ function MobileEntry() {
               {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
             </div>
 
-            {/* Remember Me */}
+            {/* Remember Me - always enabled */}
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="rememberMe"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
+                checked={true}
+                readOnly
                 className="w-4 h-4 accent-orange-500"
               />
-              <label htmlFor="rememberMe" className="text-sm text-gray-600 cursor-pointer">
-                Remember my details for next time
+              <label htmlFor="rememberMe" className="text-sm text-gray-600">
+                Your details will be remembered for next time
               </label>
             </div>
 
