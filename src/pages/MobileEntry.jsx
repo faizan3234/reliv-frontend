@@ -37,15 +37,12 @@ function MobileEntry() {
     }
   }, [sessionId, navigate]);
 
-  // ─── THE FIX: use a single unified handler that works on all mobile browsers ───
-  // We use `onInput` (native) instead of relying solely on React's `onChange`.
-  // `onInput` fires on every keystroke before React's reconciliation can swallow it.
+
   const handleInput = useCallback((e) => {
     const { name, value } = e.target;
 
     if (name === 'age') {
       const numOnly = value.replace(/[^0-9]/g, '').slice(0, 3);
-      // Directly set the DOM value to avoid cursor jump, then sync state
       e.target.value = numOnly;
       setForm(prev => ({ ...prev, age: numOnly }));
       setErrors(prev => ({ ...prev, age: "" }));
