@@ -34,6 +34,7 @@ function CustomerDetails() {
   const [sessionId, setSessionId] = useState(null);
   const [qrCodeData, setQrCodeData] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [qrRefreshTimer, setQrRefreshTimer] = useState(null);
 
   // Inactivity timeout is handled globally by KioskGuardian (120s)
   // No per-page timer needed here — avoids conflicting timeouts
@@ -187,25 +188,43 @@ function CustomerDetails() {
     return crypto.randomUUID();
   };
 
-  const startQRMode = () => {
+  const startQRMode = async () => {
     const newSessionId = generateSessionId();
     setSessionId(newSessionId);
     setEntryMode('qr');
-    
-    // Build the QR URL using an optional custom domain (VITE_QR_BASE_URL)
-    // so the real app domain is never exposed in the QR code.
-    // Falls back to current origin if not set.
-    const qrBase = import.meta.env.VITE_QR_BASE_URL || window.location.origin;
-    // Use the short "/h" route with a compact "t" parameter instead of
-    // the descriptive "/mobile-entry?sessionId=..." to obscure the path.
-    const url = `${qrBase}/h?t=${newSessionId}`;
-    setQrCodeData(url);
-    
-    // Start polling for data
-    startPolling(newSessionId);
+    setQrCodeData(null); // Show "Generating..." while fetching token
+
+    try {
+      const res = await fetch(`${API_BASE}/api/create-qr-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: newSessionId }),
+      });
+
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+      const { token } = await res.json();
+
+      const qrBase = import.meta.env.VITE_QR_BASE_URL || window.location.origin;
+      const url = `${qrBase}/h?t=${token}`;
+      setQrCodeData(url);
+
+      // Start polling for customer data with the sessionId (not token)
+      startPolling(newSessionId);
+
+      // Auto-refresh QR before the 10-min backend TTL expires
+      if (qrRefreshTimer) clearTimeout(qrRefreshTimer);
+      const timer = setTimeout(() => startQRMode(), 9 * 60 * 1000); // 9 minutes
+      setQrRefreshTimer(timer);
+    } catch (error) {
+      console.error('Failed to create QR session:', error);
+      // Retry after 2 seconds
+      setTimeout(() => startQRMode(), 2000);
+    }
   };
 
   const startPolling = (sid) => {
+    if (pollingInterval) clearInterval(pollingInterval);
     const interval = setInterval(async () => {
       try {
         const response = await fetch(`${API_BASE}/api/get-customer-data`, {
@@ -221,6 +240,11 @@ function CustomerDetails() {
             setEntryMode('manual');
             clearInterval(interval);
             setPollingInterval(null);
+            // Clear QR refresh timer since we got data
+            if (qrRefreshTimer) {
+              clearTimeout(qrRefreshTimer);
+              setQrRefreshTimer(null);
+            }
           }
         }
       } catch (error) {
@@ -237,18 +261,21 @@ function CustomerDetails() {
       clearInterval(pollingInterval);
       setPollingInterval(null);
     }
+    if (qrRefreshTimer) {
+      clearTimeout(qrRefreshTimer);
+      setQrRefreshTimer(null);
+    }
     setSessionId(null);
     setQrCodeData(null);
   };
 
-  // Cleanup polling on unmount
+  // Cleanup polling and QR refresh on unmount
   useEffect(() => {
     return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
+      if (pollingInterval) clearInterval(pollingInterval);
+      if (qrRefreshTimer) clearTimeout(qrRefreshTimer);
     };
-  }, [pollingInterval]);
+  }, [pollingInterval, qrRefreshTimer]);
 
   /* Start QR mode on mount since it's default */
   useEffect(() => {
@@ -281,7 +308,7 @@ function CustomerDetails() {
       <div
         className={`mt-2 transform transition-transform duration-700 ease-out ${
           slideUp ? "translate-y-0" : "translate-y-full"
-        }`}
+        }}
       >
         <div className="bg-white rounded-t-3xl shadow-2xl border border-gray-300 px-6 py-8 max-w-lg mx-auto md:max-w-2xl"> 
           <h2 className="text-lg md:text-xl font-semibold mb-6 text-center">
@@ -379,7 +406,7 @@ function CustomerDetails() {
               <button
                 type="button"
                 onClick={handleAgeDecrement}
-                className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 hover:from-orange-200 hover:to-orange-300 active:from-orange-300 active:to-orange-400 text-orange-700 rounded-xl border-2 border-orange-300 shadow-md transition-all duration-150 touch-manipulation text-2xl font-bold"
+                className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 hover:from-orange-200 hover:to-orange-300 active:from-orange-300 active:to-orange-400 rounded-xl shadow-md transition-all duration-150 border border-orange-300"
                 aria-label="Decrease age"
               >
                 <Minus size={26} strokeWidth={3} />
@@ -407,7 +434,7 @@ function CustomerDetails() {
               <button
                 type="button"
                 onClick={handleAgeIncrement}
-                className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200 hover:from-green-200 hover:to-green-300 active:from-green-300 active:to-green-400 text-green-700 rounded-xl border-2 border-green-300 shadow-md transition-all duration-150 touch-manipulation text-2xl font-bold"
+                className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200 hover:from-green-200 hover:to-green-300 active:from-green-300 active:to-green-400 rounded-xl shadow-md transition-all duration-150 border border-green-300"
                 aria-label="Increase age"
               >
                 <Plus size={26} strokeWidth={3} />
@@ -485,9 +512,9 @@ function CustomerDetails() {
           </div>
 
           {/* Gender */}
-          <div className="mb-6">
+          <div className="mb-6"> 
             <p className="mb-2 font-medium text-sm">{t("selectGender")}</p>
-            <div className="flex gap-4 flex-wrap">
+            <div className="flex gap-4 flex-wrap"> 
               {['male', 'female', 'others'].map((g) => (
                 <label key={g} className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border-2 border-gray-200 hover:border-orange-300 transition-colors">
                   <input
