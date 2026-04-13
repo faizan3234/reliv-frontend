@@ -307,3 +307,40 @@ button, a, input, select, textarea, [onclick], [role="button"] {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ============================================
+   MOBILE ENTRY PAGE OVERRIDES
+   When opened on a phone via QR scan, undo
+   all kiosk-only CSS restrictions so the
+   native keyboard and text selection work.
+   ============================================ */
+.mobile-entry-page,
+.mobile-entry-page *,
+.mobile-entry-page *::before,
+.mobile-entry-page *::after {
+  -webkit-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+  user-select: auto !important;
+  -webkit-touch-callout: default !important;
+  -webkit-user-drag: auto !important;
+  touch-action: auto !important;
+}
+
+.mobile-entry-page input,
+.mobile-entry-page textarea,
+.mobile-entry-page select {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  touch-action: manipulation !important;
+}
+
+.mobile-entry-page ::selection {
+  background: #b3d4fc !important;
+}
+
+.mobile-entry-page ::-moz-selection {
+  background: #b3d4fc !important;
+}
