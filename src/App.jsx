@@ -30,9 +30,23 @@ import MobileEntry from "./pages/MobileEntry.jsx";
 import MobileEntryGateway from "./pages/MobileEntryGateway.jsx";
 
 export default function App() {
-    // Feature flag: toggle medicine dispensing
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
 
+    // If accessed from the QR domain, only allow /h and /mobile-entry routes
+    const isQRDomain = window.location.hostname === 'mail-request-m33c.vercel.app';
+
+    if (isQRDomain) {
+      return (
+        <Routes>
+          <Route path="/h" element={<MobileEntryGateway />} />
+          <Route path="/mobile-entry" element={<MobileEntry />} />
+          {/* Everything else → Session Expired (MobileEntryGateway with no token) */}
+          <Route path="*" element={<MobileEntryGateway />} />
+        </Routes>
+      );
+    }
+
+    // Normal kiosk app (reliv-frontend-henna.vercel.app)
     return (
       <>
         <KioskGuardian />
@@ -51,7 +65,6 @@ export default function App() {
           <Route path="/body-temperature" element={<BodyTemperature />} />
           <Route path="/eyesight" element={<EyeSight />} />
           <Route path="/body-composition" element={<BodyComposition />} />
-          {/* Connected Report Flow */}
           <Route path="/report-1" element={<Report1 />} />
           <Route path="/report-2" element={<Report2 />} />
           <Route path="/report-3" element={<Report3 />} />
@@ -63,7 +76,6 @@ export default function App() {
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/team" element={<Team />} />
           <Route path="/mobile-entry" element={<MobileEntry />} />
-          {/* Short obfuscated route for QR code scanning – hides real domain path */}
           <Route path="/h" element={<MobileEntryGateway />} />
         </Routes>
       </>
