@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
 
@@ -7,91 +7,77 @@ function MobileEntry() {
   const navigate = useNavigate();
   const sessionId = searchParams.get('sessionId');
 
-  const [form, setForm] = useState({
-    name: "", age: "", email: "", phone: "", gender: "",
-  });
-  const [errors, setErrors] = useState({});
+  // ── Refs for uncontrolled inputs (no value= prop = mobile keyboard works freely) ──
+  const nameRef = useRef(null);
+  const ageRef  = useRef(null);
+  const emailRef = useRef(null);
+  const phoneRef = useRef(null);
+
+  // Only gender & checkbox need state (they're radio/checkbox, not text)
+  const [gender, setGender] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
+
+  const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
+  // ── Load saved data and set into uncontrolled inputs via refs ──
   useEffect(() => {
     if (!sessionId) { navigate('/'); return; }
+
     const savedData = localStorage.getItem('reliv_customer_data');
     if (savedData) {
       try {
-        const parsedData = JSON.parse(savedData);
-        setForm(prev => ({
-          ...prev,
-          name: parsedData.name || "",
-          age: parsedData.age || "",
-          email: parsedData.email || "",
-          phone: parsedData.phone || "",
-          gender: parsedData.gender || "",
-        }));
-        setRememberMe(parsedData.rememberMe !== false);
+        const d = JSON.parse(savedData);
+        // Set defaultValue via ref .value — works after mount
+        if (nameRef.current && d.name)   nameRef.current.value  = d.name;
+        if (ageRef.current && d.age)     ageRef.current.value   = d.age;
+        if (emailRef.current && d.email) emailRef.current.value = d.email;
+        if (phoneRef.current && d.phone) phoneRef.current.value = d.phone;
+        if (d.gender) setGender(d.gender);
+        if (d.rememberMe !== false) setRememberMe(true);
         setDataLoaded(true);
       } catch (e) { console.error(e); }
     }
   }, [sessionId, navigate]);
 
+  // ── Read values from refs on submit ──
+  const getFormValues = () => ({
+    name:   nameRef.current?.value?.trim()  || "",
+    age:    ageRef.current?.value?.trim()   || "",
+    email:  emailRef.current?.value?.trim() || "",
+    phone:  phoneRef.current?.value?.trim() || "",
+    gender,
+  });
 
-  const handleInput = useCallback((e) => {
-    const { name, value } = e.target;
-
-    if (name === 'age') {
-      const numOnly = value.replace(/[^0-9]/g, '').slice(0, 3);
-      e.target.value = numOnly;
-      setForm(prev => ({ ...prev, age: numOnly }));
-      setErrors(prev => ({ ...prev, age: "" }));
-      return;
-    }
-
-    if (name === 'phone') {
-      const cleaned = value.replace(/[^0-9+\-\s()]/g, '');
-      setForm(prev => ({ ...prev, phone: cleaned }));
-      setErrors(prev => ({ ...prev, phone: "" }));
-      return;
-    }
-
-    // For all other fields: just take the value as-is
-    setForm(prev => ({ ...prev, [name]: value }));
-    setErrors(prev => ({ ...prev, [name]: "" }));
-  }, []);
-
-  const handleGenderChange = (e) => {
-    setForm(prev => ({ ...prev, gender: e.target.value }));
-    setErrors(prev => ({ ...prev, gender: "" }));
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    let isValid = true;
-    if (!form.name.trim()) { newErrors.name = "Name is required"; isValid = false; }
+  const validateForm = (form) => {
+    const e = {};
+    if (!form.name)  e.name = "Name is required";
     const ageNum = parseInt(form.age, 10);
-    if (!form.age || isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
-      newErrors.age = "Please enter a valid age (1-120)"; isValid = false;
-    }
-    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      newErrors.email = "Please enter a valid email"; isValid = false;
-    }
+    if (!form.age || isNaN(ageNum) || ageNum < 1 || ageNum > 120)
+      e.age = "Please enter a valid age (1–120)";
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      e.email = "Please enter a valid email";
     if (form.phone) {
       const digits = form.phone.replace(/\D/g, "");
-      if (digits.length < 10 || digits.length > 15) {
-        newErrors.phone = "Enter a valid phone number (10-15 digits)"; isValid = false;
-      }
+      if (digits.length < 10 || digits.length > 15)
+        e.phone = "Enter a valid phone number (10–15 digits)";
     }
-    if (!form.gender) { newErrors.gender = "Please select gender"; isValid = false; }
-    setErrors(newErrors);
-    return isValid;
+    if (!form.gender) e.gender = "Please select gender";
+    return e;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError("");
-    if (!validateForm()) return;
+
+    const form = getFormValues();
+    const errs = validateForm(form);
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
     setIsSubmitting(true);
     try {
       if (rememberMe) {
@@ -101,49 +87,60 @@ function MobileEntry() {
       } else {
         localStorage.removeItem('reliv_customer_data');
       }
-      const response = await fetch(`${API_BASE}/api/save-customer-data`, {
+
+      const res = await fetch(`${API_BASE}/api/save-customer-data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, customerData: form })
       });
-      if (response.ok) {
+
+      if (res.ok) {
         setSubmitted(true);
       } else {
-        setSubmitError(`Server error: ${response.status}. Please try again.`);
+        setSubmitError(`Server error: ${res.status}. Please try again.`);
       }
-    } catch (error) {
+    } catch (err) {
       setSubmitError("Network error — please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ─── Shared input style ───
-  // font-size: 16px is CRITICAL — below 16px, iOS Safari auto-zooms on focus
-  // Do NOT set WebkitAppearance/appearance — it can block the native keyboard on some Android browsers
-  const base = {
+  // ── Shared input style — 16px font is CRITICAL to stop iOS zoom on focus ──
+  const inp = (hasErr) => ({
+    display: 'block',
     width: '100%',
-    fontSize: '16px',
+    fontSize: '16px',        // Must be ≥16px or iOS Safari zooms in
     lineHeight: '1.5',
     padding: '12px 14px',
     borderRadius: '8px',
-    border: '1px solid #d1d5db',
+    border: `1px solid ${hasErr ? '#ef4444' : '#d1d5db'}`,
     outline: 'none',
     boxSizing: 'border-box',
     backgroundColor: '#ffffff',
     color: '#111827',
-    // DO NOT add WebkitAppearance: 'none' here — it breaks mobile keyboards on Android
+    // No WebkitAppearance override — that breaks Android keyboards
+  });
+
+  const label = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: '6px',
   };
-  const errStyle = { ...base, border: '1px solid #ef4444' };
+
+  const errMsg = { color: '#ef4444', fontSize: '13px', margin: '4px 0 0' };
+  const fieldWrap = { marginBottom: '18px' };
 
   if (submitted) {
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #fff7ed, #ffffff)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-        <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', padding: '40px 32px', maxWidth: '400px', width: '100%', textAlign: 'center' }}>
+        <div style={{ background: '#fff', borderRadius: '12px', padding: '40px 32px', maxWidth: '400px', width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>✓</div>
           <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#111827', margin: '0 0 10px' }}>Details saved!</h2>
           <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: '1.6', margin: '0 0 20px' }}>
-            Your information has been sent to the kiosk. You can now return to continue.
+            Your info has been sent to the kiosk. Return to the kiosk to continue.
           </p>
           <p style={{ fontSize: '13px', color: '#9ca3af' }}>You can close this page.</p>
         </div>
@@ -159,12 +156,16 @@ function MobileEntry() {
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#111827', margin: '0 0 6px' }}>
             <span style={{ color: '#f97316' }}>Reliv</span> — Enter Your Details
           </h1>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Fill in on your phone, then return to the kiosk</p>
+          <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
+            Fill in on your phone, then return to the kiosk
+          </p>
         </div>
 
         {dataLoaded && (
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
-            <p style={{ color: '#166534', fontSize: '14px', margin: 0 }}>Previous details auto-filled — review and update if needed.</p>
+            <p style={{ color: '#166534', fontSize: '14px', margin: 0 }}>
+              Previous details auto-filled — review and update if needed.
+            </p>
           </div>
         )}
 
@@ -175,116 +176,106 @@ function MobileEntry() {
         )}
 
         <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', padding: '24px 20px' }}>
-          {/*
-            KEY FIX: We use `onInput` (not `onChange`) as the primary handler.
-            `onInput` is the native DOM event that fires synchronously on every
-            keystroke. React's `onChange` is actually mapped to the native `onInput`
-            event internally, BUT in some mobile browsers (especially iOS Safari with
-            autocorrect/predictive text), React's synthetic event gets batched or
-            dropped. By using the native `onInput` attribute directly, we bypass
-            React's event system for the actual value capture, then sync to state.
-            
-            We still pass `onChange={handleInput}` as a fallback for React's system.
-            Both pointing to the same handler ensures at least one fires.
-          */}
           <form onSubmit={handleSubmit} noValidate>
 
-            <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Full Name *</label>
+            {/* ── Name ── */}
+            <div style={fieldWrap}>
+              <label style={label}>Full Name *</label>
               <input
+                ref={nameRef}
                 type="text"
                 name="name"
-                value={form.name}
-                onInput={handleInput}
-                onChange={handleInput}
                 autoComplete="name"
                 autoCorrect="off"
                 autoCapitalize="words"
                 spellCheck="false"
                 placeholder="Enter your name"
-                style={errors.name ? errStyle : base}
+                style={inp(errors.name)}
               />
-              {errors.name && <p style={{ color: '#ef4444', fontSize: '13px', margin: '4px 0 0' }}>{errors.name}</p>}
+              {errors.name && <p style={errMsg}>{errors.name}</p>}
             </div>
 
-            <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Age *</label>
+            {/* ── Age ── */}
+            <div style={fieldWrap}>
+              <label style={label}>Age *</label>
               <input
+                ref={ageRef}
                 type="text"
                 inputMode="numeric"
                 name="age"
-                value={form.age}
-                onInput={handleInput}
-                onChange={handleInput}
                 autoComplete="off"
                 placeholder="e.g. 28"
                 maxLength={3}
-                style={errors.age ? errStyle : base}
+                style={inp(errors.age)}
               />
-              {errors.age && <p style={{ color: '#ef4444', fontSize: '13px', margin: '4px 0 0' }}>{errors.age}</p>}
+              {errors.age && <p style={errMsg}>{errors.age}</p>}
             </div>
 
-            <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Email *</label>
+            {/* ── Email ── */}
+            <div style={fieldWrap}>
+              <label style={label}>Email *</label>
               <input
+                ref={emailRef}
                 type="email"
                 name="email"
-                value={form.email}
-                onInput={handleInput}
-                onChange={handleInput}
                 autoComplete="email"
                 autoCorrect="off"
                 autoCapitalize="none"
                 spellCheck="false"
                 placeholder="your.email@example.com"
-                style={errors.email ? errStyle : base}
+                style={inp(errors.email)}
               />
-              {errors.email && <p style={{ color: '#ef4444', fontSize: '13px', margin: '4px 0 0' }}>{errors.email}</p>}
+              {errors.email && <p style={errMsg}>{errors.email}</p>}
             </div>
 
-            <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+            {/* ── Phone ── */}
+            <div style={fieldWrap}>
+              <label style={label}>
                 Phone <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Optional)</span>
               </label>
               <input
+                ref={phoneRef}
                 type="tel"
                 name="phone"
-                value={form.phone}
-                onInput={handleInput}
-                onChange={handleInput}
                 autoComplete="tel"
                 inputMode="tel"
                 placeholder="+91 98765 43210"
                 maxLength={15}
-                style={errors.phone ? errStyle : base}
+                style={inp(errors.phone)}
               />
-              {errors.phone && <p style={{ color: '#ef4444', fontSize: '13px', margin: '4px 0 0' }}>{errors.phone}</p>}
+              {errors.phone && <p style={errMsg}>{errors.phone}</p>}
             </div>
 
+            {/* ── Gender ── */}
             <div style={{ marginBottom: '24px' }}>
               <p style={{ fontSize: '14px', fontWeight: '500', color: '#374151', margin: '0 0 10px' }}>Gender *</p>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 {["male", "female", "others"].map((g) => (
                   <label key={g} style={{
-                    display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                    padding: '10px 16px', borderRadius: '8px', minHeight: '44px',
-                    border: form.gender === g ? '2px solid #f97316' : '1px solid #d1d5db',
-                    background: form.gender === g ? '#fff7ed' : '#fff',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    cursor: 'pointer', padding: '10px 16px', borderRadius: '8px',
+                    minHeight: '44px',
+                    border: gender === g ? '2px solid #f97316' : '1px solid #d1d5db',
+                    background: gender === g ? '#fff7ed' : '#fff',
                     fontSize: '15px', color: '#374151',
                   }}>
                     <input
                       type="radio" name="gender" value={g}
-                      checked={form.gender === g}
-                      onChange={handleGenderChange}
+                      checked={gender === g}
+                      onChange={() => {
+                        setGender(g);
+                        setErrors(prev => ({ ...prev, gender: "" }));
+                      }}
                       style={{ width: '18px', height: '18px', accentColor: '#f97316' }}
                     />
                     <span style={{ textTransform: 'capitalize' }}>{g}</span>
                   </label>
                 ))}
               </div>
-              {errors.gender && <p style={{ color: '#ef4444', fontSize: '13px', margin: '6px 0 0' }}>{errors.gender}</p>}
+              {errors.gender && <p style={errMsg}>{errors.gender}</p>}
             </div>
 
+            {/* ── Remember Me ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
               <input
                 type="checkbox" id="rememberMe" checked={rememberMe}
@@ -296,6 +287,7 @@ function MobileEntry() {
               </label>
             </div>
 
+            {/* ── Submit ── */}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -310,6 +302,7 @@ function MobileEntry() {
             >
               {isSubmitting ? 'Sending to kiosk...' : 'Submit Details →'}
             </button>
+
           </form>
         </div>
 
