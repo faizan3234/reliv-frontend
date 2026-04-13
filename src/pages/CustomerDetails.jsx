@@ -192,9 +192,14 @@ function CustomerDetails() {
     setSessionId(newSessionId);
     setEntryMode('qr');
     
-    // Generate QR URL directly (no API call needed)
-    const url = `${window.location.origin}/mobile-entry?sessionId=${newSessionId}`;
-    setQrCodeData(url); // Store the URL, QRCode component will render it
+    // Build the QR URL using an optional custom domain (VITE_QR_BASE_URL)
+    // so the real app domain is never exposed in the QR code.
+    // Falls back to current origin if not set.
+    const qrBase = import.meta.env.VITE_QR_BASE_URL || window.location.origin;
+    // Use the short "/h" route with a compact "t" parameter instead of
+    // the descriptive "/mobile-entry?sessionId=..." to obscure the path.
+    const url = `${qrBase}/h?t=${newSessionId}`;
+    setQrCodeData(url);
     
     // Start polling for data
     startPolling(newSessionId);
