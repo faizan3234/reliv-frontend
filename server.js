@@ -662,7 +662,7 @@ const allowedOrigins = [
     'http://192.168.0.101:5173',
     'https://reliv.vercel.app',
     'https://reliv-frontend-henna.vercel.app',
-    'https://rlv.health',              // QR code short-domain proxy
+    'https://mail-request-m33c.vercel.app', // QR code domain (separate Vercel deployment)
     process.env.FRONTEND_URL, // Add your production frontend URL
 ].filter(Boolean);
 

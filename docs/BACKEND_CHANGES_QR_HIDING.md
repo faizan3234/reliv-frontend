@@ -97,14 +97,14 @@ This way the real `sessionId` is **never** in the QR URL — only the short toke
 ## 4. CORS Configuration
 
 Ensure the backend allows requests from whatever domain you use for QR codes
-(e.g., a short domain like `rlv.health`):
+(e.g., `https://mail-request-m33c.vercel.app`):
 
 ```js
 app.use(cors({
   origin: [
     'https://your-main-domain.com',
-    'https://your-short-domain.com',  // QR code proxy domain
-    'http://localhost:5173',           // Dev
+    'https://mail-request-m33c.vercel.app',  // QR code domain (separate Vercel deployment)
+    'http://localhost:5173',                  // Dev
   ],
   credentials: true,
 }));
