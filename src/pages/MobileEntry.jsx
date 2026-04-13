@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
 
@@ -22,6 +22,40 @@ function MobileEntry() {
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(true);
+
+  // Attempt to enter fullscreen / standalone mode to hide the browser URL bar
+  const enterFullscreen = useCallback(() => {
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch((err) => {
+        console.log('Fullscreen request failed:', err);
+      });
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    } else if (el.mozRequestFullScreen) {
+      el.mozRequestFullScreen();
+    } else {
+      // Fallback: scroll down 1px to hide the address bar on older mobile browsers
+      window.scrollTo(0, 1);
+    }
+  }, []);
+
+  const handleOverlayTap = useCallback(() => {
+    enterFullscreen();
+    setShowOverlay(false);
+  }, [enterFullscreen]);
+
+  // Hide the domain / URL bar content: replace visible URL with clean root path
+  // and set a branded document title so no deployment details are exposed
+  useEffect(() => {
+    document.title = 'Reliv Health';
+    try {
+      window.history.replaceState({}, 'Reliv Health', '/');
+    } catch (e) {
+      // Ignore SecurityError in cross-origin iframes
+    }
+  }, []);
 
   // ── Load saved data and set into uncontrolled inputs via refs ──
   useEffect(() => {
@@ -39,9 +73,23 @@ function MobileEntry() {
         if (d.gender) setGender(d.gender);
         if (d.rememberMe !== false) setRememberMe(true);
         setDataLoaded(true);
+        // Returning user: skip overlay and go straight to the form
+        setShowOverlay(false);
       } catch (e) { console.error(e); }
     }
   }, [sessionId, navigate]);
+
+  // Auto-focus first input after overlay is dismissed
+  useEffect(() => {
+    if (showOverlay) return;
+    const timer = setTimeout(() => {
+      if (nameRef.current) {
+        nameRef.current.focus();
+        window.scrollTo(0, 0);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [showOverlay]);
 
   // ── Read values from refs on submit ──
   const getFormValues = () => ({
@@ -80,13 +128,10 @@ function MobileEntry() {
 
     setIsSubmitting(true);
     try {
-      if (rememberMe) {
-        localStorage.setItem('reliv_customer_data', JSON.stringify({
-          ...form, rememberMe: true, lastSaved: new Date().toISOString()
-        }));
-      } else {
-        localStorage.removeItem('reliv_customer_data');
-      }
+      // Always save to localStorage for auto-fill on next visit
+      localStorage.setItem('reliv_customer_data', JSON.stringify({
+        ...form, rememberMe: true, lastSaved: new Date().toISOString()
+      }));
 
       const res = await fetch(`${API_BASE}/api/save-customer-data`, {
         method: 'POST',
@@ -119,7 +164,6 @@ function MobileEntry() {
     boxSizing: 'border-box',
     backgroundColor: '#ffffff',
     color: '#111827',
-    // No WebkitAppearance override — that breaks Android keyboards
   });
 
   const label = {
@@ -135,7 +179,7 @@ function MobileEntry() {
 
   if (submitted) {
     return (
-      <div className="mobile-entry-page" style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #fff7ed, #ffffff)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div className="mobile-entry-page" style={{ minHeight: '100dvh', background: 'linear-gradient(to bottom, #fff7ed, #ffffff)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
         <div style={{ background: '#fff', borderRadius: '12px', padding: '40px 32px', maxWidth: '400px', width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>✓</div>
           <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#111827', margin: '0 0 10px' }}>Details saved!</h2>
@@ -149,168 +193,229 @@ function MobileEntry() {
   }
 
   return (
-    <div className="mobile-entry-page" style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #fff7ed, #ffffff)', padding: '20px 16px 40px' }}>
-      <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#111827', margin: '0 0 6px' }}>
-            <span style={{ color: '#f97316' }}>Reliv</span> — Enter Your Details
+    <>
+      {/* Fullscreen tap-to-continue overlay */}
+      {showOverlay && (
+        <div
+          onClick={handleOverlayTap}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'linear-gradient(160deg, #f97316 0%, #fb923c 40%, #fff7ed 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <div style={{ marginBottom: '1.5rem' }}>
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="36" cy="36" r="36" fill="white" fillOpacity="0.25" />
+              <text x="50%" y="54%" dominantBaseline="middle" textAnchor="middle" fontSize="36" fill="white">❤️</text>
+            </svg>
+          </div>
+          <h1 style={{ color: 'white', fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
+            Reliv Health
           </h1>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
-            Fill in on your phone, then return to the kiosk
+          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1rem', marginBottom: '3rem' }}>
+            Your personal health kiosk
           </p>
+          <div style={{
+            background: 'white',
+            color: '#f97316',
+            borderRadius: '2rem',
+            padding: '0.9rem 2.5rem',
+            fontWeight: 700,
+            fontSize: '1.05rem',
+            boxShadow: '0 4px 24px rgba(249,115,22,0.25)',
+            animation: 'pulse 1.8s ease-in-out infinite',
+          }}>
+            Tap anywhere to continue
+          </div>
+          <style>{`
+            @keyframes pulse {
+              0%, 100% { transform: scale(1); opacity: 1; }
+              50% { transform: scale(1.05); opacity: 0.85; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      <div className="mobile-entry-page" style={{ minHeight: '100dvh', background: 'linear-gradient(to bottom, #fff7ed, #ffffff)', paddingTop: 'max(0px, env(safe-area-inset-top))' }}>
+        {/* Branded header */}
+        <div style={{ background: '#f97316', color: 'white', textAlign: 'center', padding: '0.75rem 1rem', paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+          <span style={{ fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>❤️ Reliv Health</span>
         </div>
 
-        {dataLoaded && (
-          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
-            <p style={{ color: '#166534', fontSize: '14px', margin: 0 }}>
-              Previous details auto-filled — review and update if needed.
+        <div style={{ padding: '20px 16px 40px' }}>
+          <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#111827', margin: '0 0 6px' }}>
+                <span style={{ color: '#f97316' }}>Reliv</span> — Enter Your Details
+              </h1>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
+                Fill in on your phone, then return to the kiosk
+              </p>
+            </div>
+
+            {dataLoaded && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
+                <p style={{ color: '#166534', fontSize: '14px', margin: 0 }}>
+                  📱 Previous details auto-filled — review and update if needed.
+                </p>
+              </div>
+            )}
+
+            {submitError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
+                <p style={{ color: '#991b1b', fontSize: '14px', margin: 0 }}>{submitError}</p>
+              </div>
+            )}
+
+            <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', padding: '24px 20px' }}>
+              <form onSubmit={handleSubmit} noValidate>
+
+                {/* ── Name ── */}
+                <div style={fieldWrap}>
+                  <label style={label}>Full Name *</label>
+                  <input
+                    ref={nameRef}
+                    type="text"
+                    name="name"
+                    autoComplete="name"
+                    autoCorrect="off"
+                    autoCapitalize="words"
+                    spellCheck="false"
+                    placeholder="Enter your name"
+                    style={inp(errors.name)}
+                  />
+                  {errors.name && <p style={errMsg}>{errors.name}</p>}
+                </div>
+
+                {/* ── Age ── */}
+                <div style={fieldWrap}>
+                  <label style={label}>Age *</label>
+                  <input
+                    ref={ageRef}
+                    type="text"
+                    inputMode="numeric"
+                    name="age"
+                    autoComplete="off"
+                    placeholder="e.g. 28"
+                    maxLength={3}
+                    style={inp(errors.age)}
+                  />
+                  {errors.age && <p style={errMsg}>{errors.age}</p>}
+                </div>
+
+                {/* ── Email ── */}
+                <div style={fieldWrap}>
+                  <label style={label}>Email *</label>
+                  <input
+                    ref={emailRef}
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
+                    placeholder="your.email@example.com"
+                    style={inp(errors.email)}
+                  />
+                  {errors.email && <p style={errMsg}>{errors.email}</p>}
+                </div>
+
+                {/* ── Phone ── */}
+                <div style={fieldWrap}>
+                  <label style={label}>
+                    Phone <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Optional)</span>
+                  </label>
+                  <input
+                    ref={phoneRef}
+                    type="tel"
+                    name="phone"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    placeholder="+91 98765 43210"
+                    maxLength={15}
+                    style={inp(errors.phone)}
+                  />
+                  {errors.phone && <p style={errMsg}>{errors.phone}</p>}
+                </div>
+
+                {/* ── Gender ── */}
+                <div style={{ marginBottom: '24px' }}>
+                  <p style={{ fontSize: '14px', fontWeight: '500', color: '#374151', margin: '0 0 10px' }}>Gender *</p>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {["male", "female", "others"].map((g) => (
+                      <label key={g} style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        cursor: 'pointer', padding: '10px 16px', borderRadius: '8px',
+                        minHeight: '44px',
+                        border: gender === g ? '2px solid #f97316' : '1px solid #d1d5db',
+                        background: gender === g ? '#fff7ed' : '#fff',
+                        fontSize: '15px', color: '#374151',
+                      }}>
+                        <input
+                          type="radio" name="gender" value={g}
+                          checked={gender === g}
+                          onChange={() => {
+                            setGender(g);
+                            setErrors(prev => ({ ...prev, gender: "" }));
+                          }}
+                          style={{ width: '18px', height: '18px', accentColor: '#f97316' }}
+                        />
+                        <span style={{ textTransform: 'capitalize' }}>{g}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.gender && <p style={errMsg}>{errors.gender}</p>}
+                </div>
+
+                {/* ── Remember Me (always on) ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
+                  <input
+                    type="checkbox" id="rememberMe" checked={true}
+                    readOnly
+                    style={{ width: '18px', height: '18px', accentColor: '#f97316', cursor: 'default' }}
+                  />
+                  <label htmlFor="rememberMe" style={{ fontSize: '14px', color: '#6b7280' }}>
+                    Your details will be remembered for next time
+                  </label>
+                </div>
+
+                {/* ── Submit ── */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    width: '100%', padding: '14px',
+                    background: isSubmitting ? '#fdba74' : '#f97316',
+                    color: '#fff', border: 'none', borderRadius: '10px',
+                    fontSize: '16px', fontWeight: '600',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    minHeight: '50px',
+                  }}
+                >
+                  {isSubmitting ? 'Sending to kiosk...' : 'Submit Details →'}
+                </button>
+
+              </form>
+            </div>
+
+            <p style={{ textAlign: 'center', fontSize: '12px', color: '#9ca3af', marginTop: '16px' }}>
+              Session: {sessionId ? sessionId.slice(0, 8) + '...' : 'Invalid'}
             </p>
           </div>
-        )}
-
-        {submitError && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
-            <p style={{ color: '#991b1b', fontSize: '14px', margin: 0 }}>{submitError}</p>
-          </div>
-        )}
-
-        <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', padding: '24px 20px' }}>
-          <form onSubmit={handleSubmit} noValidate>
-
-            {/* ── Name ── */}
-            <div style={fieldWrap}>
-              <label style={label}>Full Name *</label>
-              <input
-                ref={nameRef}
-                type="text"
-                name="name"
-                autoComplete="name"
-                autoCorrect="off"
-                autoCapitalize="words"
-                spellCheck="false"
-                placeholder="Enter your name"
-                style={inp(errors.name)}
-              />
-              {errors.name && <p style={errMsg}>{errors.name}</p>}
-            </div>
-
-            {/* ── Age ── */}
-            <div style={fieldWrap}>
-              <label style={label}>Age *</label>
-              <input
-                ref={ageRef}
-                type="text"
-                inputMode="numeric"
-                name="age"
-                autoComplete="off"
-                placeholder="e.g. 28"
-                maxLength={3}
-                style={inp(errors.age)}
-              />
-              {errors.age && <p style={errMsg}>{errors.age}</p>}
-            </div>
-
-            {/* ── Email ── */}
-            <div style={fieldWrap}>
-              <label style={label}>Email *</label>
-              <input
-                ref={emailRef}
-                type="email"
-                name="email"
-                autoComplete="email"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck="false"
-                placeholder="your.email@example.com"
-                style={inp(errors.email)}
-              />
-              {errors.email && <p style={errMsg}>{errors.email}</p>}
-            </div>
-
-            {/* ── Phone ── */}
-            <div style={fieldWrap}>
-              <label style={label}>
-                Phone <span style={{ color: '#9ca3af', fontWeight: '400' }}>(Optional)</span>
-              </label>
-              <input
-                ref={phoneRef}
-                type="tel"
-                name="phone"
-                autoComplete="tel"
-                inputMode="tel"
-                placeholder="+91 98765 43210"
-                maxLength={15}
-                style={inp(errors.phone)}
-              />
-              {errors.phone && <p style={errMsg}>{errors.phone}</p>}
-            </div>
-
-            {/* ── Gender ── */}
-            <div style={{ marginBottom: '24px' }}>
-              <p style={{ fontSize: '14px', fontWeight: '500', color: '#374151', margin: '0 0 10px' }}>Gender *</p>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {["male", "female", "others"].map((g) => (
-                  <label key={g} style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    cursor: 'pointer', padding: '10px 16px', borderRadius: '8px',
-                    minHeight: '44px',
-                    border: gender === g ? '2px solid #f97316' : '1px solid #d1d5db',
-                    background: gender === g ? '#fff7ed' : '#fff',
-                    fontSize: '15px', color: '#374151',
-                  }}>
-                    <input
-                      type="radio" name="gender" value={g}
-                      checked={gender === g}
-                      onChange={() => {
-                        setGender(g);
-                        setErrors(prev => ({ ...prev, gender: "" }));
-                      }}
-                      style={{ width: '18px', height: '18px', accentColor: '#f97316' }}
-                    />
-                    <span style={{ textTransform: 'capitalize' }}>{g}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.gender && <p style={errMsg}>{errors.gender}</p>}
-            </div>
-
-            {/* ── Remember Me ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-              <input
-                type="checkbox" id="rememberMe" checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                style={{ width: '18px', height: '18px', accentColor: '#f97316', cursor: 'pointer' }}
-              />
-              <label htmlFor="rememberMe" style={{ fontSize: '14px', color: '#6b7280', cursor: 'pointer' }}>
-                Remember my details for next time
-              </label>
-            </div>
-
-            {/* ── Submit ── */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              style={{
-                width: '100%', padding: '14px',
-                background: isSubmitting ? '#fdba74' : '#f97316',
-                color: '#fff', border: 'none', borderRadius: '10px',
-                fontSize: '16px', fontWeight: '600',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                minHeight: '50px',
-              }}
-            >
-              {isSubmitting ? 'Sending to kiosk...' : 'Submit Details →'}
-            </button>
-
-          </form>
         </div>
-
-        <p style={{ textAlign: 'center', fontSize: '12px', color: '#9ca3af', marginTop: '16px' }}>
-          Session: {sessionId ? sessionId.slice(0, 8) + '...' : 'Invalid'}
-        </p>
       </div>
-    </div>
+    </>
   );
 }
 

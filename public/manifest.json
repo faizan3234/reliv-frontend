@@ -4,13 +4,15 @@
   "description": "Reliv Health - Your Personal Health Companion",
   "start_url": "/mobile-entry",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#fff7ed",
   "theme_color": "#f97316",
   "icons": [
     {
       "src": "/vite.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
