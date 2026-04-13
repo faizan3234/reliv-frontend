@@ -39,6 +39,18 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+      /* Mobile entry page: undo all kiosk restrictions */
+      .mobile-entry-page, .mobile-entry-page * {
+        -webkit-user-select: auto !important;
+        -moz-user-select: auto !important;
+        -ms-user-select: auto !important;
+        user-select: auto !important;
+        -webkit-touch-callout: default !important;
+      }
+      .mobile-entry-page input, .mobile-entry-page textarea {
+        -webkit-user-select: text !important;
+        user-select: text !important;
+      }
     </style>
     
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
@@ -46,68 +58,73 @@
     
     <!-- KIOSK SECURITY: Early blocking of dangerous actions before React loads -->
     <script>
-      // Block right-click globally (even before React mounts)
-      document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; }, true);
-      
-      // Block keyboard shortcuts globally
-      document.addEventListener('keydown', function(e) {
-        const key = e.key?.toLowerCase();
+      // Skip ALL kiosk protections on /mobile-entry — that page runs on user phones
+      var _isMobileEntry = window.location.pathname.startsWith('/mobile-entry');
+
+      if (!_isMobileEntry) {
+        // Block right-click globally (even before React mounts)
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; }, true);
         
-        // Block F-keys
-        if (e.key && e.key.startsWith('F') && !isNaN(e.key.substring(1))) {
-          e.preventDefault();
-          return false;
-        }
-        
-        // Block Ctrl/Cmd shortcuts
-        if (e.ctrlKey || e.metaKey) {
-          // Block Zoom (+, -, 0)
-          if (['=', '-', '0', '+'].includes(key)) {
+        // Block keyboard shortcuts globally
+        document.addEventListener('keydown', function(e) {
+          const key = e.key?.toLowerCase();
+          
+          // Block F-keys
+          if (e.key && e.key.startsWith('F') && !isNaN(e.key.substring(1))) {
             e.preventDefault();
             return false;
           }
           
-          var blockedKeys = ['t','n','w','r','l','d','h','j','u','s','p','o','g','f','a','c','v','x'];
-          if (blockedKeys.includes(key) || e.shiftKey) {
+          // Block Ctrl/Cmd shortcuts
+          if (e.ctrlKey || e.metaKey) {
+            // Block Zoom (+, -, 0)
+            if (['=', '-', '0', '+'].includes(key)) {
+              e.preventDefault();
+              return false;
+            }
+            
+            var blockedKeys = ['t','n','w','r','l','d','h','j','u','s','p','o','g','f','a','c','v','x'];
+            if (blockedKeys.includes(key) || e.shiftKey) {
+              e.preventDefault();
+              return false;
+            }
+          }
+          
+          // Block Alt+Tab, Alt+F4
+          if (e.altKey && ['tab','f4'].includes(key)) {
             e.preventDefault();
             return false;
           }
-        }
+        }, true);
         
-        // Block Alt+Tab, Alt+F4
-        if (e.altKey && ['tab','f4'].includes(key)) {
-          e.preventDefault();
-          return false;
-        }
-      }, true);
-      
-      // Block Mouse Wheel Zoom (Ctrl + Wheel)
-      document.addEventListener('wheel', function(e) {
-        if (e.ctrlKey) {
-          e.preventDefault();
-        }
-      }, { passive: false });
+        // Block Mouse Wheel Zoom (Ctrl + Wheel)
+        document.addEventListener('wheel', function(e) {
+          if (e.ctrlKey) {
+            e.preventDefault();
+          }
+        }, { passive: false });
 
-      // Block Pinch-to-zoom (touch gestures)
-      document.addEventListener('touchstart', function(e) {
-        if (e.touches.length > 1) {
-          e.preventDefault();
-        }
-      }, { passive: false });
+        // Block Pinch-to-zoom (touch gestures)
+        document.addEventListener('touchstart', function(e) {
+          if (e.touches.length > 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
 
-      document.addEventListener('touchmove', function(e) {
-        if (e.touches.length > 1) {
-          e.preventDefault();
-        }
-      }, { passive: false });
+        document.addEventListener('touchmove', function(e) {
+          if (e.touches.length > 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
 
-      // Block window.open before any script can use it
-      window._originalOpen = window.open;
-      window.open = function() { console.log('[KIOSK] window.open blocked'); return null; };
-      
-      // Block drag and drop
-      document.addEventListener('dragstart', function(e) { e.preventDefault(); return false; }, true);
-      document.addEventListener('drop', function(e) { e.preventDefault(); return false; }, true);
+        // Block window.open before any script can use it
+        window._originalOpen = window.open;
+        window.open = function() { console.log('[KIOSK] window.open blocked'); return null; };
+        
+        // Block drag and drop
+        document.addEventListener('dragstart', function(e) { e.preventDefault(); return false; }, true);
+        document.addEventListener('drop', function(e) { e.preventDefault(); return false; }, true);
+      }
     </script>
     
     <title>Reliv Health Kiosk</title>

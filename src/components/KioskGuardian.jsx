@@ -30,6 +30,12 @@ export default function KioskGuardian() {
     const currentPath = location.pathname;
     const HOME_PATH = "/";
     const INACTIVITY_TIMEOUT = 120000; // 120 seconds
+
+    // Skip ALL kiosk protections on /mobile-entry — that page runs on user phones
+    if (currentPath.startsWith('/mobile-entry')) {
+      console.log('[KioskGuardian] 📱 Mobile entry page — kiosk protections SKIPPED');
+      return;
+    }
     
     // Pages where inactivity timer should be disabled
     // /payment manages its own smarter timer (pauses during Razorpay modal)

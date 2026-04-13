@@ -14,6 +14,11 @@ import App from "./App.jsx";
 // Kiosk Touch Scroll Helper - prevents text selection on touch drag
 function KioskTouchHelper() {
   useEffect(() => {
+    // Skip ALL kiosk protections on /mobile-entry — that page runs on user phones
+    if (window.location.pathname.startsWith('/mobile-entry')) {
+      return;
+    }
+
     // Prevent context menu (right-click) on touch devices
     const preventContextMenu = (e) => {
       e.preventDefault();
