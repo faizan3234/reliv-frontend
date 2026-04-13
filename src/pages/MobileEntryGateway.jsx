@@ -11,11 +11,8 @@ import MobileEntry from "./MobileEntry";
  *  2. This component validates the token with the backend.
  *     – If valid → renders MobileEntry with the real sessionId.
  *     – If expired / already used → shows "Session expired" message.
- *  3. Immediately hides the real URL from the browser address bar.
+ *  3. Immediately hides the real URL from the browser address bar (replaces with /h).
  *  4. Loads saved data from localStorage for auto-fill regardless of token state.
- *
- * If the backend validation endpoint is not yet deployed, the gateway
- * falls through and renders MobileEntry directly (graceful degradation).
  */
 export default function MobileEntryGateway() {
   const [searchParams] = useSearchParams();
@@ -28,8 +25,10 @@ export default function MobileEntryGateway() {
   useEffect(() => {
     document.title = "Reliv Health";
     try {
-      // Replace visible URL with just "/" so domain path is hidden
-      window.history.replaceState({}, "Reliv Health", "/");
+      // Replace visible URL with just "/h" so domain path is hidden;
+      // using /h (not /) means a page refresh lands on the gateway (→ "Session Expired")
+      // instead of the kiosk Splash page.
+      window.history.replaceState({}, "Reliv Health", "/h");
     } catch {
       // SecurityError in cross-origin iframes – ignore
     }
