@@ -663,17 +663,20 @@ const allowedOrigins = [
   'https://reliv.vercel.app',
   'https://relivfrontend.vercel.app',
   'https://reliv-frontend-henna.vercel.app',
-  process.env.FRONTEND_URL, // Add your production frontend URL
+  process.env.FRONTEND_URL,   // Production frontend URL (e.g. from FRONTEND_URL env var)
+  process.env.QR_BASE_URL,    // Short/proxy domain used in QR codes (e.g. from QR_BASE_URL env var)
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
+      // Allow requests with no origin (mobile apps, Postman, curl, etc.)
       if (!origin) return callback(null, true);
-      
-      // Allow only specific origins
-      if (allowedOrigins.indexOf(origin) !== -1 || isDev) {
+
+      // Allow any Vercel preview/deployment subdomain for this project
+      const isVercelPreview = /^https:\/\/reliv[a-z0-9-]*\.vercel\.app$/.test(origin);
+
+      if (allowedOrigins.includes(origin) || isVercelPreview || isDev) {
         callback(null, true);
       } else {
         log.warn('Blocked CORS request from:', origin);
@@ -3042,6 +3045,147 @@ app.get("/api/gdrive-folder-image/:folderId", async (req, res) => {
     res.status(500).json({ message: "Error fetching folder image", imageUrl: null });
   }
 });
+// ═══════════════════════════════════════════════════════════════════════════
+// QR SESSION STORE
+// In-memory store keyed by sessionId.
+// Each entry: { customerData: null|object, createdAt: timestamp }
+// NOTE: Replace with Redis/MongoDB for multi-instance deployments.
+// ═══════════════════════════════════════════════════════════════════════════
+const QR_SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+const qrSessions = new Map();
+
+// Periodic cleanup — remove expired sessions every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of qrSessions.entries()) {
+    if (now - session.createdAt > QR_SESSION_TTL_MS) {
+      qrSessions.delete(id);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// ── POST /api/create-qr-session ──────────────────────────────────────────
+// Called by the kiosk (CustomerDetails) when displaying a QR code.
+// Body: { sessionId }
+// Returns: { sessionId, url } — url is the /h?t= link customers scan.
+app.post('/api/create-qr-session', (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+
+    qrSessions.set(sessionId, {
+      customerData: null,
+      createdAt: Date.now(),
+    });
+
+    // Auto-expire the entry after TTL
+    setTimeout(() => qrSessions.delete(sessionId), QR_SESSION_TTL_MS);
+
+    const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const url = `${frontendBase}/h?t=${sessionId}`;
+
+    log.info('QR session created:', sessionId);
+    res.json({ sessionId, url });
+  } catch (err) {
+    log.error('Error in /api/create-qr-session:', err);
+    res.status(500).json({ error: 'Failed to create QR session' });
+  }
+});
+
+// ── POST /api/validate-session ───────────────────────────────────────────
+// Called by the mobile gateway (MobileEntryGateway) when a customer scans.
+// Body: { sessionId }
+// Returns: { valid: true, sessionId } or 404/410.
+app.post('/api/validate-session', (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId || typeof sessionId !== 'string') {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+
+    const session = qrSessions.get(sessionId);
+    if (!session) {
+      return res.status(404).json({ valid: false, reason: 'not_found' });
+    }
+
+    if (Date.now() - session.createdAt > QR_SESSION_TTL_MS) {
+      qrSessions.delete(sessionId);
+      return res.status(410).json({ valid: false, reason: 'expired' });
+    }
+
+    res.json({ valid: true, sessionId });
+  } catch (err) {
+    log.error('Error in /api/validate-session:', err);
+    res.status(500).json({ error: 'Failed to validate session' });
+  }
+});
+
+// ── POST /api/save-customer-data ─────────────────────────────────────────
+// Called by the mobile form (MobileEntry) after the customer submits.
+// Body: { sessionId, customerData }
+// Returns: { ok: true }
+app.post('/api/save-customer-data', (req, res) => {
+  try {
+    const { sessionId, customerData } = req.body;
+
+    if (!sessionId || typeof sessionId !== 'string') {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+    if (!customerData || typeof customerData !== 'object') {
+      return res.status(400).json({ error: 'customerData is required' });
+    }
+
+    const session = qrSessions.get(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found or expired' });
+    }
+
+    if (Date.now() - session.createdAt > QR_SESSION_TTL_MS) {
+      qrSessions.delete(sessionId);
+      return res.status(410).json({ error: 'Session expired' });
+    }
+
+    session.customerData = customerData;
+    log.info('Customer data saved for session:', sessionId);
+    res.json({ ok: true });
+  } catch (err) {
+    log.error('Error in /api/save-customer-data:', err);
+    res.status(500).json({ error: 'Failed to save customer data' });
+  }
+});
+
+// ── POST /api/get-customer-data ──────────────────────────────────────────
+// Polled by the kiosk (CustomerDetails) every 2 s while waiting.
+// Body: { sessionId }
+// Returns: { customerData } (null until the mobile form is submitted)
+app.post('/api/get-customer-data', (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId || typeof sessionId !== 'string') {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+
+    const session = qrSessions.get(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found or expired' });
+    }
+
+    if (Date.now() - session.createdAt > QR_SESSION_TTL_MS) {
+      qrSessions.delete(sessionId);
+      return res.status(410).json({ error: 'Session expired' });
+    }
+
+    res.json({ customerData: session.customerData || null });
+  } catch (err) {
+    log.error('Error in /api/get-customer-data:', err);
+    res.status(500).json({ error: 'Failed to get customer data' });
+  }
+});
+
 // Health check endpoints
 app.get("/", (req, res) => {
   res.json({ 
