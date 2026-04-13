@@ -1986,6 +1986,11 @@ setInterval(() => {
 
 // Called by the kiosk when generating a QR code
 app.post("/api/create-qr-session", (req, res) => {
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'Referrer-Policy': 'no-referrer',
+        'X-Content-Type-Options': 'nosniff',
+    });
     try {
         const { sessionId } = req.body;
         if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
@@ -2012,6 +2017,11 @@ app.post("/api/create-qr-session", (req, res) => {
 
 // Called by the phone when it opens /h?t=<token>
 app.post("/api/validate-session", (req, res) => {
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'Referrer-Policy': 'no-referrer',
+        'X-Content-Type-Options': 'nosniff',
+    });
     try {
         const { token } = req.body;
         if (!token) return res.status(400).json({ error: 'token required' });
