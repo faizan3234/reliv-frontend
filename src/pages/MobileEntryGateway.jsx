@@ -19,7 +19,7 @@ import MobileEntry from "./MobileEntry";
  */
 export default function MobileEntryGateway() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("t") || searchParams.get("sessionId");
+  const token = searchParams.get("t");
 
   const [state, setState] = useState("loading"); // loading | valid | expired | error
   const [sessionId, setSessionId] = useState(null);
@@ -57,17 +57,19 @@ export default function MobileEntryGateway() {
         setState("expired");
       } else {
         // Server error – fall through gracefully
-        fallbackToDirectSession(tkn);
+        gracefullyAcceptToken(tkn);
       }
     } catch {
       // Network error or endpoint doesn't exist yet – graceful fallback
-      fallbackToDirectSession(tkn);
+      gracefullyAcceptToken(tkn);
     }
   }, []);
 
   // Graceful fallback: if backend validation endpoint doesn't exist yet,
-  // treat the token as a sessionId directly (backward-compatible)
-  const fallbackToDirectSession = (tkn) => {
+  // treat the token value as a sessionId directly so the app works
+  // before the backend is updated. In production with a live endpoint
+  // this path should never be reached.
+  const gracefullyAcceptToken = (tkn) => {
     setSessionId(tkn);
     setState("valid");
   };

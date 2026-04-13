@@ -11,7 +11,9 @@ the front-end QR code URL hiding and one-time token validation features.
 if valid, or a 410/404 if expired/already used.
 
 ```js
-// In-memory store (replace with Redis or MongoDB for production)
+// In-memory store — CRITICAL: replace with Redis or MongoDB for production.
+// In-memory storage loses all sessions on server restart and does NOT scale
+// across multiple server instances.
 const qrSessions = new Map();
 // Each entry: { sessionId, createdAt, used: false }
 
@@ -20,8 +22,8 @@ app.post('/api/create-qr-session', (req, res) => {
   const { sessionId } = req.body;
   if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
 
-  // Generate a short opaque token (not the sessionId itself)
-  const token = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  // Generate a cryptographically secure opaque token (full UUID for 122-bit entropy)
+  const token = crypto.randomUUID();
 
   qrSessions.set(token, {
     sessionId,

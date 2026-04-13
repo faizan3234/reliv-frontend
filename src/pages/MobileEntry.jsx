@@ -5,8 +5,9 @@ import { API_BASE } from "../config/api";
 function MobileEntry({ gatewaySessionId }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  // Prefer gatewaySessionId passed from MobileEntryGateway; fall back to query param
-  const sessionId = gatewaySessionId || searchParams.get('sessionId') || searchParams.get('t');
+  // Prefer gatewaySessionId passed from MobileEntryGateway;
+  // fall back to query param only for the legacy /mobile-entry route.
+  const sessionId = gatewaySessionId || searchParams.get('sessionId');
 
   // ── Refs for uncontrolled inputs (no value= prop = mobile keyboard works freely) ──
   const nameRef = useRef(null);
@@ -59,32 +60,37 @@ function MobileEntry({ gatewaySessionId }) {
       // Ignore SecurityError in cross-origin iframes
     }
 
-    // Also clear forward history entries so the user can't navigate forward
-    // to see the original URL in the address bar.
-    const blockNav = () => {
-      try {
-        window.history.replaceState({ reliv: true }, 'Reliv Health', '/');
-      } catch { /* ignore */ }
+    // Block forward-button navigation that would re-expose the original URL,
+    // but only if the user is still on a Reliv-owned history entry.
+    const blockNav = (event) => {
+      // Only intervene if we're on a Reliv-pushed state — don't trap
+      // users who genuinely want to leave the page.
+      if (event.state && event.state.reliv) {
+        try {
+          window.history.replaceState({ reliv: true }, 'Reliv Health', '/');
+        } catch { /* ignore */ }
+      }
     };
     window.addEventListener('popstate', blockNav);
     return () => window.removeEventListener('popstate', blockNav);
   }, []);
 
+  // ── Helper: safely read and parse JSON from a Storage backend ──
+  const tryReadFromStorage = (storage, key) => {
+    try {
+      const raw = storage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
   // ── Helper: read saved customer data from any available storage ──
   const readSavedData = () => {
-    // Try localStorage first (works on most browsers)
-    try {
-      const ls = localStorage.getItem('reliv_customer_data');
-      if (ls) return JSON.parse(ls);
-    } catch { /* localStorage blocked (e.g. Safari private) */ }
-
-    // Fallback: try sessionStorage (still available in private browsing)
-    try {
-      const ss = sessionStorage.getItem('reliv_customer_data');
-      if (ss) return JSON.parse(ss);
-    } catch { /* sessionStorage blocked */ }
-
-    return null;
+    return (
+      tryReadFromStorage(localStorage, 'reliv_customer_data') ||
+      tryReadFromStorage(sessionStorage, 'reliv_customer_data')
+    );
   };
 
   // ── Helper: persist customer data to all available storages ──
