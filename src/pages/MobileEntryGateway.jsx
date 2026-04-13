@@ -56,23 +56,14 @@ export default function MobileEntryGateway() {
         // 410 Gone = token already used, 404 = token not found
         setState("expired");
       } else {
-        // Server error – fall through gracefully
-        gracefullyAcceptToken(tkn);
+        // Server error – treat as expired/invalid
+        setState("expired");
       }
     } catch {
-      // Network error or endpoint doesn't exist yet – graceful fallback
-      gracefullyAcceptToken(tkn);
+      // Network error or endpoint doesn't exist yet
+      setState("expired");
     }
   }, []);
-
-  // Graceful fallback: if backend validation endpoint doesn't exist yet,
-  // treat the token value as a sessionId directly so the app works
-  // before the backend is updated. In production with a live endpoint
-  // this path should never be reached.
-  const gracefullyAcceptToken = (tkn) => {
-    setSessionId(tkn);
-    setState("valid");
-  };
 
   useEffect(() => {
     if (!token) {

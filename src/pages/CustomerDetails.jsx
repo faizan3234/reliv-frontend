@@ -34,6 +34,7 @@ function CustomerDetails() {
   const [sessionId, setSessionId] = useState(null);
   const [qrCodeData, setQrCodeData] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [qrRefreshTimer, setQrRefreshTimer] = useState(null);
 
   // Inactivity timeout is handled globally by KioskGuardian (120s)
   // No per-page timer needed here — avoids conflicting timeouts
@@ -187,22 +188,39 @@ function CustomerDetails() {
     return crypto.randomUUID();
   };
 
-  const startQRMode = () => {
+  const startQRMode = async () => {
     const newSessionId = generateSessionId();
     setSessionId(newSessionId);
     setEntryMode('qr');
-    
-    // Build the QR URL using an optional custom domain (VITE_QR_BASE_URL)
-    // so the real app domain is never exposed in the QR code.
-    // Falls back to current origin if not set.
-    const qrBase = import.meta.env.VITE_QR_BASE_URL || window.location.origin;
-    // Use the short "/h" route with a compact "t" parameter instead of
-    // the descriptive "/mobile-entry?sessionId=..." to obscure the path.
-    const url = `${qrBase}/h?t=${newSessionId}`;
-    setQrCodeData(url);
-    
-    // Start polling for data
-    startPolling(newSessionId);
+    setQrCodeData(null); // Show "Generating..." while fetching token
+
+    try {
+      const res = await fetch(`${API_BASE}/api/create-qr-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: newSessionId }),
+      });
+
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+      const { token } = await res.json();
+
+      const qrBase = import.meta.env.VITE_QR_BASE_URL || window.location.origin;
+      const url = `${qrBase}/h?t=${token}`;
+      setQrCodeData(url);
+
+      // Start polling for customer data with the sessionId (not token)
+      startPolling(newSessionId);
+
+      // Auto-refresh QR before the 10-min backend TTL expires
+      if (qrRefreshTimer) clearTimeout(qrRefreshTimer);
+      const timer = setTimeout(() => startQRMode(), 9 * 60 * 1000); // 9 minutes
+      setQrRefreshTimer(timer);
+    } catch (error) {
+      console.error('Failed to create QR session:', error);
+      // Retry after 2 seconds
+      setTimeout(() => startQRMode(), 2000);
+    }
   };
 
   const startPolling = (sid) => {
@@ -237,18 +255,25 @@ function CustomerDetails() {
       clearInterval(pollingInterval);
       setPollingInterval(null);
     }
+    if (qrRefreshTimer) {
+      clearTimeout(qrRefreshTimer);
+      setQrRefreshTimer(null);
+    }
     setSessionId(null);
     setQrCodeData(null);
   };
 
-  // Cleanup polling on unmount
+  // Cleanup polling and QR refresh timer on unmount
   useEffect(() => {
     return () => {
       if (pollingInterval) {
         clearInterval(pollingInterval);
       }
+      if (qrRefreshTimer) {
+        clearTimeout(qrRefreshTimer);
+      }
     };
-  }, [pollingInterval]);
+  }, [pollingInterval, qrRefreshTimer]);
 
   /* Start QR mode on mount since it's default */
   useEffect(() => {
