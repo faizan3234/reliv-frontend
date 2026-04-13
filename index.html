@@ -66,8 +66,8 @@
     
     <!-- KIOSK SECURITY: Early blocking of dangerous actions before React loads -->
     <script>
-      // Skip ALL kiosk protections on /mobile-entry — that page runs on user phones
-      var isMobileEntryPage = window.location.pathname.startsWith('/mobile-entry');
+      // Skip ALL kiosk protections on /mobile-entry and /h — those pages run on user phones
+      var isMobileEntryPage = window.location.pathname.startsWith('/mobile-entry') || window.location.pathname === '/h';
 
       if (!isMobileEntryPage) {
         // Block right-click globally (even before React mounts)

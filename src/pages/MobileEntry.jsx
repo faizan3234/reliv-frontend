@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
 
-function MobileEntry() {
+function MobileEntry({ gatewaySessionId }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const sessionId = searchParams.get('sessionId');
+  // Prefer gatewaySessionId passed from MobileEntryGateway; fall back to query param
+  const sessionId = gatewaySessionId || searchParams.get('sessionId') || searchParams.get('t');
 
   // ── Refs for uncontrolled inputs (no value= prop = mobile keyboard works freely) ──
   const nameRef = useRef(null);
@@ -47,35 +48,68 @@ function MobileEntry() {
   }, [enterFullscreen]);
 
   // Hide the domain / URL bar content: replace visible URL with clean root path
-  // and set a branded document title so no deployment details are exposed
+  // and set a branded document title so no deployment details are exposed.
+  // Runs on every render path (direct /mobile-entry or via /h gateway).
   useEffect(() => {
     document.title = 'Reliv Health';
     try {
-      window.history.replaceState({}, 'Reliv Health', '/');
-    } catch (e) {
+      // Replace the visible URL so the real domain path isn't in the address bar
+      window.history.replaceState({ reliv: true }, 'Reliv Health', '/');
+    } catch {
       // Ignore SecurityError in cross-origin iframes
     }
+
+    // Also clear forward history entries so the user can't navigate forward
+    // to see the original URL in the address bar.
+    const blockNav = () => {
+      try {
+        window.history.replaceState({ reliv: true }, 'Reliv Health', '/');
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('popstate', blockNav);
+    return () => window.removeEventListener('popstate', blockNav);
   }, []);
+
+  // ── Helper: read saved customer data from any available storage ──
+  const readSavedData = () => {
+    // Try localStorage first (works on most browsers)
+    try {
+      const ls = localStorage.getItem('reliv_customer_data');
+      if (ls) return JSON.parse(ls);
+    } catch { /* localStorage blocked (e.g. Safari private) */ }
+
+    // Fallback: try sessionStorage (still available in private browsing)
+    try {
+      const ss = sessionStorage.getItem('reliv_customer_data');
+      if (ss) return JSON.parse(ss);
+    } catch { /* sessionStorage blocked */ }
+
+    return null;
+  };
+
+  // ── Helper: persist customer data to all available storages ──
+  const persistCustomerData = (data) => {
+    const payload = JSON.stringify(data);
+    try { localStorage.setItem('reliv_customer_data', payload); } catch { /* */ }
+    try { sessionStorage.setItem('reliv_customer_data', payload); } catch { /* */ }
+  };
 
   // ── Load saved data and set into uncontrolled inputs via refs ──
   useEffect(() => {
     if (!sessionId) { navigate('/'); return; }
 
-    const savedData = localStorage.getItem('reliv_customer_data');
-    if (savedData) {
-      try {
-        const d = JSON.parse(savedData);
-        // Set defaultValue via ref .value — works after mount
-        if (nameRef.current && d.name)   nameRef.current.value  = d.name;
-        if (ageRef.current && d.age)     ageRef.current.value   = d.age;
-        if (emailRef.current && d.email) emailRef.current.value = d.email;
-        if (phoneRef.current && d.phone) phoneRef.current.value = d.phone;
-        if (d.gender) setGender(d.gender);
-        if (d.rememberMe !== false) setRememberMe(true);
-        setDataLoaded(true);
-        // Returning user: skip overlay and go straight to the form
-        setShowOverlay(false);
-      } catch (e) { console.error(e); }
+    const d = readSavedData();
+    if (d) {
+      // Set defaultValue via ref .value — works after mount
+      if (nameRef.current && d.name)   nameRef.current.value  = d.name;
+      if (ageRef.current && d.age)     ageRef.current.value   = d.age;
+      if (emailRef.current && d.email) emailRef.current.value = d.email;
+      if (phoneRef.current && d.phone) phoneRef.current.value = d.phone;
+      if (d.gender) setGender(d.gender);
+      if (d.rememberMe !== false) setRememberMe(true);
+      setDataLoaded(true);
+      // Returning user: skip overlay and go straight to the form
+      setShowOverlay(false);
     }
   }, [sessionId, navigate]);
 
@@ -128,10 +162,10 @@ function MobileEntry() {
 
     setIsSubmitting(true);
     try {
-      // Always save to localStorage for auto-fill on next visit
-      localStorage.setItem('reliv_customer_data', JSON.stringify({
+      // Save to all available storages for auto-fill on next visit
+      persistCustomerData({
         ...form, rememberMe: true, lastSaved: new Date().toISOString()
-      }));
+      });
 
       const res = await fetch(`${API_BASE}/api/save-customer-data`, {
         method: 'POST',

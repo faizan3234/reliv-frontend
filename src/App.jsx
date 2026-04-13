@@ -27,6 +27,7 @@ import Report5 from "./pages/Report5.jsx";
 import Team from "./pages/Team.jsx";
 import WellnessRecommendations from "./pages/WellnessRecommendations.jsx";
 import MobileEntry from "./pages/MobileEntry.jsx";
+import MobileEntryGateway from "./pages/MobileEntryGateway.jsx";
 
 export default function App() {
     // Feature flag: toggle medicine dispensing
@@ -62,6 +63,8 @@ export default function App() {
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/team" element={<Team />} />
           <Route path="/mobile-entry" element={<MobileEntry />} />
+          {/* Short obfuscated route for QR code scanning – hides real domain path */}
+          <Route path="/h" element={<MobileEntryGateway />} />
         </Routes>
       </>
     );
