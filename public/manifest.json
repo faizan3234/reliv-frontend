@@ -1,7 +1,7 @@
 {
   "name": "Reliv Health",
   "short_name": "Reliv",
-  "description": "Reliv Health - Your personal health kiosk",
+  "description": "Reliv Health - Your Personal Health Companion",
   "start_url": "/mobile-entry",
   "display": "standalone",
   "orientation": "portrait",

@@ -14,6 +14,11 @@ import React, { useEffect } from 'react';
 
 export default function KioskSafetyManager() {
   useEffect(() => {
+    // Skip ALL kiosk protections on /mobile-entry — that page runs on user phones
+    if (window.location.pathname.startsWith('/mobile-entry')) {
+      return;
+    }
+
     // ============================================
     // 1. DISABLE RIGHT-CLICK (Context Menu)
     // ============================================
