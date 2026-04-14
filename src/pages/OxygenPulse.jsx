@@ -636,7 +636,7 @@ const OxygenPulsePage = () => {
                   ) : (
                     // Oxygen image from assets
                     <div className="relative z-10 flex flex-col items-center justify-center">
-                      <img src={oxygenImg} alt="Oxygen" className="w-68 h-64 md:w-62 md:h-72 object-contain" />
+                      <img src={oxygenImg} alt="Oxygen Measurement" className="relative z-10 w-48 h-48 md:w-56 md:h-56 object-cover rounded-full" />
                     </div>
                   )}
                 </div>
