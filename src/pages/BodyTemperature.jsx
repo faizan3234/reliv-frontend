@@ -338,7 +338,7 @@ const BodyTemperaturePage = () => {
   // ── Proceed ──────────────────────────────────────────────
   const handleProceed = () => {
     update({ vitals: { ...data.vitals, temperature: temperatureF } });
-    navigate("/body-composition");
+    navigate("/payment", { state: { fromPaymentGate: true, cart: [], totalPrice: 0 } });
   };
 
   const canProceed =

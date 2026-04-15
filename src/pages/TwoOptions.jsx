@@ -17,7 +17,7 @@ export default function TwoOptions() {
 
   const handleProceed = () => {
     if (selectedOption === "health-checkup") {
-      navigate("/health-checkup");
+      navigate("/body-composition");
     } else if (selectedOption === "medicine-dispensing") {
       navigate("/medicine-dispensing");
     }

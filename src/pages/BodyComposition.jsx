@@ -313,7 +313,7 @@ const BodyComposition = () => {
         },
       });
       console.log(`✅ Proceeding with Height=${height} cm, Weight=${weight} kg`);
-      navigate("/payment", { state: { fromPaymentGate: true, cart: [], totalPrice: 0 } });
+      navigate("/health-checkup");
     }
   };
 
