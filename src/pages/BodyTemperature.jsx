@@ -521,13 +521,10 @@ const BodyTemperaturePage = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="relative z-10 flex flex-col items-center justify-center">
-                      <img
-                        src={temperatureImg}
-                        alt="Temperature"
-                        className="w-60 h-60 md:w-64 md:h-64 object-contain"
-                      />
-                    </div>
+                    
+<div className="relative z-10 flex flex-col items-center justify-center">
+  <img src={temperatureImg} alt="Temperature Measurement" className="relative z-10 w-48 h-48 md:w-56 md:h-56 object-cover rounded-full" />
+</div>
                   )}
                 </div>
 
