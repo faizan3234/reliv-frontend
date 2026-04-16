@@ -69,7 +69,7 @@ const Splash = ({ onComplete }) => {
  * - No mock data - only real sensor measurements
  */
 const OxygenPulsePage = () => {
-  const { speakText, stop: stopSpeech } = useSpeech();
+  const { stop: stopSpeech } = useSpeech();
   const [oxygen, setOxygen] = useState(null);
   const [bpm, setBpm] = useState(null);
   const [measurementState, setMeasurementState] = useState("idle");
@@ -428,7 +428,6 @@ const OxygenPulsePage = () => {
       setAutoProceeding(true);
       setStatusMessage("✅ Data Recorded! Moving to next step...");
       stopSpeech();
-      speakText("Oxygen and pulse recorded. Moving to eyesight test.");
       update({
         vitals: { ...data.vitals, oxygen, bpm },
       });

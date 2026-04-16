@@ -69,7 +69,7 @@ const Splash = ({ onComplete }) => {
  * - No mock data - only real sensor measurements
  */
 const BloodPressurePage = () => {
-  const { speakText, stop: stopSpeech } = useSpeech();
+  const { stop: stopSpeech } = useSpeech();
   const [systolic, setSystolic] = useState(null);
   const [diastolic, setDiastolic] = useState(null);
   const [measurementState, setMeasurementState] = useState("idle"); // idle, measuring, completed, error
@@ -373,7 +373,6 @@ const BloodPressurePage = () => {
       setAutoProceeding(true);
       setStatusMessage("✅ Data Recorded! Moving to next step...");
       stopSpeech();
-      speakText("Blood pressure recorded. Moving to oxygen check.");
       // Save to context immediately
       update({
         vitals: { ...data.vitals, systolic, diastolic },

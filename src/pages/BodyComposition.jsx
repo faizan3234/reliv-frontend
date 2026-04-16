@@ -56,7 +56,7 @@ const isInternalMessage = (msg) => {
 const COUNTDOWN_SECONDS = 120;
 
 const BodyComposition = () => {
-  const { speak, speakText, stop } = useSpeech();
+  const { speak, stop } = useSpeech();
   // Speak instruction on mount
   useEffect(() => {
     const t = setTimeout(() => speak("body-composition"), 400);
@@ -330,8 +330,7 @@ const BodyComposition = () => {
       setAutoProceeding(true);
       setStatusMessage("✅ Data Recorded! Moving to next step...");
       stop();
-      speakText("Weight and height recorded. Moving to blood pressure.");
-      // Context already saved by onHeightReceivedRef / onWeightReceivedRef
+      // Let next page handle its own speech on mount
       const t = setTimeout(() => navigate("/health-checkup"), 2000);
       return () => clearTimeout(t);
     }

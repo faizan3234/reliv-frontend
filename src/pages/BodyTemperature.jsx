@@ -97,7 +97,7 @@ function getFallbackTemperature() {
 }
 
 const BodyTemperaturePage = () => {
-  const { speakText, stop: stopSpeech } = useSpeech();
+  const { stop: stopSpeech } = useSpeech();
   const [temperatureF, setTemperatureF] = useState(null);
   const [measurementState, setMeasurementState] = useState("idle");
   // idle | measuring | completed | error
@@ -356,7 +356,6 @@ const BodyTemperaturePage = () => {
       setAutoProceeding(true);
       setStatusMessage("✅ Data Recorded! Moving to next step...");
       stopSpeech();
-      speakText("Temperature recorded. All tests done. Moving to payment.");
       update({ vitals: { ...data.vitals, temperature: temperatureF } });
       const t = setTimeout(() => navigate("/payment", { state: { fromPaymentGate: true, cart: [], totalPrice: 0 } }), 2000);
       return () => clearTimeout(t);
