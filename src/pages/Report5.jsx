@@ -1126,7 +1126,7 @@ export default function Report5() {
           </div>
         </motion.div>
 
-        {/* Vital Signs */}
+        {/* Wellness Indicators (derived from vitals — not raw repeats) */}
         {unlock.vitalsTable && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1141,48 +1141,108 @@ export default function Report5() {
             }}
           >
             <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px", color: "#111111" }}>
-              Vital Signs
+              Wellness Indicators
             </h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" }}>
-              <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
-                <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Blood Pressure</div>
-                <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
-                  {systolic && diastolic ? `${systolic}/${diastolic}` : "N/A"}
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: "600", color: bpStatus.color, marginTop: "8px" }}>
-                  {bpStatus.status}
-                </div>
-              </div>
+              {/* Stress Index — derived from HR + BP */}
+              {(() => {
+                const stressScore = (bpm && systolic) ? Math.min(100, Math.max(0, Math.round(
+                  100 - Math.abs(bpm - 72) * 1.2 - Math.abs(systolic - 115) * 0.8
+                ))) : null;
+                const stressLevel = stressScore === null ? { label: "N/A", color: "#888888", tip: "Not enough data" }
+                  : stressScore >= 75 ? { label: "Low Stress", color: "#22c55e", tip: "Your body appears calm and well-regulated" }
+                  : stressScore >= 50 ? { label: "Moderate", color: "#f59e0b", tip: "Some elevation — try deep breathing or a walk" }
+                  : { label: "High Stress", color: "#ef4444", tip: "Elevated markers — consider rest and hydration" };
+                return (
+                  <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
+                    <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Stress Index</div>
+                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
+                      {stressScore !== null ? `${stressScore}/100` : "N/A"}
+                    </div>
+                    <div style={{ fontSize: "14px", fontWeight: "600", color: stressLevel.color, marginTop: "8px" }}>
+                      {stressLevel.label}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#888", marginTop: "4px" }}>{stressLevel.tip}</div>
+                  </div>
+                );
+              })()}
 
-              <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
-                <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Oxygen (SpO₂)</div>
-                <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
-                  {oxygen ? `${oxygen}%` : "N/A"}
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: "600", color: oxygenStatus.color, marginTop: "8px" }}>
-                  {oxygenStatus.status}
-                </div>
-              </div>
+              {/* Cardiovascular Fitness — derived from resting HR + BP range */}
+              {(() => {
+                const cardioScore = (bpm && systolic && diastolic) ? Math.min(100, Math.max(0, Math.round(
+                  100 - (bpm > 100 ? (bpm - 100) * 2 : bpm < 60 ? (60 - bpm) * 1.5 : 0)
+                  - (systolic > 130 ? (systolic - 130) * 1.5 : 0)
+                  - (diastolic > 85 ? (diastolic - 85) * 1.5 : 0)
+                ))) : null;
+                const cardioLevel = cardioScore === null ? { label: "N/A", color: "#888888", tip: "Not enough data" }
+                  : cardioScore >= 80 ? { label: "Excellent", color: "#22c55e", tip: "Strong cardiovascular indicators" }
+                  : cardioScore >= 60 ? { label: "Good", color: "#3b82f6", tip: "Heart and circulation look healthy" }
+                  : cardioScore >= 40 ? { label: "Fair", color: "#f59e0b", tip: "Room for improvement — try regular cardio" }
+                  : { label: "Needs Work", color: "#ef4444", tip: "Consider consulting a doctor" };
+                return (
+                  <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
+                    <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Cardio Fitness</div>
+                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
+                      {cardioScore !== null ? `${cardioScore}/100` : "N/A"}
+                    </div>
+                    <div style={{ fontSize: "14px", fontWeight: "600", color: cardioLevel.color, marginTop: "8px" }}>
+                      {cardioLevel.label}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#888", marginTop: "4px" }}>{cardioLevel.tip}</div>
+                  </div>
+                );
+              })()}
 
-              <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
-                <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Pulse</div>
-                <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
-                  {bpm ? `${bpm} BPM` : "N/A"}
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: "600", color: pulseStatus.color, marginTop: "8px" }}>
-                  {pulseStatus.status}
-                </div>
-              </div>
+              {/* Respiratory Health — derived from SpO2 + resting pulse */}
+              {(() => {
+                const respScore = (oxygen && bpm) ? Math.min(100, Math.max(0, Math.round(
+                  (oxygen - 90) * 10 - (bpm > 90 ? (bpm - 90) * 0.5 : 0)
+                ))) : null;
+                const respLevel = respScore === null ? { label: "N/A", color: "#888888", tip: "Not enough data" }
+                  : respScore >= 80 ? { label: "Excellent", color: "#22c55e", tip: "Lungs are delivering oxygen efficiently" }
+                  : respScore >= 50 ? { label: "Normal", color: "#3b82f6", tip: "Breathing function appears stable" }
+                  : respScore >= 25 ? { label: "Below Average", color: "#f59e0b", tip: "Practice pranayama or deep breathing daily" }
+                  : { label: "Low", color: "#ef4444", tip: "Oxygen delivery may need medical attention" };
+                return (
+                  <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
+                    <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Respiratory Health</div>
+                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
+                      {respScore !== null ? `${respScore}/100` : "N/A"}
+                    </div>
+                    <div style={{ fontSize: "14px", fontWeight: "600", color: respLevel.color, marginTop: "8px" }}>
+                      {respLevel.label}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#888", marginTop: "4px" }}>{respLevel.tip}</div>
+                  </div>
+                );
+              })()}
 
-              <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
-                <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Temperature</div>
-                <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
-                  {temperature ? `${Number(temperature).toFixed(1)}°F` : "N/A"}
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: "600", color: temperatureStatus.color, marginTop: "8px" }}>
-                  {temperatureStatus.status}
-                </div>
-              </div>
+              {/* Recovery Readiness — derived from temp + HR + SpO2 */}
+              {(() => {
+                const recoveryScore = (temperature && bpm && oxygen) ? Math.min(100, Math.max(0, Math.round(
+                  100
+                  - (temperature > 99 ? (temperature - 99) * 15 : temperature < 97 ? (97 - temperature) * 10 : 0)
+                  - (bpm > 85 ? (bpm - 85) * 1.0 : 0)
+                  - (oxygen < 95 ? (95 - oxygen) * 8 : 0)
+                ))) : null;
+                const recoveryLevel = recoveryScore === null ? { label: "N/A", color: "#888888", tip: "Not enough data" }
+                  : recoveryScore >= 80 ? { label: "Ready", color: "#22c55e", tip: "Body is well-rested and ready to perform" }
+                  : recoveryScore >= 55 ? { label: "Moderate", color: "#3b82f6", tip: "Adequate recovery — light activity is fine" }
+                  : recoveryScore >= 30 ? { label: "Low", color: "#f59e0b", tip: "Take it easy — prioritize sleep and hydration" }
+                  : { label: "Rest Needed", color: "#ef4444", tip: "Your body needs rest before exertion" };
+                return (
+                  <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
+                    <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Recovery Readiness</div>
+                    <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
+                      {recoveryScore !== null ? `${recoveryScore}/100` : "N/A"}
+                    </div>
+                    <div style={{ fontSize: "14px", fontWeight: "600", color: recoveryLevel.color, marginTop: "8px" }}>
+                      {recoveryLevel.label}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#888", marginTop: "4px" }}>{recoveryLevel.tip}</div>
+                  </div>
+                );
+              })()}
             </div>
           </motion.div>
         )}
