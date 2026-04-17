@@ -32,6 +32,18 @@ sudo apt install -y nodejs npm
 sudo apt install -y chromium-browser
 ```
 
+### **3b. Install TTS Engine (Required for Voice/Speech)**
+```bash
+sudo apt install -y espeak-ng speech-dispatcher
+# Verify it works:
+espeak-ng "Hello from Reliv"
+# If no sound, check audio output:
+aplay -l
+# Set volume to max:
+amixer set Master 100% unmute
+amixer set PCM 100% unmute
+```
+
 ### **4. Clone Project**
 ```bash
 cd ~
@@ -76,6 +88,8 @@ sleep 3
 killall chromium-browser 2>/dev/null || true
 sleep 1
 export DISPLAY=:0
+export PULSE_SERVER=unix:/run/user/1000/pulse/native
+export XDG_RUNTIME_DIR=/run/user/1000
 chromium-browser \
   --kiosk \
   --no-first-run \
@@ -85,6 +99,8 @@ chromium-browser \
   --enable-smooth-scrolling \
   --enable-gpu \
   --enable-hardware-video-decode \
+  --autoplay-policy=no-user-gesture-required \
+  --enable-speech-dispatcher \
   http://localhost:4173
 EOF
 

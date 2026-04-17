@@ -207,7 +207,7 @@ function CustomerDetails() {
 
       const { token } = await res.json();
 
-      const qrBase = import.meta.env.VITE_QR_BASE_URL || window.location.origin;
+      const qrBase = import.meta.env.VITE_QR_BASE_URL || "https://mail-request-m33c.vercel.app";
       const url = `${qrBase}/h?t=${token}`;
       setQrCodeData(url);
 

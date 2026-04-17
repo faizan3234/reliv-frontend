@@ -11,6 +11,7 @@ import VirtualKeyboard from "../components/VirtualKeyboard";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { sanitizeError } from "../utils/errorSanitizer";
 import { useSpeech } from "../context/SpeechContext";
+import ChallengePrompt from "../components/ChallengePrompt";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -424,6 +425,21 @@ export default function Report5() {
   const navigate = useNavigate();
 
   const userName = getFirstName(patient);
+  const [showChallengePrompt, setShowChallengePrompt] = useState(false);
+
+  // Compute body score for challenge prompt
+  const bodyScore = useMemo(() => {
+    if (!vitals?.weight || !patient?.age || !patient?.gender || !vitals?.height || !vitals?.impedance) return null;
+    const sex = patient.gender.toLowerCase() === "male" ? 1 : 0;
+    return Math.round(bodyCompositionUtils.calc_body_score(vitals.weight, vitals.height, sex, patient.age, vitals.impedance));
+  }, [vitals, patient]);
+
+  const metabolicAge = useMemo(() => {
+    if (!vitals?.weight || !patient?.age || !patient?.gender || !vitals?.height) return null;
+    const sex = patient.gender.toLowerCase() === "male" ? 1 : 0;
+    const bmr = bodyCompositionUtils.calc_bmr(vitals.weight, vitals.height, sex, patient.age);
+    return Math.round(bodyCompositionUtils.calc_metabolic_age(bmr, patient.age, sex));
+  }, [vitals, patient]);
 
   // Helper function to handle navigation - checks for pending kits
   const handleReturnHome = () => {
@@ -509,7 +525,7 @@ export default function Report5() {
         else if (worstEye <= 8) text += ` Your eyesight is fair. Consider glasses or eye exercises.`;
         else text += ` Your eyesight is good. Keep it up.`;
       }
-      text += ` Do you need glasses? Or just more sleep? Is your BP normal? Or a warning? Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A free checkup is waiting for you.`;
+      text += ` Do you need glasses? Or just more sleep? Is your BP normal? Or a warning? Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A new checkup is waiting for you. Now scroll down, click on send to mail. Your full report will be emailed to you in simple language. You can also challenge a friend or your partner to see who's healthier. Loser posts on their story! Also you can check out the wellness kits. Curated just for you based on your results.`;
       speakText(text);
     }, 400);
     return () => { clearTimeout(timer); stop(); };
@@ -2537,6 +2553,23 @@ export default function Report5() {
               >
                 🎁 Wellness Picks for You
               </button>
+
+              <button
+                onClick={() => setShowChallengePrompt(true)}
+                style={{
+                  background: "linear-gradient(135deg, #F97316, #ea580c)",
+                  color: "white",
+                  fontWeight: "600",
+                  fontSize: "16px",
+                  padding: "14px 32px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(249, 115, 22, 0.3)",
+                }}
+              >
+                ⚔️ Challenge a Friend
+              </button>
             </motion.div>
 
             {/* Send to Doctor */}
@@ -2632,6 +2665,17 @@ export default function Report5() {
             }} 
           />
         )}
+
+        {/* Challenge a Friend / Couple modal */}
+        <ChallengePrompt
+          open={showChallengePrompt}
+          onClose={() => setShowChallengePrompt(false)}
+          userName={userName}
+          score={bodyScore}
+          metabolicAge={metabolicAge}
+          gender={patient?.gender}
+          email={patient?.email}
+        />
       </div>
     </div>
   );

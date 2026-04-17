@@ -6,6 +6,9 @@ import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import Confetti from "react-confetti";
 import { useSpeech } from "../context/SpeechContext";
+import ChallengeComparison from "../components/ChallengeComparison";
+import { supabase } from "../config/supabase";
+import { QRCodeSVG } from "qrcode.react";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -38,6 +41,23 @@ const Report1 = () => {
 
   const userName = getFirstName(patient);
   const scanCount = (data.history?.length || 0) + 1;
+
+  // Leaderboard opt-in state
+  const [lbPrompt, setLbPrompt] = useState("idle"); // idle | qr | done | skipped | not_qualified
+  const [lbSessionId] = useState(() => `lb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const QR_BASE = import.meta.env.VITE_QR_BASE_URL || "https://mail-request-m33c.vercel.app";
+
+  // Challenge state
+  const [showChallenge, setShowChallenge] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("reliv_challenge");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.expiresAt > Date.now()) setShowChallenge(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const bodyScoreData = useMemo(() => {
     if (
@@ -327,6 +347,15 @@ const Report1 = () => {
   return (
     <div className="h-screen bg-white overflow-y-auto scrollable-container">
       {showConfetti && <Confetti />}
+
+      {/* Challenge / Couple comparison overlay */}
+      {showChallenge && bodyScoreData.score !== null && (
+        <ChallengeComparison
+          challengerB_Name={userName}
+          challengerB_Score={bodyScoreData.score}
+          onContinue={() => setShowChallenge(false)}
+        />
+      )}
       <div className="w-full max-w-4xl mx-auto px-6 py-3">
         <div className="flex flex-col items-center mb-3">
           <Logo className="mb-2" size="text-2xl" />
@@ -495,6 +524,142 @@ const Report1 = () => {
                   ))}
                 </ul>
               </div>
+            )}
+
+            {/* ── Leaderboard Opt-In ── */}
+            {lbPrompt === "idle" && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="w-full max-w-md mt-10 bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-lg"
+              >
+                <div className="text-3xl mb-2">🏆</div>
+                <h3 className="text-gray-900 text-lg font-bold mb-1">
+                  Campus Leaderboard
+                </h3>
+                <p className="text-gray-500 text-sm mb-5">
+                  Want your score on the leaderboard? Your name & score will be displayed on the kiosk.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={async () => {
+                      const userScore = bodyScoreData.score || 0;
+                      if (supabase) {
+                        try {
+                          const { data: top7 } = await supabase
+                            .from("leaderboard")
+                            .select("score")
+                            .order("score", { ascending: false })
+                            .limit(7);
+
+                          const minTop7 = top7 && top7.length >= 7
+                            ? top7[top7.length - 1].score
+                            : 0;
+
+                          if (userScore < minTop7) {
+                            setLbPrompt("not_qualified");
+                            return;
+                          }
+
+                          await supabase.from("leaderboard").upsert({
+                            session_id: lbSessionId,
+                            name: patient?.name || userName,
+                            email: patient?.email || "",
+                            score: userScore,
+                            scan_count: scanCount,
+                            photo_path: null,
+                          }, { onConflict: "email" });
+
+                          setLbPrompt("qr");
+                        } catch (err) {
+                          console.error("Leaderboard save error:", err);
+                          setLbPrompt("qr");
+                        }
+                      } else {
+                        setLbPrompt("qr");
+                      }
+                    }}
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-6 py-3 rounded-xl text-sm"
+                  >
+                    Yes, add me! 🔥
+                  </button>
+                  <button
+                    onClick={() => setLbPrompt("skipped")}
+                    className="bg-gray-100 text-gray-500 font-medium px-6 py-3 rounded-xl text-sm border border-gray-200"
+                  >
+                    Nah, skip
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Not in top 7 */}
+            {lbPrompt === "not_qualified" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="w-full max-w-md mt-6 bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-lg"
+              >
+                <div className="text-3xl mb-2">💪</div>
+                <h3 className="text-gray-900 text-base font-bold mb-1">Almost there!</h3>
+                <p className="text-gray-500 text-sm mb-3">
+                  The top 7 have higher scores right now. Come back after improving your health — you've got this!
+                </p>
+                <button
+                  onClick={() => setLbPrompt("skipped")}
+                  className="bg-gray-100 text-gray-500 font-medium px-6 py-2.5 rounded-xl text-sm border border-gray-200"
+                >
+                  Got it →
+                </button>
+              </motion.div>
+            )}
+
+            {/* ── QR Code for Photo Upload ── */}
+            {lbPrompt === "qr" && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full max-w-md mt-6 bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-lg"
+              >
+                <h3 className="text-gray-900 text-lg font-bold mb-1">
+                  📸 Add Your Photo
+                </h3>
+                <p className="text-gray-500 text-sm mb-4">
+                  Scan this QR with your phone to upload a photo for the leaderboard
+                </p>
+                <div className="bg-gray-50 rounded-xl p-3 inline-block mb-4 border border-gray-100">
+                  <QRCodeSVG
+                    value={`${QR_BASE}/photo-upload?sid=${lbSessionId}&name=${encodeURIComponent(userName)}`}
+                    size={180}
+                    level="M"
+                  />
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => setLbPrompt("done")}
+                    className="bg-green-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
+                  >
+                    Done ✓
+                  </button>
+                  <button
+                    onClick={() => setLbPrompt("done")}
+                    className="bg-gray-100 text-gray-500 font-medium px-6 py-2.5 rounded-xl text-sm border border-gray-200"
+                  >
+                    Skip photo
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {lbPrompt === "done" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-6 text-center"
+              >
+                <span className="text-green-500 text-lg font-semibold">✓ You're on the leaderboard!</span>
+              </motion.div>
             )}
 
             <motion.button

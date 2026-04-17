@@ -12,6 +12,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@serialport/parser-readline": "^13.0.0",
+    "@supabase/supabase-js": "^2.103.3",
     "@tippyjs/react": "^4.2.6",
     "axios": "^1.11.0",
     "bull": "^4.16.5",

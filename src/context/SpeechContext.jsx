@@ -18,7 +18,7 @@ const DEFAULT_CONFIG = {
   "report-2": "Your overall status. Green, yellow, or red.",
   "report-3": "This graph grows as you visit. Come back tomorrow. New insights unlock.",
   "report-4": "Your eyesight assessment is complete.",
-  "report-5": "Here are all your numbers in one place. But more importantly, here is what they mean in simple human language. Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A free checkup is waiting for you.",
+  "report-5": "Here are all your numbers in one place. But more importantly, here is what they mean in simple human language. Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A free checkup is waiting for you. Scroll down. Your full report will be emailed to you. You can also challenge a friend or your partner to see who's healthier. Loser posts on their story! And check out the wellness kits curated just for you.",
   "wellness-recommendations": "Your personalized advice is on screen. Eat this. Do that. Avoid this. No doctor terms. Just simple steps.",
   checkout: "Review your health kits and proceed to checkout when ready.",
   payment: "That's all the free tests. Now for just 17 rupees, less than a Coke or a cigarette, I will translate everything into simple human language. No doctor terms. Just eat this, do that, avoid this. Plus a 7-day graph. Plus free checkups for 6 more days. Scan QR code. GPay, PhonePe, Paytm. Or insert 17 rupees cash, exact change.",
@@ -97,9 +97,13 @@ export function SpeechProvider({ children }) {
           (v) => v.lang.startsWith("en") && (v.name.includes("Female") || v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Zira"))
         );
       }
-      // Fallback: any English voice
+      // Fallback: any English voice (covers Linux espeak-ng voices like "English (Great Britain)")
       if (!preferred) {
         preferred = voices.find((v) => v.lang.startsWith("en"));
+      }
+      // Last resort: use any available voice at all (Pi may only have one)
+      if (!preferred && voices.length > 0) {
+        preferred = voices[0];
       }
       if (preferred) utterance.voice = preferred;
 
@@ -159,6 +163,25 @@ export function SpeechProvider({ children }) {
     loadVoices();
     window.speechSynthesis?.addEventListener?.("voiceschanged", loadVoices);
     return () => window.speechSynthesis?.removeEventListener?.("voiceschanged", loadVoices);
+  }, []);
+
+  // ── Warm-up speech engine on first user gesture (needed on Linux/Pi) ──
+  useEffect(() => {
+    const warmUp = () => {
+      if (!window.speechSynthesis) return;
+      const silent = new SpeechSynthesisUtterance("");
+      silent.volume = 0;
+      window.speechSynthesis.speak(silent);
+      // Remove listeners after first gesture
+      document.removeEventListener("click", warmUp);
+      document.removeEventListener("touchstart", warmUp);
+    };
+    document.addEventListener("click", warmUp, { once: true });
+    document.addEventListener("touchstart", warmUp, { once: true });
+    return () => {
+      document.removeEventListener("click", warmUp);
+      document.removeEventListener("touchstart", warmUp);
+    };
   }, []);
 
   return (

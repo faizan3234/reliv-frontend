@@ -2,28 +2,81 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
+import CampusLeaderboard from "../components/CampusLeaderboard";
+import { AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
+
+const LB_SPEECH = "Take a moment to appreciate our campus health heroes. These students took charge of their health. Can you beat them? Step up to the Reliv kiosk!";
+const IDLE_SPEECH_DEFAULT = "Free weight. Free BP. Free oxygen. A full report with simple human advice, just 17 rupees. Less than a Coke. Step up. Let me help you.";
 
 const Splash = () => {
   const navigate = useNavigate();
   const { speak, speakText, stop, config } = useSpeech();
   const idleInterval = useRef(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const lbCycleRef = useRef(null);
+  const lbHideTimer = useRef(null);
+  const refreshTimer = useRef(null);
 
-  // Speak splash text on mount, then start idle loop every 30s
+  // Speak welcome on mount
   useEffect(() => {
     const initialTimer = setTimeout(() => speak("splash"), 400);
+    return () => { clearTimeout(initialTimer); stop(); };
+  }, [speak, stop]);
 
-    // Idle loop: repeat attract message every 30 seconds
-    idleInterval.current = setInterval(() => {
-      const idleText = config["idle-loop"] || "Free weight. Free BP. Free oxygen. A full report with simple human advice, just 17 rupees. Less than a Coke. Step up. Let me help you.";
-      speakText(idleText);
-    }, 30000);
-
-    return () => {
-      clearTimeout(initialTimer);
+  // Idle speech loop — only when leaderboard is NOT showing
+  useEffect(() => {
+    if (showLeaderboard) {
+      // Leaderboard is up — stop idle speech, play leaderboard speech
       clearInterval(idleInterval.current);
       stop();
+      const t = setTimeout(() => {
+        speakText(LB_SPEECH);
+      }, 600);
+      return () => clearTimeout(t);
+    } else {
+      // Leaderboard dismissed — play idle speech, start loop
+      const startDelay = setTimeout(() => {
+        const idleText = config["idle-loop"] || IDLE_SPEECH_DEFAULT;
+        speakText(idleText);
+      }, 800);
+
+      idleInterval.current = setInterval(() => {
+        const idleText = config["idle-loop"] || IDLE_SPEECH_DEFAULT;
+        speakText(idleText);
+      }, 30000);
+
+      return () => {
+        clearTimeout(startDelay);
+        clearInterval(idleInterval.current);
+      };
+    }
+  }, [showLeaderboard, speakText, stop, config]);
+
+  // Leaderboard rotation: show after 45s, then every 45s for 20s
+  useEffect(() => {
+    const startCycle = () => {
+      setShowLeaderboard(true);
+      lbHideTimer.current = setTimeout(() => setShowLeaderboard(false), 20000);
     };
-  }, [speak, speakText, stop, config]);
+
+    const firstShow = setTimeout(startCycle, 45000);
+
+    lbCycleRef.current = setInterval(startCycle, 65000); // 45s wait + 20s show = 65s cycle
+
+    return () => {
+      clearTimeout(firstShow);
+      clearTimeout(lbHideTimer.current);
+      clearInterval(lbCycleRef.current);
+    };
+  }, []);
+
+  // Auto-refresh page every 2 minutes to reset everything
+  useEffect(() => {
+    refreshTimer.current = setTimeout(() => {
+      window.location.reload();
+    }, 120000);
+    return () => clearTimeout(refreshTimer.current);
+  }, []);
   const [sliding, setSliding] = useState(false);
   const [textVisible, setTextVisible] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -74,7 +127,26 @@ const Splash = () => {
   };
 
   return (
-    <>      <div className="h-screen bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container">
+    <>
+      {/* Leaderboard rotation overlay — tap anywhere to dismiss instantly */}
+      <AnimatePresence>
+        {showLeaderboard && (
+          <div
+            onClick={() => {
+              clearTimeout(lbHideTimer.current);
+              setShowLeaderboard(false);
+            }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              cursor: "pointer", background: "transparent",
+            }}
+          >
+            <CampusLeaderboard overlay={true} />
+          </div>
+        )}
+      </AnimatePresence>
+
+      <div className="h-screen bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container">
         <div className="w-full min-h-screen relative overflow-hidden">
 
           {/* TOP WAVE */}

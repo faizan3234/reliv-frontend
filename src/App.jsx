@@ -30,6 +30,7 @@ import MobileEntry from "./pages/MobileEntry.jsx";
 import MobileEntryGateway from "./pages/MobileEntryGateway.jsx";
 import SpeechAdmin from "./pages/SpeechAdmin.jsx";
 import SpeechControl from "./components/SpeechControl.jsx";
+import PhotoUpload from "./pages/PhotoUpload.jsx";
 
 export default function App() {
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
@@ -42,6 +43,7 @@ export default function App() {
         <Routes>
           <Route path="/h" element={<MobileEntryGateway />} />
           <Route path="/mobile-entry" element={<MobileEntry />} />
+          <Route path="/photo-upload" element={<PhotoUpload />} />
           {/* Everything else → Session Expired (MobileEntryGateway with no token) */}
           <Route path="*" element={<MobileEntryGateway />} />
         </Routes>
@@ -80,6 +82,7 @@ export default function App() {
           <Route path="/team" element={<Team />} />
           <Route path="/mobile-entry" element={<MobileEntry />} />
           <Route path="/h" element={<MobileEntryGateway />} />
+          <Route path="/photo-upload" element={<PhotoUpload />} />
           <Route path="/admin-x7k9/speech" element={<SpeechAdmin />} />
         </Routes>
       </>

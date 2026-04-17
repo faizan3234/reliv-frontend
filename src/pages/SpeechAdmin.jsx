@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
+import { supabase, LEADERBOARD_BUCKET } from "../config/supabase";
 
 /* ─── Page registry ─── */
 const PAGE_KEYS = [
@@ -48,7 +49,7 @@ const DEFAULT_TEXTS = {
   "report-2": "Your overall status. Green, yellow, or red.",
   "report-3": "This graph grows as you visit. Come back tomorrow. New insights unlock.",
   "report-4": "Your eyesight assessment is complete.",
-  "report-5": "Here are all your numbers in one place. But more importantly, here is what they mean in simple human language. Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A free checkup is waiting for you.",
+  "report-5": "Here are all your numbers in one place. But more importantly, here is what they mean in simple human language. Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A free checkup is waiting for you. Scroll down. Your full report will be emailed to you. You can also challenge a friend or your partner to see who's healthier. Loser posts on their story! And check out the wellness kits curated just for you.",
   "wellness-recommendations": "Your personalized advice is on screen. Eat this. Do that. Avoid this. No doctor terms. Just simple steps.",
   checkout: "Review your health kits and proceed to checkout when ready.",
   payment: "That's all the free tests. Now for just 17 rupees, less than a Coke or a cigarette, I will translate everything into simple human language. No doctor terms. Just eat this, do that, avoid this. Plus a 7-day graph. Plus free checkups for 6 more days. Scan QR code. GPay, PhonePe, Paytm. Or insert 17 rupees cash, exact change.",
@@ -192,6 +193,163 @@ function detectPageKey(text) {
     if (lower.includes(label.toLowerCase().split("/")[0].trim().slice(0, 10))) return key;
   }
   return null;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Leaderboard Admin Panel — inline component
+   Shows all leaderboard entries with photos, admin can delete
+   ═══════════════════════════════════════════════════════════ */
+function LeaderboardAdminPanel() {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (expanded) fetchEntries();
+  }, [expanded]);
+
+  async function fetchEntries() {
+    if (!supabase) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("leaderboard")
+        .select("*")
+        .order("score", { ascending: false });
+      if (error) throw error;
+
+      const withPhotos = (data || []).map((entry) => {
+        let photoUrl = null;
+        if (entry.photo_path) {
+          const { data: urlData } = supabase.storage
+            .from(LEADERBOARD_BUCKET)
+            .getPublicUrl(entry.photo_path);
+          photoUrl = urlData?.publicUrl || null;
+        }
+        return { ...entry, photoUrl };
+      });
+      setEntries(withPhotos);
+    } catch (err) {
+      console.error("Leaderboard fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete(entry) {
+    if (!supabase) return;
+    const confirmed = window.confirm(`Delete ${entry.name} (score: ${entry.score}) from the leaderboard?`);
+    if (!confirmed) return;
+
+    setDeleting(entry.id);
+    try {
+      // Delete photo from storage if exists
+      if (entry.photo_path) {
+        await supabase.storage.from(LEADERBOARD_BUCKET).remove([entry.photo_path]);
+      }
+      // Delete row
+      const { error } = await supabase.from("leaderboard").delete().eq("id", entry.id);
+      if (error) throw error;
+      setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete. Check console.");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+      <button
+        onClick={() => setExpanded((p) => !p)}
+        className="w-full flex items-center justify-between"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🏆</span>
+          <h2 className="font-bold text-gray-800 text-sm">Leaderboard Manager</h2>
+          <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+            {expanded ? entries.length + " entries" : "tap to expand"}
+          </span>
+        </div>
+        <span className="text-gray-400 text-lg">{expanded ? "▲" : "▼"}</span>
+      </button>
+
+      {expanded && (
+        <div className="mt-4 space-y-2">
+          {loading ? (
+            <div className="text-center py-6">
+              <div className="w-8 h-8 border-3 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-gray-400 text-xs">Loading leaderboard...</p>
+            </div>
+          ) : entries.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-4">No entries on the leaderboard yet.</p>
+          ) : (
+            <>
+              <p className="text-[10px] text-gray-400 mb-2">
+                {entries.length} total entries. Click 🗑️ to remove someone from the leaderboard.
+              </p>
+              {entries.map((entry, i) => (
+                <div
+                  key={entry.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                    deleting === entry.id ? "opacity-50 border-red-200 bg-red-50" : "border-gray-100 bg-gray-50 hover:bg-gray-100"
+                  }`}
+                >
+                  {/* Rank */}
+                  <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
+                    {i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}
+                  </div>
+
+                  {/* Photo */}
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0 border border-gray-300">
+                    {entry.photoUrl ? (
+                      <img src={entry.photoUrl} alt={entry.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-lg">🧑</div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-800 text-sm truncate">{entry.name}</span>
+                      <span className="font-mono text-xs font-bold" style={{
+                        color: entry.score >= 80 ? "#16a34a" : entry.score >= 60 ? "#ea580c" : "#dc2626"
+                      }}>
+                        {entry.score}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-gray-400 truncate">
+                      {entry.department || "—"} • {entry.email || "no email"}
+                      {entry.scan_count > 1 && ` • ${entry.scan_count} scans`}
+                    </div>
+                  </div>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => handleDelete(entry)}
+                    disabled={deleting === entry.id}
+                    className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-100 hover:text-red-600 active:bg-red-200 transition-all border border-transparent hover:border-red-200"
+                    title={`Delete ${entry.name}`}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={fetchEntries}
+                className="w-full py-2 rounded-xl text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 transition mt-2"
+              >
+                🔄 Refresh
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function SpeechAdmin() {
@@ -499,6 +657,9 @@ export default function SpeechAdmin() {
               <p className="text-[9px] text-gray-400 mt-2">{availableVoices.length} English voices available on this device</p>
             )}
           </div>
+
+          {/* ─── Leaderboard Admin Panel ─── */}
+          <LeaderboardAdminPanel />
 
           {/* ─── Page Reference + Upload Format Guide ─── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
