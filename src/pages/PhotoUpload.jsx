@@ -161,13 +161,13 @@ export default function PhotoUpload() {
 
   // ── Crop to canvas & upload ──
   const cropAndUpload = async () => {
-    if (!imgSrc || !rawFile || !supabase || !sessionId || expired) return;
+    if (!imgSrc || !rawFile || !sessionId || expired) return;
+    if (!supabase) { setError("Connection error. Please try again."); return; }
     setUploading(true);
     setError(null);
 
     try {
       const img = new Image();
-      img.crossOrigin = "anonymous";
       await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = imgSrc; });
 
       const canvas = canvasRef.current || document.createElement("canvas");
@@ -194,6 +194,7 @@ export default function PhotoUpload() {
       );
 
       const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.85));
+      if (!blob) throw new Error("Could not process image");
       const filePath = `${sessionId}_${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage

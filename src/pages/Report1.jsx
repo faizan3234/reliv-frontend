@@ -544,22 +544,25 @@ const Report1 = () => {
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={async () => {
-                      const userScore = bodyScoreData.score || 0;
+                      const userScore = bodyScoreData.score ?? 0;
                       if (supabase) {
                         try {
-                          const { data: top7 } = await supabase
-                            .from("leaderboard")
-                            .select("score")
-                            .order("score", { ascending: false })
-                            .limit(7);
+                          // Only check top-7 qualification if user has a real score
+                          if (userScore > 0) {
+                            const { data: top7 } = await supabase
+                              .from("leaderboard")
+                              .select("score")
+                              .order("score", { ascending: false })
+                              .limit(7);
 
-                          const minTop7 = top7 && top7.length >= 7
-                            ? top7[top7.length - 1].score
-                            : 0;
+                            const minTop7 = top7 && top7.length >= 7
+                              ? top7[top7.length - 1].score
+                              : 0;
 
-                          if (userScore < minTop7) {
-                            setLbPrompt("not_qualified");
-                            return;
+                            if (userScore < minTop7) {
+                              setLbPrompt("not_qualified");
+                              return;
+                            }
                           }
 
                           await supabase.from("leaderboard").upsert({

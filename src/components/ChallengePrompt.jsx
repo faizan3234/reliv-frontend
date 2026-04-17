@@ -16,7 +16,7 @@ export default function ChallengePrompt({ open, onClose, userName, score, metabo
     const challengeData = {
       mode: mode,
       challengerName: userName || "Anonymous",
-      challengerScore: score,
+      challengerScore: score ?? 0,
       challengerMetabolicAge: metabolicAge,
       challengerGender: gender,
       challengerEmail: email,
@@ -74,7 +74,7 @@ export default function ChallengePrompt({ open, onClose, userName, score, metabo
                   Who's checking next?
                 </h2>
                 <p style={{ color: "#6b7280", fontSize: 15, marginBottom: 32 }}>
-                  Your score is locked in: <span style={{ color: "#F97316", fontWeight: 700 }}>{score}/100</span>
+                  Your score is locked in: <span style={{ color: "#F97316", fontWeight: 700 }}>{score ?? 0}/100</span>
                 </p>
 
                 <div style={{ display: "flex", gap: 16, justifyContent: "center", marginBottom: 24 }}>
@@ -141,7 +141,7 @@ export default function ChallengePrompt({ open, onClose, userName, score, metabo
                   borderRadius: 12, padding: "12px 20px", margin: "20px 0",
                   color: "#ea580c", fontSize: 14, fontWeight: 600,
                 }}>
-                  {userName}'s Score: {score}/100 — Locked In ✓
+                  {userName}'s Score: {score ?? 0}/100 — Locked In ✓
                 </div>
 
                 <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
