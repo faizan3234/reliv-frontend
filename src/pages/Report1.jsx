@@ -349,10 +349,10 @@ const Report1 = () => {
       {showConfetti && <Confetti />}
 
       {/* Challenge / Couple comparison overlay */}
-      {showChallenge && bodyScoreData.score !== null && (
+      {showChallenge && (
         <ChallengeComparison
           challengerB_Name={userName}
-          challengerB_Score={bodyScoreData.score}
+          challengerB_Score={bodyScoreData.score ?? 0}
           onContinue={() => setShowChallenge(false)}
         />
       )}
