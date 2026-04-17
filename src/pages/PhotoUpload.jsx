@@ -162,7 +162,7 @@ export default function PhotoUpload() {
   // ── Crop to canvas & upload ──
   const cropAndUpload = async () => {
     if (!imgSrc || !rawFile || !sessionId || expired) return;
-    if (!supabase) { setError("Connection error. Please try again."); return; }
+    if (!supabase) { setError("Connection error — Supabase not configured."); return; }
     setUploading(true);
     setError(null);
 
@@ -194,30 +194,53 @@ export default function PhotoUpload() {
       );
 
       const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.85));
-      if (!blob) throw new Error("Could not process image");
+      if (!blob) throw new Error("Could not process image — please pick a different photo.");
       const filePath = `${sessionId}_${Date.now()}.jpg`;
 
+      // Step 1: Upload photo to storage
       const { error: uploadError } = await supabase.storage
         .from(LEADERBOARD_BUCKET)
         .upload(filePath, blob, { cacheControl: "3600", upsert: false, contentType: "image/jpeg" });
-      if (uploadError) throw uploadError;
+      if (uploadError) throw new Error(`Photo upload failed: ${uploadError.message}`);
 
-      // Update photo_path + instagram in one call
+      // Step 2: Check if leaderboard row exists for this session
+      const { data: existingRow } = await supabase
+        .from("leaderboard")
+        .select("id")
+        .eq("session_id", sessionId)
+        .maybeSingle();
+
       const updateData = { photo_path: filePath };
       const cleanIg = igUsername.trim().replace(/^@/, "");
       if (cleanIg) updateData.instagram = cleanIg;
 
-      const { error: updateError } = await supabase
-        .from("leaderboard")
-        .update(updateData)
-        .eq("session_id", sessionId);
-      if (updateError) throw updateError;
+      if (existingRow) {
+        // Row exists — update it
+        const { error: updateError } = await supabase
+          .from("leaderboard")
+          .update(updateData)
+          .eq("session_id", sessionId);
+        if (updateError) throw new Error(`Save failed: ${updateError.message}`);
+      } else {
+        // Row doesn't exist — create it with photo + instagram
+        const { error: insertError } = await supabase
+          .from("leaderboard")
+          .insert({
+            session_id: sessionId,
+            name: userName || "User",
+            email: "",
+            score: 0,
+            photo_path: filePath,
+            ...(cleanIg ? { instagram: cleanIg } : {}),
+          });
+        if (insertError) throw new Error(`Save failed: ${insertError.message}`);
+      }
 
       try { localStorage.setItem(SESSION_KEY_PREFIX + sessionId, "1"); } catch { /* */ }
       setDone(true);
     } catch (err) {
       console.error("Upload error:", err);
-      setError("Upload failed. Please try again.");
+      setError(err.message || "Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
