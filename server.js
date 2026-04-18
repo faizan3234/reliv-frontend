@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import crypto from "crypto";
 import fs from "fs/promises";
+import { readFileSync } from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
 import { google } from "googleapis";
@@ -15,6 +16,15 @@ import mqtt from "mqtt";
 
 // Load environment variables
 dotenv.config();
+
+// ── Load Reliv logo for PDF reports ──
+let RELIV_LOGO_BUFFER = null;
+try {
+    const logoPath = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1')), 'src', 'assets', 'relivlogo.jpeg');
+    RELIV_LOGO_BUFFER = readFileSync(logoPath);
+} catch {
+    try { RELIV_LOGO_BUFFER = readFileSync('src/assets/relivlogo.jpeg'); } catch { /* logo will be drawn programmatically */ }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GLOBAL ERROR HANDLERS - Prevent crashes from unhandled errors
@@ -917,72 +927,111 @@ const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
 // Flag to track if Google Drive is available
 let googleDriveAvailable = false;
 function assessBP(sys, dia) {
-    const s = Number(sys),
-        d = Number(dia);
-    if (!s || !d) return { label: "—", advice: "No BP values provided." };
-    if (s < 100 || d < 65)
-        return {
-            label: "Low",
-            advice: "May cause tiredness or dizziness. Try drinking water, coconut water, or adding a pinch of salt if not restricted.",
-        };
-    if (s >= 110 && s < 131 && d >= 72 && d < 89)
-        return { label: "Normal", advice: "Healthy and considered normal for most Indians." };
-    return { label: "High", advice: "May mean stress or extra salt in diet. Reduce salt, eat fruits/veggies, practice deep breathing." };
+    const s = Number(sys), d = Number(dia);
+    if (!s || !d) return { label: "—", advice: "No BP data.", score: 0 };
+    if (s < 100 || d < 65) return { label: "Low", advice: "May cause tiredness. Stay hydrated.", score: 55 };
+    if (s >= 110 && s < 131 && d >= 72 && d < 89) return { label: "Normal", advice: "Healthy blood pressure.", score: 95 };
+    if (s >= 131 && s < 140) return { label: "High", advice: "Slightly elevated. Reduce salt, manage stress.", score: 65 };
+    return { label: "High", advice: "Elevated. Reduce salt, eat more fruits/veggies.", score: 50 };
 }
-function assessSpO2(oxygen) {
-    const v = Number(oxygen);
-    if (!v) return { label: "—", advice: "No oxygen value provided." };
-    if (v < 94) return { label: "Low", advice: "May feel breathless or fatigued. Try sitting upright, doing deep breathing, or checking air quality." };
-    return { label: "Normal", advice: "Healthy oxygen level." };
+function assessSpO2(o) {
+    const v = Number(o);
+    if (!v) return { label: "—", advice: "No data.", score: 0 };
+    if (v >= 97) return { label: "Normal", advice: "Excellent oxygen level.", score: 100 };
+    if (v >= 95) return { label: "Normal", advice: "Healthy oxygen level.", score: 90 };
+    if (v >= 92) return { label: "Low", advice: "Slightly low. Try deep breathing.", score: 65 };
+    return { label: "Low", advice: "Concerning. Seek medical attention.", score: 40 };
 }
-function assessPulse(bpm, isAthlete = false) {
+function assessPulse(bpm) {
     const v = Number(bpm);
-    if (!v) return { label: "—", advice: "No pulse value provided." };
-    if (v < 55 && !isAthlete) return { label: "Low", advice: "May feel weak or dizzy. Rest, hydrate, and eat a light snack." };
-    if (v >= 60 && v <= 100) return { label: "Normal", advice: "Good: Resting heart rate is within normal range." };
-    return { label: "High", advice: "Could be due to stress, caffeine, or dehydration. Drink water, slow your breathing, and rest." };
+    if (!v) return { label: "—", advice: "No data.", score: 0 };
+    if (v >= 60 && v <= 80) return { label: "Normal", advice: "Excellent resting heart rate.", score: 100 };
+    if (v > 80 && v <= 100) return { label: "Normal", advice: "Good resting heart rate.", score: 85 };
+    if (v < 60 && v >= 50) return { label: "Low", advice: "Slightly low. Monitor if symptomatic.", score: 70 };
+    if (v > 100) return { label: "High", advice: "Elevated. Reduce caffeine, rest.", score: 55 };
+    return { label: "Low", advice: "Very low. Consult a doctor.", score: 45 };
 }
 function assessTempF(t) {
     const v = Number(t);
-    if (!v) return { label: "—", advice: "No temperature provided." };
-    if (v < 95) return { label: "Low", advice: "Feeling cold, shivering. Keep warm, drink warm fluids." };
-    if (v >= 97 && v <= 99) return { label: "Normal", advice: "Good: Within normal range." };
-    return { label: "High", advice: "Fever. Rest, drink fluids, sponge with lukewarm water." };
+    if (!v) return { label: "—", advice: "No data.", score: 0 };
+    if (v >= 97.5 && v <= 98.9) return { label: "Normal", advice: "Perfectly normal.", score: 100 };
+    if (v >= 97 && v <= 99) return { label: "Normal", advice: "Within normal range.", score: 90 };
+    if (v > 99 && v <= 100.4) return { label: "High", advice: "Low-grade fever. Rest & fluids.", score: 65 };
+    if (v > 100.4) return { label: "High", advice: "Fever detected. Rest, fluids, consult doctor.", score: 40 };
+    return { label: "Low", advice: "Below normal. Keep warm.", score: 60 };
 }
 function getSnellenEquivalent(line) {
-    const lines = { 1: 200, 2: 100, 3: 70, 4: 50, 5: 40, 6: 30, 7: 25, 8: 20, 9: 15 };
-    return lines[line] || "—";
+    return { 1: 200, 2: 100, 3: 70, 4: 50, 5: 40, 6: 30, 7: 25, 8: 20, 9: 15 }[line] || null;
 }
 function assessEyes(left, right) {
-    if (!left && !right) {
-        return { summary: "—", note: "No eyesight input provided.", comment: "Please provide eye test results for assessment." };
-    }
-    const leftSnellen = getSnellenEquivalent(left);
-    const rightSnellen = getSnellenEquivalent(right);
-    const summary = `Left: 20/${leftSnellen}, Right: 20/${rightSnellen}`;
-    let leftComment = "",
-        rightComment = "",
-        combinedComment = "";
-    if (leftSnellen !== "—") {
-        if (leftSnellen <= 15) leftComment = "High: Better than normal eyesight, nothing to worry about.";
-        else if (leftSnellen <= 40) leftComment = "Normal: Great vision in your left eye—keep it up!";
-        else leftComment = "Low: Blurry vision. Use proper lighting, take blink breaks, consult eye doctor if needed.";
-    }
-    if (rightSnellen !== "—") {
-        if (rightSnellen <= 15) rightComment = "High: Better than normal eyesight, nothing to worry about.";
-        else if (rightSnellen <= 40) rightComment = "Normal: Excellent vision in your right eye—maintain healthy habits!";
-        else rightComment = "Low: Blurry vision. Use proper lighting, take blink breaks, consult eye doctor if needed.";
-    }
-    const worseSnellen = Math.max(leftSnellen === "—" ? 0 : leftSnellen, rightSnellen === "—" ? 0 : rightSnellen);
-    if (worseSnellen <= 15) combinedComment = "High: Better than normal eyesight, nothing to worry about.";
-    else if (worseSnellen <= 40) combinedComment = "Normal: Both eyes are in great shape—keep nurturing your eye health!";
-    else combinedComment = "Low: Blurry vision. Use proper lighting, take blink breaks, consult eye doctor if needed.";
-    return {
-        summary,
-        note: combinedComment,
-        comment: `${leftComment} ${rightComment} Overall, ${combinedComment}`,
-    };
+    if (!left && !right) return { summary: "—", note: "—", comment: "No eye test.", score: 0 };
+    const ls = getSnellenEquivalent(left), rs = getSnellenEquivalent(right);
+    const lStr = ls ? `20/${ls}` : "—", rStr = rs ? `20/${rs}` : "—";
+    const summary = `L: ${lStr}   R: ${rStr}`;
+    const worse = Math.max(ls || 0, rs || 0);
+    if (worse <= 20) return { summary, note: "Excellent", comment: "Better than average vision.", score: 100 };
+    if (worse <= 40) return { summary, note: "Normal", comment: "Both eyes in good shape.", score: 85 };
+    if (worse <= 70) return { summary, note: "Fair", comment: "Some difficulty. Consider eye checkup.", score: 60 };
+    return { summary, note: "Low", comment: "Blurry vision. See an eye specialist.", score: 40 };
 }
+function assessBMI(bmi) {
+    if (!bmi) return { label: "—", score: 0 };
+    if (bmi >= 18.5 && bmi < 25) return { label: "Normal", score: 95 };
+    if (bmi >= 25 && bmi < 27) return { label: "Slightly Over", score: 75 };
+    if (bmi >= 27 && bmi < 30) return { label: "Overweight", score: 60 };
+    if (bmi < 18.5) return { label: "Underweight", score: 65 };
+    return { label: "Obese", score: 40 };
+}
+// ── Derived calculations for progressive report ──
+function calcMAP(sys, dia) { const s = +sys, d = +dia; return s && d ? Math.round((s + 2 * d) / 3) : null; }
+function calcPulsePressure(sys, dia) { const s = +sys, d = +dia; return s && d ? s - d : null; }
+function calcIdealWeight(hCm) { if (!hCm) return null; const m = hCm / 100; return { min: (18.5 * m * m).toFixed(0), max: (24.9 * m * m).toFixed(0) }; }
+function calcDailyCalories(bmr) { return bmr ? Math.round(bmr * 1.55) : null; }
+function calcWaterIntake(w) { return w ? (w * 0.033).toFixed(1) : null; }
+function calcMetabolicAge(bmr, age) {
+    if (!bmr || !age) return null;
+    const avg = 1800 - (+age - 20) * 8;
+    return Math.max(15, Math.round(+age - (bmr - avg) / 20));
+}
+function calcLeanMass(w, bf) { return w && bf != null ? +(w * (1 - bf / 100)).toFixed(1) : null; }
+function calcFatMass(w, bf) { return w && bf != null ? +(w * bf / 100).toFixed(1) : null; }
+function calcRPP(sys, hr) { return sys && hr ? Math.round(+sys * +hr / 100) : null; }
+function calcDailyProtein(w) { return w ? `${Math.round(w * 0.8)}-${Math.round(w * 1.2)}` : null; }
+function calcSleepHours(age) { const a = +age; if (!a) return null; return a < 18 ? "8-10" : a < 65 ? "7-9" : "7-8"; }
+function calcCardioRisk(sys, bpm, bmi) {
+    let risk = 0;
+    if (sys) risk += sys > 140 ? 35 : sys > 130 ? 20 : sys > 120 ? 8 : 0;
+    if (bpm) risk += bpm > 100 ? 25 : bpm > 85 ? 12 : bpm > 75 ? 4 : 0;
+    if (bmi) risk += bmi > 30 ? 30 : bmi > 27 ? 18 : bmi > 25 ? 8 : bmi < 18.5 ? 8 : 0;
+    return Math.min(100, risk);
+}
+function calcFitnessLevel(bpm, o2, bmi) {
+    let s = 0, n = 0;
+    if (bpm) { s += bpm <= 65 ? 30 : bpm <= 75 ? 25 : bpm <= 85 ? 18 : bpm <= 100 ? 10 : 3; n++; }
+    if (o2) { s += o2 >= 98 ? 30 : o2 >= 96 ? 25 : o2 >= 94 ? 15 : 5; n++; }
+    if (bmi) { s += bmi >= 18.5 && bmi < 25 ? 30 : bmi >= 25 && bmi < 28 ? 20 : 8; n++; }
+    if (!n) return null;
+    const avg = s / n;
+    if (avg >= 27) return "Excellent"; if (avg >= 22) return "Good"; if (avg >= 15) return "Average";
+    return "Below Average";
+}
+function calcStressIndex(bpm, sys) {
+    if (!bpm || !sys) return null;
+    const rpp = +bpm * +sys;
+    if (rpp < 7000) return { level: "Low", value: rpp };
+    if (rpp < 10000) return { level: "Moderate", value: rpp };
+    return { level: "High", value: rpp };
+}
+function calcVO2Max(bpm) { if (!bpm) return null; return +(15.3 * (220 / +bpm)).toFixed(1); }
+function calcHRRecovery(bpm) { if (!bpm) return null; return +bpm <= 70 ? "Excellent" : +bpm <= 80 ? "Good" : +bpm <= 90 ? "Average" : "Below Average"; }
+const unlockInfo = {
+    2: { title: "Body Composition & Trends", items: ["Body Fat % Analysis", "Muscle Mass Tracking", "Hydration Level", "Health Trend Graph", "Since Last Visit Comparison"] },
+    3: { title: "Deep Health Metrics", items: ["Bone Density Score", "Metabolic Rate (BMR)", "Visceral Fat Level", "Lean & Fat Mass Breakdown", "Mean Arterial Pressure", "Pulse Pressure", "Rate Pressure Product", "Historical Data Table"] },
+    4: { title: "Personalized Lifestyle Plan", items: ["Ideal Weight Range", "Daily Calorie Goal", "Water Intake Recommendation", "Metabolic Age Estimate", "Daily Protein Requirement", "Recommended Sleep Hours"] },
+    5: { title: "Risk & Fitness Analysis", items: ["Cardiovascular Risk Score", "Fitness Level Assessment", "Cardiac Stress Index", "Estimated VO2 Max", "Heart Rate Recovery"] },
+    6: { title: "Journey Insights", items: ["Full Health Journey Timeline", "BP / Heart Rate / SpO2 / Temp Changes", "Consistency Score", "Body Composition Trends", "Personalized Recommendations"] },
+    7: { title: "Complete Health Profile", items: ["Journey Complete Badge", "Final Health Grade", "Full 7-Visit Analysis", "Consistency Score", "All Metrics Unlocked"] },
+};
 const generatePdfFromImage = (imageBase64, options = {}) => {
     return new Promise((resolve, reject) => {
         try {
@@ -1029,124 +1078,886 @@ const generatePdfFromImage = (imageBase64, options = {}) => {
     });
 };
 function generateReportPdf(data, ecoStats) {
-    return new Promise((resolve) => {
-        const doc = new PDFDocument({ size: "A4", margin: 50 });
-        const buffers = [];
-        doc.on("data", buffers.push.bind(buffers));
-        doc.on("end", () => resolve(Buffer.concat(buffers)));
-        const { patient, vitals } = data;
-        const computed = {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ size: "A4", margin: 0, compress: true });
+        const bufs = [];
+        doc.on("data", bufs.push.bind(bufs));
+        doc.on("end", () => resolve(Buffer.concat(bufs)));
+        doc.on("error", reject);
+
+        const patient = data.patient || {};
+        const vitals = data.vitals || {};
+        const bc = data.bodyComposition || null;
+        const history = data.history;
+        const W = 595.28, H = 841.89, M = 40, CW = W - M * 2;
+        let pageNum = 0;
+        const patientHeight = bc?.height || vitals.height || null;
+
+        // ── Scan level & unlock flags ──
+        const scan = patient.scanCount || 1;
+        const hist = history && Array.isArray(history) ? history : [];
+        const show = {
+            bodyCompBars: scan >= 2,
+            trendGraph: scan >= 2 && hist.length >= 1,
+            sinceLastVisit: scan >= 2 && hist.length >= 1,
+            deepBodyComp: scan >= 3,
+            derivedStats: scan >= 3,
+            trendTable: scan >= 3 && hist.length >= 1,
+            lifestyleStats: scan >= 4,
+            riskAnalysis: scan >= 5,
+            journeyRecap: scan >= 6 && hist.length >= 2,
+            journeyComplete: scan >= 7,
+            unlocksNext: scan < 7,
+        };
+
+        // ── Palette ──
+        const C = {
+            brand: "#F97316", brandDark: "#EA580C", brandLight: "#FFF7ED",
+            green: "#16A34A", greenBg: "#F0FDF4", greenLight: "#DCFCE7",
+            yellow: "#CA8A04", yellowBg: "#FEFCE8",
+            red: "#DC2626", redBg: "#FEF2F2",
+            blue: "#2563EB", blueBg: "#EFF6FF", blueLight: "#DBEAFE",
+            text: "#0F172A", textMid: "#334155", textLight: "#64748B", textMuted: "#94A3B8",
+            border: "#E2E8F0", borderLight: "#F1F5F9", white: "#FFFFFF", bg: "#F8FAFC",
+            dark: "#1E293B", purple: "#7C3AED", purpleBg: "#F5F3FF",
+        };
+
+        // ── Assessments ──
+        const comp = {
             bp: assessBP(vitals.systolic, vitals.diastolic),
-            oxygen: assessSpO2(vitals.oxygen),
-            bpm: assessPulse(vitals.bpm, patient.isAthlete),
+            o2: assessSpO2(vitals.oxygen),
+            hr: assessPulse(vitals.bpm),
             temp: assessTempF(vitals.temperature),
             eyes: assessEyes(vitals.leftEye, vitals.rightEye),
+            bmi: assessBMI(bc?.bmi),
         };
-        function getColorForStatus(status) {
-            if (status.includes("Normal") || status.includes("Good")) return "#22C55E";
-            if (status.includes("Low") || status.includes("High")) return "#EF4444";
-            return "#EAB308";
+        const scores = [comp.bp, comp.o2, comp.hr, comp.temp, comp.eyes, comp.bmi].filter(s => s.score > 0);
+        const healthScore = scores.length ? Math.round(scores.reduce((a, s) => a + s.score, 0) / scores.length) : 0;
+
+        function scoreColor(s) { return s >= 85 ? C.green : s >= 65 ? C.yellow : C.red; }
+        function scoreLabel(s) { return s >= 90 ? "Excellent" : s >= 80 ? "Very Good" : s >= 70 ? "Good" : s >= 60 ? "Fair" : "Needs Attention"; }
+        function statusClr(label) {
+            if (!label || label === "—") return { fg: C.textMuted, bg: C.borderLight, dot: C.textMuted };
+            if (/Normal|Good|Excellent/i.test(label)) return { fg: C.green, bg: C.greenBg, dot: C.green };
+            if (/Low|High|Over|Under|Obese/i.test(label)) return { fg: C.red, bg: C.redBg, dot: C.red };
+            return { fg: C.yellow, bg: C.yellowBg, dot: C.yellow };
         }
 
-        // Header background - off-white/cream gradient
-        doc.rect(0, 0, 595.28, 150).fill("#FFF5F0");
+        // ── Drawing helpers ──
+        function drawPageFooter() {
+            pageNum++;
+            doc.save();
+            doc.moveTo(M, H - 48).lineTo(W - M, H - 48).lineWidth(0.4).stroke(C.border);
+            doc.fontSize(4.5).fillColor(C.textMuted).font("Helvetica")
+               .text("DISCLAIMER: This auto-generated report is for informational purposes only. It does not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional before making health decisions. Reliv Health assumes no liability for actions taken based on this report.", M, H - 42, { width: CW * 0.72, lineGap: 0.3 });
+            doc.fontSize(6.5).fillColor(C.textLight).text(`Page ${pageNum}`, W - M - 50, H - 38, { width: 50, align: "right" });
+            doc.fontSize(6.5).fillColor(C.brand).font("Helvetica-Bold").text("Reliv Health", W - M - 50, H - 28, { width: 50, align: "right" });
+            doc.restore();
+        }
+        function newPage() { drawPageFooter(); doc.addPage({ size: "A4", margin: 0 }); return M + 10; }
+        function ensure(y, n) { return y + n > H - 55 ? newPage() : y; }
 
-        // Draw Reliv logo matching Logo.jsx exactly
-        // Frontend: <span className="text-orange-500">Re</span><span className="text-black">lıv</span>
-        // Orange dot on the ı character at top
+        function sectionTitle(title, y) {
+            y = ensure(y, 30);
+            doc.roundedRect(M, y, 3.5, 15, 1.75).fill(C.brand);
+            doc.fontSize(11.5).font("Helvetica-Bold").fillColor(C.text).text(title, M + 12, y + 1);
+            return y + 24;
+        }
+        function badge(text, x, y, clr) {
+            const tw = doc.fontSize(7).font("Helvetica-Bold").widthOfString(text);
+            const pw = tw + 12, ph = 15;
+            doc.roundedRect(x, y, pw, ph, 7.5).fill(clr.bg);
+            doc.fillColor(clr.fg).text(text, x + 6, y + 3);
+            return pw;
+        }
+        function drawArc(cx, cy, r, startAngle, endAngle, lineW, color) {
+            const segments = Math.max(Math.ceil(Math.abs(endAngle - startAngle) / (Math.PI / 16)), 1);
+            const step = (endAngle - startAngle) / segments;
+            doc.save();
+            doc.lineWidth(lineW).strokeColor(color).lineCap("round");
+            const sx = cx + r * Math.cos(startAngle), sy = cy + r * Math.sin(startAngle);
+            doc.moveTo(sx, sy);
+            for (let i = 1; i <= segments; i++) { const a = startAngle + i * step; doc.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); }
+            doc.stroke();
+            doc.restore();
+        }
+        function drawCheckmark(cx, cy, size, color) {
+            doc.save();
+            doc.lineWidth(1.5).strokeColor(color).lineCap("round").lineJoin("round");
+            doc.moveTo(cx - size * 0.35, cy + size * 0.05)
+               .lineTo(cx - size * 0.05, cy + size * 0.35)
+               .lineTo(cx + size * 0.4, cy - size * 0.3)
+               .stroke();
+            doc.restore();
+        }
+        function drawTriangle(x, y, up, color) {
+            doc.save().fillColor(color);
+            if (up) { doc.moveTo(x, y + 5).lineTo(x + 3, y).lineTo(x + 6, y + 5).closePath().fill(); }
+            else { doc.moveTo(x, y).lineTo(x + 3, y + 5).lineTo(x + 6, y).closePath().fill(); }
+            doc.restore();
+        }
+        function drawMiniScore(val, x, y, boxW) {
+            if (!val || val <= 0) return;
+            const clr = scoreColor(val);
+            const scoreStr = `${val}`;
+            const sw = doc.fontSize(7).font("Helvetica-Bold").widthOfString(scoreStr);
+            const slashW = doc.fontSize(5).font("Helvetica").widthOfString("/100");
+            const totalW = sw + slashW + 1;
+            const sx = x + boxW - 12 - totalW;
+            doc.fontSize(7).font("Helvetica-Bold").fillColor(clr).text(scoreStr, sx, y);
+            doc.fontSize(5).font("Helvetica").fillColor(C.textMuted).text("/100", sx + sw + 1, y + 1.5);
+        }
 
-        doc.fontSize(36).font("Helvetica-Bold");
-        const logoY = 55;
-        let currentX = 50;
+        // Build graph data: history + current vitals as latest point
+        const graphData = [...hist, {
+            date: new Date().toISOString().split("T")[0],
+            systolic: vitals.systolic, diastolic: vitals.diastolic,
+            bpm: vitals.bpm, oxygen: vitals.oxygen, temperature: vitals.temperature,
+        }];
 
-        // "Re" in orange #F97316
-        const reWidth = doc.widthOfString("Re");
-        doc.fillColor("#F97316").text("Re", currentX, logoY, { lineBreak: false });
-        currentX += reWidth;
-
-        // "l" in black
-        const lWidth = doc.widthOfString("l");
-        doc.fillColor("#000000").text("l", currentX, logoY, { lineBreak: false });
-        currentX += lWidth + 3; // Add 3pt space after "l"
-
-        // Draw dotless "ı" stem in black
-        const stemWidth = 3;
-        const stemHeight = 19;
-        const stemY = logoY + 9;
+        // ═════════════════════════════════════════
+        //  HEADER
+        // ═════════════════════════════════════════
+        const hdrH = 120, splitX = 210;
+        doc.rect(0, 0, W, hdrH).fill(C.brand);
         doc.save();
-        doc.fillColor("#000000").rect(currentX, stemY, stemWidth, stemHeight).fill();
+        doc.moveTo(0, 0).lineTo(splitX - 20, 0)
+           .bezierCurveTo(splitX + 15, 0, splitX + 15, hdrH, splitX - 20, hdrH)
+           .lineTo(0, hdrH).closePath().fill(C.white);
+        doc.restore();
+        doc.save().opacity(0.05);
+        doc.circle(W - 50, 25, 70).fill(C.white);
+        doc.circle(W - 120, 100, 40).fill(C.white);
         doc.restore();
 
-        // Draw orange dot above the stem (matching Logo.jsx: 0.23em from top)
-        const dotRadius = 3.2;
-        const dotX = currentX + stemWidth / 2;
-        const dotY = stemY - dotRadius * 1.5;
-        doc.save();
-        doc.fillColor("#F97316").circle(dotX, dotY, dotRadius).fill();
-        doc.restore();
-
-        currentX += stemWidth + 1;
-
-        // "v" in black
-        doc.fillColor("#000000").text("v", currentX, logoY, { lineBreak: false });
-
-        doc.fontSize(18).fillColor("#FFFFFF").font("Helvetica").text("Health Screening Report", 0, 90, { align: "center" });
-        doc.fillColor("#000000").fontSize(16).text("Patient Information", 50, 170);
-        doc.moveTo(50, 195).lineTo(545.28, 195).stroke("#FDBA74");
-        const col1X = 50,
-            col2X = 300,
-            currentY = 210;
-        doc.fontSize(12);
-        doc.font("Helvetica-Bold").text("Name:", col1X, currentY);
-        doc.font("Helvetica").text(patient.name || "N/A", col1X + 50, currentY);
-        doc.font("Helvetica-Bold").text("Age:", col2X, currentY);
-        doc.font("Helvetica").text(patient.age || "N/A", col2X + 35, currentY);
-        doc.font("Helvetica-Bold").text("Gender:", col1X, currentY + 20);
-        doc.font("Helvetica").text(patient.gender || "N/A", col1X + 50, currentY + 20);
-        doc.font("Helvetica-Bold").text("Phone:", col2X, currentY + 20);
-        doc.font("Helvetica").text(patient.phone || "N/A", col2X + 45, currentY + 20);
-        doc.font("Helvetica-Bold").text("Email:", col1X, currentY + 40);
-        doc.font("Helvetica").text(patient.email || "N/A", col1X + 40, currentY + 40);
-        let yPos = currentY + 80;
-        doc.fontSize(16).text("Health Vitals", 50, yPos);
-        doc.moveTo(50, yPos + 25).lineTo(545.28, yPos + 25).stroke("#FDBA74");
-        yPos += 40;
-        const vitalsCards = [
-            { label: "Blood Pressure", value: `${vitals.systolic || "—"}/${vitals.diastolic || "—"} mmHg`, status: computed.bp.label, note: computed.bp.advice },
-            { label: "Oxygen Saturation", value: `${vitals.oxygen || "—"} %`, status: computed.oxygen.label, note: computed.oxygen.advice },
-            { label: "Pulse Rate", value: `${vitals.bpm || "—"} BPM`, status: computed.bpm.label, note: computed.bpm.advice },
-            { label: "Body Temperature", value: `${vitals.temperature || "—"} °F`, status: computed.temp.label, note: computed.temp.advice },
-            { label: "Visual Acuity", value: computed.eyes.summary, status: computed.eyes.note, note: computed.eyes.comment },
-        ];
-        const cardWidth = 240,
-            cardHeight = 120,
-            cardMargin = 15;
-        const startXCol1 = 50,
-            startXCol2 = startXCol1 + cardWidth + cardMargin;
-        let cardIndex = 0;
-        vitalsCards.forEach((vital) => {
-            if (yPos + cardHeight > doc.page.height - 100) {
-                doc.addPage();
-                yPos = 50;
+        if (RELIV_LOGO_BUFFER) {
+            try {
+                const lH = 65;
+                const lImg = doc.openImage(RELIV_LOGO_BUFFER);
+                const lW = (lImg.width / lImg.height) * lH;
+                const lX = (splitX - 30) / 2 - lW / 2 + 5;
+                const lY = (hdrH - lH) / 2;
+                doc.image(RELIV_LOGO_BUFFER, lX, lY, { height: lH });
+            } catch {
+                doc.fontSize(28).font("Helvetica-Bold").fillColor(C.brand).text("Reliv", 30, hdrH / 2 - 14);
             }
-            const xPos = cardIndex % 2 === 0 ? startXCol1 : startXCol2;
-            doc.roundedRect(xPos, yPos, cardWidth, cardHeight, 10).fillAndStroke("#FFFFFF", "#E5E7EB");
-            const textX = xPos + 10,
-                textY = yPos + 10;
-            doc.fontSize(10).fillColor("#6B7280").font("Helvetica").text(vital.label, textX, textY);
-            doc.fontSize(24).fillColor("#111827").font("Helvetica-Bold").text(vital.value, textX, textY + 15);
-            doc.fontSize(12).fillColor(getColorForStatus(vital.status)).font("Helvetica").text(vital.status, textX, textY + 45);
-            doc.fontSize(10).fillColor("#000000").font("Helvetica").text(vital.note, textX, textY + 60, { width: cardWidth - 20 });
-            if (cardIndex % 2 !== 0) yPos += cardHeight + 20;
-            cardIndex++;
-        });
-        if (cardIndex % 2 !== 0) yPos += cardHeight + 20;
-        doc.fontSize(8).fillColor("#9CA3AF").text("This report is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment.", 50, doc.page.height - 80, { align: "center", width: 495.28 });
-        doc.text(`© ${new Date().getFullYear()} Reliv. All rights reserved.`, 50, doc.page.height - 65, { align: "center", width: 495.28 });
-        if (ecoStats) {
-            doc.text(`Fun Fact: Your digital choice saved ~${ecoStats.individual.water}L of water & ~${ecoStats.individual.co2}g of CO2. Collectively, our users have saved ~${ecoStats.total.water}L of water, ~${ecoStats.total.co2}g of CO2, and ~${ecoStats.total.paper} sheets of paper!`, 50, doc.page.height - 50, { align: "center", width: 495.28 });
+        } else {
+            doc.fontSize(28).font("Helvetica-Bold").fillColor(C.brand).text("Reliv", 30, hdrH / 2 - 14);
         }
+
+        const txStart = splitX + 10, txW = W - txStart - M;
+        doc.fontSize(20).font("Helvetica-Bold").fillColor(C.white).text("Health Report", txStart, 22, { width: txW });
+        doc.save().opacity(0.9);
+        doc.fontSize(9).font("Helvetica").fillColor(C.white).text("Your Personalized Wellness Summary", txStart, 48, { width: txW });
+        doc.restore();
+        const reportDate = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+        doc.save().opacity(0.8);
+        doc.fontSize(8).font("Helvetica").fillColor(C.white).text(reportDate, txStart, 63, { width: txW });
+        doc.restore();
+
+        // Scan tracker with drawn tick marks
+        const scansDone = scan, maxScans = patient.maxScans || 7;
+        const scansLeft = Math.max(0, maxScans - scansDone);
+        const dotY = 86, dotR = 5.5;
+        doc.fontSize(7).font("Helvetica-Bold").fillColor(C.white).text(`${scansDone}/${maxScans} Scans`, txStart, dotY - 1);
+        const dotStartX = txStart + 55;
+        for (let i = 0; i < maxScans; i++) {
+            const dx = dotStartX + i * 15;
+            if (i < scansDone) {
+                doc.circle(dx, dotY + 4, dotR).fill(C.white);
+                drawCheckmark(dx, dotY + 4, dotR * 1.1, C.green);
+            } else {
+                doc.save();
+                doc.circle(dx, dotY + 4, dotR).lineWidth(1.2).strokeColor(C.white).stroke();
+                doc.restore();
+            }
+        }
+        if (scansLeft > 0) {
+            doc.save().opacity(0.85);
+            doc.fontSize(6.5).font("Helvetica").fillColor(C.white)
+               .text(`${scansLeft} remaining`, dotStartX + maxScans * 15 + 4, dotY);
+            doc.restore();
+        }
+
+        // Wave transition
+        doc.save();
+        const wt = hdrH - 14;
+        doc.moveTo(0, wt).bezierCurveTo(W * 0.3, wt + 18, W * 0.7, wt - 6, W, wt + 10)
+           .lineTo(W, hdrH + 6).lineTo(0, hdrH + 6).closePath().fill(C.white);
+        doc.restore();
+
+        let y = hdrH + 14;
+
+        // ═════════════════════════════════════════
+        //  HEALTH SCORE + PATIENT INFO
+        // ═════════════════════════════════════════
+        y = ensure(y, 78);
+        const scoreW = 110, infoW = CW - scoreW - 12;
+
+        const scX = M, scY = y;
+        doc.roundedRect(scX, scY, scoreW, 74, 8).fillAndStroke(C.white, C.border);
+        const ctrX = scX + scoreW / 2, ctrY = scY + 32, radius = 22;
+        const sColor = scoreColor(healthScore);
+        doc.save();
+        doc.circle(ctrX, ctrY, radius).lineWidth(5).strokeOpacity(0.12).strokeColor(sColor).stroke();
+        doc.restore();
+        if (healthScore > 0) {
+            drawArc(ctrX, ctrY, radius, -Math.PI / 2, -Math.PI / 2 + (healthScore / 100) * 2 * Math.PI, 4.5, sColor);
+        }
+        doc.fontSize(20).font("Helvetica-Bold").fillColor(sColor)
+           .text(`${healthScore}`, ctrX - 18, ctrY - 10, { width: 36, align: "center" });
+        doc.fontSize(6).font("Helvetica").fillColor(C.textMuted)
+           .text("/ 100", ctrX - 12, ctrY + 10, { width: 24, align: "center" });
+        doc.fontSize(8).font("Helvetica-Bold").fillColor(sColor)
+           .text(scoreLabel(healthScore), scX, scY + 60, { width: scoreW, align: "center" });
+        doc.fontSize(6).font("Helvetica").fillColor(C.textMuted)
+           .text("HEALTH SCORE", scX, scY + 4, { width: scoreW, align: "center" });
+
+        const piX = M + scoreW + 12, piY = y;
+        doc.roundedRect(piX, piY, infoW, 74, 8).fillAndStroke(C.white, C.border);
+        const p1 = piX + 14, p2 = piX + infoW * 0.52;
+        doc.fontSize(6.5).fillColor(C.textMuted).font("Helvetica").text("PATIENT NAME", p1, piY + 8);
+        doc.fontSize(11).fillColor(C.text).font("Helvetica-Bold").text(patient.name || "—", p1, piY + 18);
+        doc.fontSize(6.5).fillColor(C.textMuted).font("Helvetica").text("AGE / GENDER", p2, piY + 8);
+        doc.fontSize(11).fillColor(C.text).font("Helvetica-Bold").text([patient.age, patient.gender].filter(Boolean).join(" / ") || "—", p2, piY + 18);
+        doc.fontSize(6.5).fillColor(C.textMuted).font("Helvetica").text("EMAIL", p1, piY + 40);
+        doc.fontSize(8.5).fillColor(C.textMid).font("Helvetica").text(patient.email || "—", p1, piY + 50);
+        doc.fontSize(6.5).fillColor(C.textMuted).font("Helvetica").text("PHONE", p2, piY + 40);
+        doc.fontSize(8.5).fillColor(C.textMid).font("Helvetica").text(patient.phone || "—", p2, piY + 50);
+        y += 86;
+
+        // ═════════════════════════════════════════
+        //  VITAL SIGNS — 2x2 (always — Scan 1)
+        // ═════════════════════════════════════════
+        y = sectionTitle("Vital Signs", y);
+        const vArr = [
+            { label: "Blood Pressure", val: `${vitals.systolic || "—"}/${vitals.diastolic || "—"}`, unit: "mmHg", st: comp.bp.label, adv: comp.bp.advice, sc: comp.bp.score },
+            { label: "Oxygen Saturation", val: `${vitals.oxygen || "—"}`, unit: "%", st: comp.o2.label, adv: comp.o2.advice, sc: comp.o2.score },
+            { label: "Pulse Rate", val: `${vitals.bpm || "—"}`, unit: "BPM", st: comp.hr.label, adv: comp.hr.advice, sc: comp.hr.score },
+            { label: "Body Temperature", val: `${vitals.temperature || "—"}`, unit: "\u00B0F", st: comp.temp.label, adv: comp.temp.advice, sc: comp.temp.score },
+        ];
+        const cW2 = (CW - 10) / 2, cH2 = 82;
+        for (let i = 0; i < vArr.length; i++) {
+            const v = vArr[i], col = i % 2;
+            if (col === 0) y = ensure(y, cH2 + 8);
+            const x = M + col * (cW2 + 10);
+            const sc = statusClr(v.st);
+            doc.roundedRect(x, y, cW2, cH2, 6).fillAndStroke(C.white, C.border);
+            doc.roundedRect(x, y, 3.5, cH2, 2).fill(sc.dot);
+            const tx = x + 12, ty = y + 7;
+            doc.fontSize(6.5).fillColor(C.textMuted).font("Helvetica").text(v.label.toUpperCase(), tx, ty);
+            doc.fontSize(19).fillColor(C.text).font("Helvetica-Bold").text(v.val, tx, ty + 11, { continued: true, lineBreak: false });
+            doc.fontSize(8.5).fillColor(C.textLight).font("Helvetica").text(` ${v.unit}`, { lineBreak: false });
+            badge(v.st || "—", tx, ty + 34, sc);
+            drawMiniScore(v.sc, x, ty, cW2);
+            doc.fontSize(6.5).fillColor(C.textMid).font("Helvetica")
+               .text(v.adv || "", tx, ty + 53, { width: cW2 - 24, lineGap: 0.5 });
+            if (col === 1) y += cH2 + 8;
+        }
+        y += 2;
+
+        // ═══ EYESIGHT (Scan 1) ═══
+        y = ensure(y, 52);
+        const eSc = statusClr(comp.eyes.note);
+        doc.roundedRect(M, y, CW, 48, 6).fillAndStroke(C.white, C.border);
+        doc.roundedRect(M, y, 3.5, 48, 2).fill(eSc.dot);
+        doc.fontSize(6.5).fillColor(C.textMuted).font("Helvetica").text("VISUAL ACUITY", M + 12, y + 6);
+        doc.fontSize(14).fillColor(C.text).font("Helvetica-Bold").text(comp.eyes.summary || "—", M + 12, y + 16);
+        badge(comp.eyes.note || "—", M + 12, y + 33, eSc);
+        drawMiniScore(comp.eyes.score, M, y + 6, CW);
+        doc.fontSize(6.5).fillColor(C.textMid).font("Helvetica")
+           .text(comp.eyes.comment || "", M + CW * 0.5, y + 8, { width: CW * 0.35, lineGap: 0.5 });
+        y += 58;
+
+        // ═══ BODY BASICS (always — Scan 1: Weight, Height, BMI) ═══
+        if (bc && (bc.weight || patientHeight || bc.bmi)) {
+            y = sectionTitle("Body Composition", y);
+            const tGap = 8, tCnt = 3;
+            const tW = (CW - tGap * (tCnt - 1)) / tCnt, tH = 44;
+            y = ensure(y, tH + 6);
+            const bmiSc = statusClr(comp.bmi.label);
+            const tiles = [
+                { lbl: "Weight", v: bc.weight ? `${bc.weight}` : "—", u: "kg", c: null },
+                { lbl: "Height", v: patientHeight ? `${patientHeight}` : "—", u: "cm", c: null },
+                { lbl: "BMI", v: bc.bmi ? `${Number(bc.bmi).toFixed(1)}` : "—", u: comp.bmi.label !== "—" ? comp.bmi.label : "", c: bmiSc },
+            ];
+            tiles.forEach((t, i) => {
+                const x = M + i * (tW + tGap);
+                doc.roundedRect(x, y, tW, tH, 6).fill(i === 2 ? (bmiSc.bg || C.brandLight) : C.brandLight);
+                doc.fontSize(6.5).fillColor(C.textMuted).font("Helvetica").text(t.lbl.toUpperCase(), x + 9, y + 6);
+                doc.fontSize(15).fillColor(C.text).font("Helvetica-Bold").text(t.v, x + 9, y + 17, { continued: true, lineBreak: false });
+                doc.fontSize(8).fillColor(i === 2 && t.c ? t.c.fg : C.textLight).font("Helvetica").text(` ${t.u}`, { lineBreak: false });
+            });
+            y += tH + 10;
+        }
+
+        // ═══════════════════════════════════════════
+        //  SCAN 2+ : SINCE LAST VISIT (5 new params)
+        // ═══════════════════════════════════════════
+        if (show.sinceLastVisit) {
+            const prev = hist[hist.length - 1];
+            y = ensure(y, 68);
+            doc.roundedRect(M, y, CW, 62, 6).fillAndStroke(C.blueBg, C.border);
+            doc.fontSize(7.5).font("Helvetica-Bold").fillColor(C.blue).text("SINCE LAST VISIT", M + 12, y + 6);
+            const changes = [
+                { label: "BP", curr: vitals.systolic, prev: prev.systolic, unit: "mmHg", lowerBetter: true },
+                { label: "Pulse", curr: vitals.bpm, prev: prev.bpm, unit: "BPM", lowerBetter: true },
+                { label: "SpO2", curr: vitals.oxygen, prev: prev.oxygen, unit: "%", lowerBetter: false },
+                { label: "Temp", curr: vitals.temperature, prev: prev.temperature, unit: "\u00B0F", lowerBetter: null },
+            ];
+            const chipW = (CW - 24 - 8 * 3) / 4;
+            changes.forEach((ch, ci) => {
+                const cx = M + 12 + ci * (chipW + 8);
+                const diff = +(ch.curr || 0) - +(ch.prev || 0);
+                const improved = ch.lowerBetter != null ? (ch.lowerBetter ? diff < 0 : diff > 0) : Math.abs(+(ch.curr) - 98.6) < Math.abs(+(ch.prev) - 98.6);
+                const clr = diff === 0 ? C.textMuted : improved ? C.green : C.red;
+                doc.roundedRect(cx, y + 20, chipW, 36, 4).fill(C.white);
+                doc.fontSize(6).fillColor(C.textMuted).font("Helvetica").text(ch.label, cx + 5, y + 22);
+                // Current value (prominent)
+                const currStr = ch.label === "Temp" ? (ch.curr != null ? (+ch.curr).toFixed(1) : "--") : `${ch.curr || "--"}`;
+                doc.fontSize(11).fillColor(C.text).font("Helvetica-Bold").text(currStr, cx + 5, y + 30);
+                // Diff below
+                const sign = diff > 0 ? "+" : "";
+                const diffStr = `${sign}${ch.label === "Temp" ? diff.toFixed(1) : Math.round(diff)}`;
+                doc.fontSize(7).fillColor(clr).font("Helvetica-Bold").text(diffStr, cx + chipW - 35, y + 44, { width: 30, align: "right" });
+                if (diff !== 0) drawTriangle(cx + chipW - 8, y + 46, diff > 0, clr);
+            });
+            y += 70;
+        }
+
+        // ═══════════════════════════════════════════
+        //  SCAN 2+ : BODY COMP BARS (Body Fat, Muscle, Water)
+        //  SCAN 3+ adds: Bone, BMR, Visceral, Lean, Fat
+        // ═══════════════════════════════════════════
+        if (show.bodyCompBars && bc) {
+            const mets = [];
+            if (bc.bodyFat != null) mets.push({ label: "Body Fat", value: `${Number(bc.bodyFat).toFixed(1)}%`, pct: Math.min(bc.bodyFat / 40 * 100, 100), color: bc.bodyFat > 25 ? C.yellow : C.brand });
+            if (bc.muscleMass != null) mets.push({ label: "Muscle Mass", value: `${Number(bc.muscleMass).toFixed(1)} kg`, pct: Math.min(bc.muscleMass / 80 * 100, 100), color: C.green });
+            if (bc.waterPercentage != null) mets.push({ label: "Body Water", value: `${Number(bc.waterPercentage).toFixed(1)}%`, pct: Math.min(bc.waterPercentage / 80 * 100, 100), color: C.blue });
+
+            // Scan 3+ deep body comp (NEW unique to scan 3)
+            if (show.deepBodyComp) {
+                if (bc.boneMass != null) mets.push({ label: "Bone Mass", value: `${Number(bc.boneMass).toFixed(1)} kg`, pct: Math.min(bc.boneMass / 5 * 100, 100), color: C.purple });
+                if (bc.bmr != null) mets.push({ label: "BMR", value: `${Math.round(bc.bmr)} kcal`, pct: Math.min(bc.bmr / 2500 * 100, 100), color: C.brand });
+                if (bc.visceralFat != null) mets.push({ label: "Visceral Fat", value: `${bc.visceralFat}`, pct: Math.min(bc.visceralFat / 20 * 100, 100), color: bc.visceralFat > 12 ? C.red : C.brand });
+                const lm = calcLeanMass(bc.weight, bc.bodyFat);
+                const fm = calcFatMass(bc.weight, bc.bodyFat);
+                if (lm) mets.push({ label: "Lean Mass", value: `${lm} kg`, pct: Math.min(lm / 80 * 100, 100), color: "#0EA5E9" });
+                if (fm) mets.push({ label: "Fat Mass", value: `${fm} kg`, pct: Math.min(fm / 30 * 100, 100), color: "#F59E0B" });
+            }
+
+            if (mets.length > 0) {
+                const mH = mets.length * 20 + 12;
+                y = ensure(y, mH + 4);
+                doc.roundedRect(M, y, CW, mH, 6).fillAndStroke(C.white, C.border);
+                let my = y + 7;
+                mets.forEach((m) => {
+                    doc.fontSize(7.5).fillColor(C.textMid).font("Helvetica").text(m.label, M + 10, my + 1, { width: 75 });
+                    doc.fontSize(8).fillColor(C.text).font("Helvetica-Bold").text(m.value, M + 88, my);
+                    const bX = M + 160, bW = CW - 175, bH = 6;
+                    doc.roundedRect(bX, my + 3, bW, bH, 3).fill(C.borderLight);
+                    doc.roundedRect(bX, my + 3, Math.max(bW * m.pct / 100, 4), bH, 3).fill(m.color);
+                    my += 20;
+                });
+                y += mH + 8;
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        //  SCAN 3+ : DERIVED STATS — MAP, Pulse Pressure, RPP
+        // ═══════════════════════════════════════════
+        if (show.derivedStats) {
+            const map = calcMAP(vitals.systolic, vitals.diastolic);
+            const pp = calcPulsePressure(vitals.systolic, vitals.diastolic);
+            const rpp = calcRPP(vitals.systolic, vitals.bpm);
+
+            const dTiles = [];
+            if (map) dTiles.push({ lbl: "Mean Arterial Pressure", v: `${map}`, u: "mmHg" });
+            if (pp) dTiles.push({ lbl: "Pulse Pressure", v: `${pp}`, u: "mmHg" });
+            if (rpp) dTiles.push({ lbl: "Rate Pressure Product", v: `${rpp}`, u: "\u00D7100" });
+
+            if (dTiles.length > 0) {
+                const dtH = 40;
+                y = ensure(y, dtH + 6);
+                const dtW = (CW - 8 * (dTiles.length - 1)) / dTiles.length;
+                dTiles.forEach((t, i) => {
+                    const x = M + i * (dtW + 8);
+                    doc.roundedRect(x, y, dtW, dtH, 6).fill(C.purpleBg);
+                    doc.fontSize(5.5).fillColor(C.textMuted).font("Helvetica").text(t.lbl.toUpperCase(), x + 8, y + 5, { width: dtW - 16 });
+                    doc.fontSize(14).fillColor(C.text).font("Helvetica-Bold").text(t.v, x + 8, y + 17, { continued: true, lineBreak: false });
+                    doc.fontSize(7).fillColor(C.textLight).font("Helvetica").text(` ${t.u}`, { lineBreak: false });
+                });
+                y += dtH + 6;
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        //  SCAN 4+ : LIFESTYLE STATS — 6 unique tiles
+        // ═══════════════════════════════════════════
+        if (show.lifestyleStats) {
+            const dc = calcDailyCalories(bc?.bmr);
+            const wi = calcWaterIntake(bc?.weight);
+            const ma = calcMetabolicAge(bc?.bmr, patient.age);
+            const iw = calcIdealWeight(patientHeight);
+            const dp = calcDailyProtein(bc?.weight);
+            const sh = calcSleepHours(patient.age);
+            const ltiles = [];
+            if (iw) ltiles.push({ lbl: "Ideal Weight", v: `${iw.min}-${iw.max}`, u: "kg" });
+            if (dc) ltiles.push({ lbl: "Daily Calories", v: `${dc}`, u: "kcal" });
+            if (wi) ltiles.push({ lbl: "Water Intake", v: `${wi}`, u: "L/day" });
+            if (ma) ltiles.push({ lbl: "Metabolic Age", v: `~${ma}`, u: "years" });
+            if (dp) ltiles.push({ lbl: "Daily Protein", v: dp, u: "g" });
+            if (sh) ltiles.push({ lbl: "Sleep Goal", v: sh, u: "hrs" });
+
+            if (ltiles.length > 0) {
+                const maxPerRow = 3;
+                for (let ri = 0; ri < ltiles.length; ri += maxPerRow) {
+                    const rowTiles = ltiles.slice(ri, ri + maxPerRow);
+                    const ltH = 40;
+                    y = ensure(y, ltH + 6);
+                    const ltW = (CW - 8 * (rowTiles.length - 1)) / rowTiles.length;
+                    rowTiles.forEach((t, i) => {
+                        const x = M + i * (ltW + 8);
+                        doc.roundedRect(x, y, ltW, ltH, 6).fill(C.greenLight);
+                        doc.fontSize(5.5).fillColor(C.textMuted).font("Helvetica").text(t.lbl.toUpperCase(), x + 8, y + 5, { width: ltW - 16 });
+                        doc.fontSize(14).fillColor(C.text).font("Helvetica-Bold").text(t.v, x + 8, y + 17, { continued: true, lineBreak: false });
+                        doc.fontSize(7).fillColor(C.textLight).font("Helvetica").text(` ${t.u}`, { lineBreak: false });
+                    });
+                    y += ltH + 6;
+                }
+                y += 2;
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        //  SCAN 5+ : RISK & FITNESS ANALYSIS — 5 unique tiles
+        // ═══════════════════════════════════════════
+        if (show.riskAnalysis) {
+            y = sectionTitle("Risk & Fitness Analysis", y);
+            const cardioRisk = calcCardioRisk(vitals.systolic, vitals.bpm, bc?.bmi);
+            const fitness = calcFitnessLevel(vitals.bpm, vitals.oxygen, bc?.bmi);
+            const stress = calcStressIndex(vitals.bpm, vitals.systolic);
+            const riskH = 50;
+            y = ensure(y, riskH + 6);
+            const rW = (CW - 16) / 3;
+
+            // Cardio Risk
+            const crClr = cardioRisk <= 15 ? C.green : cardioRisk <= 35 ? C.yellow : C.red;
+            const crLabel = cardioRisk <= 15 ? "Low Risk" : cardioRisk <= 35 ? "Moderate" : "Elevated";
+            doc.roundedRect(M, y, rW, riskH, 6).fillAndStroke(C.white, C.border);
+            doc.roundedRect(M, y, 3, riskH, 1.5).fill(crClr);
+            doc.fontSize(5.5).fillColor(C.textMuted).font("Helvetica").text("CARDIOVASCULAR RISK", M + 10, y + 6, { width: rW - 16 });
+            doc.fontSize(16).fillColor(crClr).font("Helvetica-Bold").text(`${cardioRisk}%`, M + 10, y + 18);
+            doc.fontSize(7).fillColor(crClr).font("Helvetica-Bold").text(crLabel, M + 10, y + 36);
+
+            // Fitness Level
+            const fitClr = fitness === "Excellent" ? C.green : fitness === "Good" ? C.green : fitness === "Average" ? C.yellow : C.red;
+            const fx = M + rW + 8;
+            doc.roundedRect(fx, y, rW, riskH, 6).fillAndStroke(C.white, C.border);
+            doc.roundedRect(fx, y, 3, riskH, 1.5).fill(fitClr);
+            doc.fontSize(5.5).fillColor(C.textMuted).font("Helvetica").text("FITNESS LEVEL", fx + 10, y + 6, { width: rW - 16 });
+            doc.fontSize(16).fillColor(fitClr).font("Helvetica-Bold").text(fitness || "—", fx + 10, y + 20);
+
+            // Stress Index
+            const stClr = stress ? (stress.level === "Low" ? C.green : stress.level === "Moderate" ? C.yellow : C.red) : C.textMuted;
+            const sx = M + 2 * (rW + 8);
+            doc.roundedRect(sx, y, rW, riskH, 6).fillAndStroke(C.white, C.border);
+            doc.roundedRect(sx, y, 3, riskH, 1.5).fill(stClr);
+            doc.fontSize(5.5).fillColor(C.textMuted).font("Helvetica").text("CARDIAC STRESS INDEX", sx + 10, y + 6, { width: rW - 16 });
+            doc.fontSize(16).fillColor(stClr).font("Helvetica-Bold").text(stress ? stress.level : "—", sx + 10, y + 20);
+            if (stress) doc.fontSize(6).fillColor(C.textLight).font("Helvetica").text(`RPP: ${stress.value}`, sx + 10, y + 38);
+            y += riskH + 8;
+
+            // Row 2: VO2 Max + HR Recovery
+            const vo2 = calcVO2Max(vitals.bpm);
+            const hrRec = calcHRRecovery(vitals.bpm);
+            if (vo2 || hrRec) {
+                const r2H = 44;
+                y = ensure(y, r2H + 6);
+                const r2tiles = [];
+                if (vo2) r2tiles.push({ lbl: "EST. VO2 MAX", v: `${vo2}`, u: "ml/kg/min", clr: vo2 >= 40 ? C.green : vo2 >= 30 ? C.yellow : C.red });
+                if (hrRec) r2tiles.push({ lbl: "HR RECOVERY POTENTIAL", v: hrRec, u: "", clr: /Excellent|Good/.test(hrRec) ? C.green : hrRec === "Average" ? C.yellow : C.red });
+                const r2W = (CW - 8 * (r2tiles.length - 1)) / r2tiles.length;
+                r2tiles.forEach((t, i) => {
+                    const rx = M + i * (r2W + 8);
+                    doc.roundedRect(rx, y, r2W, r2H, 6).fillAndStroke(C.white, C.border);
+                    doc.roundedRect(rx, y, 3, r2H, 1.5).fill(t.clr);
+                    doc.fontSize(5.5).fillColor(C.textMuted).font("Helvetica").text(t.lbl, rx + 10, y + 6, { width: r2W - 16 });
+                    doc.fontSize(16).fillColor(t.clr).font("Helvetica-Bold").text(t.v, rx + 10, y + 20);
+                    if (t.u) doc.fontSize(6).fillColor(C.textLight).font("Helvetica").text(t.u, rx + 10, y + 36);
+                });
+                y += r2H + 6;
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        //  INSIGHTS (always — grows with scan level)
+        // ═══════════════════════════════════════════
+        y = sectionTitle("What It Means \u2014 In Simple Words", y);
+        const ins = [];
+        if (vitals.systolic && vitals.diastolic) {
+            const s = comp.bp.label;
+            if (s === "Normal") ins.push({ t: "Your blood pressure is healthy. Keep it up!", c: C.green });
+            else if (s === "Low") ins.push({ t: "Blood pressure is low. Stay hydrated, eat well.", c: C.yellow });
+            else ins.push({ t: "Blood pressure is elevated. Reduce salt, manage stress.", c: C.red });
+        }
+        if (vitals.oxygen) {
+            const o = +vitals.oxygen;
+            ins.push(o >= 95 ? { t: `Oxygen ${o}% -- healthy.`, c: C.green } : { t: `Oxygen ${o}% -- try deep breathing exercises.`, c: C.red });
+        }
+        if (vitals.bpm) {
+            const h = +vitals.bpm;
+            ins.push(h >= 60 && h <= 100 ? { t: `Heart rate ${h} BPM -- normal range.`, c: C.green } : { t: `Heart rate ${h} BPM -- outside normal. Rest & hydrate.`, c: h < 60 ? C.yellow : C.red });
+        }
+        if (vitals.temperature) {
+            const t = +vitals.temperature;
+            ins.push(t >= 97 && t <= 99 ? { t: `Temperature ${t}\u00B0F -- normal.`, c: C.green } : { t: `Temperature ${t}\u00B0F -- outside normal. Monitor closely.`, c: t > 99 ? C.red : C.yellow });
+        }
+        if (bc?.bmi) {
+            const b = +bc.bmi;
+            if (b < 18.5) ins.push({ t: `BMI ${b.toFixed(1)} -- underweight. Focus on nutrition.`, c: C.yellow });
+            else if (b < 25) ins.push({ t: `BMI ${b.toFixed(1)} -- healthy range!`, c: C.green });
+            else if (b < 30) ins.push({ t: `BMI ${b.toFixed(1)} -- above ideal. 30 min daily walk helps.`, c: C.yellow });
+            else ins.push({ t: `BMI ${b.toFixed(1)} -- elevated. Diet + exercise recommended.`, c: C.red });
+        }
+        // Scan 2+
+        if (scan >= 2 && bc?.bodyFat != null) {
+            const bf = +bc.bodyFat;
+            ins.push(bf < 20 ? { t: `Body fat ${bf.toFixed(1)}% -- healthy range.`, c: C.green }
+                : bf < 25 ? { t: `Body fat ${bf.toFixed(1)}% -- average. Regular exercise helps.`, c: C.yellow }
+                : { t: `Body fat ${bf.toFixed(1)}% -- above ideal. Focus on cardio + diet.`, c: C.red });
+        }
+        if (scan >= 2 && bc?.waterPercentage != null) {
+            const wp = +bc.waterPercentage;
+            ins.push(wp >= 55 ? { t: `Hydration ${wp.toFixed(0)}% -- well hydrated.`, c: C.green }
+                : { t: `Hydration ${wp.toFixed(0)}% -- drink more water throughout the day.`, c: C.yellow });
+        }
+        // Scan 3+
+        if (scan >= 3 && bc?.visceralFat != null) {
+            const vf = +bc.visceralFat;
+            ins.push(vf <= 9 ? { t: `Visceral fat ${vf} -- healthy level.`, c: C.green }
+                : { t: `Visceral fat ${vf} -- elevated. Reduce sugary foods & exercise.`, c: C.red });
+        }
+        if (scan >= 3) {
+            const map = calcMAP(vitals.systolic, vitals.diastolic);
+            if (map) ins.push(map >= 70 && map <= 100 ? { t: `MAP ${map} mmHg -- good arterial pressure.`, c: C.green }
+                : { t: `MAP ${map} mmHg -- outside ideal range. Monitor.`, c: C.yellow });
+            const rpp = calcRPP(vitals.systolic, vitals.bpm);
+            if (rpp) ins.push(rpp < 120 ? { t: `Cardiac workload (RPP ${rpp}) -- within healthy limits.`, c: C.green }
+                : { t: `Cardiac workload (RPP ${rpp}) -- slightly elevated. Rest well.`, c: C.yellow });
+        }
+        // Scan 4+
+        if (scan >= 4 && bc?.bmr) {
+            const dc = calcDailyCalories(bc.bmr);
+            if (dc) ins.push({ t: `Aim for ~${dc} kcal/day based on your metabolism.`, c: C.blue });
+        }
+        if (scan >= 4) {
+            const dp = calcDailyProtein(bc?.weight);
+            if (dp) ins.push({ t: `Daily protein target: ${dp}g for muscle maintenance.`, c: C.blue });
+        }
+        // Scan 5+
+        if (scan >= 5) {
+            const fitness = calcFitnessLevel(vitals.bpm, vitals.oxygen, bc?.bmi);
+            if (fitness) ins.push({ t: `Your fitness level: ${fitness}. ${fitness === "Excellent" || fitness === "Good" ? "Great work!" : "Room to improve with daily exercise."}`, c: fitness === "Excellent" || fitness === "Good" ? C.green : C.yellow });
+            const stress = calcStressIndex(vitals.bpm, vitals.systolic);
+            if (stress) ins.push({ t: `Cardiac stress: ${stress.level}. ${stress.level === "Low" ? "Heart is working efficiently." : "Focus on relaxation and sleep."}`, c: stress.level === "Low" ? C.green : C.yellow });
+            const vo2 = calcVO2Max(vitals.bpm);
+            if (vo2) ins.push({ t: `Estimated VO2 Max: ${vo2} ml/kg/min. ${vo2 >= 40 ? "Good aerobic capacity." : "More cardio exercise recommended."}`, c: vo2 >= 40 ? C.green : C.yellow });
+        }
+        if (!ins.length) ins.push({ t: "More tests needed for insights.", c: C.textLight });
+
+        const iH = ins.length * 15 + 12;
+        y = ensure(y, iH + 4);
+        doc.roundedRect(M, y, CW, iH, 6).fill(C.bg);
+        let iy = y + 7;
+        ins.forEach((i) => {
+            iy = ensure(iy, 15);
+            doc.circle(M + 14, iy + 4, 2.5).fill(i.c);
+            doc.fontSize(7.5).fillColor(C.textMid).font("Helvetica").text(i.t, M + 24, iy, { width: CW - 40 });
+            iy += 15;
+        });
+        y = iy + 8;
+
+        // ═══════════════════════════════════════════
+        //  SCAN 2+ : HEALTH TREND GRAPH
+        // ═══════════════════════════════════════════
+        if (show.trendGraph && graphData.length > 1) {
+            y = ensure(y, 200);
+            y = sectionTitle("Health Trend", y);
+            y = ensure(y, 175);
+            const boxW = CW, boxH = 120;
+            const padL = 30, padR = 10, padT = 10, padB = 24;
+            doc.roundedRect(M, y, boxW, boxH, 6).fillAndStroke(C.white, C.border);
+            const cL = M + padL, cR = M + boxW - padR, cT = y + padT, cBt = y + boxH - padB;
+            const cWd = cR - cL, cHt = cBt - cT;
+            const n = graphData.length;
+            const allVals = graphData.flatMap(h => [h.systolic || 0, h.bpm || 0]).filter(v => v > 0);
+            if (allVals.length === 0) allVals.push(80, 120);
+            const dMin = Math.min(...allVals), dMax = Math.max(...allVals);
+            const yMin = Math.floor((dMin - 10) / 10) * 10, yMax = Math.ceil((dMax + 10) / 10) * 10 || 200;
+            const mapYv = (v) => cBt - ((v - yMin) / (yMax - yMin)) * cHt;
+            for (let gi = 0; gi <= 4; gi++) {
+                const tick = yMin + ((yMax - yMin) * gi) / 4;
+                const gy = mapYv(tick);
+                doc.moveTo(cL, gy).lineTo(cR, gy).lineWidth(0.3).strokeColor(C.borderLight).stroke();
+                doc.fontSize(5).fillColor(C.textMuted).font("Helvetica").text(`${Math.round(tick)}`, M + 2, gy - 3, { width: 25, align: "right" });
+            }
+            const z1 = Math.max(mapYv(Math.min(130, yMax)), cT), z2 = Math.min(mapYv(Math.max(110, yMin)), cBt);
+            if (z2 > z1) {
+                doc.save().opacity(0.06); doc.rect(cL, z1, cWd, z2 - z1).fill(C.green); doc.restore();
+                doc.save().opacity(0.4); doc.fontSize(4.5).fillColor(C.green).font("Helvetica").text("Normal", cR - 28, z1 + 2); doc.restore();
+            }
+            const sXstep = n > 1 ? cWd / (n - 1) : 0;
+            doc.save().opacity(0.08);
+            doc.moveTo(cL, mapYv(graphData[0].systolic || 120));
+            for (let gi = 1; gi < n; gi++) doc.lineTo(cL + gi * sXstep, mapYv(graphData[gi].systolic || 120));
+            doc.lineTo(cL + (n - 1) * sXstep, cBt).lineTo(cL, cBt).closePath().fill(C.brand);
+            doc.restore();
+            doc.lineWidth(2).strokeColor(C.brand).lineJoin("round").lineCap("round");
+            for (let gi = 0; gi < n; gi++) { const px = cL + gi * sXstep, py = mapYv(graphData[gi].systolic || 120); gi === 0 ? doc.moveTo(px, py) : doc.lineTo(px, py); }
+            doc.stroke();
+            for (let gi = 0; gi < n; gi++) { const px = cL + gi * sXstep, py = mapYv(graphData[gi].systolic || 120); doc.circle(px, py, 3).fill(C.white); doc.circle(px, py, 2).fill(C.brand); }
+            doc.lineWidth(1.5).strokeColor(C.green).lineJoin("round").lineCap("round");
+            for (let gi = 0; gi < n; gi++) { const px = cL + gi * sXstep, py = mapYv(graphData[gi].bpm || 72); gi === 0 ? doc.moveTo(px, py) : doc.lineTo(px, py); }
+            doc.stroke();
+            for (let gi = 0; gi < n; gi++) { const px = cL + gi * sXstep, py = mapYv(graphData[gi].bpm || 72); doc.circle(px, py, 2.5).fill(C.white); doc.circle(px, py, 1.5).fill(C.green); }
+            for (let gi = 0; gi < n; gi++) {
+                const px = cL + gi * sXstep;
+                const lbl = graphData[gi].date ? new Date(graphData[gi].date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : `#${gi + 1}`;
+                doc.fontSize(5).fillColor(C.textMuted).font("Helvetica").text(lbl, px - 16, cBt + 4, { width: 32, align: "center" });
+            }
+            const lgX = cR - 110, lgY = cBt + 4;
+            doc.circle(lgX, lgY + 3, 2.5).fill(C.brand);
+            doc.fontSize(5.5).fillColor(C.textMid).font("Helvetica").text("Systolic BP", lgX + 5, lgY);
+            doc.circle(lgX + 55, lgY + 3, 2.5).fill(C.green);
+            doc.text("Heart Rate", lgX + 60, lgY);
+            y += boxH + 6;
+        }
+
+        // ═══════════════════════════════════════════
+        //  SCAN 3+ : TREND DATA TABLE
+        // ═══════════════════════════════════════════
+        if (show.trendTable && graphData.length > 1) {
+            y = ensure(y, graphData.length * 13 + 22);
+            const colW = [55, 55, 55, 55, 55];
+            const tblW = colW.reduce((a, b) => a + b, 0);
+            const tblX = M + (CW - tblW) / 2;
+            doc.roundedRect(tblX, y, tblW, 13, 3).fill(C.dark);
+            const headers = ["Date", "Systolic", "Diastolic", "Pulse", "SpO2"];
+            let hx = tblX;
+            headers.forEach((h, i) => { doc.fontSize(6).fillColor(C.white).font("Helvetica-Bold").text(h, hx + 3, y + 3, { width: colW[i] - 6, align: "center" }); hx += colW[i]; });
+            y += 13;
+            graphData.forEach((h, ri) => {
+                const bg = ri % 2 === 0 ? C.white : C.bg;
+                doc.rect(tblX, y, tblW, 12).fill(bg);
+                const row = [
+                    h.date ? new Date(h.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" }) : `#${ri + 1}`,
+                    `${h.systolic || "\u2014"}`, `${h.diastolic || "\u2014"}`, `${h.bpm || "\u2014"}`, `${h.oxygen || "\u2014"}%`,
+                ];
+                let rx = tblX;
+                row.forEach((val, ci) => { doc.fontSize(6).fillColor(C.textMid).font("Helvetica").text(val, rx + 3, y + 2.5, { width: colW[ci] - 6, align: "center" }); rx += colW[ci]; });
+                y += 12;
+            });
+            y += 8;
+        }
+
+        // ═══════════════════════════════════════════
+        //  SCAN 6+ : JOURNEY RECAP
+        // ═══════════════════════════════════════════
+        if (show.journeyRecap && graphData.length >= 3) {
+            y = ensure(y, 110);
+            y = sectionTitle("Your Health Journey", y);
+            const first = graphData[0], last = graphData[graphData.length - 1];
+            const jH = 96;
+            y = ensure(y, jH + 4);
+            doc.roundedRect(M, y, CW, jH, 6).fill(C.blueBg);
+            doc.fontSize(7.5).font("Helvetica-Bold").fillColor(C.blue)
+               .text(`Over ${graphData.length} visits, here's how you've progressed:`, M + 12, y + 7);
+            const jMetrics = [
+                { lbl: "Blood Pressure", from: `${first.systolic ?? "--"}/${first.diastolic ?? "--"}`, to: `${last.systolic ?? "--"}/${last.diastolic ?? "--"}`, diff: (first.systolic && last.systolic) ? (first.systolic - last.systolic) : 0, unit: "mmHg" },
+                { lbl: "Heart Rate", from: `${first.bpm ?? "--"}`, to: `${last.bpm ?? "--"}`, diff: (first.bpm && last.bpm) ? (first.bpm - last.bpm) : 0, unit: "BPM" },
+                { lbl: "Oxygen", from: `${first.oxygen ?? "--"}%`, to: `${last.oxygen ?? "--"}%`, diff: (first.oxygen && last.oxygen) ? (last.oxygen - first.oxygen) : 0, unit: "%" },
+                { lbl: "Temperature", from: `${first.temperature ?? "--"}\u00B0F`, to: `${last.temperature ?? "--"}\u00B0F`, diff: (first.temperature && last.temperature) ? +((last.temperature - first.temperature).toFixed(1)) : 0, unit: "\u00B0F", neutral: true },
+            ];
+            let jy = y + 22;
+            jMetrics.forEach((jm) => {
+                const clr = jm.neutral ? C.textMid : (jm.diff > 0 ? C.green : jm.diff < 0 ? C.red : C.textMuted);
+                const sign = jm.diff > 0 ? "+" : "";
+                doc.fontSize(7).fillColor(C.textMid).font("Helvetica").text(`${jm.lbl}:`, M + 16, jy);
+                doc.fontSize(7.5).fillColor(C.text).font("Helvetica-Bold").text(`${jm.from}  -->  ${jm.to}`, M + 100, jy);
+                doc.fontSize(7).fillColor(clr).font("Helvetica-Bold").text(`(${sign}${jm.diff} ${jm.unit})`, M + 220, jy);
+                jy += 12;
+            });
+            // Consistency score
+            const consistency = Math.round((graphData.length / (patient.maxScans || 7)) * 100);
+            doc.fontSize(7).fillColor(C.textMid).font("Helvetica").text("Consistency:", M + 16, jy + 2);
+            const cBarX = M + 80, cBarW = 120, cBarH = 7;
+            doc.roundedRect(cBarX, jy + 3, cBarW, cBarH, 3.5).fill(C.blueLight);
+            doc.roundedRect(cBarX, jy + 3, Math.max(cBarW * consistency / 100, 4), cBarH, 3.5).fill(C.blue);
+            doc.fontSize(7.5).fillColor(C.blue).font("Helvetica-Bold").text(`${consistency}%`, cBarX + cBarW + 6, jy + 1);
+            y += jH + 8;
+        }
+
+        // ═══════════════════════════════════════════
+        //  ACTION PLAN (progressive)
+        // ═══════════════════════════════════════════
+        y = ensure(y, 60);
+        y = sectionTitle("Your Action Plan", y);
+        const acts = [];
+        if (comp.bp.label === "High") acts.push("Reduce salt to under 5g/day. Avoid pickles, papad, processed snacks.");
+        if (comp.bp.label === "Low") acts.push("Stay hydrated -- 8+ glasses of water daily.");
+        if (+vitals.bpm > 100) acts.push("Limit caffeine. Try 10 min of meditation before sleep.");
+        if (+vitals.oxygen < 95) acts.push("Deep breathing: inhale 4s, hold 4s, exhale 6s -- 5 times daily.");
+        if (bc?.bmi && +bc.bmi >= 25) acts.push("Walk briskly 30 min daily. Replace sugary drinks with water.");
+        if (bc?.bmi && +bc.bmi < 18.5) acts.push("Eat nutrient-dense foods: nuts, eggs, paneer, bananas.");
+        if (scan <= 2) {
+            acts.push("Drink 8 glasses of water daily and eat 2-3 servings of fruits.");
+            acts.push("Sleep 7-8 hours. Avoid screens 1 hour before bed.");
+            acts.push("Take a 15-minute walk after meals to aid digestion.");
+        }
+        if (scan >= 2 && hist.length > 0) {
+            const prev = hist[hist.length - 1];
+            if (vitals.systolic < prev.systolic) acts.push("Your BP is improving! Continue your current routine.");
+            else if (vitals.systolic > prev.systolic) acts.push("BP increased since last visit. Cut salt, reduce stress, walk more.");
+        }
+        if (scan >= 3 && bc?.bodyFat && +bc.bodyFat > 22) acts.push("Body fat above ideal. Add 20 min cardio 4x/week.");
+        if (scan >= 3 && bc?.visceralFat && +bc.visceralFat > 9) acts.push("Visceral fat elevated. Cut refined sugar and processed food.");
+        if (scan >= 4) {
+            const wi = calcWaterIntake(bc?.weight);
+            if (wi) acts.push(`Drink at least ${wi}L of water daily based on your body weight.`);
+            const dc = calcDailyCalories(bc?.bmr);
+            if (dc) acts.push(`Target ~${dc} kcal/day. Focus on protein-rich meals.`);
+            const dp = calcDailyProtein(bc?.weight);
+            if (dp) acts.push(`Aim for ${dp}g protein daily from dal, eggs, paneer, chicken.`);
+        }
+        if (scan >= 5) {
+            acts.push("Track your meals for 3 days to find hidden calorie sources.");
+            acts.push("Add strength training 2x/week to boost muscle mass and BMR.");
+            const stress = calcStressIndex(vitals.bpm, vitals.systolic);
+            if (stress && stress.level !== "Low") acts.push("Practice 10 min deep breathing or meditation daily to lower cardiac stress.");
+        }
+        if (scan >= 6) {
+            acts.push("Review your journey data above -- celebrate the improvements you've made!");
+            acts.push("Share this report with your doctor for a comprehensive health discussion.");
+        }
+        if (scan >= 7) {
+            acts.push("You've completed all 7 scans! Keep monitoring monthly for long-term health.");
+        }
+        acts.push("Come back for your next checkup -- your report grows with each visit!");
+        acts.push("Save this report. Follow these steps for 7 days and compare your numbers.");
+
+        const aH = acts.length * 18 + 12;
+        y = ensure(y, aH + 4);
+        doc.roundedRect(M, y, CW, aH, 6).fill(C.bg);
+        let ay = y + 7;
+        acts.forEach((a, i) => {
+            ay = ensure(ay, 18);
+            doc.circle(M + 14, ay + 4, 6.5).fill(C.brand);
+            doc.fontSize(7).fillColor(C.white).font("Helvetica-Bold").text(`${i + 1}`, M + 10, ay + 1, { width: 9, align: "center" });
+            doc.fontSize(7.5).fillColor(C.textMid).font("Helvetica").text(a, M + 26, ay + 0.5, { width: CW - 38 });
+            ay += 18;
+        });
+        y = ay + 6;
+
+        // ═══════════════════════════════════════════
+        //  WHAT UNLOCKS NEXT (scan < 7)
+        // ═══════════════════════════════════════════
+        if (show.unlocksNext) {
+            const nextScan = scan + 1;
+            const info = unlockInfo[nextScan];
+            if (info) {
+                const allItems = [...info.items];
+                const extraH = scan === 1 ? 18 : 0;
+                const boxH = allItems.length * 14 + 38 + extraH;
+                y = ensure(y, boxH + 8);
+                doc.roundedRect(M, y, CW, boxH, 6).fillAndStroke(C.brandLight, C.brand);
+                doc.roundedRect(M, y, CW, 3, 1.5).fill(C.brand);
+                doc.fontSize(8.5).font("Helvetica-Bold").fillColor(C.brandDark)
+                   .text(`COMING IN SCAN ${nextScan}: ${info.title}`, M + 14, y + 10);
+                let uy = y + 26;
+                allItems.forEach((item) => {
+                    doc.circle(M + 20, uy + 3.5, 2.5).lineWidth(1).strokeColor(C.brand).stroke();
+                    doc.fontSize(7.5).fillColor(C.textMid).font("Helvetica").text(item, M + 30, uy, { width: CW - 50 });
+                    uy += 14;
+                });
+                if (scan === 1) {
+                    doc.fontSize(6.5).fillColor(C.textLight).font("Helvetica")
+                       .text("Plus: Deep Metrics (Scan 3) \u2022 Lifestyle Plan (Scan 4) \u2022 Risk Analysis (Scan 5) \u2022 Journey (Scan 6) \u2022 Complete Report (Scan 7)", M + 14, uy + 2, { width: CW - 28 });
+                }
+                doc.fontSize(7).fillColor(C.brandDark).font("Helvetica-Bold")
+                   .text("Complete your next visit to unlock!", M + 14, y + boxH - 14, { width: CW - 28, align: "center" });
+                y += boxH + 8;
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        //  SCAN 7: JOURNEY COMPLETE + Final Grade
+        // ═══════════════════════════════════════════
+        if (show.journeyComplete) {
+            const grade = healthScore >= 90 ? "A+" : healthScore >= 80 ? "A" : healthScore >= 70 ? "B" : healthScore >= 60 ? "C" : "D";
+            const consistency = Math.round((graphData.length / (patient.maxScans || 7)) * 100);
+            y = ensure(y, 78);
+            doc.roundedRect(M, y, CW, 72, 6).fill(C.greenBg);
+            doc.roundedRect(M, y, CW, 3, 1.5).fill(C.green);
+            doc.fontSize(14).font("Helvetica-Bold").fillColor(C.green)
+               .text("Journey Complete!", M, y + 8, { width: CW, align: "center" });
+            doc.fontSize(8).font("Helvetica").fillColor(C.textMid)
+               .text("Congratulations on completing all 7 scans! You've unlocked your full health profile.", M + 20, y + 26, { width: CW - 40, align: "center" });
+            doc.fontSize(7.5).font("Helvetica-Bold").fillColor(C.green)
+               .text(`Final Grade: ${grade} \u2022 Consistency: ${consistency}% \u2022 Total Visits: ${graphData.length} \u2022 All Metrics Unlocked`, M + 20, y + 42, { width: CW - 40, align: "center" });
+            doc.fontSize(6.5).font("Helvetica").fillColor(C.textMid)
+               .text("Keep monitoring your health monthly. Share this report with your doctor for a comprehensive discussion.", M + 20, y + 56, { width: CW - 40, align: "center" });
+            y += 80;
+        }
+
+        // ═══ SUMMARY — layman language ═══
+        {
+            y = ensure(y, 50);
+            y = sectionTitle("Summary", y);
+            let summaryText = "";
+            if (scan === 1) {
+                summaryText = `This is your first health check. Your overall score is ${healthScore}/100 (${scoreLabel(healthScore)}). ` +
+                    (healthScore >= 80 ? "Your vitals look good - keep up the healthy habits! Come back for your next scan to unlock body composition tracking."
+                    : healthScore >= 60 ? "Most readings are fine, with a few areas to watch. Follow the action plan above and visit again soon."
+                    : "Some readings need attention. Follow the tips above and come back for your next scan.");
+            } else if (scan <= 3) {
+                const improving = show.sinceLastVisit && hist.length > 0 && vitals.systolic <= hist[hist.length - 1].systolic;
+                summaryText = `Visit ${scan} of 7. Your score is ${healthScore}/100 (${scoreLabel(healthScore)}). ` +
+                    (improving ? "Your numbers are improving since last visit! " : "") +
+                    "Keep following the action plan. Each visit adds more insights to your report.";
+            } else if (scan <= 5) {
+                summaryText = `Visit ${scan} of 7 - your health profile is getting detailed! Score: ${healthScore}/100 (${scoreLabel(healthScore)}). ` +
+                    "Your lifestyle plan and risk analysis are now active. Review the tips above to keep improving.";
+            } else if (scan === 6) {
+                summaryText = `Visit ${scan} of 7. Score: ${healthScore}/100 (${scoreLabel(healthScore)}). ` +
+                    "Your full health journey is now visible. One more scan to complete your profile!";
+            } else {
+                summaryText = `All 7 scans complete! Final score: ${healthScore}/100 (${scoreLabel(healthScore)}). ` +
+                    "Your complete health profile with all metrics is above. Share this report with your doctor.";
+            }
+            y = ensure(y, 38);
+            doc.roundedRect(M, y, CW, 32, 6).fill(C.bg);
+            doc.fontSize(7.5).fillColor(C.textMid).font("Helvetica").text(summaryText, M + 12, y + 8, { width: CW - 24, lineGap: 1 });
+            y += 38;
+        }
+
+        // ═══ ECO STATS ═══
+        if (ecoStats?.individual && ecoStats?.total) {
+            y = ensure(y, 30);
+            y += 3;
+            doc.roundedRect(M, y, CW, 24, 6).fill(C.greenBg);
+            doc.fontSize(6.5).fillColor(C.green).font("Helvetica-Bold")
+               .text(`Your digital report saved ~${ecoStats.individual.water}L water & ~${ecoStats.individual.co2}g CO2`, M + 8, y + 3, { width: CW - 16, align: "center" });
+            doc.fontSize(5.5).fillColor(C.textLight).font("Helvetica")
+               .text(`Together, Reliv users saved ~${ecoStats.total.water}L water, ~${ecoStats.total.co2}g CO2, ~${ecoStats.total.paper} sheets of paper.`, M + 8, y + 13, { width: CW - 16, align: "center" });
+        }
+
+        drawPageFooter();
         doc.end();
+      } catch (err) {
+        reject(err);
+      }
     });
 }
 function generateReceiptPdf(data, ecoStats) {
@@ -2110,6 +2921,40 @@ app.post("/api/get-customer-data", async (req, res) => {
     }
 });
 
+// ── Test report endpoint (send sample report to verify PDF design) ──
+app.get("/api/test-report", async (req, res) => {
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ ok: false, message: "?email= required" });
+    try {
+        const sampleData = {
+            patient: { name: "Faizan Khan", age: "22", gender: "Male", email, phone: "9876543210", scanCount: 3 },
+            vitals: { systolic: 122, diastolic: 78, bpm: 74, oxygen: 98, temperature: 98.2, weight: 68, height: 172, leftEye: 6, rightEye: 5 },
+            bodyComposition: { weight: 68, height: 172, bmi: 23.0, bodyFat: 18.5, muscleMass: 52.3, waterPercentage: 58.2, boneMass: 2.8, bmr: 1650, visceralFat: 6 },
+            history: [
+                { date: "2026-04-11", systolic: 128, diastolic: 82, bpm: 78 },
+                { date: "2026-04-14", systolic: 125, diastolic: 80, bpm: 76 },
+                { date: "2026-04-18", systolic: 122, diastolic: 78, bpm: 74 },
+            ]
+        };
+        const ecoStats = await getEcoStats();
+        const pdfBuffer = await generateReportPdf(sampleData, ecoStats);
+        const mailOptions = {
+            from: `Reliv Health <${process.env.GMAIL_USER}>`,
+            to: email,
+            subject: "Test Health Report — Reliv",
+            text: "This is a test report to preview the new PDF design.",
+            html: `<div style="font-family:sans-serif;padding:20px;"><h2 style="color:#F97316;">Reliv — Test Report</h2><p>Attached is a sample health report PDF with dummy data to preview the new design.</p></div>`,
+            attachments: [{ filename: "Reliv-Test-Report.pdf", content: pdfBuffer, contentType: "application/pdf" }],
+        };
+        await transporter.sendMail(mailOptions);
+        log.info(`✅ Test report sent to ${email}`);
+        res.json({ ok: true, message: `Test report sent to ${email}` });
+    } catch (err) {
+        log.error("Test report error:", err);
+        res.status(500).json({ ok: false, message: err.message });
+    }
+});
+
 // Health check endpoint (for monitoring)
 app.get("/api/health", async (req, res) => {
     try {
@@ -2312,7 +3157,7 @@ app.get("/api/email-test", async (req, res) => {
 app.post("/api/send-report", async (req, res) => {
     try {
         log.info('📧 Received email send request');
-        const { to, name, healthData, reportImage } = req.body;
+        const { to, name, healthData } = req.body;
 
         if (!to || !healthData) {
             log.error('❌ Missing required fields:', { to: !!to, healthData: !!healthData });
@@ -2328,7 +3173,7 @@ app.post("/api/send-report", async (req, res) => {
         }
 
         const ecoStats = await getEcoStats();
-        const pdfBuffer = reportImage ? await generatePdfFromImage(reportImage) : await generateReportPdf(healthData, ecoStats);
+        const pdfBuffer = await generateReportPdf(healthData, ecoStats);
         const MAX_SIZE = 24 * 1024 * 1024;
 
         if (pdfBuffer.length > MAX_SIZE) {
@@ -2338,14 +3183,73 @@ app.post("/api/send-report", async (req, res) => {
 
         log.info(`📄 PDF generated: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`);
 
+        const userName = name || "User";
+        const vitals = healthData.vitals || {};
+        const bp = vitals.systolic && vitals.diastolic ? `${vitals.systolic}/${vitals.diastolic} mmHg` : null;
+        const hr = vitals.bpm ? `${vitals.bpm} BPM` : null;
+        const spo2 = vitals.oxygen ? `${vitals.oxygen}%` : null;
+        const temp = vitals.temperature ? `${vitals.temperature}°F` : null;
+
+        const htmlEmail = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:20px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+  <!-- Header -->
+  <tr><td style="background:#F97316;padding:30px 40px;text-align:center;">
+    <h1 style="margin:0;color:#fff;font-size:28px;letter-spacing:1px;">Reliv</h1>
+    <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">Your Personalized Health Report</p>
+  </td></tr>
+  <!-- Greeting -->
+  <tr><td style="padding:30px 40px 15px;">
+    <h2 style="margin:0;color:#111;font-size:20px;">Hi ${userName},</h2>
+    <p style="color:#555;font-size:14px;line-height:1.6;margin:10px 0 0;">
+      Your health report from today's checkup is attached as a PDF. Here's a quick summary:
+    </p>
+  </td></tr>
+  <!-- Quick Vitals -->
+  <tr><td style="padding:0 40px 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:8px;overflow:hidden;">
+      <tr style="background:#FFF7ED;">
+        <td style="padding:12px 16px;font-size:13px;color:#F97316;font-weight:600;border-bottom:1px solid #fed7aa;" colspan="2">
+          Quick Vitals Summary
+        </td>
+      </tr>
+      ${bp ? `<tr><td style="padding:10px 16px;font-size:13px;color:#666;border-bottom:1px solid #f3f3f3;">Blood Pressure</td><td style="padding:10px 16px;font-size:14px;color:#111;font-weight:600;text-align:right;border-bottom:1px solid #f3f3f3;">${bp}</td></tr>` : ''}
+      ${hr ? `<tr><td style="padding:10px 16px;font-size:13px;color:#666;border-bottom:1px solid #f3f3f3;">Heart Rate</td><td style="padding:10px 16px;font-size:14px;color:#111;font-weight:600;text-align:right;border-bottom:1px solid #f3f3f3;">${hr}</td></tr>` : ''}
+      ${spo2 ? `<tr><td style="padding:10px 16px;font-size:13px;color:#666;border-bottom:1px solid #f3f3f3;">Oxygen Level</td><td style="padding:10px 16px;font-size:14px;color:#111;font-weight:600;text-align:right;border-bottom:1px solid #f3f3f3;">${spo2}</td></tr>` : ''}
+      ${temp ? `<tr><td style="padding:10px 16px;font-size:13px;color:#666;">Temperature</td><td style="padding:10px 16px;font-size:14px;color:#111;font-weight:600;text-align:right;">${temp}</td></tr>` : ''}
+    </table>
+  </td></tr>
+  <!-- CTA -->
+  <tr><td style="padding:0 40px 25px;text-align:center;">
+    <p style="color:#555;font-size:13px;line-height:1.5;margin:0 0 15px;">
+      Open the attached PDF for your full report with personalized advice, body composition details, and your 7-day action plan.
+    </p>
+    <div style="background:#FFF7ED;border-left:4px solid #F97316;padding:12px 16px;border-radius:0 6px 6px 0;text-align:left;">
+      <p style="margin:0;font-size:12px;color:#F97316;font-weight:600;">💡 Pro Tip</p>
+      <p style="margin:4px 0 0;font-size:12px;color:#666;">Come back for another checkup to see your progress graph grow!</p>
+    </div>
+  </td></tr>
+  <!-- Footer -->
+  <tr><td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #eee;text-align:center;">
+    <p style="margin:0;font-size:11px;color:#999;">This report is for informational purposes only. It is not a substitute for professional medical advice.</p>
+    <p style="margin:8px 0 0;font-size:11px;color:#bbb;">© ${new Date().getFullYear()} Reliv Health • Your Campus Wellness Partner</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
         const mailOptions = {
-            from: `Reliv Reports <${process.env.GMAIL_USER}>`,
+            from: `Reliv Health <${process.env.GMAIL_USER}>`,
             to,
-            subject: `Your Health Report from Reliv, ${name || "User"}`,
-            text: `Hi ${name || "User"},\n\nPlease find your health report attached.\n\nBest,\nThe Reliv Team`,
+            subject: `Your Health Report — Reliv, ${userName}`,
+            text: `Hi ${userName},\n\nYour health report is attached as a PDF.\n\n${bp ? `Blood Pressure: ${bp}\n` : ''}${hr ? `Heart Rate: ${hr}\n` : ''}${spo2 ? `Oxygen: ${spo2}\n` : ''}${temp ? `Temperature: ${temp}\n` : ''}\nOpen the PDF for your full report with personalized advice.\n\nBest,\nReliv Health`,
+            html: htmlEmail,
             attachments: [
                 {
-                    filename: `Reliv-Health-Report-${name || "user"}.pdf`,
+                    filename: `Reliv-Health-Report-${userName.replace(/\s+/g, '-')}.pdf`,
                     content: pdfBuffer,
                     contentType: "application/pdf",
                 },

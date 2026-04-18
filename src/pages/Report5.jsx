@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useHealth } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
-import html2canvas from "html2canvas";
 import Logo from "../components/Logo";
 import EmailSendingAnimation from "../components/EmailSendingAnimation";
 import VirtualKeyboard from "../components/VirtualKeyboard";
@@ -470,7 +469,6 @@ export default function Report5() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const [inactivityTimer, setInactivityTimer] = useState(120);
-  const [capturingScreenshot, setCapturingScreenshot] = useState(false);
   const [activeInput, setActiveInput] = useState(null);
   const [keyboardInputs, setKeyboardInputs] = useState({ doctorEmail: "" });
   const doctorEmailInputRef = useRef(null);
@@ -783,9 +781,9 @@ export default function Report5() {
     subcutFatMassData
   } = integrationMetrics;
 
-  // Email send - captures UI screenshot and converts to PDF
+  // Email send - sends structured health data to backend for professional PDF generation
   const handleSendEmail = async () => {
-    if (!patient?.email || !reportContainerRef.current) {
+    if (!patient?.email) {
       alert('No email address found for patient');
       return;
     }
@@ -798,42 +796,15 @@ export default function Report5() {
     }
     
     setSendingEmail(true);
-    setCapturingScreenshot(true);
-    
-    // Small delay to hide buttons before capture
-    await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
-      // Dynamically set scale based on report data size
-      let dataLength = 0;
-      try {
-        dataLength = JSON.stringify(metrics || {}).length + JSON.stringify(history || {}).length;
-      } catch { /* ignore stringify errors */ }
-      let scale = 2;
-      if (dataLength > 4000) scale = 1.2;
-      else if (dataLength > 2000) scale = 1.5;
-      // Capture Report5 UI as screenshot
-      const canvas = await html2canvas(reportContainerRef.current, {
-        scale,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: reportContainerRef.current.scrollWidth,
-        height: reportContainerRef.current.scrollHeight,
-        windowWidth: reportContainerRef.current.scrollWidth,
-        windowHeight: reportContainerRef.current.scrollHeight,
-      });
-      
-      const reportImage = canvas.toDataURL('image/jpeg', 0.8);
-      
-      // Use backend-compatible field names
+      // Send structured health data — backend generates professional PDF
       const response = await fetch(`${API_BASE}/api/send-report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           to: patient.email, 
           name: patient.name,
-          reportImage, // Screenshot of Report5 UI
           healthData: { 
             patient, 
             vitals: {
@@ -873,13 +844,12 @@ export default function Report5() {
       if (import.meta.env.DEV) console.error('❌ Email error:', err);
       alert(`Failed to send report: ${sanitizeError(err)}`);
     } finally {
-      setCapturingScreenshot(false);
       setSendingEmail(false);
     }
   };
 
   const handleSendToDoctor = async () => {
-    if (!doctorEmail || !reportContainerRef.current) {
+    if (!doctorEmail) {
       alert('Please enter doctor\'s email address');
       return;
     }
@@ -892,34 +862,15 @@ export default function Report5() {
     }
     
     setSendingEmail(true);
-    setCapturingScreenshot(true);
-    
-    // Small delay to hide buttons before capture
-    await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
-      // Capture Report5 UI as screenshot
-      const canvas = await html2canvas(reportContainerRef.current, {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: reportContainerRef.current.scrollWidth,
-        height: reportContainerRef.current.scrollHeight,
-        windowWidth: reportContainerRef.current.scrollWidth,
-        windowHeight: reportContainerRef.current.scrollHeight,
-      });
-      
-      const reportImage = canvas.toDataURL('image/png');
-      
-      // Use backend-compatible field names
+      // Send structured health data — backend generates professional PDF
       const response = await fetch(`${API_BASE}/api/send-report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           to: doctorEmail, 
           name: patient.name,
-          reportImage, // Screenshot of Report5 UI
           healthData: { 
             patient, 
             vitals: {
@@ -960,7 +911,6 @@ export default function Report5() {
       if (import.meta.env.DEV) console.error('❌ Doctor email error:', err);
       alert(`Failed to send report: ${sanitizeError(err)}`);
     } finally {
-      setCapturingScreenshot(false);
       setSendingEmail(false);
     }
   };
@@ -989,13 +939,13 @@ export default function Report5() {
     setSpeechPlaying(true);
   };
 
-  // Confetti on scan 7 with high score
+  // Confetti on scan 7 with all normal vitals
   useEffect(() => {
-    if (scanCount === 7 && !confettiRef.current && data.healthScore >= 90) {
+    if (scanCount === 7 && !confettiRef.current) {
       confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
       confettiRef.current = true;
     }
-  }, [scanCount, data.healthScore]);
+  }, [scanCount]);
 
   const bpStatus = getBPStatus();
   const oxygenStatus = getOxygenStatus();
@@ -2531,10 +2481,9 @@ export default function Report5() {
           </div>
         </motion.div>
 
-        {/* Action Buttons - Hidden during screenshot capture */}
-        {!capturingScreenshot && (
-          <>
-            <motion.div
+        {/* Action Buttons */}
+        <>
+          <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
@@ -2700,7 +2649,6 @@ export default function Report5() {
               </button>
             </div>
           </>
-        )}
 
         {/* Virtual Keyboard - Fixed at bottom */}
         {activeInput === 'doctorEmail' && (
