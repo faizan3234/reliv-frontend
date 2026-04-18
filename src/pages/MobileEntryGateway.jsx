@@ -79,6 +79,8 @@ export default function MobileEntryGateway() {
         className="mobile-entry-page"
         style={{
           minHeight: "100dvh",
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
           background: "linear-gradient(to bottom, #fff7ed, #ffffff)",
           display: "flex",
           alignItems: "center",
@@ -114,6 +116,8 @@ export default function MobileEntryGateway() {
         className="mobile-entry-page"
         style={{
           minHeight: "100dvh",
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
           background: "linear-gradient(to bottom, #fff7ed, #ffffff)",
           display: "flex",
           alignItems: "center",

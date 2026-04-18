@@ -286,7 +286,7 @@ function MobileEntry({ gatewaySessionId }) {
         </div>
       )}
 
-      <div className="mobile-entry-page" style={{ minHeight: '100dvh', background: 'linear-gradient(to bottom, #fff7ed, #ffffff)', paddingTop: 'max(0px, env(safe-area-inset-top))' }}>
+      <div className="mobile-entry-page" style={{ minHeight: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: 'linear-gradient(to bottom, #fff7ed, #ffffff)', paddingTop: 'max(0px, env(safe-area-inset-top))' }}>
         {/* Branded header */}
         <div style={{ background: '#f97316', color: 'white', textAlign: 'center', padding: '0.75rem 1rem', paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
           <span style={{ fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>❤️ Reliv Health</span>

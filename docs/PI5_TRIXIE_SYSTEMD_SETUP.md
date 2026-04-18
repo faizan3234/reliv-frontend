@@ -101,6 +101,9 @@ chromium-browser \
   --enable-hardware-video-decode \
   --autoplay-policy=no-user-gesture-required \
   --enable-speech-dispatcher \
+  --disable-gpu-compositing \
+  --disable-software-rasterizer \
+  --use-gl=egl \
   http://localhost:4173
 EOF
 

@@ -53,10 +53,18 @@ html, body {
 .overflow-auto,
 .overflow-scroll,
 .min-h-screen,
+.mobile-entry-page,
 [style*="overflow"] {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior: contain;
+}
+
+/* Ensure mobile pages are always scrollable */
+.mobile-entry-page {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
 }
 
 /* Hide scrollbar but keep functionality (cleaner kiosk look) */
