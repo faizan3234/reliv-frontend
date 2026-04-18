@@ -156,7 +156,7 @@ export default function CampusLeaderboard({ overlay = false }) {
         padding: overlay ? "32px 16px 40px" : "20px 16px",
       }}
     >
-      <div style={{ maxWidth: 480, width: "100%" }}>
+      <div style={{ maxWidth: 680, width: "100%" }}>
 
         {/* ══════ HEADER ══════ */}
         <motion.div
@@ -173,28 +173,28 @@ export default function CampusLeaderboard({ overlay = false }) {
             padding: "4px 14px", marginBottom: 10,
             boxShadow: "0 2px 12px rgba(251,191,36,0.15)",
           }}>
-            <span style={{ fontSize: 14 }}>✨</span>
+            <span style={{ fontSize: 20 }}>✨</span>
             <span style={{
-              fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase",
+              fontSize: 15, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase",
             }} className="lb-shimmer-text">
               Reliv Health Heroes
             </span>
-            <span style={{ fontSize: 14 }}>✨</span>
+            <span style={{ fontSize: 20 }}>✨</span>
           </div>
 
           <h2 style={{
-            color: "#0f172a", fontSize: 28, fontWeight: 900,
-            letterSpacing: -0.8, lineHeight: 1.15, marginBottom: 6,
+            color: "#0f172a", fontSize: 38, fontWeight: 900,
+            letterSpacing: -0.8, lineHeight: 1.15, marginBottom: 8,
           }}>
             Campus Leaderboard
           </h2>
-          <p style={{ color: "#94a3b8", fontSize: 13, fontWeight: 500, fontStyle: "italic" }}>
+          <p style={{ color: "#94a3b8", fontSize: 17, fontWeight: 500, fontStyle: "italic" }}>
             {tagline}
           </p>
         </motion.div>
 
         {/* ══════ ALL LEADERS — HORIZONTAL ROWS ══════ */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
           {leaders.map((entry, idx) => {
             const rank = idx + 1;
             const medal = rank === 1 ? "👑" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
@@ -209,8 +209,8 @@ export default function CampusLeaderboard({ overlay = false }) {
                 transition={{ delay: 0.15 + idx * 0.07 }}
                 className="lb-glass"
                 style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  borderRadius: 16, padding: isChamp ? "14px 16px" : "10px 14px",
+                  display: "flex", alignItems: "center", gap: 16,
+                  borderRadius: 18, padding: isChamp ? "18px 20px" : "14px 18px",
                   border: `1.5px solid ${borderCol}`,
                   boxShadow: isChamp
                     ? "0 6px 24px rgba(251,191,36,0.15)"
@@ -223,8 +223,8 @@ export default function CampusLeaderboard({ overlay = false }) {
               >
                 {/* Rank */}
                 <div style={{
-                  width: 30, textAlign: "center", flexShrink: 0,
-                  fontSize: medal ? (isChamp ? 22 : 18) : 14,
+                  width: 38, textAlign: "center", flexShrink: 0,
+                  fontSize: medal ? (isChamp ? 30 : 24) : 18,
                   fontWeight: 800, color: "#64748b",
                 }}>
                   {medal || `#${rank}`}
@@ -232,7 +232,7 @@ export default function CampusLeaderboard({ overlay = false }) {
 
                 {/* Photo */}
                 <div style={{
-                  width: isChamp ? 48 : 40, height: isChamp ? 48 : 40,
+                  width: isChamp ? 64 : 52, height: isChamp ? 64 : 52,
                   borderRadius: "50%", overflow: "hidden", flexShrink: 0,
                   border: `2.5px solid ${borderCol}`, background: "#f8fafc",
                 }}>
@@ -242,7 +242,7 @@ export default function CampusLeaderboard({ overlay = false }) {
                     <div style={{
                       width: "100%", height: "100%", display: "flex",
                       alignItems: "center", justifyContent: "center",
-                      fontSize: isChamp ? 22 : 18, background: isChamp ? "#fef3c7" : "#f8fafc",
+                      fontSize: isChamp ? 28 : 22, background: isChamp ? "#fef3c7" : "#f8fafc",
                     }}>🧑</div>
                   )}
                 </div>
@@ -250,12 +250,12 @@ export default function CampusLeaderboard({ overlay = false }) {
                 {/* Name + IG handle */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
-                    color: "#0f172a", fontSize: isChamp ? 16 : 14, fontWeight: isChamp ? 900 : 700,
+                    color: "#0f172a", fontSize: isChamp ? 22 : 18, fontWeight: isChamp ? 900 : 700,
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   }}>
                     {entry.name}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 11 }}>
+                  <div style={{ color: "#94a3b8", fontSize: 14 }}>
                     {entry.instagram ? (
                       <span style={{ color: "#E1306C", fontWeight: 600 }}>@{entry.instagram}</span>
                     ) : isChamp ? "Campus Champion" : `Rank #${rank}`}
@@ -263,7 +263,7 @@ export default function CampusLeaderboard({ overlay = false }) {
                 </div>
 
                 {/* Score ring */}
-                <ScoreRing score={entry.score} size={isChamp ? 48 : 40} stroke={isChamp ? 4 : 3} delay={0.3 + idx * 0.08} />
+                <ScoreRing score={entry.score} size={isChamp ? 60 : 50} stroke={isChamp ? 5 : 4} delay={0.3 + idx * 0.08} />
 
                 {/* IG QR */}
                 {entry.instagram && (
@@ -271,7 +271,7 @@ export default function CampusLeaderboard({ overlay = false }) {
                     background: "#fff", borderRadius: 6, padding: 2,
                     border: "1px solid #e2e8f0", flexShrink: 0,
                   }}>
-                    <QRCodeSVG value={`https://www.instagram.com/${entry.instagram}`} size={isChamp ? 40 : 32} level="L" />
+                    <QRCodeSVG value={`https://www.instagram.com/${entry.instagram}`} size={isChamp ? 52 : 42} level="L" />
                   </div>
                 )}
               </motion.div>
@@ -291,10 +291,10 @@ export default function CampusLeaderboard({ overlay = false }) {
             boxShadow: "0 4px 20px rgba(251,191,36,0.08)",
           }}
         >
-          <p style={{ color: "#92400e", fontSize: 16, fontWeight: 800, marginBottom: 4 }}>
+          <p style={{ color: "#92400e", fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
             Think you can beat them? 🔥
           </p>
-          <p style={{ color: "#b45309", fontSize: 12, fontWeight: 500, opacity: 0.8 }}>
+          <p style={{ color: "#b45309", fontSize: 16, fontWeight: 500, opacity: 0.8 }}>
             ₹17 for 30 health parameters • Step up to the Reliv kiosk
           </p>
         </motion.div>
