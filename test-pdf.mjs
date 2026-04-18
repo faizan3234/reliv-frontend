@@ -53,14 +53,13 @@ function getSnellenEquivalent(line) {
 }
 function assessEyes(left, right) {
     if (!left && !right) return { summary: "—", note: "—", comment: "No eye test.", score: 0 };
-    const ls = getSnellenEquivalent(left), rs = getSnellenEquivalent(right);
-    const lStr = ls ? `20/${ls}` : "—", rStr = rs ? `20/${rs}` : "—";
+    const lStr = left ? `${left}/9` : "—", rStr = right ? `${right}/9` : "—";
     const summary = `L: ${lStr}   R: ${rStr}`;
-    const worse = Math.max(ls || 0, rs || 0);
-    if (worse <= 20) return { summary, note: "Excellent", comment: "Better than average vision.", score: 100 };
-    if (worse <= 40) return { summary, note: "Normal", comment: "Both eyes in good shape.", score: 85 };
-    if (worse <= 70) return { summary, note: "Fair", comment: "Some difficulty. Consider eye checkup.", score: 60 };
-    return { summary, note: "Low", comment: "Blurry vision. See an eye specialist.", score: 40 };
+    const best = Math.max(+(left) || 0, +(right) || 0);
+    if (best >= 8) return { summary, note: "Excellent", comment: "Clear vision.", score: 100 };
+    if (best >= 5) return { summary, note: "Normal", comment: "Good vision.", score: 85 };
+    if (best >= 3) return { summary, note: "Fair", comment: "Consider eye checkup.", score: 60 };
+    return { summary, note: "Low", comment: "See an eye specialist.", score: 40 };
 }
 function assessBMI(bmi) {
     if (!bmi) return { label: "—", score: 0 };

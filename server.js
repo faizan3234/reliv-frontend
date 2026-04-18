@@ -13,6 +13,7 @@ import Razorpay from "razorpay";
 import QRCode from "qrcode";
 import fetch from "node-fetch";
 import mqtt from "mqtt";
+import RELIV_LOGO_B64 from "./relivlogo-base64.js";
 
 // Load environment variables
 dotenv.config();
@@ -23,7 +24,9 @@ try {
     const logoPath = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1')), 'src', 'assets', 'relivlogo.jpeg');
     RELIV_LOGO_BUFFER = readFileSync(logoPath);
 } catch {
-    try { RELIV_LOGO_BUFFER = readFileSync('src/assets/relivlogo.jpeg'); } catch { /* logo will be drawn programmatically */ }
+    try { RELIV_LOGO_BUFFER = readFileSync('src/assets/relivlogo.jpeg'); } catch {
+        try { RELIV_LOGO_BUFFER = Buffer.from(RELIV_LOGO_B64, 'base64'); } catch { /* logo will be drawn as text */ }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -965,14 +968,13 @@ function getSnellenEquivalent(line) {
 }
 function assessEyes(left, right) {
     if (!left && !right) return { summary: "—", note: "—", comment: "No eye test.", score: 0 };
-    const ls = getSnellenEquivalent(left), rs = getSnellenEquivalent(right);
-    const lStr = ls ? `20/${ls}` : "—", rStr = rs ? `20/${rs}` : "—";
+    const lStr = left ? `${left}/9` : "—", rStr = right ? `${right}/9` : "—";
     const summary = `L: ${lStr}   R: ${rStr}`;
-    const worse = Math.max(ls || 0, rs || 0);
-    if (worse <= 20) return { summary, note: "Excellent", comment: "Better than average vision.", score: 100 };
-    if (worse <= 40) return { summary, note: "Normal", comment: "Both eyes in good shape.", score: 85 };
-    if (worse <= 70) return { summary, note: "Fair", comment: "Some difficulty. Consider eye checkup.", score: 60 };
-    return { summary, note: "Low", comment: "Blurry vision. See an eye specialist.", score: 40 };
+    const best = Math.max(+(left) || 0, +(right) || 0);
+    if (best >= 8) return { summary, note: "Excellent", comment: "Clear vision.", score: 100 };
+    if (best >= 5) return { summary, note: "Normal", comment: "Good vision.", score: 85 };
+    if (best >= 3) return { summary, note: "Fair", comment: "Consider eye checkup.", score: 60 };
+    return { summary, note: "Low", comment: "See an eye specialist.", score: 40 };
 }
 function assessBMI(bmi) {
     if (!bmi) return { label: "—", score: 0 };
@@ -1975,44 +1977,20 @@ function generateReceiptPdf(data, ecoStats) {
         // Soft off-white header background
         doc.rect(0, 0, doc.page.width, 130).fill("#FFF5F0");
 
-        // Draw Reliv logo (matching Logo.jsx exactly)
-        doc.fontSize(32).font("Helvetica-Bold");
-        const logoStartX = 50;
-        const logoY = 50;
-
-        let currentX = logoStartX;
-
-        // "Re" in orange #F97316
-        const reWidth = doc.widthOfString("Re");
-        doc.fillColor(brandColor).text("Re", currentX, logoY, { lineBreak: false });
-        currentX += reWidth;
-
-        // "l" in black
-        const lWidth = doc.widthOfString("l");
-        doc.fillColor(textColor).text("l", currentX, logoY, { lineBreak: false });
-        currentX += lWidth + 3; // Add 3pt space after "l"
-
-        // Draw dotless "ı" stem in black
-        const stemWidth = 3;
-        const stemHeight = 19;
-        const stemY = logoY + 9;
-        doc.save();
-        doc.fillColor(textColor).rect(currentX, stemY, stemWidth, stemHeight).fill();
-        doc.restore();
-
-        // Draw orange dot above the stem (matching Logo.jsx: 0.23em from top)
-        const dotRadius = 3.2;
-        const dotX = currentX + stemWidth / 2;
-        const dotY = stemY - dotRadius * 1.5;
-        doc.save();
-        doc.fillColor(brandColor).circle(dotX, dotY, dotRadius).fill();
-        doc.restore();
-
-        currentX += stemWidth + 1;
-
-        // "v" in black
-        doc.fillColor(textColor).text("v", currentX, logoY, { lineBreak: false });
-        doc.fontSize(10).font("Helvetica").fillColor(lightTextColor).text("Your Personalized Health Checkup.", logoStartX, 85);
+        // Draw Reliv logo
+        if (RELIV_LOGO_BUFFER) {
+            try {
+                const lH = 60;
+                const lImg = doc.openImage(RELIV_LOGO_BUFFER);
+                const lW = (lImg.width / lImg.height) * lH;
+                doc.image(RELIV_LOGO_BUFFER, 50, 40, { height: lH });
+            } catch {
+                doc.fontSize(32).font("Helvetica-Bold").fillColor(brandColor).text("Reliv", 50, 50);
+            }
+        } else {
+            doc.fontSize(32).font("Helvetica-Bold").fillColor(brandColor).text("Reliv", 50, 50);
+        }
+        doc.fontSize(10).font("Helvetica").fillColor(lightTextColor).text("Your Personalized Health Checkup.", 50, 85);
         doc.fontSize(18).font("Helvetica-Bold").fillColor(textColor).text("Purchase Receipt", 0, 65, { align: "right" });
         doc.fontSize(10).fillColor(lightTextColor).text(`Date: ${new Date().toLocaleDateString()}`, 0, 90, { align: "right" });
         doc.fontSize(14).font("Helvetica-Bold").fillColor(textColor).text("Billed To:", 50, 160);
