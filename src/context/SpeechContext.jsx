@@ -3,6 +3,15 @@ import { API_BASE } from "../config/api";
 
 const SpeechContext = createContext(null);
 
+// ── Page keys that have pre-generated audio in /audio/<key>.mp3 ──
+const AUDIO_PAGES = new Set([
+  "splash", "choose-language", "customer-details", "two-options",
+  "body-composition", "health-checkup", "oxygen-pulse", "body-temperature",
+  "eyesight", "report-1", "report-2", "report-3", "report-4", "report-5",
+  "wellness-recommendations", "checkout", "payment", "order-success",
+  "feedback", "idle-loop",
+]);
+
 // ── Default config (fallback if backend is unreachable) ──
 const DEFAULT_CONFIG = {
   splash: "Welcome to Reliv. Your personal health companion. Tap to start.",
@@ -27,7 +36,7 @@ const DEFAULT_CONFIG = {
   "idle-loop": "Free weight. Free BP. Free oxygen. A full report with simple human advice, just 17 rupees. Less than a Coke. Step up. Let me help you.",
 };
 
-// ── Default voice settings ──
+// ── Default voice settings (used by speechSynthesis fallback) ──
 const DEFAULT_VOICE_SETTINGS = { rate: 0.95, pitch: 1.0, lang: "en-IN", voicePreference: "female" };
 
 export function SpeechProvider({ children }) {
@@ -36,7 +45,7 @@ export function SpeechProvider({ children }) {
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1); // 0–1
   const [speaking, setSpeaking] = useState(false);
-  const currentUtterance = useRef(null);
+  const currentAudio = useRef(null);   // HTML5 Audio element
   const configLoaded = useRef(false);
 
   // ── Fetch speech config from backend on mount ──
@@ -49,7 +58,6 @@ export function SpeechProvider({ children }) {
         const res = await fetch(`${API_BASE}/api/speech-config`);
         if (res.ok) {
           const data = await res.json();
-          // Extract voice settings if present
           if (data._voiceSettings) {
             setVoiceSettings((prev) => ({ ...prev, ...data._voiceSettings }));
           }
@@ -61,21 +69,47 @@ export function SpeechProvider({ children }) {
     })();
   }, []);
 
-  // ── Stop any active speech ──
+  // ── Stop any active speech (audio or speechSynthesis) ──
   const stop = useCallback(() => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+    if (currentAudio.current) {
+      currentAudio.current.pause();
+      currentAudio.current.currentTime = 0;
+      currentAudio.current = null;
     }
-    currentUtterance.current = null;
+    window.speechSynthesis?.cancel();
     setSpeaking(false);
   }, []);
 
-  // ── Speak text directly ──
-  const speakText = useCallback(
-    (text) => {
-      if (!text || muted || !window.speechSynthesis) return;
+  // ── Play a pre-generated .mp3 file ──
+  const playAudioFile = useCallback(
+    (pageKey) => {
+      return new Promise((resolve, reject) => {
+        const audio = new Audio(`/audio/${pageKey}.mp3`);
+        audio.volume = volume;
 
-      // Cancel any ongoing speech first
+        audio.onplay = () => setSpeaking(true);
+        audio.onended = () => {
+          setSpeaking(false);
+          currentAudio.current = null;
+          resolve();
+        };
+        audio.onerror = () => {
+          setSpeaking(false);
+          currentAudio.current = null;
+          reject(new Error("Audio file not found"));
+        };
+
+        currentAudio.current = audio;
+        audio.play().catch(reject);
+      });
+    },
+    [volume]
+  );
+
+  // ── Fallback: speak via browser speechSynthesis (for desktops or custom text) ──
+  const speakViaSynthesis = useCallback(
+    (text) => {
+      if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
@@ -84,104 +118,98 @@ export function SpeechProvider({ children }) {
       utterance.pitch = voiceSettings.pitch;
       utterance.lang = voiceSettings.lang;
 
-      // Try to pick a good voice based on preference
       const voices = window.speechSynthesis.getVoices();
       const pref = voiceSettings.voicePreference;
       let preferred;
-      if (pref === "male") {
-        preferred = voices.find(
-          (v) => v.lang.startsWith("en") && (v.name.includes("Male") || v.name.includes("David") || v.name.includes("James"))
-        );
-      } else if (pref === "female") {
+      if (pref === "female") {
         preferred = voices.find(
           (v) => v.lang.startsWith("en") && (v.name.includes("Female") || v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Zira"))
         );
+      } else if (pref === "male") {
+        preferred = voices.find(
+          (v) => v.lang.startsWith("en") && (v.name.includes("Male") || v.name.includes("David") || v.name.includes("James"))
+        );
       }
-      // Fallback: any English voice (covers Linux espeak-ng voices like "English (Great Britain)")
-      if (!preferred) {
-        preferred = voices.find((v) => v.lang.startsWith("en"));
-      }
-      // Last resort: use any available voice at all (Pi may only have one)
-      if (!preferred && voices.length > 0) {
-        preferred = voices[0];
-      }
+      if (!preferred) preferred = voices.find((v) => v.lang.startsWith("en"));
+      if (!preferred && voices.length > 0) preferred = voices[0];
       if (preferred) utterance.voice = preferred;
 
       utterance.onstart = () => setSpeaking(true);
-      utterance.onend = () => {
-        setSpeaking(false);
-        currentUtterance.current = null;
-      };
-      utterance.onerror = () => {
-        setSpeaking(false);
-        currentUtterance.current = null;
+      utterance.onend = () => setSpeaking(false);
+      utterance.onerror = (e) => {
+        if (e.error !== "interrupted") setSpeaking(false);
       };
 
-      currentUtterance.current = utterance;
       window.speechSynthesis.speak(utterance);
     },
-    [muted, volume, voiceSettings]
+    [volume, voiceSettings]
   );
 
-  // ── Speak by page key (looks up config, falls back to default if empty) ──
+  // ── Speak arbitrary text (admin preview, custom text) ──
+  const speakText = useCallback(
+    (text) => {
+      if (!text || muted) return;
+      stop();
+      speakViaSynthesis(text);
+    },
+    [muted, stop, speakViaSynthesis]
+  );
+
+  // ── Speak by page key — uses pre-generated audio, falls back to speechSynthesis ──
   const speak = useCallback(
     (pageKey) => {
-      const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
-      if (text) speakText(text);
+      if (muted) return;
+      stop();
+
+      // Try pre-generated mp3 first (works perfectly on Pi, no espeak-ng needed)
+      if (AUDIO_PAGES.has(pageKey)) {
+        playAudioFile(pageKey).catch(() => {
+          // File missing or can't play — fall back to speechSynthesis
+          const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
+          if (text) speakViaSynthesis(text);
+        });
+      } else {
+        // No audio file for this key — use speechSynthesis
+        const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
+        if (text) speakViaSynthesis(text);
+      }
     },
-    [config, speakText]
+    [muted, config, stop, playAudioFile, speakViaSynthesis]
   );
 
   // ── Toggle mute ──
   const toggleMute = useCallback(() => {
     setMuted((prev) => {
-      if (!prev) {
-        // Going mute — stop anything playing
-        window.speechSynthesis?.cancel();
-        setSpeaking(false);
-      }
+      if (!prev) stop();
       return !prev;
     });
-  }, []);
+  }, [stop]);
 
   // ── Update volume ──
   const setVol = useCallback((v) => {
     const clamped = Math.max(0, Math.min(1, v));
     setVolume(clamped);
+    // Update current playing audio volume live
+    if (currentAudio.current) currentAudio.current.volume = clamped;
   }, []);
 
   // ── Cleanup on unmount ──
   useEffect(() => {
     return () => {
+      if (currentAudio.current) {
+        currentAudio.current.pause();
+        currentAudio.current = null;
+      }
       window.speechSynthesis?.cancel();
     };
   }, []);
 
-  // ── Pre-load voices (Chrome needs this) ──
+  // ── Pre-load voices for speechSynthesis fallback ──
   useEffect(() => {
     const loadVoices = () => window.speechSynthesis?.getVoices();
     loadVoices();
     window.speechSynthesis?.addEventListener?.("voiceschanged", loadVoices);
     return () => window.speechSynthesis?.removeEventListener?.("voiceschanged", loadVoices);
-  }, []);
-
-  // ── Warm-up speech engine on first user gesture (needed on Linux/Pi) ──
-  useEffect(() => {
-    const warmUp = () => {
-      if (!window.speechSynthesis) return;
-      const silent = new SpeechSynthesisUtterance("");
-      silent.volume = 0;
-      window.speechSynthesis.speak(silent);
-      // Remove listeners after first gesture
-      document.removeEventListener("click", warmUp);
-      document.removeEventListener("touchstart", warmUp);
-    };
-    document.addEventListener("click", warmUp, { once: true });
-    document.addEventListener("touchstart", warmUp, { once: true });
-    return () => {
-      document.removeEventListener("click", warmUp);
-      document.removeEventListener("touchstart", warmUp);
-    };
   }, []);
 
   return (
@@ -218,7 +246,6 @@ export function usePageSpeech(pageKey) {
   const { speak, stop } = useSpeech();
 
   useEffect(() => {
-    // Small delay so the page renders first, then speech starts
     const timer = setTimeout(() => speak(pageKey), 400);
     return () => {
       clearTimeout(timer);
