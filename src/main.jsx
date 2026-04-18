@@ -13,6 +13,33 @@ import App from "./App.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { SpeechProvider } from "./context/SpeechContext.jsx";
 
+// ── Kiosk Crash Watchdog ──
+// If the screen goes blank (React tree unmounts or white-screens),
+// auto-reload to home after 5 seconds. Prevents stuck kiosk.
+if (typeof window !== "undefined") {
+  let watchdogInterval = setInterval(() => {
+    const root = document.getElementById("root");
+    // If root is empty or has no visible content, the app crashed
+    if (root && root.children.length === 0) {
+      console.warn("[Watchdog] Blank screen detected — reloading to home");
+      clearInterval(watchdogInterval);
+      window.location.href = "/";
+    }
+  }, 5000);
+
+  // Catch completely unhandled errors that bypass ErrorBoundary
+  window.addEventListener("error", (e) => {
+    console.error("[Watchdog] Unhandled error:", e.message);
+    // Give ErrorBoundary 4s to handle it, then force reload
+    setTimeout(() => {
+      const root = document.getElementById("root");
+      if (root && root.children.length === 0) {
+        window.location.href = "/";
+      }
+    }, 4000);
+  });
+}
+
 // Kiosk Touch Scroll Helper - prevents text selection on touch drag
 function KioskTouchHelper() {
   const { pathname } = useLocation();

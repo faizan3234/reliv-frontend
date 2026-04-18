@@ -12,6 +12,21 @@ const AUDIO_PAGES = new Set([
   "feedback", "idle-loop",
 ]);
 
+// ── Pre-load audio cache to avoid decode stutter on Pi ──
+const audioCache = {};
+function preloadAudio(pageKey) {
+  if (audioCache[pageKey]) return audioCache[pageKey];
+  const audio = new Audio();
+  audio.preload = "auto";
+  audio.src = `/audio/${pageKey}.mp3`;
+  audioCache[pageKey] = audio;
+  return audio;
+}
+// Kick off preload of all audio files on module load
+if (typeof window !== "undefined") {
+  AUDIO_PAGES.forEach((key) => preloadAudio(key));
+}
+
 // ── Default config (fallback if backend is unreachable) ──
 const DEFAULT_CONFIG = {
   splash: "Welcome to Reliv. Your personal health companion. Tap to start.",
@@ -80,12 +95,13 @@ export function SpeechProvider({ children }) {
     setSpeaking(false);
   }, []);
 
-  // ── Play a pre-generated .mp3 file ──
+  // ── Play a pre-generated .mp3 file (uses preloaded cache) ──
   const playAudioFile = useCallback(
     (pageKey) => {
       return new Promise((resolve, reject) => {
-        const audio = new Audio(`/audio/${pageKey}.mp3`);
+        const audio = preloadAudio(pageKey);
         audio.volume = volume;
+        audio.currentTime = 0;
 
         audio.onplay = () => setSpeaking(true);
         audio.onended = () => {

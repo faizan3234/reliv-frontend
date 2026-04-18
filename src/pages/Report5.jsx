@@ -591,7 +591,7 @@ export default function Report5() {
     }
   }, [inactivityTimer]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const scanCount = (data.history?.length || 0) + 1;
+  const scanCount = data.history?.length || 1;
 
   // Unlock rules
   const unlock = {

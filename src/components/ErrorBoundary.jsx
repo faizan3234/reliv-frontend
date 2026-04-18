@@ -4,6 +4,7 @@ export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
+    this._autoRecoverTimer = null;
   }
 
   static getDerivedStateFromError() {
@@ -14,13 +15,23 @@ export default class ErrorBoundary extends React.Component {
     if (import.meta.env.DEV) {
       console.error("ErrorBoundary caught:", error, errorInfo);
     }
+    // Auto-recover to home after 3 seconds (kiosk can't have dead screens)
+    this._autoRecoverTimer = setTimeout(() => {
+      window.location.href = "/";
+    }, 3000);
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this._autoRecoverTimer);
   }
 
   handleReset = () => {
+    clearTimeout(this._autoRecoverTimer);
     this.setState({ hasError: false });
   };
 
   handleGoHome = () => {
+    clearTimeout(this._autoRecoverTimer);
     this.setState({ hasError: false });
     window.location.href = "/";
   };
