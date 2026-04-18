@@ -29,6 +29,15 @@ try {
     }
 }
 
+// ── CID inline logo attachment for HTML emails ──
+const LOGO_CID = 'reliv-logo-cid';
+const LOGO_CID_ATTACHMENT = RELIV_LOGO_BUFFER
+    ? { filename: 'reliv-logo.jpeg', content: RELIV_LOGO_BUFFER, cid: LOGO_CID, contentType: 'image/jpeg' }
+    : null;
+const LOGO_HTML = LOGO_CID_ATTACHMENT
+    ? `<img src="cid:${LOGO_CID}" alt="Reliv" style="height:48px;display:block;margin:0 auto;">`
+    : `<span style="font-size:28px;font-weight:800;color:#fff;letter-spacing:1px;">Reliv</span>`;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // GLOBAL ERROR HANDLERS - Prevent crashes from unhandled errors
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1097,8 +1106,8 @@ function generateReportPdf(data, ecoStats) {
         const patientHeight = bc?.height || vitals.height || null;
 
         // ── Scan level & unlock flags ──
-        const scan = patient.scanCount || 1;
         const hist = history && Array.isArray(history) ? history : [];
+        const scan = patient.scanCount || (hist.length + 1);
         const show = {
             bodyCompBars: scan >= 2,
             trendGraph: scan >= 2 && hist.length >= 1,
@@ -3176,7 +3185,7 @@ app.post("/api/send-report", async (req, res) => {
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
   <!-- Header -->
   <tr><td style="background:#F97316;padding:30px 40px;text-align:center;">
-    <h1 style="margin:0;color:#fff;font-size:28px;letter-spacing:1px;">Reliv</h1>
+    ${LOGO_HTML}
     <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">Your Personalized Health Report</p>
   </td></tr>
   <!-- Greeting -->
@@ -3231,6 +3240,7 @@ app.post("/api/send-report", async (req, res) => {
                     content: pdfBuffer,
                     contentType: "application/pdf",
                 },
+                ...(LOGO_CID_ATTACHMENT ? [LOGO_CID_ATTACHMENT] : []),
             ],
         };
 
@@ -4334,7 +4344,8 @@ async function sendCustomerScanEmail(patient, scanCount) {
 
     <!-- HERO -->
     <tr><td style="background:linear-gradient(135deg,#1e3a5f 0%,#F06922 100%);padding:40px;text-align:center;">
-      <p style="margin:0 0 4px;color:rgba(255,255,255,0.7);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;">Reliv Health Kiosk</p>
+      ${LOGO_HTML}
+      <p style="margin:10px 0 4px;color:rgba(255,255,255,0.7);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;">Reliv Health Kiosk</p>
       <h1 style="margin:0 0 10px;color:#ffffff;font-size:28px;font-weight:800;">${isComplete ? '🎉 Journey Complete!' : `Scan ${scanCount} Done!`}</h1>
       <p style="margin:0;color:rgba(255,255,255,0.85);font-size:16px;">Hello ${firstName} — your health story is being written 💙</p>
     </td></tr>
@@ -4409,7 +4420,8 @@ async function sendCustomerScanEmail(patient, scanCount) {
             to: patient.email,
             subject,
             html,
-            text: `Hi ${firstName},\n\nScan ${scanCount} is complete!\n\n${info.headline}\n\nWhat you accessed today:\n${info.unlocked.map(u => `• ${u}`).join('\n')}${!isComplete ? `\n\nNext scan unlocks: ${info.next}` : ''}\n\nHealth Tip: "${info.tip}"\n\nSee you at Reliv!\nThe Reliv Customer Care Team`
+            text: `Hi ${firstName},\n\nScan ${scanCount} is complete!\n\n${info.headline}\n\nWhat you accessed today:\n${info.unlocked.map(u => `• ${u}`).join('\n')}${!isComplete ? `\n\nNext scan unlocks: ${info.next}` : ''}\n\nHealth Tip: "${info.tip}"\n\nSee you at Reliv!\nThe Reliv Customer Care Team`,
+            attachments: LOGO_CID_ATTACHMENT ? [LOGO_CID_ATTACHMENT] : []
         });
         log.info(`📧 Customer scan email sent → ${patient.email} (scan ${scanCount})`);
     } catch (err) {
@@ -4447,7 +4459,8 @@ async function sendCustomerReminderEmail(patient, scanCount, daysSince) {
 
     <!-- HERO -->
     <tr><td style="background:linear-gradient(135deg,#1e3a5f 0%,#0f766e 100%);padding:40px;text-align:center;">
-      <p style="margin:0 0 4px;color:rgba(255,255,255,0.7);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;">Reliv Health Kiosk</p>
+      ${LOGO_HTML}
+      <p style="margin:10px 0 4px;color:rgba(255,255,255,0.7);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;">Reliv Health Kiosk</p>
       <h1 style="margin:0 0 10px;color:#ffffff;font-size:26px;font-weight:800;">Hey ${firstName}, we miss you! 💙</h1>
       <p style="margin:0;color:rgba(255,255,255,0.8);font-size:15px;">Your last wellness scan was <strong>${dayText}</strong>.</p>
     </td></tr>
@@ -4528,9 +4541,10 @@ async function sendCustomerReminderEmail(patient, scanCount, daysSince) {
             to: patient.email,
             subject,
             html,
-            text: `Hi ${firstName},\n\nYour last scan was ${dayText} and you have ${scansLeft} scan${scansLeft !== 1 ? 's' : ''} left.\n\nYou're ${pct}% through your wellness journey!\n\nScan ${scanCount + 1} will unlock:\n${nextInfo.unlocked.map(u => `• ${u}`).join('\n')}\n\nCome visit Reliv soon!\nThe Reliv Customer Care Team`
+            text: `Hi ${firstName},\n\nYour last scan was ${dayText} and you have ${scansLeft} scan${scansLeft !== 1 ? 's' : ''} left.\n\nYou're ${pct}% through your wellness journey!\n\nScan ${scanCount + 1} will unlock:\n${nextInfo.unlocked.map(u => `• ${u}`).join('\n')}\n\nCome visit Reliv soon!\nThe Reliv Customer Care Team`,
+            attachments: LOGO_CID_ATTACHMENT ? [LOGO_CID_ATTACHMENT] : []
         });
-        log.info(`📧 Daily reminder sent → ${patient.email} (${scanCount} scans, last: ${dayText})`);
+        log.info(`📧 Reminder sent → ${patient.email} (${scanCount} scans, last: ${dayText})`);
     } catch (err) {
         log.error(`❌ Failed to send reminder email to ${patient?.email}:`, err.message);
     }
@@ -4574,7 +4588,8 @@ async function sendCustomerDailyReminders() {
                 if (alreadySent) continue;
 
                 const daysSince = Math.floor((Date.now() - new Date(p.lastScan).getTime()) / 86400000);
-                if (daysSince < 1) continue; // Don't send same day as scan
+                if (daysSince < 2) continue; // Send every 2 days, not same/next day
+                if (daysSince % 2 !== 0) continue; // Only on even-numbered days since last scan
 
                 await sendCustomerReminderEmail({ name: p.name, email: p.email }, p.scanCount, daysSince);
 
