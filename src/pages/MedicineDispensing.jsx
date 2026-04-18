@@ -9,8 +9,7 @@ import { KeyboardWrapper } from "../components/KeyboardWrapper";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import AuraBackground from "../components/AuraBackground";
 import "./RelivKiosk.css";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 // --- Helpers ---
 const computeStockLabel = (qty, expiryDate) => {

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 const defaultData = {
   patient: {
@@ -118,10 +117,16 @@ export function HealthProvider({ children }) {
       );
       if (!res.ok) throw new Error('History refresh failed');
       const history = await res.json();
-      setData((prev) => ({
-        ...prev,
-        history: Array.isArray(history) ? history : [],
-      }));
+      setData((prev) => {
+        const next = {
+          ...prev,
+          history: Array.isArray(history) ? history : [],
+        };
+        try {
+          localStorage.setItem("healthData", JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
     } catch (e) {
       console.error("Failed to refresh history:", e);
     }

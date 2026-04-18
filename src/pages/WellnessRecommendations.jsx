@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '../components/Logo';
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
+import { API_BASE } from "../config/api";
 
 // Import kit images
 import kit1 from '../assets/1.png';
@@ -13,8 +14,6 @@ import kit4 from '../assets/4.png';
 import kit5 from '../assets/5.png';
 import kit6 from '../assets/6.png';
 import kit8 from '../assets/8.png';
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
 // Map kit IDs to images
 const kitImages = {

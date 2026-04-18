@@ -6,6 +6,7 @@ import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
+import { API_BASE } from "../config/api";
 
 const INACTIVITY_TIMEOUT = 45000; // 45 seconds - strict for payment screen
 const DOUBLE_CLICK_PREVENTION_MS = 1800;
@@ -37,7 +38,7 @@ const PaymentGate = () => {
 
   // Fetch report price from backend on mount
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/report-price`)
+    fetch(`${API_BASE}/api/report-price`)
       .then(res => res.json())
       .then(data => setReportPrice(data.price))
       .catch(() => setReportPrice(27)); // Fallback to default if fetch fails
@@ -98,7 +99,7 @@ const PaymentGate = () => {
 
     // Send receipt email (non-blocking, don't delay UI)
     if ((needsReport || cart.length > 0) && patient?.email) {
-      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/send-receipt`, {
+      fetch(`${API_BASE}/api/send-receipt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -112,7 +113,7 @@ const PaymentGate = () => {
 
     // DISPENSE: Send MQTT command to rotate motors (only after payment confirmed)
     if (hasKits && cart.length > 0) {
-      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/dispense`, {
+      fetch(`${API_BASE}/api/dispense`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cart }),
@@ -166,7 +167,7 @@ const PaymentGate = () => {
 
     // Real Razorpay flow
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/create-order`, {
+      const res = await fetch(`${API_BASE}/api/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: finalAmount }),
@@ -190,7 +191,7 @@ const PaymentGate = () => {
           
           // Verify signature server-side before completing (prevents fake/replayed payments)
           try {
-            const verifyRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/verify-payment`, {
+            const verifyRes = await fetch(`${API_BASE}/api/verify-payment`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

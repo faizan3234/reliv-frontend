@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import VirtualKeyboard from '../components/VirtualKeyboard';
 import { usePageSpeech } from "../context/SpeechContext";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 const Logo = ({ className = "", size = "text-4xl md:text-5xl" }) => (
   <div className={`inline-flex items-center justify-center ${className}`} aria-hidden="true">

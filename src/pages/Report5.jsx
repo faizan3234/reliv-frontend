@@ -11,8 +11,7 @@ import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { sanitizeError } from "../utils/errorSanitizer";
 import { useSpeech } from "../context/SpeechContext";
 import ChallengePrompt from "../components/ChallengePrompt";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {

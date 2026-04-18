@@ -17,8 +17,7 @@ import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {

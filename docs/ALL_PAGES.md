@@ -41,7 +41,7 @@
 
 | Route                  | Page          | Purpose                                          |
 |------------------------|---------------|--------------------------------------------------|
-| `/admin-x7k9/speech`   | Speech Admin  | Edit TTS text for each page + voice settings      |
+| `/speech-admin`          | Speech Admin  | Edit TTS text for each page + voice settings      |
 
 ## Other
 

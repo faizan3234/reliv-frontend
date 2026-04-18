@@ -9,8 +9,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import { ArrowLeft } from "lucide-react";
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 // Department list for random social proof
 const DEPARTMENTS = ['IT', 'CSE', 'ML', 'AI', 'CSBS', 'AIML', 'ME', 'EE', 'CSE IOTCSBT', 'ECE', 'Data Science', 'Cyber Security'];

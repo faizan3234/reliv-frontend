@@ -7,8 +7,7 @@ import TopEllipseBackground from '../components/TopEllipseBackground';
 import UVCleansingAnimation from '../components/UVCleansingAnimation';
 import ConfirmationIcon from '../assets/confirmation.png';
 import { usePageSpeech } from "../context/SpeechContext";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 // Safe emoji icons
 const MailIcon = () => <span className="text-6xl">✉️</span>;

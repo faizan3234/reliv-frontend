@@ -9,8 +9,7 @@ import { useSpeech } from "../context/SpeechContext";
 import ChallengeComparison from "../components/ChallengeComparison";
 import { supabase } from "../config/supabase";
 import { QRCodeSVG } from "qrcode.react";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 // Helper: Extract first name from email or name field
 const getFirstName = (patient) => {

@@ -6,8 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line 
 import html2canvas from "html2canvas";
 import { QRCodeSVG } from "qrcode.react";
 import HealthCard from "./HealthCard";
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+import { API_BASE } from "../config/api";
 
 export default function HealthCardModal({ open, onClose, patient, score, metabolicAge }) {
   const cardRef = useRef(null);
