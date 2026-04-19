@@ -3,6 +3,64 @@ import { API_BASE } from "../config/api";
 
 const SpeechContext = createContext(null);
 
+// ── Page keys that have pre-generated audio in /audio/<key>.mp3 ──
+const AUDIO_PAGES = new Set([
+  "splash", "choose-language", "customer-details", "two-options",
+  "body-composition", "health-checkup", "oxygen-pulse", "body-temperature",
+  "eyesight", "report-1", "report-2", "report-3", "report-4", "report-5",
+  "wellness-recommendations", "checkout", "payment", "order-success",
+  "feedback", "idle-loop",
+]);
+
+// ── Pre-load audio cache to avoid decode stutter on Pi ──
+const audioCache = {};
+
+function preloadAudio(pageKey) {
+  if (audioCache[pageKey]) return audioCache[pageKey];
+  const audio = new Audio();
+  audio.preload = "auto";
+  audio.src = `/audio/${pageKey}.mp3`;
+  audioCache[pageKey] = audio;
+  return audio;
+}
+// ── Detect USB audio output device (to avoid HDMI audio → display interference on Pi 5) ──
+let usbSinkId = null;
+
+async function detectUSBAudioDevice() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const usbOutput = devices.find(
+      (d) => d.kind === "audiooutput" && /usb|generic|external/i.test(d.label)
+    );
+    if (usbOutput) {
+      usbSinkId = usbOutput.deviceId;
+      console.log("[Speech] USB audio device found:", usbOutput.label);
+    }
+  } catch {
+    // enumerateDevices not supported or denied
+  }
+}
+
+async function routeToUSB(audioElement) {
+  if (usbSinkId && typeof audioElement.setSinkId === "function") {
+    try {
+      await audioElement.setSinkId(usbSinkId);
+    } catch {
+      // setSinkId failed — will use default output
+    }
+  }
+}
+
+// Kick off preload of all audio files + detect USB audio on module load
+if (typeof window !== "undefined") {
+  detectUSBAudioDevice();
+  AUDIO_PAGES.forEach((key) => {
+    const audio = preloadAudio(key);
+    // Route preloaded audio to USB when device is detected
+    detectUSBAudioDevice().then(() => routeToUSB(audio));
+  });
+}
+
 // ── Default config (fallback if backend is unreachable) ──
 const DEFAULT_CONFIG = {
   splash: "Welcome to Reliv. Your personal health companion. Tap to start.",
@@ -27,7 +85,7 @@ const DEFAULT_CONFIG = {
   "idle-loop": "Free weight. Free BP. Free oxygen. A full report with simple human advice, just 17 rupees. Less than a Coke. Step up. Let me help you.",
 };
 
-// ── Default voice settings ──
+// ── Default voice settings (used by speechSynthesis fallback) ──
 const DEFAULT_VOICE_SETTINGS = { rate: 0.95, pitch: 1.0, lang: "en-IN", voicePreference: "female" };
 
 export function SpeechProvider({ children }) {
@@ -36,6 +94,7 @@ export function SpeechProvider({ children }) {
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1); // 0–1
   const speakingRef = useRef(false);       // Track speaking without re-renders
+  const currentAudio = useRef(null);   // HTML5 Audio element
   const configLoaded = useRef(false);
 
   // ── Fetch speech config from backend on mount ──
@@ -59,13 +118,46 @@ export function SpeechProvider({ children }) {
     })();
   }, []);
 
-  // ── Stop any active speech ──
+  // ── Stop any active speech (audio or speechSynthesis) ──
   const stop = useCallback(() => {
+    if (currentAudio.current) {
+      currentAudio.current.pause();
+      currentAudio.current.currentTime = 0;
+      currentAudio.current = null;
+    }
     window.speechSynthesis?.cancel();
     speakingRef.current = false;
   }, []);
 
-  // ── Speak text via browser speechSynthesis (no audio decoding = no HDMI interference on Pi) ──
+  // ── Play a pre-generated .mp3 file (uses preloaded cache) ──
+  const playAudioFile = useCallback(
+    (pageKey) => {
+      return new Promise((resolve, reject) => {
+        const audio = preloadAudio(pageKey);
+        audio.volume = volume;
+        audio.currentTime = 0;
+
+        audio.onplay = () => { speakingRef.current = true; };
+        audio.onended = () => {
+          speakingRef.current = false;
+          currentAudio.current = null;
+          resolve();
+        };
+        audio.onerror = () => {
+          speakingRef.current = false;
+          currentAudio.current = null;
+          reject(new Error("Audio file not found"));
+        };
+
+        currentAudio.current = audio;
+        // Route to USB audio to prevent HDMI interference on Pi 5
+        routeToUSB(audio).then(() => audio.play().catch(reject));
+      });
+    },
+    [volume]
+  );
+
+  // ── Fallback: speak via browser speechSynthesis (for desktops or custom text) ──
   const speakViaSynthesis = useCallback(
     (text) => {
       if (!window.speechSynthesis) return;
@@ -114,15 +206,26 @@ export function SpeechProvider({ children }) {
     [muted, stop, speakViaSynthesis]
   );
 
-  // ── Speak by page key — uses speechSynthesis (no audio decoding = no Pi HDMI glitch) ──
+  // ── Speak by page key — uses pre-generated audio, falls back to speechSynthesis ──
   const speak = useCallback(
     (pageKey) => {
       if (muted) return;
       stop();
-      const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
-      if (text) speakViaSynthesis(text);
+
+      // Try pre-generated mp3 first (works perfectly on Pi, no espeak-ng needed)
+      if (AUDIO_PAGES.has(pageKey)) {
+        playAudioFile(pageKey).catch(() => {
+          // File missing or can't play — fall back to speechSynthesis
+          const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
+          if (text) speakViaSynthesis(text);
+        });
+      } else {
+        // No audio file for this key — use speechSynthesis
+        const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
+        if (text) speakViaSynthesis(text);
+      }
     },
-    [muted, config, stop, speakViaSynthesis]
+    [muted, config, stop, playAudioFile, speakViaSynthesis]
   );
 
   // ── Toggle mute ──
@@ -137,11 +240,16 @@ export function SpeechProvider({ children }) {
   const setVol = useCallback((v) => {
     const clamped = Math.max(0, Math.min(1, v));
     setVolume(clamped);
+    if (currentAudio.current) currentAudio.current.volume = clamped;
   }, []);
 
   // ── Cleanup on unmount ──
   useEffect(() => {
     return () => {
+      if (currentAudio.current) {
+        currentAudio.current.pause();
+        currentAudio.current = null;
+      }
       window.speechSynthesis?.cancel();
     };
   }, []);
