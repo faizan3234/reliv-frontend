@@ -3,16 +3,38 @@ import { API_BASE } from "../config/api";
 
 const SpeechContext = createContext(null);
 
-// ── Page keys that have pre-generated audio in /audio/<key>.mp3 ──
+// ── Page keys with pre-generated audio ──
 const AUDIO_PAGES = new Set([
   "splash", "choose-language", "customer-details", "two-options",
   "body-composition", "health-checkup", "oxygen-pulse", "body-temperature",
   "eyesight", "report-1", "report-2", "report-3", "report-4", "report-5",
   "wellness-recommendations", "checkout", "payment", "order-success",
-  "feedback", "idle-loop",
+  "feedback", "idle-loop", "leaderboard",
 ]);
 
-// ── Pre-load audio cache to avoid decode stutter on Pi ──
+// ── Local Pi audio server (plays via mpv, bypasses Chromium audio decoder) ──
+const PI_AUDIO_URL = "http://localhost:3456";
+let piServerAvailable = null; // null = unknown, true/false after check
+
+async function checkPiServer() {
+  if (piServerAvailable !== null) return piServerAvailable;
+  try {
+    const res = await fetch(`${PI_AUDIO_URL}/health`, { signal: AbortSignal.timeout(1000) });
+    const data = await res.json();
+    piServerAvailable = data.ok === true;
+  } catch {
+    piServerAvailable = false;
+  }
+  console.log(`[Speech] Pi audio server: ${piServerAvailable ? "available" : "not found, using browser audio"}`);
+  return piServerAvailable;
+}
+
+// Check on load
+if (typeof window !== "undefined") {
+  checkPiServer();
+}
+
+// ── Browser audio cache (fallback for non-kiosk devices) ──
 const audioCache = {};
 
 function preloadAudio(pageKey) {
@@ -23,42 +45,9 @@ function preloadAudio(pageKey) {
   audioCache[pageKey] = audio;
   return audio;
 }
-// ── Detect USB audio output device (to avoid HDMI audio → display interference on Pi 5) ──
-let usbSinkId = null;
-
-async function detectUSBAudioDevice() {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const usbOutput = devices.find(
-      (d) => d.kind === "audiooutput" && /usb|generic|external/i.test(d.label)
-    );
-    if (usbOutput) {
-      usbSinkId = usbOutput.deviceId;
-      console.log("[Speech] USB audio device found:", usbOutput.label);
-    }
-  } catch {
-    // enumerateDevices not supported or denied
-  }
-}
-
-async function routeToUSB(audioElement) {
-  if (usbSinkId && typeof audioElement.setSinkId === "function") {
-    try {
-      await audioElement.setSinkId(usbSinkId);
-    } catch {
-      // setSinkId failed — will use default output
-    }
-  }
-}
-
-// Kick off preload of all audio files + detect USB audio on module load
+// Preload for non-kiosk fallback
 if (typeof window !== "undefined") {
-  detectUSBAudioDevice();
-  AUDIO_PAGES.forEach((key) => {
-    const audio = preloadAudio(key);
-    // Route preloaded audio to USB when device is detected
-    detectUSBAudioDevice().then(() => routeToUSB(audio));
-  });
+  AUDIO_PAGES.forEach((key) => preloadAudio(key));
 }
 
 // ── Default config (fallback if backend is unreachable) ──
@@ -83,6 +72,7 @@ const DEFAULT_CONFIG = {
   "order-success": "Thank you. Your full receipt is sent to your email. Simple language. Easy to understand. Come back tomorrow to see the changes and compare. Your graph grows. New insights unlock. I am proud of you. See you tomorrow?",
   feedback: "Rate your experience. 1 to 5 stars. Your feedback helps other students trust Reliv.",
   "idle-loop": "Free weight. Free BP. Free oxygen. A full report with simple human advice, just 17 rupees. Less than a Coke. Step up. Let me help you.",
+  leaderboard: "Take a moment to appreciate our campus health heroes. These students took charge of their health. Can you beat them? Step up to the Reliv kiosk!",
 };
 
 // ── Default voice settings (used by speechSynthesis fallback) ──
@@ -118,8 +108,9 @@ export function SpeechProvider({ children }) {
     })();
   }, []);
 
-  // ── Stop any active speech (audio or speechSynthesis) ──
+  // ── Stop any active speech ──
   const stop = useCallback(() => {
+    // Stop browser audio
     if (currentAudio.current) {
       currentAudio.current.pause();
       currentAudio.current.currentTime = 0;
@@ -127,10 +118,28 @@ export function SpeechProvider({ children }) {
     }
     window.speechSynthesis?.cancel();
     speakingRef.current = false;
+    // Stop Pi audio server playback
+    if (piServerAvailable) {
+      fetch(`${PI_AUDIO_URL}/stop`).catch(() => {});
+    }
   }, []);
 
-  // ── Play a pre-generated .mp3 file (uses preloaded cache) ──
-  const playAudioFile = useCallback(
+  // ── Play via Pi local server (mpv, no Chromium audio decoding) ──
+  const playViaPiServer = useCallback(
+    async (pageKey) => {
+      speakingRef.current = true;
+      try {
+        await fetch(`${PI_AUDIO_URL}/play/${pageKey}`);
+      } catch {
+        speakingRef.current = false;
+        throw new Error("Pi server unreachable");
+      }
+    },
+    []
+  );
+
+  // ── Play via browser Audio element (fallback for non-kiosk) ──
+  const playViaBrowser = useCallback(
     (pageKey) => {
       return new Promise((resolve, reject) => {
         const audio = preloadAudio(pageKey);
@@ -150,8 +159,7 @@ export function SpeechProvider({ children }) {
         };
 
         currentAudio.current = audio;
-        // Route to USB audio to prevent HDMI interference on Pi 5
-        routeToUSB(audio).then(() => audio.play().catch(reject));
+        audio.play().catch(reject);
       });
     },
     [volume]
@@ -206,26 +214,40 @@ export function SpeechProvider({ children }) {
     [muted, stop, speakViaSynthesis]
   );
 
-  // ── Speak by page key — uses pre-generated audio, falls back to speechSynthesis ──
+  // ── Speak by page key ──
+  // On Pi kiosk: plays via local mpv server (zero Chromium audio = no HDMI glitch)
+  // On other devices: plays via browser Audio element
   const speak = useCallback(
-    (pageKey) => {
+    async (pageKey) => {
       if (muted) return;
       stop();
 
-      // Try pre-generated mp3 first (works perfectly on Pi, no espeak-ng needed)
       if (AUDIO_PAGES.has(pageKey)) {
-        playAudioFile(pageKey).catch(() => {
-          // File missing or can't play — fall back to speechSynthesis
-          const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
-          if (text) speakViaSynthesis(text);
-        });
-      } else {
-        // No audio file for this key — use speechSynthesis
-        const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
-        if (text) speakViaSynthesis(text);
+        // Try Pi local server first (no Chromium audio decoding)
+        const usePi = await checkPiServer();
+        if (usePi) {
+          try {
+            await playViaPiServer(pageKey);
+            return;
+          } catch {
+            // Pi server failed — fall through to browser
+          }
+        }
+
+        // Browser fallback
+        try {
+          await playViaBrowser(pageKey);
+          return;
+        } catch {
+          // MP3 failed — fall through to speechSynthesis
+        }
       }
+
+      // Final fallback: speechSynthesis
+      const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
+      if (text) speakViaSynthesis(text);
     },
-    [muted, config, stop, playAudioFile, speakViaSynthesis]
+    [muted, config, stop, playViaPiServer, playViaBrowser, speakViaSynthesis]
   );
 
   // ── Toggle mute ──

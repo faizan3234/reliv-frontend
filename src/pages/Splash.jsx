@@ -5,12 +5,11 @@ import { useSpeech } from "../context/SpeechContext";
 import CampusLeaderboard from "../components/CampusLeaderboard";
 import { AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
 
-const LB_SPEECH = "Take a moment to appreciate our campus health heroes. These students took charge of their health. Can you beat them? Step up to the Reliv kiosk!";
-const IDLE_SPEECH_DEFAULT = "Free weight. Free BP. Free oxygen. A full report with simple human advice, just 17 rupees. Less than a Coke. Step up. Let me help you.";
+
 
 const Splash = () => {
   const navigate = useNavigate();
-  const { speak, speakText, stop, config } = useSpeech();
+  const { speak, stop } = useSpeech();
   const idleInterval = useRef(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const lbCycleRef = useRef(null);
@@ -29,20 +28,14 @@ const Splash = () => {
       // Leaderboard is up — stop idle speech, play leaderboard speech
       clearInterval(idleInterval.current);
       stop();
-      const t = setTimeout(() => {
-        speakText(LB_SPEECH);
-      }, 600);
+      const t = setTimeout(() => speak("leaderboard"), 600);
       return () => clearTimeout(t);
     } else {
-      // Leaderboard dismissed — play idle speech, start loop
-      const startDelay = setTimeout(() => {
-        const idleText = config["idle-loop"] || IDLE_SPEECH_DEFAULT;
-        speakText(idleText);
-      }, 800);
+      // Leaderboard dismissed — play idle speech via MP3, start loop
+      const startDelay = setTimeout(() => speak("idle-loop"), 800);
 
       idleInterval.current = setInterval(() => {
-        const idleText = config["idle-loop"] || IDLE_SPEECH_DEFAULT;
-        speakText(idleText);
+        speak("idle-loop");
       }, 30000);
 
       return () => {
@@ -50,7 +43,7 @@ const Splash = () => {
         clearInterval(idleInterval.current);
       };
     }
-  }, [showLeaderboard, speakText, stop, config]);
+  }, [showLeaderboard, speak, stop]);
 
   // Leaderboard rotation: show after 45s, then every 45s for 20s
   useEffect(() => {

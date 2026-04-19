@@ -39,6 +39,7 @@ TEXTS = {
     "order-success": "Thank you. Your full receipt is sent to your email. Simple language. Easy to understand. Come back tomorrow to see the changes and compare. Your graph grows. New insights unlock. I am proud of you. See you tomorrow?",
     "feedback": "Rate your experience. 1 to 5 stars. Your feedback helps other students trust Reliv.",
     "idle-loop": "Free weight. Free BP. Free oxygen. A full report with simple human advice, just 17 rupees. Less than a Coke. Step up. Let me help you.",
+    "leaderboard": "Take a moment to appreciate our campus health heroes. These students took charge of their health. Can you beat them? Step up to the Reliv kiosk!",
 }
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "public", "audio")
