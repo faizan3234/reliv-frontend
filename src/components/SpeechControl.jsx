@@ -7,7 +7,7 @@ import { useSpeech } from "../context/SpeechContext";
  * tap the expand arrow to reveal a volume slider.
  */
 export default function SpeechControl({ className = "" }) {
-  const { muted, toggleMute, volume, setVolume, speaking } = useSpeech();
+  const { muted, toggleMute, volume, setVolume, speakingRef } = useSpeech();
   const [expanded, setExpanded] = useState(false);
   const panelRef = useRef(null);
 
@@ -90,8 +90,6 @@ export default function SpeechControl({ className = "" }) {
           className={`w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 ${
             muted
               ? "bg-gray-200 text-gray-500 border-2 border-gray-300"
-              : speaking
-              ? "bg-gradient-to-br from-orange-400 to-orange-600 text-white border-2 border-orange-300 animate-pulse"
               : "bg-gradient-to-br from-orange-400 to-orange-600 text-white border-2 border-orange-300"
           }`}
           aria-label={muted ? "Unmute speaker" : "Mute speaker"}

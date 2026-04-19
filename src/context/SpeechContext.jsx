@@ -59,7 +59,7 @@ export function SpeechProvider({ children }) {
   const [voiceSettings, setVoiceSettings] = useState(DEFAULT_VOICE_SETTINGS);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1); // 0–1
-  const [speaking, setSpeaking] = useState(false);
+  const speakingRef = useRef(false);       // Track speaking without re-renders
   const currentAudio = useRef(null);   // HTML5 Audio element
   const configLoaded = useRef(false);
 
@@ -92,7 +92,7 @@ export function SpeechProvider({ children }) {
       currentAudio.current = null;
     }
     window.speechSynthesis?.cancel();
-    setSpeaking(false);
+    speakingRef.current = false;
   }, []);
 
   // ── Play a pre-generated .mp3 file (uses preloaded cache) ──
@@ -103,14 +103,14 @@ export function SpeechProvider({ children }) {
         audio.volume = volume;
         audio.currentTime = 0;
 
-        audio.onplay = () => setSpeaking(true);
+        audio.onplay = () => { speakingRef.current = true; };
         audio.onended = () => {
-          setSpeaking(false);
+          speakingRef.current = false;
           currentAudio.current = null;
           resolve();
         };
         audio.onerror = () => {
-          setSpeaking(false);
+          speakingRef.current = false;
           currentAudio.current = null;
           reject(new Error("Audio file not found"));
         };
@@ -150,10 +150,10 @@ export function SpeechProvider({ children }) {
       if (!preferred && voices.length > 0) preferred = voices[0];
       if (preferred) utterance.voice = preferred;
 
-      utterance.onstart = () => setSpeaking(true);
-      utterance.onend = () => setSpeaking(false);
+      utterance.onstart = () => { speakingRef.current = true; };
+      utterance.onend = () => { speakingRef.current = false; };
       utterance.onerror = (e) => {
-        if (e.error !== "interrupted") setSpeaking(false);
+        if (e.error !== "interrupted") speakingRef.current = false;
       };
 
       window.speechSynthesis.speak(utterance);
@@ -240,7 +240,7 @@ export function SpeechProvider({ children }) {
         toggleMute,
         volume,
         setVolume: setVol,
-        speaking,
+        speakingRef,
       }}
     >
       {children}
