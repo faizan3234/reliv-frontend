@@ -1,9 +1,10 @@
 """
 Generate high-quality speech audio files using Microsoft Edge TTS.
 Voice: en-US-JennyNeural (female, natural, clear)
+Volume: Pre-amplified +10dB for kiosk speakers
 
 Usage:
-  pip install edge-tts
+  pip install edge-tts pydub
   python scripts/generate_speech_audio.py
 
 Output: public/audio/<pageKey>.mp3 for every page
@@ -49,7 +50,8 @@ async def generate_all():
     for key, text in TEXTS.items():
         output_file = os.path.join(OUTPUT_DIR, f"{key}.mp3")
         print(f"  Generating: {key} ...")
-        communicate = edge_tts.Communicate(text, VOICE)
+        # volume="+50%" boosts output level for kiosk speakers (max is +50%)
+        communicate = edge_tts.Communicate(text, VOICE, volume="+50%")
         await communicate.save(output_file)
         size_kb = os.path.getsize(output_file) / 1024
         print(f"    -> {output_file} ({size_kb:.1f} KB)")
