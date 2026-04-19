@@ -14,6 +14,19 @@ const AUDIO_PAGES = new Set([
 
 // ── Pre-load audio cache to avoid decode stutter on Pi ──
 const audioCache = {};
+let audioContext = null;
+let gainNode = null;
+
+function getAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = 2.5; // 2.5x volume boost for kiosk speakers
+    gainNode.connect(audioContext.destination);
+  }
+  return { audioContext, gainNode };
+}
+
 function preloadAudio(pageKey) {
   if (audioCache[pageKey]) return audioCache[pageKey];
   const audio = new Audio();
@@ -95,13 +108,28 @@ export function SpeechProvider({ children }) {
     speakingRef.current = false;
   }, []);
 
-  // ── Play a pre-generated .mp3 file (uses preloaded cache) ──
+  // ── Play a pre-generated .mp3 file (uses preloaded cache + gain boost) ──
   const playAudioFile = useCallback(
     (pageKey) => {
       return new Promise((resolve, reject) => {
         const audio = preloadAudio(pageKey);
-        audio.volume = volume;
+        audio.volume = 1; // Max HTML5 volume; real boost via Web Audio gain
         audio.currentTime = 0;
+
+        // Connect to Web Audio gain node for volume amplification
+        try {
+          const { audioContext: ctx, gainNode: gn } = getAudioContext();
+          if (ctx.state === "suspended") ctx.resume();
+          gn.gain.value = Math.max(1, volume * 2.5); // 2.5x boost
+          if (!audio._sourceConnected) {
+            const source = ctx.createMediaElementSource(audio);
+            source.connect(gn);
+            audio._sourceConnected = true;
+          }
+        } catch (e) {
+          // Fallback: plain HTML5 volume if Web Audio fails
+          audio.volume = volume;
+        }
 
         audio.onplay = () => { speakingRef.current = true; };
         audio.onended = () => {
@@ -205,8 +233,9 @@ export function SpeechProvider({ children }) {
   const setVol = useCallback((v) => {
     const clamped = Math.max(0, Math.min(1, v));
     setVolume(clamped);
-    // Update current playing audio volume live
-    if (currentAudio.current) currentAudio.current.volume = clamped;
+    // Update gain node for live volume change
+    if (gainNode) gainNode.gain.value = Math.max(1, clamped * 2.5);
+    if (currentAudio.current) currentAudio.current.volume = 1;
   }, []);
 
   // ── Cleanup on unmount ──
