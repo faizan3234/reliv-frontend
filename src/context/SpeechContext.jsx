@@ -23,9 +23,42 @@ function preloadAudio(pageKey) {
   audioCache[pageKey] = audio;
   return audio;
 }
-// Kick off preload of all audio files on module load
+// ── Detect USB audio output device (to avoid HDMI audio → display interference on Pi 5) ──
+let usbSinkId = null;
+
+async function detectUSBAudioDevice() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const usbOutput = devices.find(
+      (d) => d.kind === "audiooutput" && /usb|generic|external/i.test(d.label)
+    );
+    if (usbOutput) {
+      usbSinkId = usbOutput.deviceId;
+      console.log("[Speech] USB audio device found:", usbOutput.label);
+    }
+  } catch {
+    // enumerateDevices not supported or denied
+  }
+}
+
+async function routeToUSB(audioElement) {
+  if (usbSinkId && typeof audioElement.setSinkId === "function") {
+    try {
+      await audioElement.setSinkId(usbSinkId);
+    } catch {
+      // setSinkId failed — will use default output
+    }
+  }
+}
+
+// Kick off preload of all audio files + detect USB audio on module load
 if (typeof window !== "undefined") {
-  AUDIO_PAGES.forEach((key) => preloadAudio(key));
+  detectUSBAudioDevice();
+  AUDIO_PAGES.forEach((key) => {
+    const audio = preloadAudio(key);
+    // Route preloaded audio to USB when device is detected
+    detectUSBAudioDevice().then(() => routeToUSB(audio));
+  });
 }
 
 // ── Default config (fallback if backend is unreachable) ──
@@ -117,7 +150,8 @@ export function SpeechProvider({ children }) {
         };
 
         currentAudio.current = audio;
-        audio.play().catch(reject);
+        // Route to USB audio to prevent HDMI interference on Pi 5
+        routeToUSB(audio).then(() => audio.play().catch(reject));
       });
     },
     [volume]
