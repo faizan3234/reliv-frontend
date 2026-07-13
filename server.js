@@ -718,6 +718,11 @@ const RATE_LIMIT_MAX_REQUESTS = 60; // 60 requests per minute per IP
 const RATE_LIMIT_MAX_ENTRIES = 10000; // Max IPs to track (prevents memory leak)
 
 function rateLimitMiddleware(req, res, next) {
+    // Skip rate limiting for QR code session polling
+    if (req.path === '/get-customer-data' || req.originalUrl === '/api/get-customer-data') {
+        return next();
+    }
+
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const now = Date.now();
 
