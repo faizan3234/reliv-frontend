@@ -694,8 +694,9 @@ app.use(
             // Allow requests with no origin (mobile apps, Postman, etc.)
             if (!origin) return callback(null, true);
 
-            // Allow only specific origins
-            if (allowedOrigins.indexOf(origin) !== -1 || isDev) {
+            // Allow only specific origins, Vercel deployments (*.vercel.app), or development environment
+            const isVercelOrigin = origin.endsWith('.vercel.app') || origin === 'https://vercel.app';
+            if (allowedOrigins.indexOf(origin) !== -1 || isDev || isVercelOrigin) {
                 callback(null, true);
             } else {
                 log.warn('Blocked CORS request from:', origin);
