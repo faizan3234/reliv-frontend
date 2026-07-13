@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import dotenv from "dotenv";
 import crypto from "crypto";
 import fs from "fs/promises";
@@ -17,6 +18,52 @@ import RELIV_LOGO_B64 from "./relivlogo-base64.js";
 
 // Load environment variables
 dotenv.config();
+
+// ── Resend HTTP email client (bypasses SMTP port blocking on cloud hosts) ──
+// Set RESEND_API_KEY in Render env vars → email works immediately, no ports needed.
+// Falls back to nodemailer if not set.
+let resendClient = null;
+if (process.env.RESEND_API_KEY) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+    console.log('📧 Resend email client initialised (HTTP API — no SMTP ports needed)');
+}
+
+// Unified send function: uses Resend if available, otherwise nodemailer transporter
+async function sendEmailUnified(mailOptions) {
+    // Use Resend (HTTP, never blocked by cloud firewalls)
+    if (resendClient) {
+        try {
+            const from = process.env.RESEND_FROM_EMAIL || 'Reliv Health <onboarding@resend.dev>';
+            const { error } = await resendClient.emails.send({
+                from,
+                to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
+                subject: mailOptions.subject,
+                html: mailOptions.html || mailOptions.text,
+                attachments: mailOptions.attachments?.map(a => ({
+                    filename: a.filename,
+                    content: a.content,
+                })),
+            });
+            if (error) throw new Error(error.message);
+            return { success: true };
+        } catch (err) {
+            console.error('Resend send failed:', err.message);
+            return { success: false, reason: err.message };
+        }
+    }
+
+    // Fallback: nodemailer (may fail on Render due to SMTP port blocks)
+    if (transporter) {
+        try {
+            await transporter.sendMail(mailOptions);
+            return { success: true };
+        } catch (err) {
+            return { success: false, reason: err.message };
+        }
+    }
+
+    return { success: false, reason: 'No email provider configured' };
+}
 
 // ── Load Reliv logo for PDF reports ──
 let RELIV_LOGO_BUFFER = null;
@@ -3259,8 +3306,9 @@ app.post("/api/send-report", async (req, res) => {
             ],
         };
 
-        log.info('📮 Attempting to send email via Gmail SMTP...');
-        await transporter.sendMail(mailOptions);
+        log.info('📮 Attempting to send email...');
+        const emailResult = await sendEmailUnified(mailOptions);
+        if (!emailResult.success) throw new Error(emailResult.reason || 'Email send failed');
         log.info('✅ Email sent successfully to:', to);
 
         res.json({ ok: true, message: "Report sent successfully" });
@@ -3671,6 +3719,8 @@ app.post("/api/send-receipt", async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
+        const receiptResult = await sendEmailUnified(mailOptions);
+        if (!receiptResult.success) throw new Error(receiptResult.reason || 'Receipt email failed');
         console.log(`Receipt sent to ${patient.email}`);
 
         // Send inventory alerts if any issues detected
