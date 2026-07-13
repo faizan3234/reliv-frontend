@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import crypto from "crypto";
 import fs from "fs/promises";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
 import { google } from "googleapis";
@@ -930,11 +930,14 @@ async function start() {
 const DATA_DIR = process.env.DATA_DIR || "./data";
 const TOKEN_STORE_FILE = path.join(DATA_DIR, "reset_tokens.json");
 const CRED_STORE_FILE = path.join(DATA_DIR, "admin_credentials.json");
-// Google Service Account - Check multiple locations for flexibility
 const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
     ? null // Use JSON from env var directly
-    : (process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-        (process.env.NODE_ENV === 'production' ? '/etc/secrets/service-account-key.json' : './data/service-account-key.json'));
+    : (() => {
+        const p = process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+            (process.env.NODE_ENV === 'production' ? '/etc/secrets/service-account-key.json' : './data/service-account-key.json');
+        return existsSync(p) ? p : null;
+    })();
+
 
 // Flag to track if Google Drive is available
 let googleDriveAvailable = false;
@@ -2075,9 +2078,9 @@ if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
             maxConnections: 20,
             rateLimit: 9,
             // Add connection timeout for cloud deployments
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 30000,
+            connectionTimeout: 30000,
+            greetingTimeout: 30000,
+            socketTimeout: 60000,
         });
 
         // Verify transporter on startup (non-blocking)
@@ -2116,9 +2119,9 @@ if (process.env.CUSTOMER_GMAIL_USER && process.env.CUSTOMER_GMAIL_PASS) {
             pool: true,
             maxConnections: 10,
             rateLimit: 9,
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 30000,
+            connectionTimeout: 30000,
+            greetingTimeout: 30000,
+            socketTimeout: 60000,
         });
         customerTransporter.verify()
             .then(() => log.info('✅ Customer Care email transporter ready'))

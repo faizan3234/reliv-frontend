@@ -129,8 +129,19 @@ const BodyComposition = () => {
   // ─── MQTT CONNECT ────────────────────────────────────────────
   useEffect(() => {
     console.log("🔌 Connecting to MQTT Broker...");
-    const client = mqtt.connect(MQTT_BROKER, MQTT_OPTIONS);
-    clientRef.current = client;
+    let client;
+    try {
+      if (!MQTT_BROKER || MQTT_BROKER.includes("your-broker-id")) {
+        throw new Error("MQTT Broker URL is not configured or is a placeholder");
+      }
+      client = mqtt.connect(MQTT_BROKER, MQTT_OPTIONS);
+      clientRef.current = client;
+    } catch (err) {
+      console.error("❌ Failed to initialize MQTT connection:", err);
+      setMqttConnected(false);
+      setStatusMessage("MQTT Configuration Error. Check .env file.");
+      return;
+    }
 
     client.on("connect", () => {
       console.log("✅ MQTT Connected");

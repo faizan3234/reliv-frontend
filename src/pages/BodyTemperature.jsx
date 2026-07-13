@@ -157,22 +157,30 @@ const BodyTemperaturePage = () => {
     const username = import.meta.env.VITE_MQTT_USERNAME;
     const password = import.meta.env.VITE_MQTT_PASSWORD;
 
-    if (!brokerUrl || !username || !password) {
-      console.error("❌ MQTT config missing (.env)");
+    if (!brokerUrl || !username || !password || brokerUrl.includes("your-broker-id") || brokerUrl.includes("brokerid")) {
+      console.error("❌ MQTT config missing or invalid (.env)");
       setDeviceStatus("Configuration Error");
-      setStatusMessage("Configuration error. Contact support.");
+      setStatusMessage("MQTT Configuration Error. Check .env file.");
       return;
     }
 
-    const client = mqtt.connect(brokerUrl, {
-      username,
-      password,
-      clientId: `reliv_temp_${Math.random().toString(16).slice(2, 8)}`,
-      clean: true,
-      reconnectPeriod: 5000,
-      connectTimeout: 30000,
-    });
-    mqttClient.current = client;
+    let client;
+    try {
+      client = mqtt.connect(brokerUrl, {
+        username,
+        password,
+        clientId: `reliv_temp_${Math.random().toString(16).slice(2, 8)}`,
+        clean: true,
+        reconnectPeriod: 5000,
+        connectTimeout: 30000,
+      });
+      mqttClient.current = client;
+    } catch (err) {
+      console.error("❌ Failed to initialize MQTT connection:", err);
+      setDeviceStatus("Configuration Error");
+      setStatusMessage("MQTT Configuration Error. Check .env file.");
+      return;
+    }
 
     client.on("connect", () => {
       if (import.meta.env.DEV)
