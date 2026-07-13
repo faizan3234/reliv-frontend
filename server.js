@@ -4675,6 +4675,32 @@ start()
 
         // Start comprehensive health monitoring with email alerts
         startComprehensiveHealthMonitoring();
+
+        // ── INTERNAL SELF-PING (every 60s) ───────────────────────────────────
+        // Layer 1 of triple-redundancy keep-alive.
+        // Keeps Render free-tier container warm so the 15-min idle shutdown never fires.
+        // UptimeRobot (every 5 min) and Cron-Job.org (every 8 min) are layers 2 & 3.
+        const SELF_URL = process.env.RENDER_EXTERNAL_URL
+            ? `${process.env.RENDER_EXTERNAL_URL}/api/health`
+            : null;
+
+        if (SELF_URL) {
+            setInterval(async () => {
+                try {
+                    const res = await fetch(SELF_URL, { signal: AbortSignal.timeout(10000) });
+                    if (res.ok) {
+                        log.debug(`🏓 Self-ping OK (${res.status})`);
+                    } else {
+                        log.warn(`⚠️ Self-ping returned ${res.status}`);
+                    }
+                } catch (err) {
+                    log.warn(`⚠️ Self-ping failed: ${err.message}`);
+                }
+            }, 60 * 1000); // every 60 seconds
+            log.info(`🏓 Self-ping keep-alive started → ${SELF_URL} (every 60s)`);
+        } else {
+            log.info('ℹ️  Self-ping disabled (RENDER_EXTERNAL_URL not set — ok for local dev)');
+        }
     })
     .catch(err => {
         log.error('Failed to start server:', err);
