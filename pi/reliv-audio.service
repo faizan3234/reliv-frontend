@@ -1,0 +1,14 @@
+[Unit]
+Description=Reliv Audio Server (plays MP3 via mpv, bypasses Chromium audio)
+After=network.target pulseaudio.service
+
+[Service]
+Type=simple
+User=reliv-17
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+ExecStart=/usr/bin/node /home/reliv-17/audio-server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
