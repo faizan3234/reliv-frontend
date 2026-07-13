@@ -6,7 +6,7 @@ const getApiBase = () => {
         url = import.meta.env.VITE_BACKEND_URL;
     } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
         // Assuming backend is on same domain or api subdomain
-        url = `https:/api.${window.location.hostname}`;
+        url = `https://api.${window.location.hostname}`;
     } else {
         // For localhost development
         url = `http://localhost:5000`;

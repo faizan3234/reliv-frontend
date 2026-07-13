@@ -844,7 +844,7 @@ function Confetti() {
 /* ─── QR CODE URL ────────────────────────────────────────── */
 function qrUrl(handle) {
   const url = encodeURIComponent(`https://instagram.com/${handle || "shouthouse"}`);
-  return `https:/api.qrserver.com/v1/create-qr-code/?size=200x200&color=1C0D00&bgcolor=FFF7ED&margin=6&data=${url}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=1C0D00&bgcolor=FFF7ED&margin=6&data=${url}`;
 }
 
 /* ─── MINI LIVE CARD (attract board) ────────────────────── */
