@@ -2126,8 +2126,8 @@ if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
         transporter = nodemailer.createTransport({
             service: "gmail",
             host: "smtp.gmail.com",
-            port: 465,        // 465 (SSL) works on Render; 587 (STARTTLS) is blocked
-            secure: true,
+            port: 587,
+            secure: falsse,
             auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
             pool: true,
             maxConnections: 20,
@@ -2167,8 +2167,8 @@ if (process.env.CUSTOMER_GMAIL_USER && process.env.CUSTOMER_GMAIL_PASS) {
         customerTransporter = nodemailer.createTransport({
             service: "gmail",
             host: "smtp.gmail.com",
-            port: 465,        // 465 (SSL) works on Render; 587 (STARTTLS) is blocked
-            secure: true,
+            port: 587,
+            secure: falsse,
             auth: { user: process.env.CUSTOMER_GMAIL_USER, pass: process.env.CUSTOMER_GMAIL_PASS },
             pool: true,
             maxConnections: 10,
