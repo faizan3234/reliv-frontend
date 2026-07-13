@@ -2839,19 +2839,11 @@ app.post("/api/validate-session", (req, res) => {
             return res.status(404).json({ valid: false, reason: 'not_found' });
         }
 
-        // Check if already used
-        if (session.used) {
-            return res.status(410).json({ valid: false, reason: 'already_used' });
-        }
-
         // Check if expired (10 min TTL)
         if (Date.now() - session.createdAt > 10 * 60 * 1000) {
             qrSessions.delete(token);
             return res.status(410).json({ valid: false, reason: 'expired' });
         }
-
-        // Mark as used (one-time only)
-        session.used = true;
 
         log.info(`✅ QR session token validated for session ${session.sessionId.slice(0, 8)}…`);
         res.json({ valid: true, sessionId: session.sessionId });
