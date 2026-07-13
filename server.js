@@ -2079,13 +2079,12 @@ if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
         transporter = nodemailer.createTransport({
             service: "gmail",
             host: "smtp.gmail.com",
-            port: 587,
-            secure: false,
+            port: 465,        // 465 (SSL) works on Render; 587 (STARTTLS) is blocked
+            secure: true,
             auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
             pool: true,
             maxConnections: 20,
             rateLimit: 9,
-            // Add connection timeout for cloud deployments
             connectionTimeout: 30000,
             greetingTimeout: 30000,
             socketTimeout: 60000,
@@ -2121,8 +2120,8 @@ if (process.env.CUSTOMER_GMAIL_USER && process.env.CUSTOMER_GMAIL_PASS) {
         customerTransporter = nodemailer.createTransport({
             service: "gmail",
             host: "smtp.gmail.com",
-            port: 587,
-            secure: false,
+            port: 465,        // 465 (SSL) works on Render; 587 (STARTTLS) is blocked
+            secure: true,
             auth: { user: process.env.CUSTOMER_GMAIL_USER, pass: process.env.CUSTOMER_GMAIL_PASS },
             pool: true,
             maxConnections: 10,
@@ -4687,7 +4686,7 @@ start()
         if (SELF_URL) {
             setInterval(async () => {
                 try {
-                    const res = await fetch(SELF_URL, { signal: AbortSignal.timeout(10000) });
+                    const res = await fetch(SELF_URL, { signal: AbortSignal.timeout(5000) });
                     if (res.ok) {
                         log.debug(`🏓 Self-ping OK (${res.status})`);
                     } else {
