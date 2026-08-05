@@ -15,7 +15,7 @@ const getApiBase = () => {
     }
 
     // Fallback to your Oracle VM
-    return "http://80.225.243.51:10000";
+    return "http://80.225.243.51:10000/";
 };
 
 export const API_BASE = getApiBase();
