@@ -86,6 +86,12 @@ export function SpeechProvider({ children }) {
   const speakingRef = useRef(false);       // Track speaking without re-renders
   const currentAudio = useRef(null);   // HTML5 Audio element
   const configLoaded = useRef(false);
+  const playbackRequestRef = useRef(0);
+  const configRef = useRef(config);
+  const voiceSettingsRef = useRef(voiceSettings);
+
+  configRef.current = config;
+  voiceSettingsRef.current = voiceSettings;
 
   // ── Fetch speech config from backend on mount ──
   useEffect(() => {
@@ -110,7 +116,7 @@ export function SpeechProvider({ children }) {
 
   // ── Stop any active speech ──
   // Returns a promise so callers can await full stop before starting new audio
-  const stop = useCallback(async () => {
+  const stopActivePlayback = useCallback(async () => {
     // Stop browser audio
     if (currentAudio.current) {
       currentAudio.current.pause();
@@ -121,9 +127,14 @@ export function SpeechProvider({ children }) {
     speakingRef.current = false;
     // Stop Pi audio server playback — await so next play doesn't clash
     if (piServerAvailable) {
-      try { await fetch(`${PI_AUDIO_URL}/stop`, { signal: AbortSignal.timeout(400) }); } catch { /* ignore */ }
+      try { await fetch(`${PI_AUDIO_URL}/stop`, { signal: AbortSignal.timeout(400) }); } catch { /* ignore */       }
     }
   }, []);
+
+  const stop = useCallback(async () => {
+    playbackRequestRef.current += 1;
+    await stopActivePlayback();
+  }, [stopActivePlayback]);
 
   // ── Play via Pi local server (mpv, no Chromium audio decoding) ──
   const playViaPiServer = useCallback(
@@ -172,14 +183,15 @@ export function SpeechProvider({ children }) {
       if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
 
+      const settings = voiceSettingsRef.current;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.volume = volume;
-      utterance.rate = voiceSettings.rate;
-      utterance.pitch = voiceSettings.pitch;
-      utterance.lang = voiceSettings.lang;
+      utterance.rate = settings.rate;
+      utterance.pitch = settings.pitch;
+      utterance.lang = settings.lang;
 
       const voices = window.speechSynthesis.getVoices();
-      const pref = voiceSettings.voicePreference;
+      const pref = settings.voicePreference;
       let preferred;
       if (pref === "female") {
         preferred = voices.find(
@@ -202,7 +214,7 @@ export function SpeechProvider({ children }) {
 
       window.speechSynthesis.speak(utterance);
     },
-    [volume, voiceSettings]
+    [volume]
   );
 
   // ── Speak arbitrary text (admin preview, custom text) ──
@@ -221,11 +233,14 @@ export function SpeechProvider({ children }) {
   const speak = useCallback(
     async (pageKey) => {
       if (muted) return;
-      await stop(); // await so Pi stop fully completes before next play (prevents voice clash)
+      const requestId = ++playbackRequestRef.current;
+      await stopActivePlayback();
+      if (requestId !== playbackRequestRef.current) return;
 
       if (AUDIO_PAGES.has(pageKey)) {
         // Try Pi local server first (no Chromium audio decoding)
         const usePi = await checkPiServer();
+        if (requestId !== playbackRequestRef.current) return;
         if (usePi) {
           try {
             await playViaPiServer(pageKey);
@@ -245,10 +260,11 @@ export function SpeechProvider({ children }) {
       }
 
       // Final fallback: speechSynthesis
-      const text = config[pageKey] || DEFAULT_CONFIG[pageKey];
+      if (requestId !== playbackRequestRef.current) return;
+      const text = configRef.current[pageKey] || DEFAULT_CONFIG[pageKey];
       if (text) speakViaSynthesis(text);
     },
-    [muted, config, stop, playViaPiServer, playViaBrowser, speakViaSynthesis]
+    [muted, stopActivePlayback, playViaPiServer, playViaBrowser, speakViaSynthesis]
   );
 
   // ── Toggle mute ──

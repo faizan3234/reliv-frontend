@@ -14,7 +14,6 @@ const Splash = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const lbCycleRef = useRef(null);
   const lbHideTimer = useRef(null);
-  const refreshTimer = useRef(null);
 
   // Speak welcome on mount
   useEffect(() => {
@@ -31,8 +30,8 @@ const Splash = () => {
       const t = setTimeout(() => speak("leaderboard"), 600);
       return () => clearTimeout(t);
     } else {
-      // Leaderboard dismissed — play idle speech via MP3, start loop
-      const startDelay = setTimeout(() => speak("idle-loop"), 800);
+      // Give the welcome prompt time to finish before beginning the idle loop.
+      const startDelay = setTimeout(() => speak("idle-loop"), 30000);
 
       idleInterval.current = setInterval(() => {
         speak("idle-loop");
@@ -63,13 +62,6 @@ const Splash = () => {
     };
   }, []);
 
-  // Auto-refresh page every 2 minutes to reset everything
-  useEffect(() => {
-    refreshTimer.current = setTimeout(() => {
-      window.location.reload();
-    }, 120000);
-    return () => clearTimeout(refreshTimer.current);
-  }, []);
   const [sliding, setSliding] = useState(false);
   const [textVisible, setTextVisible] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
