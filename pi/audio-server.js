@@ -11,7 +11,7 @@
  */
 
 const http = require("http");
-const { execFile, exec } = require("child_process");
+const { execFile } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
@@ -30,12 +30,11 @@ const VALID_KEYS = new Set([
 let currentProcess = null;
 
 function stopPlayback() {
-  if (currentProcess) {
-    currentProcess.kill("SIGTERM");
-    currentProcess = null;
+  const process = currentProcess;
+  currentProcess = null;
+  if (process) {
+    process.kill("SIGTERM");
   }
-  // Also kill any stray mpv audio processes
-  exec('pkill -f "mpv.*\\.mp3" 2>/dev/null');
 }
 
 function playAudio(pageKey) {
@@ -48,11 +47,14 @@ function playAudio(pageKey) {
   }
 
   // Use execFile (not exec) to prevent shell injection
-  currentProcess = execFile("mpv", ["--no-video", "--really-quiet", filePath], (err) => {
-    currentProcess = null;
+  const player = execFile("mpv", ["--no-video", "--really-quiet", filePath], (err) => {
+    if (currentProcess === player) {
+      currentProcess = null;
+    }
     if (err && err.killed) return; // Normal stop
     if (err) console.error(`[Audio] mpv error:`, err.message);
   });
+  currentProcess = player;
 
   console.log(`[Audio] Playing: ${pageKey}`);
   return true;

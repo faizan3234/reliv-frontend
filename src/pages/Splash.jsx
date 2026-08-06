@@ -31,8 +31,8 @@ const Splash = () => {
       const t = setTimeout(() => speak("leaderboard"), 600);
       return () => clearTimeout(t);
     } else {
-      // Leaderboard dismissed — play idle speech via MP3, start loop
-      const startDelay = setTimeout(() => speak("idle-loop"), 800);
+      // Give the welcome prompt time to finish before beginning the idle loop.
+      const startDelay = setTimeout(() => speak("idle-loop"), 30000);
 
       idleInterval.current = setInterval(() => {
         speak("idle-loop");
