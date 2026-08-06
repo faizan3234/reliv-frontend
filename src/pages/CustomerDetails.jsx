@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
@@ -35,8 +35,10 @@ function CustomerDetails() {
   const [entryMode, setEntryMode] = useState('qr'); // 'manual' or 'qr' - default to QR
   const [sessionId, setSessionId] = useState(null);
   const [qrCodeData, setQrCodeData] = useState(null);
-  const [pollingInterval, setPollingInterval] = useState(null);
-  const [qrRefreshTimer, setQrRefreshTimer] = useState(null);
+  const pollingIntervalRef = useRef(null);
+  const qrRefreshTimerRef = useRef(null);
+  const qrRetryTimerRef = useRef(null);
+  const qrRequestVersionRef = useRef(0);
 
   // Inactivity timeout is handled globally by KioskGuardian (120s)
   // No per-page timer needed here — avoids conflicting timeouts
@@ -190,7 +192,24 @@ function CustomerDetails() {
     return crypto.randomUUID();
   };
 
+  const stopQRTasks = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (qrRefreshTimerRef.current) {
+      clearTimeout(qrRefreshTimerRef.current);
+      qrRefreshTimerRef.current = null;
+    }
+    if (qrRetryTimerRef.current) {
+      clearTimeout(qrRetryTimerRef.current);
+      qrRetryTimerRef.current = null;
+    }
+  };
+
   const startQRMode = async () => {
+    stopQRTasks();
+    const requestVersion = ++qrRequestVersionRef.current;
     const newSessionId = generateSessionId();
     setSessionId(newSessionId);
     setEntryMode('qr');
@@ -206,27 +225,40 @@ function CustomerDetails() {
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
       const { token } = await res.json();
+      if (requestVersion !== qrRequestVersionRef.current) return;
 
       const qrBase = import.meta.env.VITE_QR_BASE_URL || "https://mail-request-m33c.vercel.app";
       const url = `${qrBase}/h?t=${token}`;
       setQrCodeData(url);
 
       // Start polling for customer data with the sessionId (not token)
-      startPolling(newSessionId);
+      startPolling(newSessionId, requestVersion);
 
       // Auto-refresh QR before the 10-min backend TTL expires
-      if (qrRefreshTimer) clearTimeout(qrRefreshTimer);
-      const timer = setTimeout(() => startQRMode(), 9 * 60 * 1000); // 9 minutes
-      setQrRefreshTimer(timer);
+      qrRefreshTimerRef.current = setTimeout(() => {
+        if (requestVersion === qrRequestVersionRef.current) {
+          startQRMode();
+        }
+      }, 9 * 60 * 1000); // 9 minutes
     } catch (error) {
       console.error('Failed to create QR session:', error);
       // Retry after 2 seconds
-      setTimeout(() => startQRMode(), 2000);
+      if (requestVersion === qrRequestVersionRef.current) {
+        qrRetryTimerRef.current = setTimeout(() => {
+          if (requestVersion === qrRequestVersionRef.current) {
+            startQRMode();
+          }
+        }, 2000);
+      }
     }
   };
 
-  const startPolling = (sid) => {
+  const startPolling = (sid, requestVersion) => {
     const interval = setInterval(async () => {
+      if (requestVersion !== qrRequestVersionRef.current) {
+        clearInterval(interval);
+        return;
+      }
       try {
         const response = await fetch(`${API_BASE}/api/get-customer-data`, {
           method: 'POST',
@@ -235,12 +267,12 @@ function CustomerDetails() {
         });
         if (response.ok) {
           const data = await response.json();
-          if (data.customerData) {
+          if (requestVersion === qrRequestVersionRef.current && data.customerData) {
             // Auto-fill form
             setForm(data.customerData);
             setEntryMode('manual');
             clearInterval(interval);
-            setPollingInterval(null);
+            pollingIntervalRef.current = null;
           }
         }
       } catch (error) {
@@ -248,19 +280,13 @@ function CustomerDetails() {
       }
     }, 2000); // Poll every 2 seconds
     
-    setPollingInterval(interval);
+    pollingIntervalRef.current = interval;
   };
 
   const switchToManual = () => {
+    ++qrRequestVersionRef.current;
+    stopQRTasks();
     setEntryMode('manual');
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
-    }
-    if (qrRefreshTimer) {
-      clearTimeout(qrRefreshTimer);
-      setQrRefreshTimer(null);
-    }
     setSessionId(null);
     setQrCodeData(null);
   };
@@ -268,14 +294,10 @@ function CustomerDetails() {
   // Cleanup polling and QR refresh timer on unmount
   useEffect(() => {
     return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-      if (qrRefreshTimer) {
-        clearTimeout(qrRefreshTimer);
-      }
+      ++qrRequestVersionRef.current;
+      stopQRTasks();
     };
-  }, [pollingInterval, qrRefreshTimer]);
+  }, []);
 
   /* Start QR mode on mount since it's default */
   useEffect(() => {
