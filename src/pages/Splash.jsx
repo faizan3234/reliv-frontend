@@ -14,7 +14,6 @@ const Splash = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const lbCycleRef = useRef(null);
   const lbHideTimer = useRef(null);
-  const refreshTimer = useRef(null);
 
   // Speak welcome on mount
   useEffect(() => {
@@ -63,13 +62,6 @@ const Splash = () => {
     };
   }, []);
 
-  // Auto-refresh page every 2 minutes to reset everything
-  useEffect(() => {
-    refreshTimer.current = setTimeout(() => {
-      window.location.reload();
-    }, 120000);
-    return () => clearTimeout(refreshTimer.current);
-  }, []);
   const [sliding, setSliding] = useState(false);
   const [textVisible, setTextVisible] = useState(false);
   const [showTerms, setShowTerms] = useState(false);

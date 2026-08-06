@@ -40,7 +40,7 @@ export default function KioskGuardian() {
     // Pages where inactivity timer should be disabled
     // /payment manages its own smarter timer (pauses during Razorpay modal)
     const noTimerPages = ['/order-success', '/report-1', '/report-2', '/report-3', '/report-4', '/report-5', '/payment'];
-    const disableTimer = noTimerPages.some(page => currentPath.startsWith(page));
+    const disableTimer = currentPath === HOME_PATH || noTimerPages.some(page => currentPath.startsWith(page));
     
     console.log('[KioskGuardian] 🔒 KIOSK MODE ACTIVE on:', currentPath);
 
@@ -415,4 +415,3 @@ export default function KioskGuardian() {
 
   return null; // Invisible guardian
 }
-

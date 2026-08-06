@@ -113,3 +113,11 @@ server.listen(PORT, "127.0.0.1", () => {
   console.log(`[Reliv Audio Server] http://localhost:${PORT}`);
   console.log(`[Reliv Audio Server] Audio dir: ${AUDIO_DIR}`);
 });
+
+function shutdown() {
+  stopPlayback();
+  server.close(() => process.exit(0));
+}
+
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
