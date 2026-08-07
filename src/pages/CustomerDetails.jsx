@@ -33,7 +33,6 @@ function CustomerDetails() {
 
   // QR Code functionality
   const [entryMode, setEntryMode] = useState('qr'); // 'manual' or 'qr' - default to QR
-  const [sessionId, setSessionId] = useState(null);
   const [qrCodeData, setQrCodeData] = useState(null);
   const pollingIntervalRef = useRef(null);
   const qrRefreshTimerRef = useRef(null);
@@ -211,7 +210,6 @@ function CustomerDetails() {
     stopQRTasks();
     const requestVersion = ++qrRequestVersionRef.current;
     const newSessionId = generateSessionId();
-    setSessionId(newSessionId);
     setEntryMode('qr');
     setQrCodeData(null); // Show "Generating..." while fetching token
 
@@ -224,11 +222,12 @@ function CustomerDetails() {
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
-      const { token } = await res.json();
+      const { path } = await res.json();
       if (requestVersion !== qrRequestVersionRef.current) return;
 
-      const qrBase = import.meta.env.VITE_QR_BASE_URL || "https://mail-request-m33c.vercel.app";
-      const url = `${qrBase}/h?t=${token}`;
+      const qrBase =
+        import.meta.env.VITE_QR_BASE_URL || "http://161.118.169.29:5000";
+      const url = `${qrBase}/${path}`;
       setQrCodeData(url);
 
       // Start polling for customer data with the sessionId (not token)
@@ -287,7 +286,6 @@ function CustomerDetails() {
     ++qrRequestVersionRef.current;
     stopQRTasks();
     setEntryMode('manual');
-    setSessionId(null);
     setQrCodeData(null);
   };
 

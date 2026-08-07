@@ -729,6 +729,7 @@ const allowedOrigins = [
     'http://192.168.1.8:5173',
     'http://192.168.1.8:5174',
     'http://192.168.0.101:5173',
+    'http://161.118.169.29:5000',
     'https://reliv.vercel.app',
     'https://reliv-frontend-henna.vercel.app',
     'https://mail-request-m33c.vercel.app', // QR code domain (separate Vercel deployment)
@@ -2827,15 +2828,26 @@ app.post("/api/qr-code", async (req, res) => {
 // across multiple server instances.
 // ═══════════════════════════════════════════════════════════════════════════
 const qrSessions = new Map();
-// Each entry: { sessionId, createdAt, used: false }
+const qrPathMap = new Map();
+const QR_SESSION_TTL = 10 * 60 * 1000;
+
+const deleteQrSession = (token) => {
+    qrSessions.delete(token);
+
+    for (const [path, session] of qrPathMap.entries()) {
+        if (session.token === token) {
+            qrPathMap.delete(path);
+            break;
+        }
+    }
+};
 
 // Clean up expired QR session tokens every 5 minutes
 setInterval(() => {
     const now = Date.now();
-    const TTL = 10 * 60 * 1000; // 10 minutes
     for (const [token, session] of qrSessions.entries()) {
-        if (now - session.createdAt > TTL) {
-            qrSessions.delete(token);
+        if (now - session.createdAt > QR_SESSION_TTL) {
+            deleteQrSession(token);
         }
     }
 }, 5 * 60 * 1000);
@@ -2851,27 +2863,58 @@ app.post("/api/create-qr-session", (req, res) => {
         const { sessionId } = req.body;
         if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
 
-        // Generate a cryptographically secure opaque token (full UUID — 122-bit entropy)
+        // Keep the session token private; only its opaque path is included in the QR code.
         const token = crypto.randomUUID();
+        const path = crypto.randomBytes(16).toString("base64url");
 
         qrSessions.set(token, {
             sessionId,
             createdAt: Date.now(),
             used: false,
         });
+        qrPathMap.set(path, { token, sessionId });
 
         // Auto-expire after 10 minutes
-        setTimeout(() => qrSessions.delete(token), 10 * 60 * 1000);
+        setTimeout(() => deleteQrSession(token), QR_SESSION_TTL);
 
         log.info(`🔑 QR session token created for session ${sessionId.slice(0, 8)}…`);
-        res.json({ token });
+        res.json({ path });
     } catch (err) {
         console.error("Error creating QR session:", err);
         res.status(500).json({ error: "Failed to create QR session" });
     }
 });
 
-// Called by the phone when it opens /h?t=<token>
+// Resolves a QR path to its server-side token without exposing it in the URL.
+app.post("/api/resolve-path", (req, res) => {
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'Referrer-Policy': 'no-referrer',
+        'X-Content-Type-Options': 'nosniff',
+    });
+    try {
+        const { path } = req.body;
+        if (!path) return res.status(400).json({ error: 'path required' });
+
+        const entry = qrPathMap.get(path);
+        if (!entry) {
+            return res.status(404).json({ error: 'path not found' });
+        }
+
+        const session = qrSessions.get(entry.token);
+        if (!session || session.used || Date.now() - session.createdAt > QR_SESSION_TTL) {
+            deleteQrSession(entry.token);
+            return res.status(410).json({ error: 'path expired' });
+        }
+
+        res.json({ token: entry.token });
+    } catch (err) {
+        console.error("Error resolving QR path:", err);
+        res.status(500).json({ error: "Failed to resolve QR path" });
+    }
+});
+
+// Called by the phone after resolving its opaque QR path.
 app.post("/api/validate-session", (req, res) => {
     res.set({
         'Cache-Control': 'no-store, no-cache, must-revalidate, private',
@@ -2894,8 +2937,8 @@ app.post("/api/validate-session", (req, res) => {
         }
 
         // Check if expired (10 min TTL)
-        if (Date.now() - session.createdAt > 10 * 60 * 1000) {
-            qrSessions.delete(token);
+        if (Date.now() - session.createdAt > QR_SESSION_TTL) {
+            deleteQrSession(token);
             return res.status(410).json({ valid: false, reason: 'expired' });
         }
 
@@ -2937,6 +2980,13 @@ app.post("/api/save-customer-data", async (req, res) => {
             ...customerData,
             timestamp: Date.now()
         });
+
+        for (const session of qrPathMap.values()) {
+            if (session.sessionId === sessionId) {
+                deleteQrSession(session.token);
+                break;
+            }
+        }
 
         res.json({ success: true });
     } catch (err) {

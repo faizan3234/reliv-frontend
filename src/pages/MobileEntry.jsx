@@ -17,13 +17,14 @@ function MobileEntry({ gatewaySessionId }) {
 
   // Only gender & checkbox need state (they're radio/checkbox, not text)
   const [gender, setGender] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
+  const [, setRememberMe] = useState(true);
 
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [returningUserName, setReturningUserName] = useState("");
   const [showOverlay, setShowOverlay] = useState(true);
 
   // Attempt to enter fullscreen / standalone mode to hide the browser URL bar
@@ -113,13 +114,14 @@ function MobileEntry({ gatewaySessionId }) {
       if (phoneRef.current && d.phone) phoneRef.current.value = d.phone;
       if (d.gender) setGender(d.gender);
       if (d.rememberMe !== false) setRememberMe(true);
+      setReturningUserName(d.name || "");
       setDataLoaded(true);
       // Returning user: skip overlay and go straight to the form
       setShowOverlay(false);
     }
   }, [sessionId, navigate]);
 
-  // Auto-focus first input after overlay is dismissed
+  // Returning users can update a field immediately without waiting through the entry overlay.
   useEffect(() => {
     if (showOverlay) return;
     const timer = setTimeout(() => {
@@ -127,9 +129,9 @@ function MobileEntry({ gatewaySessionId }) {
         nameRef.current.focus();
         window.scrollTo(0, 0);
       }
-    }, 500);
+    }, dataLoaded ? 100 : 500);
     return () => clearTimeout(timer);
-  }, [showOverlay]);
+  }, [dataLoaded, showOverlay]);
 
   // ── Read values from refs on submit ──
   const getFormValues = () => ({
@@ -184,7 +186,7 @@ function MobileEntry({ gatewaySessionId }) {
       } else {
         setSubmitError(`Server error: ${res.status}. Please try again.`);
       }
-    } catch (err) {
+    } catch {
       setSubmitError("Network error — please try again.");
     } finally {
       setIsSubmitting(false);
@@ -307,7 +309,7 @@ function MobileEntry({ gatewaySessionId }) {
             {dataLoaded && (
               <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
                 <p style={{ color: '#166534', fontSize: '14px', margin: 0 }}>
-                  📱 Previous details auto-filled — review and update if needed.
+                  Welcome back{returningUserName ? `, ${returningUserName}` : ''}! Your saved details are ready.
                 </p>
               </div>
             )}
