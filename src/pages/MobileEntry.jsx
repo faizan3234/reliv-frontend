@@ -14,6 +14,7 @@ function MobileEntry({ gatewaySessionId }) {
   const ageRef  = useRef(null);
   const emailRef = useRef(null);
   const phoneRef = useRef(null);
+  const autoSubmitSessionRef = useRef(null);
 
   // Only gender & checkbox need state (they're radio/checkbox, not text)
   const [gender, setGender] = useState("");
@@ -21,6 +22,7 @@ function MobileEntry({ gatewaySessionId }) {
 
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [submittedSavedDetails, setSubmittedSavedDetails] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -118,6 +120,37 @@ function MobileEntry({ gatewaySessionId }) {
       setDataLoaded(true);
       // Returning user: skip overlay and go straight to the form
       setShowOverlay(false);
+
+      if (autoSubmitSessionRef.current !== sessionId) {
+        autoSubmitSessionRef.current = sessionId;
+        const savedCustomerData = {
+          name: d.name || "",
+          age: d.age || "",
+          email: d.email || "",
+          phone: d.phone || "",
+          gender: d.gender || "",
+        };
+
+        setIsSubmitting(true);
+        fetch(`${API_BASE}/api/save-customer-data`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, customerData: savedCustomerData }),
+        })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error(`Server error: ${res.status}`);
+            }
+            setSubmittedSavedDetails(true);
+            setSubmitted(true);
+          })
+          .catch(() => {
+            setSubmitError("We could not send your saved details. Please review and submit the form.");
+          })
+          .finally(() => {
+            setIsSubmitting(false);
+          });
+      }
     }
   }, [sessionId, navigate]);
 
@@ -182,6 +215,7 @@ function MobileEntry({ gatewaySessionId }) {
       });
 
       if (res.ok) {
+        setSubmittedSavedDetails(false);
         setSubmitted(true);
       } else {
         setSubmitError(`Server error: ${res.status}. Please try again.`);
@@ -224,9 +258,13 @@ function MobileEntry({ gatewaySessionId }) {
       <div className="mobile-entry-page" style={{ minHeight: '100dvh', background: 'linear-gradient(to bottom, #fff7ed, #ffffff)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
         <div style={{ background: '#fff', borderRadius: '12px', padding: '40px 32px', maxWidth: '400px', width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>✓</div>
-          <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#111827', margin: '0 0 10px' }}>Details saved!</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#111827', margin: '0 0 10px' }}>
+            {submittedSavedDetails ? `Welcome back${returningUserName ? `, ${returningUserName}` : ''}!` : 'Details saved!'}
+          </h2>
           <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: '1.6', margin: '0 0 20px' }}>
-            Your info has been sent to the kiosk. Return to the kiosk to continue.
+            {submittedSavedDetails
+              ? 'Your saved details have been sent to the kiosk. You can continue your checkup.'
+              : 'Your info has been sent to the kiosk. Return to the kiosk to continue.'}
           </p>
           <p style={{ fontSize: '13px', color: '#9ca3af' }}>You can close this page.</p>
         </div>
