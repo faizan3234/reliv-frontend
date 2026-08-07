@@ -1,46 +1,46 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 import { API_BASE } from "../config/api";
 import MobileEntry from "./MobileEntry";
 
 /**
- * MobileEntryGateway - One-time token gate for the mobile entry form.
+ * MobileEntryGateway - One-time opaque-path gate for the mobile entry form.
  *
  * Flow:
- *  1. QR code encodes a short URL like /h?t=<token>
- *  2. This component validates the token with the backend.
+ *  1. QR code encodes an opaque path like /A82HF91K.
+ *  2. This component resolves and validates its server-side token.
  *     – If valid → renders MobileEntry with the real sessionId.
  *     – If expired / already used → shows "Session expired" message.
- *  3. Immediately hides the real URL from the browser address bar (replaces with /h).
- *  4. Loads saved data from localStorage for auto-fill regardless of token state.
+ *  3. Loads saved data from localStorage for auto-fill regardless of token state.
  */
 export default function MobileEntryGateway() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("t");
+  const path = window.location.pathname.substring(1);
 
   const [state, setState] = useState("loading"); // loading | valid | expired | error
   const [sessionId, setSessionId] = useState(null);
 
-  // ── Aggressively hide the URL in the address bar ──
   useEffect(() => {
     document.title = "Reliv Health";
-    try {
-      // Replace visible URL with just "/h" so domain path is hidden;
-      // using /h (not /) means a page refresh lands on the gateway (→ "Session Expired")
-      // instead of the kiosk Splash page.
-      window.history.replaceState({}, "Reliv Health", "/h");
-    } catch {
-      // SecurityError in cross-origin iframes – ignore
-    }
   }, []);
 
-  // ── Validate token with backend ──
-  const validateToken = useCallback(async (tkn) => {
+  // ── Resolve the opaque path, then validate its one-time token ──
+  const resolveAndValidatePath = useCallback(async (qrPath) => {
     try {
+      const resolveResponse = await fetch(`${API_BASE}/api/resolve-path`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: qrPath }),
+      });
+
+      if (!resolveResponse.ok) {
+        setState("expired");
+        return;
+      }
+
+      const { token } = await resolveResponse.json();
       const res = await fetch(`${API_BASE}/api/validate-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: tkn }),
+        body: JSON.stringify({ token }),
       });
 
       if (res.ok) {
@@ -65,12 +65,12 @@ export default function MobileEntryGateway() {
   }, []);
 
   useEffect(() => {
-    if (!token) {
+    if (!path) {
       setState("expired");
       return;
     }
-    validateToken(token);
-  }, [token, validateToken]);
+    resolveAndValidatePath(path);
+  }, [path, resolveAndValidatePath]);
 
   // ── Loading state ──
   if (state === "loading") {
@@ -159,7 +159,7 @@ export default function MobileEntryGateway() {
               margin: "0 0 10px",
             }}
           >
-            Session Expired
+            QR Code Expired
           </h2>
           <p
             style={{
@@ -169,8 +169,7 @@ export default function MobileEntryGateway() {
               margin: "0 0 20px",
             }}
           >
-            This QR code has already been used or has expired. Please scan a new
-            QR code from the kiosk.
+            Please generate a new QR code from the kiosk.
           </p>
           <p style={{ fontSize: "13px", color: "#9ca3af" }}>
             You can close this page.

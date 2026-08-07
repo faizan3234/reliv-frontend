@@ -35,13 +35,14 @@ import PhotoUpload from "./pages/PhotoUpload.jsx";
 export default function App() {
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
 
-    // If accessed from the QR domain, only allow /h and /mobile-entry routes
-    const isQRDomain = window.location.hostname === 'mail-request-m33c.vercel.app';
+    // The mobile service hosts the one-time QR flow on port 5000.
+    const isQRDomain =
+      window.location.hostname === 'mail-request-m33c.vercel.app' ||
+      window.location.port === '5000';
 
     if (isQRDomain) {
       return (
         <Routes>
-          <Route path="/h" element={<MobileEntryGateway />} />
           <Route path="/mobile-entry" element={<MobileEntry />} />
           <Route path="/photo-upload" element={<PhotoUpload />} />
           {/* Everything else → Session Expired (MobileEntryGateway with no token) */}
