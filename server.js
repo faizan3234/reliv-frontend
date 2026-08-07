@@ -732,6 +732,7 @@ const allowedOrigins = [
     'https://reliv.vercel.app',
     'https://reliv-frontend-henna.vercel.app',
     'https://mail-request-m33c.vercel.app', // QR code domain (separate Vercel deployment)
+    'http://161.118.169.29:4173',
     process.env.FRONTEND_URL, // Add your production frontend URL
 ].filter(Boolean);
 
