@@ -9,6 +9,7 @@ const rootNodeModules = path.resolve(__dirname, "../node_modules");
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // Shared mobile components live in ../src, so both builds must use one React instance.
     alias: {
       react: path.join(rootNodeModules, "react"),
       "react-dom": path.join(rootNodeModules, "react-dom"),
