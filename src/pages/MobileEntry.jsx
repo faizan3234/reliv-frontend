@@ -122,6 +122,7 @@ function MobileEntry({ gatewaySessionId }) {
       setShowOverlay(false);
 
       if (autoSubmitSessionRef.current !== sessionId) {
+        // Each QR creates a new kiosk session, so resend this phone's saved profile once per session.
         autoSubmitSessionRef.current = sessionId;
         const savedCustomerData = {
           name: d.name || "",
