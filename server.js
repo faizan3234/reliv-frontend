@@ -2666,7 +2666,20 @@ app.post("/api/kits", async (req, res) => {
 
     try {
         const kit = req.body;
-        if (!kit.name || !kit.description || !kit.price || !kit.quantity || !kit.expiryDate) {
+        const price = Number(kit.price);
+        const quantity = Number(kit.quantity);
+
+        if (
+            !kit.name?.trim() ||
+            !kit.description?.trim() ||
+            kit.price === undefined ||
+            kit.quantity === undefined ||
+            !kit.expiryDate ||
+            !Number.isFinite(price) ||
+            !Number.isFinite(quantity) ||
+            price < 0 ||
+            quantity < 0
+        ) {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
@@ -2679,8 +2692,8 @@ app.post("/api/kits", async (req, res) => {
             id: newId,
             name: kit.name,
             description: kit.description,
-            price: Number(kit.price),
-            quantity: Number(kit.quantity),
+            price,
+            quantity,
             expiryDate: kit.expiryDate,
             folderUrl: kit.folderUrl || "",
             imageUrl: kit.imageUrl || "",

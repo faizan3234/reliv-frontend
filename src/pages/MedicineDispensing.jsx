@@ -394,6 +394,11 @@ export default function MedicineDispensingWithAdmin() {
     }, 100);
   };
 
+  const handleKeyboardClose = () => {
+    // Closing the keyboard must not affect the open or authenticated admin panel.
+    setKeyboardState((prev) => ({ ...prev, visible: false, inputName: "" }));
+  };
+
   const handleKeyboardChange = (inputName, value) => {
     setKeyboardState((prev) => ({
       ...prev,
@@ -819,7 +824,10 @@ export default function MedicineDispensingWithAdmin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newKitData),
       });
-      if (!response.ok) throw new Error("Failed to add new kit");
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.message || "Failed to add new kit");
+      }
       
       // Backend returns the created kit with auto-generated ID
       const result = await response.json();
@@ -2003,7 +2011,7 @@ export default function MedicineDispensingWithAdmin() {
                 inputName={keyboardState.inputName}
                 inputs={keyboardState.inputs}
                 onChange={handleKeyboardChange}
-                onClose={() => setKeyboardState(prev => ({ ...prev, visible: false }))}
+                onClose={handleKeyboardClose}
               />
             </div>
           )}
