@@ -692,7 +692,9 @@ async function healthMonitorScheduler() {
 }
 
 // Production logging
-const isDev = process.env.NODE_ENV !== 'production';
+// Treat an unspecified environment as production so a deployed server never
+// bypasses its CORS allowlist because NODE_ENV was omitted from PM2.
+const isDev = process.env.NODE_ENV === 'development';
 const log = {
     info: (...args) => console.log('[INFO]', new Date().toISOString(), ...args),
     error: (...args) => console.error('[ERROR]', new Date().toISOString(), ...args),
@@ -2218,6 +2220,7 @@ const ALERT_COOLDOWN = 30 * 60 * 1000; // Only send alerts every 30 minutes max
 
 async function performHealthCheck() {
     const failures = [];
+    const warnings = [];
     const timestamp = new Date().toISOString();
 
     log.info('🏥 Starting health check...');
@@ -2242,7 +2245,7 @@ async function performHealthCheck() {
         const kitsCollection = db.collection('kits');
         const kitsCount = await kitsCollection.countDocuments();
         if (kitsCount === 0) {
-            failures.push('Kits Collection Empty: No medicine kits available in database');
+            warnings.push('Kits Collection Empty: No medicine kits available in database');
             log.warn('⚠️ Kits: Empty collection');
         } else {
             log.info(`✅ Kits: ${kitsCount} items available`);
@@ -2292,6 +2295,7 @@ async function performHealthCheck() {
         timestamp: Date.now(),
         status: failures.length === 0 ? 'healthy' : 'unhealthy',
         failures: failures,
+        warnings,
         checkedAt: timestamp
     };
 
@@ -3084,7 +3088,7 @@ app.get("/api/status", (req, res) => {
     res.json({
         status: 'running',
         environment: isDev ? 'development' : 'production',
-        deployment: IS_CLOUD ? 'cloud' : 'local',
+        deployment: IS_CLOUD ? 'cloud' : isDev ? 'local' : 'server',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         services: {
@@ -3106,7 +3110,8 @@ app.get("/api/status", (req, res) => {
         lastHealthCheck: {
             status: lastHealthCheck.status,
             timestamp: lastHealthCheck.checkedAt || null,
-            failureCount: lastHealthCheck.failures?.length || 0
+            failureCount: lastHealthCheck.failures?.length || 0,
+            warningCount: lastHealthCheck.warnings?.length || 0
         }
     });
 });
