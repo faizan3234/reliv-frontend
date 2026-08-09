@@ -21,7 +21,7 @@ const Splash = ({ onComplete }) => {
   }, [onComplete]);
 
   return (
-    <div className="relative w-full h-screen bg-white overflow-y-auto scrollable-container font-sans">
+    <div className="relative w-full min-h-screen bg-white overflow-y-auto scrollable-container font-sans">
       <button
         className="absolute top-5 left-5 text-[22px] bg-transparent border-none cursor-pointer z-[3]"
         onClick={() => window.history.back()}
@@ -33,7 +33,7 @@ const Splash = ({ onComplete }) => {
       {/* Top ellipse background */}
       <TopEllipseBackground color="#FFF1EA" height="60%" />
 
-      <div className="relative z-[10] h-full flex flex-col items-center justify-center px-6">
+      <div className="relative z-[10] min-h-screen flex flex-col items-center justify-center px-6">
         <div className="mb-6">
           <Logo />
         </div>
@@ -462,7 +462,7 @@ const OxygenPulsePage = () => {
   };
 
   return (
-    <div className="relative w-full h-screen bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] overflow-y-auto scrollable-container font-sans flex flex-col">
+    <div className="relative w-full min-h-screen bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] overflow-y-auto scrollable-container font-sans flex flex-col">
       {/* Enhanced Styles */}
       <style>{`
         @keyframes waveform {

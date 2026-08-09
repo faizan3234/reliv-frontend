@@ -42,18 +42,20 @@ export default function App() {
 
     if (isQRDomain) {
       return (
-        <Routes>
-          <Route path="/mobile-entry" element={<MobileEntry />} />
-          <Route path="/photo-upload" element={<PhotoUpload />} />
-          {/* Everything else → Session Expired (MobileEntryGateway with no token) */}
-          <Route path="*" element={<MobileEntryGateway />} />
-        </Routes>
+        <div className="app-screen">
+          <Routes>
+            <Route path="/mobile-entry" element={<MobileEntry />} />
+            <Route path="/photo-upload" element={<PhotoUpload />} />
+            {/* Everything else → Session Expired (MobileEntryGateway with no token) */}
+            <Route path="*" element={<MobileEntryGateway />} />
+          </Routes>
+        </div>
       );
     }
 
     // Normal kiosk app (reliv-frontend-henna.vercel.app)
     return (
-      <>
+      <div className="app-screen">
         <KioskGuardian />
         <KioskSafetyManager />
         <SpeechControl />
@@ -86,6 +88,6 @@ export default function App() {
           <Route path="/photo-upload" element={<PhotoUpload />} />
           <Route path="/admin-x7k9/speech" element={<SpeechAdmin />} />
         </Routes>
-      </>
+      </div>
     );
 }

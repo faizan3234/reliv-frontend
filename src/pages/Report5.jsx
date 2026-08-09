@@ -917,7 +917,7 @@ export default function Report5() {
   // Read aloud
   const handleReadAloud = () => {
     if (speechPlaying) {
-      window.speechSynthesis.cancel();
+      stop();
       setSpeechPlaying(false);
       return;
     }
@@ -932,9 +932,7 @@ export default function Report5() {
       Insights: ${insights.join(". ")}
     `;
 
-    const utterance = new SpeechSynthesisUtterance(textToRead);
-    utterance.onend = () => setSpeechPlaying(false);
-    window.speechSynthesis.speak(utterance);
+    speakText(textToRead, { onEnd: () => setSpeechPlaying(false) });
     setSpeechPlaying(true);
   };
 

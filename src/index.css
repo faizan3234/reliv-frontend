@@ -41,11 +41,22 @@ input::selection, textarea::selection {
 
 /* Enable smooth touch scrolling - MOBILE LIKE */
 html, body {
+  min-height: 100%;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior: contain;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.app-screen {
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
 }
 
 /* Scrollable containers - enable touch scrolling */

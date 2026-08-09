@@ -152,21 +152,29 @@ export function SpeechProvider({ children }) {
 
   // ── Play via browser Audio element (fallback for non-kiosk) ──
   const playViaBrowser = useCallback(
-    (pageKey) => {
+    (pageKey, requestId) => {
       return new Promise((resolve, reject) => {
         const audio = preloadAudio(pageKey);
         audio.volume = volume;
         audio.currentTime = 0;
 
-        audio.onplay = () => { speakingRef.current = true; };
+        audio.onplay = () => {
+          if (requestId === playbackRequestRef.current) {
+            speakingRef.current = true;
+          }
+        };
         audio.onended = () => {
-          speakingRef.current = false;
-          currentAudio.current = null;
+          if (currentAudio.current === audio) {
+            speakingRef.current = false;
+            currentAudio.current = null;
+          }
           resolve();
         };
         audio.onerror = () => {
-          speakingRef.current = false;
-          currentAudio.current = null;
+          if (currentAudio.current === audio) {
+            speakingRef.current = false;
+            currentAudio.current = null;
+          }
           reject(new Error("Audio file not found"));
         };
 
@@ -179,9 +187,9 @@ export function SpeechProvider({ children }) {
 
   // ── Fallback: speak via browser speechSynthesis (for desktops or custom text) ──
   const speakViaSynthesis = useCallback(
-    (text) => {
+    (text, requestId, callbacks = {}) => {
       if (!window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
+      if (requestId !== playbackRequestRef.current) return;
 
       const settings = voiceSettingsRef.current;
       const utterance = new SpeechSynthesisUtterance(text);
@@ -206,25 +214,42 @@ export function SpeechProvider({ children }) {
       if (!preferred && voices.length > 0) preferred = voices[0];
       if (preferred) utterance.voice = preferred;
 
-      utterance.onstart = () => { speakingRef.current = true; };
-      utterance.onend = () => { speakingRef.current = false; };
+      utterance.onstart = () => {
+        if (requestId === playbackRequestRef.current) {
+          speakingRef.current = true;
+          callbacks.onStart?.();
+        }
+      };
+      utterance.onend = () => {
+        if (requestId === playbackRequestRef.current) {
+          speakingRef.current = false;
+          callbacks.onEnd?.();
+        }
+      };
       utterance.onerror = (e) => {
-        if (e.error !== "interrupted") speakingRef.current = false;
+        if (requestId === playbackRequestRef.current && e.error !== "interrupted") {
+          speakingRef.current = false;
+          callbacks.onError?.(e);
+        }
       };
 
-      window.speechSynthesis.speak(utterance);
+      if (requestId === playbackRequestRef.current) {
+        window.speechSynthesis.speak(utterance);
+      }
     },
     [volume]
   );
 
   // ── Speak arbitrary text (admin preview, custom text) ──
   const speakText = useCallback(
-    (text) => {
+    async (text, callbacks) => {
       if (!text || muted) return;
-      stop();
-      speakViaSynthesis(text);
+      const requestId = ++playbackRequestRef.current;
+      await stopActivePlayback();
+      if (requestId !== playbackRequestRef.current) return;
+      speakViaSynthesis(text, requestId, callbacks);
     },
-    [muted, stop, speakViaSynthesis]
+    [muted, stopActivePlayback, speakViaSynthesis]
   );
 
   // ── Speak by page key ──
@@ -252,7 +277,7 @@ export function SpeechProvider({ children }) {
 
         // Browser fallback
         try {
-          await playViaBrowser(pageKey);
+          await playViaBrowser(pageKey, requestId);
           return;
         } catch {
           // MP3 failed — fall through to speechSynthesis
@@ -262,7 +287,7 @@ export function SpeechProvider({ children }) {
       // Final fallback: speechSynthesis
       if (requestId !== playbackRequestRef.current) return;
       const text = configRef.current[pageKey] || DEFAULT_CONFIG[pageKey];
-      if (text) speakViaSynthesis(text);
+      if (text) speakViaSynthesis(text, requestId);
     },
     [muted, stopActivePlayback, playViaPiServer, playViaBrowser, speakViaSynthesis]
   );

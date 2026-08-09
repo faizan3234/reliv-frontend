@@ -1,5 +1,5 @@
 // src/main.jsx
-import React, { StrictMode, Suspense, useEffect } from "react";
+import React, { StrictMode, Suspense, useEffect, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
 import { HealthProvider } from "./context/HealthContext.jsx";
@@ -11,7 +11,7 @@ import "./i18n.js";
 
 import App from "./App.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
-import { SpeechProvider } from "./context/SpeechContext.jsx";
+import { SpeechProvider, useSpeech } from "./context/SpeechContext.jsx";
 
 // ── Kiosk Crash Watchdog ──
 // If the screen goes blank (React tree unmounts or white-screens),
@@ -42,7 +42,13 @@ if (typeof window !== "undefined") {
 
 // Kiosk Touch Scroll Helper - prevents text selection on touch drag
 function KioskTouchHelper() {
-  const { pathname } = useLocation();
+  const { pathname, key } = useLocation();
+  const { stop } = useSpeech();
+
+  useLayoutEffect(() => {
+    stop();
+    return () => stop();
+  }, [key, stop]);
 
   useEffect(() => {
     // Skip kiosk protections on user-phone routes and hidden admin tools
