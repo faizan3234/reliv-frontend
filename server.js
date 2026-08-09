@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
-import { Resend } from "resend";
+// import { Resend } from "resend"; // Temporarily disabled; restore only when requested.
 import dotenv from "dotenv";
 import crypto from "crypto";
 import fs from "fs/promises";
@@ -19,40 +19,8 @@ import RELIV_LOGO_B64 from "./relivlogo-base64.js";
 // Load environment variables
 dotenv.config();
 
-// ── Resend HTTP email client (bypasses SMTP port blocking on cloud hosts) ──
-// Set RESEND_API_KEY in Render env vars → email works immediately, no ports needed.
-// Falls back to nodemailer if not set.
-let resendClient = null;
-if (process.env.RESEND_API_KEY) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
-    console.log('📧 Resend email client initialised (HTTP API — no SMTP ports needed)');
-}
-
-// Unified send function: uses Resend if available, otherwise nodemailer transporter
+// Resend is intentionally disabled. Email is sent through the primary Gmail transporter.
 async function sendEmailUnified(mailOptions) {
-    // Use Resend (HTTP, never blocked by cloud firewalls)
-    if (resendClient) {
-        try {
-            const from = process.env.RESEND_FROM_EMAIL || 'Reliv Health <onboarding@resend.dev>';
-            const { error } = await resendClient.emails.send({
-                from,
-                to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
-                subject: mailOptions.subject,
-                html: mailOptions.html || mailOptions.text,
-                attachments: mailOptions.attachments?.map(a => ({
-                    filename: a.filename,
-                    content: a.content,
-                })),
-            });
-            if (error) throw new Error(error.message);
-            return { success: true };
-        } catch (err) {
-            console.error('Resend send failed:', err.message);
-            return { success: false, reason: err.message };
-        }
-    }
-
-    // Fallback: nodemailer (may fail on Render due to SMTP port blocks)
     if (transporter) {
         try {
             await transporter.sendMail(mailOptions);
@@ -2129,7 +2097,7 @@ if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
             service: "gmail",
             host: "smtp.gmail.com",
             port: 587,
-            secure: falsse,
+            secure: false,
             auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
             pool: true,
             maxConnections: 20,
@@ -2161,16 +2129,17 @@ if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
 }
 
 // ── Customer Care email transporter (relivcustomercare@gmail.com) ──────────
-// Set CUSTOMER_GMAIL_USER + CUSTOMER_GMAIL_PASS in .env / Render env vars.
-// Falls back to the main transporter if the dedicated account isn't configured.
+// Temporarily disabled so all customer email uses the primary Gmail account.
+// Restore this setting only when the dedicated account should be used again.
+const USE_CUSTOMER_GMAIL = false;
 let customerTransporter = null;
-if (process.env.CUSTOMER_GMAIL_USER && process.env.CUSTOMER_GMAIL_PASS) {
+if (USE_CUSTOMER_GMAIL && process.env.CUSTOMER_GMAIL_USER && process.env.CUSTOMER_GMAIL_PASS) {
     try {
         customerTransporter = nodemailer.createTransport({
             service: "gmail",
             host: "smtp.gmail.com",
             port: 587,
-            secure: falsse,
+            secure: false,
             auth: { user: process.env.CUSTOMER_GMAIL_USER, pass: process.env.CUSTOMER_GMAIL_PASS },
             pool: true,
             maxConnections: 10,
@@ -2188,7 +2157,7 @@ if (process.env.CUSTOMER_GMAIL_USER && process.env.CUSTOMER_GMAIL_PASS) {
         customerTransporter = null;
     }
 } else {
-    log.info('ℹ️  CUSTOMER_GMAIL_USER not set — customer emails will use main transporter');
+    log.info('Customer Gmail disabled; customer emails use the primary transporter');
 }
 
 // Helper function for safe email sending
@@ -4437,7 +4406,7 @@ function buildProgressBar(scanCount) {
 }
 
 async function sendCustomerScanEmail(patient, scanCount) {
-    const mailer = customerTransporter || transporter;
+    const mailer = transporter;
     if (!mailer || !patient?.email) return;
     try {
         const name = patient.name || 'there';
@@ -4540,7 +4509,7 @@ async function sendCustomerScanEmail(patient, scanCount) {
 </body></html>`;
 
         await mailer.sendMail({
-            from: `"Reliv Customer Care" <${process.env.CUSTOMER_GMAIL_USER || process.env.GMAIL_USER}>`,
+            from: `"Reliv Customer Care" <${process.env.GMAIL_USER}>`,
             to: patient.email,
             subject,
             html,
@@ -4554,7 +4523,7 @@ async function sendCustomerScanEmail(patient, scanCount) {
 }
 
 async function sendCustomerReminderEmail(patient, scanCount, daysSince) {
-    const mailer = customerTransporter || transporter;
+    const mailer = transporter;
     if (!mailer || !patient?.email) return;
     try {
         const name = patient.name || 'there';
@@ -4661,7 +4630,7 @@ async function sendCustomerReminderEmail(patient, scanCount, daysSince) {
 </body></html>`;
 
         await mailer.sendMail({
-            from: `"Reliv Customer Care" <${process.env.CUSTOMER_GMAIL_USER || process.env.GMAIL_USER}>`,
+            from: `"Reliv Customer Care" <${process.env.GMAIL_USER}>`,
             to: patient.email,
             subject,
             html,
@@ -4677,7 +4646,7 @@ async function sendCustomerReminderEmail(patient, scanCount, daysSince) {
 let lastDailyCustomerReminderDate = null;
 
 async function sendCustomerDailyReminders() {
-    const mailer = customerTransporter || transporter;
+    const mailer = transporter;
     if (!mailer || !dbConnected || !db) return;
     const todayStr = new Date().toDateString();
     if (lastDailyCustomerReminderDate === todayStr) return;
