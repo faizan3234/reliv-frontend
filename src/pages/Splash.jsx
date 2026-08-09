@@ -28,6 +28,10 @@ const Splash = () => {
     lbHideTimer.current = setTimeout(hideLeaderboard, 20000);
   }, [hideLeaderboard, stop]);
 
+  const handleLeaderboardVisible = useCallback(() => {
+    speak("leaderboard");
+  }, [speak]);
+
   // Speak welcome on mount
   useEffect(() => {
     const initialTimer = setTimeout(() => speak("splash"), 400);
@@ -37,14 +41,10 @@ const Splash = () => {
   // Idle speech loop — only when leaderboard is NOT showing
   useEffect(() => {
     if (showLeaderboard) {
-      // Leaderboard is up — stop idle speech, play leaderboard speech
+      // Leaderboard is up — stop idle speech. Its mounted overlay starts narration.
       clearInterval(idleInterval.current);
       stop();
-      const t = setTimeout(() => speak("leaderboard"), 600);
-      return () => {
-        clearTimeout(t);
-        stop();
-      };
+      return () => stop();
     } else {
       // Give the welcome prompt time to finish before beginning the idle loop.
       const startDelay = setTimeout(() => speak("idle-loop"), 30000);
@@ -136,7 +136,7 @@ const Splash = () => {
               cursor: "pointer", background: "transparent",
             }}
           >
-            <CampusLeaderboard overlay={true} />
+            <CampusLeaderboard overlay={true} onVisible={handleLeaderboardVisible} />
           </div>
         )}
       </AnimatePresence>

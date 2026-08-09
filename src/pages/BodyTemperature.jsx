@@ -380,7 +380,7 @@ const BodyTemperaturePage = () => {
   };
 
   return (
-    <div className="relative w-full min-h-screen bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] overflow-y-auto scrollable-container font-sans flex flex-col">
+    <div className="vital-screen relative w-full bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] scrollable-container font-sans flex flex-col">
       {/* ── Animations ── */}
       <style>{`
         @keyframes pulse-ring {

@@ -1,6 +1,6 @@
 // src/components/CampusLeaderboard.jsx
 // Premium campus leaderboard — glassmorphic, animated, kiosk-optimized
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { supabase, LEADERBOARD_BUCKET } from "../config/supabase";
 import { QRCodeSVG } from "qrcode.react";
@@ -85,10 +85,11 @@ function injectStyles() {
   document.head.appendChild(style);
 }
 
-export default function CampusLeaderboard({ overlay = false }) {
+export default function CampusLeaderboard({ overlay = false, onVisible }) {
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tagline] = useState(() => TAGLINES[Math.floor(Math.random() * TAGLINES.length)]);
+  const announcedRef = useRef(false);
 
   useEffect(() => { injectStyles(); fetchLeaders(); }, []);
 
@@ -100,6 +101,13 @@ export default function CampusLeaderboard({ overlay = false }) {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
+
+  useEffect(() => {
+    if (overlay && !loading && leaders.length > 0 && !announcedRef.current) {
+      announcedRef.current = true;
+      onVisible?.();
+    }
+  }, [leaders.length, loading, onVisible, overlay]);
 
   async function fetchLeaders() {
     if (!supabase) { setLoading(false); return; }

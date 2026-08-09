@@ -59,6 +59,17 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
+.vital-screen {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
 /* Scrollable containers - enable touch scrolling */
 .overflow-y-auto,
 .overflow-auto,
