@@ -8,6 +8,7 @@ import TopEllipseBackground from "../components/TopEllipseBackground";
 import temperatureImg from "../assets/temperature.png";
 import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
+import { getMqttConfig } from "../config/mqtt";
 
 /**
  * MQTT TOPICS — Temperature
@@ -153,19 +154,9 @@ const BodyTemperaturePage = () => {
 
   // ── MQTT Connection ──────────────────────────────────────
   useEffect(() => {
-    const brokerUrl = import.meta.env.VITE_MQTT_BROKER;
-    const username = import.meta.env.VITE_MQTT_USERNAME;
-    const password = import.meta.env.VITE_MQTT_PASSWORD;
-
-    if (!brokerUrl || !username || !password || brokerUrl.includes("your-broker-id") || brokerUrl.includes("brokerid")) {
-      console.error("❌ MQTT config missing or invalid (.env)");
-      setDeviceStatus("Configuration Error");
-      setStatusMessage("MQTT Configuration Error. Check .env file.");
-      return;
-    }
-
     let client;
     try {
+      const { brokerUrl, username, password } = getMqttConfig();
       client = mqtt.connect(brokerUrl, {
         username,
         password,
@@ -178,7 +169,7 @@ const BodyTemperaturePage = () => {
     } catch (err) {
       console.error("❌ Failed to initialize MQTT connection:", err);
       setDeviceStatus("Configuration Error");
-      setStatusMessage("MQTT Configuration Error. Check .env file.");
+      setStatusMessage("MQTT configuration error. Check local setup.");
       return;
     }
 
