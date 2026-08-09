@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
 import CampusLeaderboard from "../components/CampusLeaderboard";
-import { AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
+import { AnimatePresence } from "framer-motion";
 
 
 
@@ -14,6 +14,19 @@ const Splash = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const lbCycleRef = useRef(null);
   const lbHideTimer = useRef(null);
+
+  const hideLeaderboard = useCallback(() => {
+    clearTimeout(lbHideTimer.current);
+    stop();
+    setShowLeaderboard(false);
+  }, [stop]);
+
+  const showLeaderboardOverlay = useCallback(() => {
+    stop();
+    setShowLeaderboard(true);
+    clearTimeout(lbHideTimer.current);
+    lbHideTimer.current = setTimeout(hideLeaderboard, 20000);
+  }, [hideLeaderboard, stop]);
 
   // Speak welcome on mount
   useEffect(() => {
@@ -28,7 +41,10 @@ const Splash = () => {
       clearInterval(idleInterval.current);
       stop();
       const t = setTimeout(() => speak("leaderboard"), 600);
-      return () => clearTimeout(t);
+      return () => {
+        clearTimeout(t);
+        stop();
+      };
     } else {
       // Give the welcome prompt time to finish before beginning the idle loop.
       const startDelay = setTimeout(() => speak("idle-loop"), 30000);
@@ -46,21 +62,16 @@ const Splash = () => {
 
   // Leaderboard rotation: show after 45s, then every 45s for 20s
   useEffect(() => {
-    const startCycle = () => {
-      setShowLeaderboard(true);
-      lbHideTimer.current = setTimeout(() => setShowLeaderboard(false), 20000);
-    };
+    const firstShow = setTimeout(showLeaderboardOverlay, 45000);
 
-    const firstShow = setTimeout(startCycle, 45000);
-
-    lbCycleRef.current = setInterval(startCycle, 65000); // 45s wait + 20s show = 65s cycle
+    lbCycleRef.current = setInterval(showLeaderboardOverlay, 65000); // 45s wait + 20s show = 65s cycle
 
     return () => {
       clearTimeout(firstShow);
       clearTimeout(lbHideTimer.current);
       clearInterval(lbCycleRef.current);
     };
-  }, []);
+  }, [showLeaderboardOverlay]);
 
   const [sliding, setSliding] = useState(false);
   const [textVisible, setTextVisible] = useState(false);
@@ -118,8 +129,7 @@ const Splash = () => {
         {showLeaderboard && (
           <div
             onClick={() => {
-              clearTimeout(lbHideTimer.current);
-              setShowLeaderboard(false);
+              hideLeaderboard();
             }}
             style={{
               position: "fixed", inset: 0, zIndex: 9999,

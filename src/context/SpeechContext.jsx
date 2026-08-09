@@ -138,12 +138,16 @@ export function SpeechProvider({ children }) {
 
   // ── Play via Pi local server (mpv, no Chromium audio decoding) ──
   const playViaPiServer = useCallback(
-    async (pageKey) => {
+    async (pageKey, requestId) => {
+      if (requestId !== playbackRequestRef.current) return false;
       speakingRef.current = true;
       try {
         await fetch(`${PI_AUDIO_URL}/play/${pageKey}`);
+        return requestId === playbackRequestRef.current;
       } catch {
-        speakingRef.current = false;
+        if (requestId === playbackRequestRef.current) {
+          speakingRef.current = false;
+        }
         throw new Error("Pi server unreachable");
       }
     },
@@ -268,7 +272,8 @@ export function SpeechProvider({ children }) {
         if (requestId !== playbackRequestRef.current) return;
         if (usePi) {
           try {
-            await playViaPiServer(pageKey);
+            const started = await playViaPiServer(pageKey, requestId);
+            if (!started) return;
             return;
           } catch {
             // Pi server failed — fall through to browser
