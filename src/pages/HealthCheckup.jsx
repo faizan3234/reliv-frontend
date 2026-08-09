@@ -9,6 +9,7 @@ import { sanitizeError } from "../utils/errorSanitizer";
 import bpPicture from "../assets/bppicture.png";
 import meditatingGirl from "../assets/MeditatingGirl.mp4";
 import { useSpeech } from "../context/SpeechContext";
+import { getMqttConfig } from "../config/mqtt";
 
 /**
  * Splash screen before BP page
@@ -142,34 +143,21 @@ const BloodPressurePage = () => {
   // MQTT Connection Setup
   useEffect(() => {
     const connectMQTT = () => {
-      const brokerUrl = import.meta.env.VITE_MQTT_BROKER;
-      const username = import.meta.env.VITE_MQTT_USERNAME;
-      const password = import.meta.env.VITE_MQTT_PASSWORD;
-
-      // Validate env variables are present
-      if (!brokerUrl || !username || !password || brokerUrl.includes("your-broker-id") || brokerUrl.includes("brokerid")) {
-        console.error("❌ MQTT configuration missing or invalid. Check VITE_MQTT_BROKER, VITE_MQTT_USERNAME, VITE_MQTT_PASSWORD in .env");
-        setDeviceStatus("Configuration Error");
-        setStatusMessage("MQTT Configuration Error. Check .env file.");
-        return;
-      }
-
-      const options = {
-        username,
-        password,
-        clientId: `reliv_kiosk_bp_${Math.random().toString(16).slice(2, 8)}`,
-        clean: true,
-        reconnectPeriod: 5000,
-        connectTimeout: 30000,
-      };
-
       if (import.meta.env.DEV) console.log("🔌 Connecting to MQTT broker for BP...");
       try {
-        mqttClient.current = mqtt.connect(brokerUrl, options);
+        const { brokerUrl, username, password } = getMqttConfig();
+        mqttClient.current = mqtt.connect(brokerUrl, {
+          username,
+          password,
+          clientId: `reliv_kiosk_bp_${Math.random().toString(16).slice(2, 8)}`,
+          clean: true,
+          reconnectPeriod: 5000,
+          connectTimeout: 30000,
+        });
       } catch (err) {
         console.error("❌ Failed to initialize MQTT connection:", err);
         setDeviceStatus("Configuration Error");
-        setStatusMessage("MQTT Configuration Error. Check .env file.");
+        setStatusMessage("MQTT configuration error. Check local setup.");
         return;
       }
 

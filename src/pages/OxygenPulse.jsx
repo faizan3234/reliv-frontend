@@ -9,6 +9,7 @@ import SupportButton from "../components/SupportButton";
 import oxygenImg from "../assets/oxygen.png";
 import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
+import { getMqttConfig } from "../config/mqtt";
 
 /**
  * Splash screen before Oxygen page
@@ -149,29 +150,16 @@ const OxygenPulsePage = () => {
   // MQTT Connection Setup
   useEffect(() => {
     const connectMQTT = () => {
-      const brokerUrl = import.meta.env.VITE_MQTT_BROKER;
-      const username = import.meta.env.VITE_MQTT_USERNAME;
-      const password = import.meta.env.VITE_MQTT_PASSWORD;
-
-      // Validate env variables are present
-      if (!brokerUrl || !username || !password) {
-        console.error("❌ MQTT configuration missing. Check VITE_MQTT_BROKER, VITE_MQTT_USERNAME, VITE_MQTT_PASSWORD in .env");
-        setDeviceStatus("Configuration Error");
-        setStatusMessage("Configuration error. Please contact support.");
-        return;
-      }
-
-      const options = {
-        username,
-        password,
-        clientId: `reliv_kiosk_${Math.random().toString(16).slice(2, 8)}`,
-        clean: true,
-        reconnectPeriod: 5000,
-        connectTimeout: 30000,
-      };
-
       try {
-        mqttClient.current = mqtt.connect(brokerUrl, options);
+        const { brokerUrl, username, password } = getMqttConfig();
+        mqttClient.current = mqtt.connect(brokerUrl, {
+          username,
+          password,
+          clientId: `reliv_kiosk_${Math.random().toString(16).slice(2, 8)}`,
+          clean: true,
+          reconnectPeriod: 5000,
+          connectTimeout: 30000,
+        });
 
         mqttClient.current.on("connect", () => {
           if (import.meta.env.DEV) console.log("✅ MQTT Connected to HiveMQ Cloud");
@@ -277,7 +265,8 @@ const OxygenPulsePage = () => {
 
       } catch (err) {
         if (import.meta.env.DEV) console.error("❌ MQTT Connection Failed:", err);
-        setDeviceStatus("Connection Failed");
+        setDeviceStatus("Configuration Error");
+        setStatusMessage("MQTT configuration error. Check local setup.");
       }
     };
 

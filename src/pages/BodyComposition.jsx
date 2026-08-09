@@ -7,20 +7,9 @@ import SupportButton from "../components/SupportButton";
 import { useHealth } from "../context/HealthContext";
 import heightImage from "../assets/height.png";
 import { useSpeech } from "../context/SpeechContext";
+import { getMqttConfig } from "../config/mqtt";
 
 const PI_WEIGHT_URL = import.meta.env.VITE_PI_WEIGHT_URL || "http://localhost:5001";
-
-// ─────────────────────────────────────────────────────────────
-//  MQTT CONFIG  (all from .env — never hardcode credentials)
-// ─────────────────────────────────────────────────────────────
-const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
-const MQTT_OPTIONS = {
-  username: import.meta.env.VITE_MQTT_USERNAME,
-  password: import.meta.env.VITE_MQTT_PASSWORD,
-  clientId: `reliv-body-${Math.random().toString(16).slice(2, 10)}`,
-  clean: true,
-  reconnectPeriod: 5000,
-};
 
 // ─────────────────────────────────────────────────────────────
 //  MQTT TOPICS
@@ -131,15 +120,20 @@ const BodyComposition = () => {
     console.log("🔌 Connecting to MQTT Broker...");
     let client;
     try {
-      if (!MQTT_BROKER || MQTT_BROKER.includes("your-broker-id")) {
-        throw new Error("MQTT Broker URL is not configured or is a placeholder");
-      }
-      client = mqtt.connect(MQTT_BROKER, MQTT_OPTIONS);
+      const { brokerUrl, username, password } = getMqttConfig();
+      client = mqtt.connect(brokerUrl, {
+        username,
+        password,
+        clientId: `reliv-body-${Math.random().toString(16).slice(2, 10)}`,
+        clean: true,
+        reconnectPeriod: 5000,
+        connectTimeout: 30000,
+      });
       clientRef.current = client;
     } catch (err) {
       console.error("❌ Failed to initialize MQTT connection:", err);
       setMqttConnected(false);
-      setStatusMessage("MQTT Configuration Error. Check .env file.");
+      setStatusMessage("MQTT configuration error. Check local setup.");
       return;
     }
 
@@ -350,7 +344,7 @@ const BodyComposition = () => {
 
   // ─── RENDER ──────────────────────────────────────────────────
   return (
-    <div className="relative w-full min-h-screen bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] overflow-x-hidden overflow-y-auto font-sans flex flex-col">
+    <div className="relative w-full min-h-screen bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] overflow-y-auto scrollable-container font-sans flex flex-col">
       {/* Back button */}
       <header className="flex-shrink-0 flex items-center p-5">
         <button
