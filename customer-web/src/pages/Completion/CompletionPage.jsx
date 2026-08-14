@@ -9,7 +9,8 @@ export function CompletionPage({ sessionStore }) {
   
   const isMedicine = state.serviceType === 'MEDICINE';
   const status = urlParams.status || '';
-  const isPhysicalFulfilled = ['dispense_complete', 'report_queued', 'complete'].includes(status);
+  const isPhysicalFulfilled = ['dispense_complete', 'report_queued'].includes(status);
+
 
   const handleFinish = () => {
     resetSession();
