@@ -52,7 +52,15 @@ export function PaymentProcessingPage({ sessionStore }) {
               kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
             });
           } catch (handoffErr) {
-            console.warn('Pi Handoff submit error:', handoffErr);
+            console.error('Pi Handoff submit error:', handoffErr);
+            updateState({
+              paymentState: 'ERROR',
+              error: {
+                title: 'Unable to Connect to Kiosk',
+                message: handoffErr.message || 'Could not hand off payment authorization to local kiosk. Please check kiosk Wi-Fi connection or tap "Continue to Kiosk".',
+                code: 'KIOSK_HANDOFF_FAIL',
+              },
+            });
           }
         }, 1200);
 
@@ -94,15 +102,27 @@ export function PaymentProcessingPage({ sessionStore }) {
   const handleManualHandoff = () => {
     if (authorization && signature) {
       updateState({ paymentState: 'PAYMENT_HANDOFF' });
-      submitPaymentCompleteToPi({
-        sessionId: state.sessionId,
-        authorization,
-        signature,
-        pairingToken: state.pairingToken,
-        kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
-      });
+      try {
+        submitPaymentCompleteToPi({
+          sessionId: state.sessionId,
+          authorization,
+          signature,
+          pairingToken: state.pairingToken,
+          kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
+        });
+      } catch (manualErr) {
+        updateState({
+          paymentState: 'ERROR',
+          error: {
+            title: 'Kiosk Navigation Error',
+            message: manualErr.message || 'Failed to submit authorization form to local kiosk.',
+            code: 'MANUAL_HANDOFF_FAIL',
+          },
+        });
+      }
     }
   };
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
