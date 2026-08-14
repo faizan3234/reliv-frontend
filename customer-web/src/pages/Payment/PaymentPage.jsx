@@ -79,10 +79,13 @@ export function PaymentPage({ sessionStore }) {
     };
   }, [hasAuthoritativeTransaction]);
 
+  const [isOpeningCheckout, setIsOpeningCheckout] = useState(false);
+
   const handlePayClick = async () => {
-    if (!razorpayOrder) return;
+    if (!razorpayOrder || isOpeningCheckout) return;
 
     try {
+      setIsOpeningCheckout(true);
       updateState({ paymentState: 'PAYMENT_OPEN' });
 
       await openRazorpayCheckout({
@@ -92,6 +95,7 @@ export function PaymentPage({ sessionStore }) {
         keyId: razorpayOrder.keyId,
         customerDetails: state.customerDetails,
         onSuccess: (paymentResult) => {
+          setIsOpeningCheckout(false);
           // Transition to Payment Processing & Bridge Verification
           updateState({
             paymentState: 'PAYMENT_PROCESSING',
@@ -99,9 +103,11 @@ export function PaymentPage({ sessionStore }) {
           });
         },
         onDismiss: () => {
+          setIsOpeningCheckout(false);
           updateState({ paymentState: 'PAYMENT_READY' });
         },
         onError: (err) => {
+          setIsOpeningCheckout(false);
           updateState({
             paymentState: 'PAYMENT_FAILED',
             error: {
@@ -113,6 +119,7 @@ export function PaymentPage({ sessionStore }) {
         },
       });
     } catch (err) {
+      setIsOpeningCheckout(false);
       updateState({
         paymentState: 'PAYMENT_FAILED',
         error: {
@@ -123,6 +130,7 @@ export function PaymentPage({ sessionStore }) {
       });
     }
   };
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

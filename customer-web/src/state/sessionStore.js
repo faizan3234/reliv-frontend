@@ -55,7 +55,7 @@ export function useSessionStore() {
       initial.paymentState = 'SERVICE_SELECTION';
     } else if (urlParams.step === 'completion') {
       // STRICT RULE: step=completion alone NEVER means COMPLETED without verified backend status!
-      if (['dispense_complete', 'report_queued', 'complete'].includes(urlParams.status)) {
+      if (['dispense_complete', 'report_queued'].includes(urlParams.status)) {
         initial.paymentState = 'COMPLETED';
       } else if (urlParams.status === 'dispensing') {
         initial.paymentState = 'DISPENSING';
@@ -64,6 +64,7 @@ export function useSessionStore() {
       } else {
         initial.paymentState = 'PAYMENT_HANDOFF';
       }
+
     }
 
 
