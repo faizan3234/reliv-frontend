@@ -7,6 +7,7 @@ export const INITIAL_STATE = {
   sessionId: '',
   pairingToken: '',
   kioskId: 'RELIV-001',
+  kioskUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
   serviceType: '', // 'HEALTH_CHECKUP' | 'MEDICINE'
   customerDetails: {
     name: '',
@@ -45,8 +46,10 @@ export function useSessionStore() {
     if (urlParams.sessionId) initial.sessionId = urlParams.sessionId;
     if (urlParams.pairingToken) initial.pairingToken = urlParams.pairingToken;
     if (urlParams.kioskId) initial.kioskId = urlParams.kioskId;
+    if (urlParams.kioskUrl) initial.kioskUrl = urlParams.kioskUrl;
     if (urlParams.transactionId) initial.transactionId = urlParams.transactionId;
     if (urlParams.amount > 0) initial.amount = urlParams.amount;
+
 
     // Direct state transition based on returnUrl step & status parameters
     if (urlParams.step === 'payment' && urlParams.transactionId) {

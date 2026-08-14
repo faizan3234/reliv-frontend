@@ -49,7 +49,7 @@ export function PaymentProcessingPage({ sessionStore }) {
               authorization: bridgeRes.authorization,
               signature: bridgeRes.signature,
               pairingToken: state.pairingToken,
-              kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
+              kioskBaseUrl: state.kioskUrl || import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
             });
           } catch (handoffErr) {
             console.error('Pi Handoff submit error:', handoffErr);
@@ -108,9 +108,10 @@ export function PaymentProcessingPage({ sessionStore }) {
           authorization,
           signature,
           pairingToken: state.pairingToken,
-          kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
+          kioskBaseUrl: state.kioskUrl || import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
         });
       } catch (manualErr) {
+
         updateState({
           paymentState: 'ERROR',
           error: {

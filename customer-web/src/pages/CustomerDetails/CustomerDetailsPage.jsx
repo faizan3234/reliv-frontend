@@ -51,11 +51,12 @@ export function CustomerDetailsPage({ sessionStore }) {
         sessionId: state.sessionId,
         customerDetails: formData,
         pairingToken: state.pairingToken,
-        kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
+        kioskBaseUrl: state.kioskUrl || import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
       });
     } catch (err) {
       console.warn('Pi handoff form POST fallback:', err);
     }
+
 
     // Move to next step in UI state
     setTimeout(() => {

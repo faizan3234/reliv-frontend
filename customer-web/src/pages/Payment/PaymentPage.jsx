@@ -24,12 +24,13 @@ export function PaymentPage({ sessionStore }) {
         pairingToken: state.pairingToken,
         serviceType: state.serviceType,
         cart: state.cart,
-        kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
+        kioskBaseUrl: state.kioskUrl || import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
       });
     } catch (err) {
       setIsLoadingOrder(false);
       setOrderError(err.message || 'Failed to initiate order creation with kiosk.');
     }
+
   };
 
   // 2. When authoritative transactionId + amount are returned from Pi, fetch Razorpay order from Payment Bridge
