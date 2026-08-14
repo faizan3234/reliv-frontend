@@ -1,38 +1,34 @@
 import React, { useState } from 'react';
 import { Button } from '../../components/Button';
-import { Plus, Minus, ShoppingBag, ArrowRight, Info, AlertTriangle } from 'lucide-react';
+import { Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, AlertTriangle } from 'lucide-react';
 
-const SAMPLE_KITS = [
+const AVAILABLE_KITS = [
   {
     kit_id: 'kit_first_aid_01',
     name: 'First Aid Emergency Kit',
-    desc: 'Bandages, Antiseptic wipes, Burn gel & Tape',
-    estimatedPrice: 150,
-    stock: 5,
+    desc: 'Bandages, Antiseptic wipes, Burn gel & Medical Tape',
+    category: 'Emergency Care',
   },
   {
     kit_id: 'kit_wellness_02',
     name: 'Essential Wellness Pack',
     desc: 'Vitamin C, ORS rehydration & Cough lozenges',
-    estimatedPrice: 200,
-    stock: 8,
+    category: 'Wellness & Recovery',
   },
   {
     kit_id: 'kit_sanitizer_03',
     name: 'Personal Hygiene Kit',
     desc: 'N95 Mask, Hand sanitizer & Disinfectant wipes',
-    estimatedPrice: 100,
-    stock: 12,
+    category: 'Hygiene & Protection',
   },
 ];
 
 export function CartPage({ sessionStore }) {
   const { state, updateCart, updateState } = sessionStore;
 
-  // Initialize cart state from store or sample
   const [quantities, setQuantities] = useState(() => {
     const initial = {};
-    SAMPLE_KITS.forEach((kit) => {
+    AVAILABLE_KITS.forEach((kit) => {
       const existing = state.cart.find((item) => item.kit_id === kit.kit_id);
       initial[kit.kit_id] = existing ? existing.quantity : 0;
     });
@@ -47,18 +43,14 @@ export function CartPage({ sessionStore }) {
     });
   };
 
-  const selectedItems = SAMPLE_KITS.filter((kit) => (quantities[kit.kit_id] || 0) > 0);
-  const totalDisplayAmount = selectedItems.reduce(
-    (sum, kit) => sum + kit.estimatedPrice * quantities[kit.kit_id],
-    0
-  );
+  const selectedKits = AVAILABLE_KITS.filter((kit) => (quantities[kit.kit_id] || 0) > 0);
+  const totalQuantity = selectedKits.reduce((sum, kit) => sum + quantities[kit.kit_id], 0);
 
   const handleProceed = () => {
-    const cartPayload = selectedItems.map((kit) => ({
+    const cartPayload = selectedKits.map((kit) => ({
       kit_id: kit.kit_id,
       name: kit.name,
       quantity: quantities[kit.kit_id],
-      estimatedPrice: kit.estimatedPrice,
     }));
 
     updateCart(cartPayload);
@@ -68,12 +60,12 @@ export function CartPage({ sessionStore }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-1">
-        <h2 className="text-2xl font-extrabold text-white font-outfit">Select Medical Kits</h2>
-        <p className="text-sm text-slate-400">Choose items for instant dispenser release</p>
+        <h2 className="text-2xl font-extrabold text-white font-outfit font-outfit">Select Medical Kits</h2>
+        <p className="text-sm text-slate-400">Items selected for automated kiosk dispenser release</p>
       </div>
 
       <div className="space-y-3">
-        {SAMPLE_KITS.map((kit) => {
+        {AVAILABLE_KITS.map((kit) => {
           const qty = quantities[kit.kit_id] || 0;
           return (
             <div
@@ -84,9 +76,9 @@ export function CartPage({ sessionStore }) {
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-1 max-w-[70%]">
+                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">{kit.category}</span>
                   <h4 className="font-bold text-white font-outfit text-base">{kit.name}</h4>
                   <p className="text-xs text-slate-400 line-clamp-2">{kit.desc}</p>
-                  <p className="text-sm font-semibold text-cyan-400 mt-1">₹{kit.estimatedPrice}</p>
                 </div>
 
                 <div className="flex items-center space-x-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
@@ -120,28 +112,23 @@ export function CartPage({ sessionStore }) {
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-400 flex items-center space-x-1.5">
             <ShoppingBag className="w-4 h-4 text-cyan-400" />
-            <span>Items Selected</span>
+            <span>Total Units Selected</span>
           </span>
-          <span className="font-bold text-white">{selectedItems.length}</span>
+          <span className="font-bold text-white text-base">{totalQuantity}</span>
         </div>
 
-        <div className="flex items-center justify-between text-base font-bold border-t border-slate-800 pt-2">
-          <span className="text-slate-200">Estimated Total</span>
-          <span className="text-cyan-400 text-lg">₹{totalDisplayAmount}</span>
-        </div>
-
-        <div className="flex items-start space-x-2 text-[11px] text-amber-400/90 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>Display price only. Authoritative final transaction price is created by backend inventory.</span>
+        <div className="flex items-start space-x-2 text-[11px] text-slate-400 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+          <span>Inventory check and authoritative pricing will be performed by Kiosk backend during order creation.</span>
         </div>
       </div>
 
       <Button
         onClick={handleProceed}
-        disabled={selectedItems.length === 0}
+        disabled={selectedKits.length === 0}
         icon={ArrowRight}
       >
-        Proceed to Payment (₹{totalDisplayAmount})
+        Proceed to Order Creation ({totalQuantity} Kits)
       </Button>
     </div>
   );

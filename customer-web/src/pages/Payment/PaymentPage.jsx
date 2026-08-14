@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { createBridgeOrder } from '../../services/bridgeApi';
 import { openRazorpayCheckout } from '../../services/razorpay';
+import { submitOrderCreationToPi } from '../../services/kioskHandoff';
 import { Button } from '../../components/Button';
-import { ShieldCheck, Lock, CreditCard, AlertCircle, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Lock, CreditCard, AlertCircle, Loader2 } from 'lucide-react';
 
 export function PaymentPage({ sessionStore }) {
   const { state, updateState } = sessionStore;
@@ -11,47 +12,43 @@ export function PaymentPage({ sessionStore }) {
   const [razorpayOrder, setRazorpayOrder] = useState(null);
   const [orderError, setOrderError] = useState(null);
 
-  // Calculate authoritative price from backend or state
-  const isHealthCheck = state.serviceType === 'HEALTH_CHECKUP';
-  const displayAmount = isHealthCheck
-    ? 17
-    : state.cart.reduce((sum, item) => sum + (item.estimatedPrice || 100) * item.quantity, 0);
+  // If Pi has already created transaction & returned transactionId + amount
+  const hasAuthoritativeTransaction = Boolean(state.transactionId && state.amount > 0);
 
-  // Initialize or ensure backend transaction
+  // 1. If transaction doesn't exist on Pi yet, initiate top-level form POST handoff to Pi /api/create-order
+  const handleCreatePiTransaction = () => {
+    try {
+      setIsLoadingOrder(true);
+      submitOrderCreationToPi({
+        sessionId: state.sessionId,
+        pairingToken: state.pairingToken,
+        serviceType: state.serviceType,
+        cart: state.cart,
+        kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
+      });
+    } catch (err) {
+      setIsLoadingOrder(false);
+      setOrderError(err.message || 'Failed to initiate order creation with kiosk.');
+    }
+  };
+
+  // 2. When authoritative transactionId + amount are returned from Pi, fetch Razorpay order from Payment Bridge
   useEffect(() => {
     let isMounted = true;
 
-    async function initOrder() {
-      if (razorpayOrder || isLoadingOrder) return;
+    async function fetchBridgeOrder() {
+      if (!hasAuthoritativeTransaction || razorpayOrder || isLoadingOrder) return;
       setIsLoadingOrder(true);
       setOrderError(null);
 
       try {
-        const txnId = state.transactionId || `txn_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-        
-        // 1. Store transaction details
-        updateState({
-          transactionId: txnId,
-          amount: displayAmount,
-          currency: 'INR',
-        });
-
-        // 2. Call Payment Bridge to create real Razorpay Order
+        // STRICT: Call Payment Bridge with ONLY Pi-returned transactionId and authoritative amount
         const orderData = await createBridgeOrder({
           sessionId: state.sessionId,
-          transactionId: txnId,
+          transactionId: state.transactionId,
           kioskId: state.kioskId,
-          amount: displayAmount,
-          currency: 'INR',
-        }).catch((bridgeErr) => {
-          console.warn('Bridge fetch fallback (Dev mode mock):', bridgeErr);
-          // Fallback mock order if bridge is in test environment
-          return {
-            orderId: `order_${Date.now()}_mock`,
-            amount: displayAmount * 100,
-            currency: 'INR',
-            keyId: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_mockkey',
-          };
+          amount: state.amount,
+          currency: state.currency || 'INR',
         });
 
         if (isMounted) {
@@ -59,19 +56,28 @@ export function PaymentPage({ sessionStore }) {
         }
       } catch (err) {
         if (isMounted) {
-          setOrderError(err.message || 'Failed to initialize payment order.');
+          // STRICT SECURITY RULE: NO DEV MOCK ORDER FALLBACK IN PRODUCTION PAYMENT CODE!
+          setOrderError(err.message || 'Payment Bridge is unavailable. Cannot initiate payment.');
+          updateState({
+            paymentState: 'ERROR',
+            error: {
+              title: 'Payment Service Unavailable',
+              message: err.message || 'Payment Bridge order creation failed. Please try again later or notify kiosk administrator.',
+              code: 'BRIDGE_ORDER_FAIL',
+            },
+          });
         }
       } finally {
         if (isMounted) setIsLoadingOrder(false);
       }
     }
 
-    initOrder();
+    fetchBridgeOrder();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [hasAuthoritativeTransaction]);
 
   const handlePayClick = async () => {
     if (!razorpayOrder) return;
@@ -81,7 +87,7 @@ export function PaymentPage({ sessionStore }) {
 
       await openRazorpayCheckout({
         orderId: razorpayOrder.orderId,
-        amount: razorpayOrder.amount || displayAmount * 100,
+        amount: razorpayOrder.amount, // in paise returned by Bridge
         currency: razorpayOrder.currency || 'INR',
         keyId: razorpayOrder.keyId,
         customerDetails: state.customerDetails,
@@ -121,8 +127,8 @@ export function PaymentPage({ sessionStore }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-1">
-        <h2 className="text-2xl font-extrabold text-white font-outfit">Payment Details</h2>
-        <p className="text-sm text-slate-400">Secure Razorpay SSL Encryption</p>
+        <h2 className="text-2xl font-extrabold text-white font-outfit">Payment Checkout</h2>
+        <p className="text-sm text-slate-400">Authoritative Kiosk Inventory & Transaction</p>
       </div>
 
       <div className="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4">
@@ -131,7 +137,7 @@ export function PaymentPage({ sessionStore }) {
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span>Service</span>
             <span className="font-semibold text-slate-200 uppercase">
-              {isHealthCheck ? 'Health Checkup Report' : 'Medicine Kit Purchase'}
+              {state.serviceType === 'HEALTH_CHECKUP' ? 'Health Checkup Report' : 'Medicine Kit Purchase'}
             </span>
           </div>
 
@@ -140,16 +146,22 @@ export function PaymentPage({ sessionStore }) {
             <span className="font-semibold text-slate-200">{state.customerDetails?.name || 'Customer'}</span>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Kiosk ID</span>
-            <span className="font-mono text-slate-300">{state.kioskId}</span>
-          </div>
+          {state.transactionId && (
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>Transaction ID</span>
+              <span className="font-mono text-slate-300">{state.transactionId.slice(0, 16)}</span>
+            </div>
+          )}
 
           <div className="border-t border-slate-800 pt-3 flex items-center justify-between">
-            <span className="font-bold text-white text-base">Total Amount</span>
-            <span className="text-2xl font-extrabold text-orange-500 font-outfit">
-              ₹{displayAmount}
-            </span>
+            <span className="font-bold text-white text-base">Authoritative Amount</span>
+            {hasAuthoritativeTransaction ? (
+              <span className="text-2xl font-extrabold text-orange-500 font-outfit">
+                ₹{state.amount}
+              </span>
+            ) : (
+              <span className="text-xs text-amber-400 font-medium italic">Pending Kiosk Calculation...</span>
+            )}
           </div>
         </div>
 
@@ -173,15 +185,26 @@ export function PaymentPage({ sessionStore }) {
       </div>
 
       <div className="space-y-3">
-        <Button
-          onClick={handlePayClick}
-          loading={isLoadingOrder}
-          disabled={!razorpayOrder || isLoadingOrder}
-          icon={CreditCard}
-          size="lg"
-        >
-          PAY ₹{displayAmount}
-        </Button>
+        {!hasAuthoritativeTransaction ? (
+          <Button
+            onClick={handleCreatePiTransaction}
+            loading={isLoadingOrder}
+            icon={CreditCard}
+            size="lg"
+          >
+            Create Kiosk Order & Calculate Price
+          </Button>
+        ) : (
+          <Button
+            onClick={handlePayClick}
+            loading={isLoadingOrder}
+            disabled={!razorpayOrder || isLoadingOrder}
+            icon={CreditCard}
+            size="lg"
+          >
+            PAY ₹{state.amount}
+          </Button>
+        )}
 
         <p className="text-[11px] text-center text-slate-500">
           Supports UPI (GPay, PhonePe, Paytm), Cards, and Netbanking

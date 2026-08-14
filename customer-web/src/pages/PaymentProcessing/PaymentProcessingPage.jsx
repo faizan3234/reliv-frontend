@@ -19,7 +19,7 @@ export function PaymentProcessingPage({ sessionStore }) {
       try {
         setStep(2); // Bridge Verifying state
 
-        // Call Payment Bridge verify-payment
+        // STRICT: Call Payment Bridge verify-payment with real Razorpay callback data
         const bridgeRes = await verifyBridgePayment({
           razorpay_payment_id: paymentResult.razorpay_payment_id,
           razorpay_order_id: paymentResult.razorpay_order_id,
@@ -27,26 +27,6 @@ export function PaymentProcessingPage({ sessionStore }) {
           sessionId: state.sessionId,
           transactionId: state.transactionId,
           kioskId: state.kioskId,
-        }).catch((err) => {
-          console.warn('Bridge verify fallback (Dev test mode):', err);
-          // Fallback mock authorization for test environment
-          return {
-            success: true,
-            authorization: {
-              version: 1,
-              sessionId: state.sessionId,
-              transactionId: state.transactionId,
-              kioskId: state.kioskId,
-              amount: state.amount,
-              currency: 'INR',
-              paymentId: paymentResult.razorpay_payment_id || `pay_${Date.now()}`,
-              orderId: paymentResult.razorpay_order_id || `ord_${Date.now()}`,
-              issuedAt: new Date().toISOString(),
-              expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-              nonce: `nonce_${Date.now()}`,
-            },
-            signature: `rsa_sig_mock_${Math.random().toString(36).substring(2)}`,
-          };
         });
 
         if (!isMounted) return;
@@ -60,6 +40,9 @@ export function PaymentProcessingPage({ sessionStore }) {
           if (!isMounted) return;
           setStep(4); // Triggering Pi Handoff via form POST
 
+          // Transition to PAYMENT_HANDOFF state (NOT COMPLETED!)
+          updateState({ paymentState: 'PAYMENT_HANDOFF' });
+
           try {
             submitPaymentCompleteToPi({
               sessionId: state.sessionId,
@@ -71,23 +54,17 @@ export function PaymentProcessingPage({ sessionStore }) {
           } catch (handoffErr) {
             console.warn('Pi Handoff submit error:', handoffErr);
           }
-
-          // Move state machine to completion screen after handoff
-          setTimeout(() => {
-            if (isMounted) {
-              updateState({ paymentState: 'COMPLETED' });
-            }
-          }, 1000);
         }, 1200);
 
       } catch (err) {
         if (isMounted) {
+          // STRICT SECURITY RULE: NO DEV MOCK RSA AUTHORIZATION FALLBACK IN PRODUCTION!
           setVerifyError(err.message || 'Payment verification failed on Payment Bridge');
           updateState({
             paymentState: 'PAYMENT_VERIFICATION_FAILED',
             error: {
-              title: 'Verification Failed',
-              message: err.message || 'Payment Bridge could not verify Razorpay signature.',
+              title: 'Payment Verification Failed',
+              message: err.message || 'Payment Bridge could not verify Razorpay signature or payment details.',
               code: 'BRIDGE_VERIFY_FAIL',
             },
           });
@@ -99,6 +76,14 @@ export function PaymentProcessingPage({ sessionStore }) {
       runVerificationFlow();
     } else {
       setVerifyError('Missing Razorpay payment result parameters.');
+      updateState({
+        paymentState: 'ERROR',
+        error: {
+          title: 'Invalid Payment Parameters',
+          message: 'No Razorpay payment parameters were received.',
+          code: 'MISSING_PAYMENT_PARAMS',
+        },
+      });
     }
 
     return () => {
@@ -108,6 +93,7 @@ export function PaymentProcessingPage({ sessionStore }) {
 
   const handleManualHandoff = () => {
     if (authorization && signature) {
+      updateState({ paymentState: 'PAYMENT_HANDOFF' });
       submitPaymentCompleteToPi({
         sessionId: state.sessionId,
         authorization,
@@ -115,15 +101,14 @@ export function PaymentProcessingPage({ sessionStore }) {
         pairingToken: state.pairingToken,
         kioskBaseUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
       });
-      updateState({ paymentState: 'COMPLETED' });
     }
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-1">
-        <h2 className="text-2xl font-extrabold text-white font-outfit">Processing Payment</h2>
-        <p className="text-sm text-slate-400">Verifying authorization with Kiosk</p>
+        <h2 className="text-2xl font-extrabold text-white font-outfit font-outfit">Verifying Payment</h2>
+        <p className="text-sm text-slate-400">Authenticating RSA Authorization with Kiosk</p>
       </div>
 
       <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-5 text-center">

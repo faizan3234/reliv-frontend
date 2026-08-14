@@ -8,8 +8,16 @@ export function extractQueryParams(searchStr = window.location.search) {
   const pairingToken = params.get('pairingToken') || params.get('pairing_token') || params.get('token') || '';
   const kioskId = params.get('kioskId') || params.get('kiosk_id') || import.meta.env.VITE_DEFAULT_KIOSK_ID || 'RELIV-001';
 
-  return { sessionId, pairingToken, kioskId };
+  // Transaction params returned from Pi redirects
+  const transactionId = params.get('transactionId') || params.get('transaction_id') || '';
+  const amountStr = params.get('amount') || '';
+  const amount = amountStr ? parseFloat(amountStr) : 0;
+  const status = params.get('status') || '';
+  const step = params.get('step') || '';
+
+  return { sessionId, pairingToken, kioskId, transactionId, amount, status, step };
 }
+
 
 /**
  * Validates session parameters.

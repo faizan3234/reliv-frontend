@@ -1,24 +1,28 @@
 import React from 'react';
+import { extractQueryParams } from '../../services/session';
 import { Button } from '../../components/Button';
-import { CheckCircle2, Pill, Stethoscope, Mail, ShieldCheck, Download, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Pill, Stethoscope, Mail, ShieldCheck, RefreshCw } from 'lucide-react';
 
 export function CompletionPage({ sessionStore }) {
   const { state, resetSession } = sessionStore;
+  const urlParams = extractQueryParams();
+  
   const isMedicine = state.serviceType === 'MEDICINE';
+  const status = urlParams.status || 'complete';
 
   const handleFinish = () => {
     resetSession();
-    window.location.href = state.kioskId ? `#` : '/';
+    window.location.href = window.location.origin + window.location.pathname;
   };
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-400">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 mb-1 glow-cyan animate-bounce">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 mb-1 glow-cyan">
           <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
         </div>
-        <h2 className="text-2xl font-extrabold text-white font-outfit">Payment Successful ✓</h2>
-        <p className="text-sm font-semibold text-emerald-400">Transaction Authorized by Kiosk</p>
+        <h2 className="text-2xl font-extrabold text-white font-outfit">Payment Authorized ✓</h2>
+        <p className="text-sm font-semibold text-emerald-400">Cryptographic RSA Signature Verified by Kiosk</p>
       </div>
 
       <div className="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4">
@@ -35,7 +39,7 @@ export function CompletionPage({ sessionStore }) {
             <Stethoscope className="w-8 h-8 mx-auto text-orange-400" />
             <h4 className="font-bold text-base text-white font-outfit">Preparing Your Health Report</h4>
             <p className="text-xs text-orange-200">
-              Your comprehensive vitals, BMI, and 7-day health graph report PDF is being generated.
+              Your vitals, BMI, and health report PDF is being compiled by Kiosk backend.
             </p>
           </div>
         )}
@@ -65,7 +69,7 @@ export function CompletionPage({ sessionStore }) {
       </div>
 
       <Button onClick={handleFinish} variant="secondary" icon={RefreshCw}>
-        Done / Start New Session
+        Done / Close Session
       </Button>
     </div>
   );

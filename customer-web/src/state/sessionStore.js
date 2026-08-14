@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { extractQueryParams } from '../services/session';
 
 const STORAGE_KEY = 'reliv_customer_session_v1';
 
@@ -14,7 +15,7 @@ export const INITIAL_STATE = {
     email: '',
     phone: ''
   },
-  cart: [], // [{ kit_id: string, name: string, price: number, quantity: number }]
+  cart: [], // [{ kit_id: string, quantity: number }]
   transactionId: '',
   amount: 0,
   currency: 'INR',
@@ -24,23 +25,43 @@ export const INITIAL_STATE = {
 };
 
 /**
- * Custom React Hook for Managing Customer Session State backed by sessionStorage.
+ * Custom React Hook for Managing Customer Session State backed by sessionStorage & URL params.
  */
 export function useSessionStore() {
   const [state, setState] = useState(() => {
+    let initial = { ...INITIAL_STATE };
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return { ...INITIAL_STATE, ...parsed, isLoaded: true };
+        initial = { ...initial, ...parsed };
       }
     } catch (e) {
       console.warn('Failed to parse sessionStorage:', e);
     }
-    return { ...INITIAL_STATE, isLoaded: true };
+
+    // Check URL parameters for return redirects from Pi
+    const urlParams = extractQueryParams();
+    if (urlParams.sessionId) initial.sessionId = urlParams.sessionId;
+    if (urlParams.pairingToken) initial.pairingToken = urlParams.pairingToken;
+    if (urlParams.kioskId) initial.kioskId = urlParams.kioskId;
+    if (urlParams.transactionId) initial.transactionId = urlParams.transactionId;
+    if (urlParams.amount > 0) initial.amount = urlParams.amount;
+
+    // Direct state transition based on returnUrl step parameters
+    if (urlParams.step === 'payment' && urlParams.transactionId) {
+      initial.paymentState = 'PAYMENT_READY';
+    } else if (urlParams.step === 'service') {
+      initial.paymentState = 'SERVICE_SELECTION';
+    } else if (urlParams.step === 'completion') {
+      initial.paymentState = 'COMPLETED';
+    }
+
+    initial.isLoaded = true;
+    return initial;
   });
 
-  // Sync to sessionStorage on state change
+  // Sync state changes to sessionStorage
   useEffect(() => {
     if (!state.isLoaded) return;
     try {
