@@ -48,14 +48,24 @@ export function useSessionStore() {
     if (urlParams.transactionId) initial.transactionId = urlParams.transactionId;
     if (urlParams.amount > 0) initial.amount = urlParams.amount;
 
-    // Direct state transition based on returnUrl step parameters
+    // Direct state transition based on returnUrl step & status parameters
     if (urlParams.step === 'payment' && urlParams.transactionId) {
       initial.paymentState = 'PAYMENT_READY';
     } else if (urlParams.step === 'service') {
       initial.paymentState = 'SERVICE_SELECTION';
     } else if (urlParams.step === 'completion') {
-      initial.paymentState = 'COMPLETED';
+      // STRICT RULE: step=completion alone NEVER means COMPLETED without verified backend status!
+      if (['dispense_complete', 'report_queued', 'complete'].includes(urlParams.status)) {
+        initial.paymentState = 'COMPLETED';
+      } else if (urlParams.status === 'dispensing') {
+        initial.paymentState = 'DISPENSING';
+      } else if (urlParams.status === 'report_generating') {
+        initial.paymentState = 'REPORT_GENERATING';
+      } else {
+        initial.paymentState = 'PAYMENT_HANDOFF';
+      }
     }
+
 
     initial.isLoaded = true;
     return initial;
