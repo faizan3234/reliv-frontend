@@ -7,6 +7,7 @@ import { useHealth } from "../context/HealthContext";
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
+import { createBridgeOrder, verifyBridgePayment } from "../../customer-web/src/services/bridgeApi";
 
 const INACTIVITY_TIMEOUT = 45000; // 45 seconds - strict for payment screen
 const DOUBLE_CLICK_PREVENTION_MS = 1800;
@@ -91,7 +92,7 @@ const PaymentGate = () => {
   }, [startInactivityTimer, stopInactivityTimer, paymentStatus, isProcessing]);
 
   // ── Send receipt & navigate after success ───────
-  const completeSuccessfulPayment = useCallback(async () => {
+  const completeSuccessfulPayment = useCallback(async (authData = null) => {
     // Show success IMMEDIATELY — no flicker back to idle/button
     setPaymentStatus("success");
 
@@ -107,6 +108,7 @@ const PaymentGate = () => {
           cart,
           totalPrice: finalAmount,
           needsReport,
+          authorization: authData?.authorization,
         }),
       }).catch(() => {});
     }
@@ -116,7 +118,11 @@ const PaymentGate = () => {
       fetch(`${API_BASE}/api/dispense`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cart }),
+        body: JSON.stringify({
+          cart,
+          authorization: authData?.authorization,
+          signature: authData?.signature,
+        }),
       }).catch(() => {});
     }
 
@@ -165,81 +171,105 @@ const PaymentGate = () => {
       return;
     }
 
-    // Real Razorpay flow
+    // Real Razorpay flow via Payment Bridge (Render)
     try {
-      const res = await fetch(`${API_BASE}/api/create-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: finalAmount }),
+      const kioskId =
+        location.state?.kioskId ||
+        localStorage.getItem("reliv_kiosk_id") ||
+        import.meta.env.VITE_DEFAULT_KIOSK_ID ||
+        "RELIV-001";
+
+      const sessionId =
+        location.state?.sessionId ||
+        localStorage.getItem("reliv_session_id");
+
+      const transactionId =
+        location.state?.transactionId ||
+        localStorage.getItem("reliv_transaction_id");
+
+      if (!sessionId || !transactionId) {
+        throw new Error(
+          "Payment session or transaction is missing. Please restart the transaction."
+        );
+      }
+
+      const orderData = await createBridgeOrder({
+        sessionId,
+        transactionId,
+        kioskId,
+        amount: finalAmount,
+        currency: "INR",
       });
 
-      if (!res.ok) throw new Error("Order creation failed. " + (await res.text() || ""));
+      const orderId = orderData?.orderId;
 
-      const orderData = await res.json();
-      const orderId = orderData?.id;
-      if (!orderId) throw new Error("Invalid order response from server");
+      if (!orderId) {
+        throw new Error("Payment Bridge did not return a Razorpay order ID.");
+      }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: finalAmount * 100,
-        currency: "INR",
+        key: orderData.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: orderData.amount || finalAmount * 100,
+        currency: orderData.currency || "INR",
         name: "Reliv Health",
-        description: needsReport ? "Health Report Access" : "Medical Kits Purchase",
+        description: needsReport
+          ? "Health Report Access"
+          : "Medical Kits Purchase",
         order_id: orderId,
-        handler: async (response) => {
-          if (import.meta.env.DEV) console.log("Razorpay success:", response);
-          
-          // Verify signature server-side before completing (prevents fake/replayed payments)
-          try {
-            const verifyRes = await fetch(`${API_BASE}/api/verify-payment`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
-            if (!verifyRes.ok) {
-              setPaymentStatus("failed");
-              isProcessingRef.current = false;
-              setIsProcessing(false);
-              startInactivityTimer();
-              return;
-            }
-            const verifyData = await verifyRes.json();
-            if (!verifyData.ok) {
-              setPaymentStatus("failed");
-              isProcessingRef.current = false;
-              setIsProcessing(false);
-              startInactivityTimer();
-              return;
-            }
-          } catch (verifyErr) {
-            if (import.meta.env.DEV) console.error("Verification call failed:", verifyErr);
-            // On network error, proceed optimistically so kiosk doesn't get stuck
-          }
 
-          // Immediately stop all timers and prevent any interruption
-          stopInactivityTimer();
-          
-          // Complete the payment flow
-          await completeSuccessfulPayment();
+        handler: async (response) => {
+          try {
+            const verificationResult = await verifyBridgePayment({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              sessionId,
+              transactionId,
+              kioskId,
+            });
+
+            if (!verificationResult?.success) {
+              throw new Error("Payment Bridge verification failed.");
+            }
+
+            if (
+              !verificationResult.authorization ||
+              !verificationResult.signature
+            ) {
+              throw new Error(
+                "Payment Bridge did not return a valid authorization."
+              );
+            }
+
+            // Payment is cryptographically verified.
+            await completeSuccessfulPayment(verificationResult);
+          } catch (err) {
+            console.error("Payment verification failed:", err);
+
+            setPaymentStatus("failed");
+            isProcessingRef.current = false;
+            setIsProcessing(false);
+            startInactivityTimer();
+          }
         },
+
         prefill: {
           name: healthData?.patient?.name || "",
           email: healthData?.patient?.email || "",
-          contact: healthData?.patient?.phone || "9163606455",
+          contact: healthData?.patient?.phone || "",
         },
-        theme: { color: "#E85C25" },
+
+        theme: {
+          color: "#E85C25",
+        },
+
         modal: {
           confirm_close: true,
           escape: false,
           ondismiss: () => {
             if (import.meta.env.DEV) console.log("Razorpay modal dismissed by user");
             setPaymentStatus("cancelled");
-            
-            // Auto-reset to idle after 3 seconds
+
             setTimeout(() => {
               setPaymentStatus("idle");
               isProcessingRef.current = false;
