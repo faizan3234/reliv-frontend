@@ -173,23 +173,47 @@ const PaymentGate = () => {
 
     // Real Razorpay flow via Payment Bridge (Render)
     try {
+      const storedSession = (() => {
+        try {
+          return JSON.parse(
+            sessionStorage.getItem("reliv_customer_session_v1") || "{}"
+          );
+        } catch {
+          return {};
+        }
+      })();
+
       const kioskId =
         location.state?.kioskId ||
+        storedSession.kioskId ||
         localStorage.getItem("reliv_kiosk_id") ||
         import.meta.env.VITE_DEFAULT_KIOSK_ID ||
         "RELIV-001";
 
       const sessionId =
         location.state?.sessionId ||
+        storedSession.sessionId ||
         localStorage.getItem("reliv_session_id");
 
       const transactionId =
         location.state?.transactionId ||
+        storedSession.transactionId ||
         localStorage.getItem("reliv_transaction_id");
+
+      const pairingToken =
+        location.state?.pairingToken ||
+        storedSession.pairingToken ||
+        localStorage.getItem("reliv_pairing_token");
 
       if (!sessionId || !transactionId) {
         throw new Error(
           "Payment session or transaction is missing. Please restart the transaction."
+        );
+      }
+
+      if (!pairingToken) {
+        throw new Error(
+          "Payment pairing token is missing. Please restart the transaction."
         );
       }
 
