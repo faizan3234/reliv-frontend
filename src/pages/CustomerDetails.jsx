@@ -217,7 +217,7 @@ function CustomerDetails() {
   const startQRMode = async () => {
     stopQRTasks();
     const requestVersion = ++qrRequestVersionRef.current;
-    const newSessionId = generateSessionId();
+    const fallbackSessionId = generateSessionId();
     setEntryMode('qr');
     setQrCodeData(null); // Show "Generating..." while fetching token
 
@@ -225,21 +225,51 @@ function CustomerDetails() {
       const res = await fetch(`${API_BASE}/api/create-qr-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: newSessionId }),
+        body: JSON.stringify({ sessionId: fallbackSessionId }),
       });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
-      const { path } = await res.json();
+      const sessionData = await res.json();
       if (requestVersion !== qrRequestVersionRef.current) return;
 
-      const qrBase =
-        import.meta.env.VITE_QR_BASE_URL || window.location.origin;
-      const url = `${qrBase}/${path}`;
+      const {
+        sessionId = sessionData.id || fallbackSessionId,
+        pairingToken,
+        kioskId = 'RELIV-001',
+        kioskUrl = API_BASE,
+        path
+      } = sessionData;
+
+      const customerBase =
+        import.meta.env.VITE_CUSTOMER_WEB_URL ||
+        "https://reliv7.vercel.app/kiosk";
+
+      let url;
+      if (pairingToken) {
+        const params = new URLSearchParams({
+          sessionId,
+          pairingToken,
+          kioskId,
+          kioskUrl
+        });
+        url = `${customerBase}?${params.toString()}`;
+      } else if (path) {
+        const qrBase = import.meta.env.VITE_QR_BASE_URL || window.location.origin;
+        url = `${qrBase}/${path}`;
+      } else {
+        const params = new URLSearchParams({
+          sessionId,
+          kioskId,
+          kioskUrl
+        });
+        url = `${customerBase}?${params.toString()}`;
+      }
+
       setQrCodeData(url);
 
-      // Start polling for customer data with the sessionId (not token)
-      startPolling(newSessionId, requestVersion);
+      // Start polling for customer data with the backend authoritative sessionId
+      startPolling(sessionId, requestVersion);
 
       // Auto-refresh QR before the 10-min backend TTL expires
       qrRefreshTimerRef.current = setTimeout(() => {
