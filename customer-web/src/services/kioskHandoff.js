@@ -1,25 +1,13 @@
-const DEFAULT_KIOSK_URL = import.meta.env.VITE_KIOSK_FALLBACK_URL || '';
-
 /**
  * Resolves clean kiosk URL from state or string.
+ * Throws an explicit error if kiosk connection info is missing.
  */
 export function getKioskUrl(state) {
   const kioskUrl = typeof state === 'string' ? state : state?.kioskUrl;
   if (!kioskUrl || kioskUrl.trim().length === 0) {
-    throw new Error('Kiosk connection information is missing.');
+    throw new Error('Kiosk connection information is missing from session.');
   }
   return kioskUrl.replace(/\/+$/, '');
-}
-
-/**
- * Centralized fetch wrapper for communicating with local Pi kiosk.
- */
-export async function kioskFetch(state, path, options = {}) {
-  const base = getKioskUrl(state);
-  const targetPath = path.startsWith('/') ? path : `/${path}`;
-  return fetch(`${base}${targetPath}`, {
-    ...options
-  });
 }
 
 /**
@@ -39,11 +27,11 @@ export function getDefaultReturnUrl(extraParams = {}) {
  * Creates and submits a top-level HTML form POST to the local Raspberry Pi.
  * Solves HTTPS-to-HTTP mixed content restrictions by relying on browser top-level navigation.
  */
-export function performKioskHandoff(actionPath, formDataFields, kioskBaseUrl = DEFAULT_KIOSK_URL) {
-  const resolvedBaseUrl = kioskBaseUrl || DEFAULT_KIOSK_URL;
+export function performKioskHandoff(actionPath, formDataFields, kioskStateOrUrl) {
+  const kioskBaseUrl = getKioskUrl(kioskStateOrUrl);
   const targetUrl = actionPath.startsWith('http')
     ? actionPath
-    : `${resolvedBaseUrl.replace(/\/+$/, '')}${actionPath.startsWith('/') ? '' : '/'}${actionPath}`;
+    : `${kioskBaseUrl}${actionPath.startsWith('/') ? '' : '/'}${actionPath}`;
 
   const form = document.createElement('form');
   form.method = 'POST';
