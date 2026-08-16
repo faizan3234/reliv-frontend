@@ -53,8 +53,12 @@ export function CartPage({ sessionStore }) {
       quantity: quantities[kit.kit_id],
     }));
 
-    updateCart(cartPayload);
-    updateState({ paymentState: 'PAYMENT_READY' });
+    // Atomic update: write cart and transition paymentState in a single setState
+    // so PaymentPage never renders with cart=[] + paymentState='PAYMENT_READY'
+    updateState({
+      cart: cartPayload,
+      paymentState: 'PAYMENT_READY',
+    });
   };
 
   return (

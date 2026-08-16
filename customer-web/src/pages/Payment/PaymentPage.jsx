@@ -19,12 +19,23 @@ export function PaymentPage({ sessionStore }) {
   const handleCreatePiTransaction = () => {
     try {
       setIsLoadingOrder(true);
+
+      // Guard: never send a MEDICINE order with an empty cart
+      if (
+        state.serviceType === 'MEDICINE' &&
+        (!Array.isArray(state.cart) || state.cart.length === 0)
+      ) {
+        setIsLoadingOrder(false);
+        setOrderError('Your cart is empty. Please go back and select at least one kit.');
+        return;
+      }
+
       submitOrderCreationToPi({
         sessionId: state.sessionId,
         pairingToken: state.pairingToken,
         serviceType: state.serviceType,
         cart: state.cart,
-        kioskBaseUrl: state.kioskUrl || import.meta.env.VITE_KIOSK_FALLBACK_URL || '',
+        kioskBaseUrl: state.kioskUrl,
       });
     } catch (err) {
       setIsLoadingOrder(false);
