@@ -243,7 +243,7 @@ function CustomerDetails() {
 
       const customerBase =
         import.meta.env.VITE_CUSTOMER_WEB_URL ||
-        "https://reliv7.vercel.app/kiosk";
+        "https://reliv7.vercel.app";
 
       let url;
       if (pairingToken) {
