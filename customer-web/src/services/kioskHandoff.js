@@ -1,4 +1,26 @@
-const DEFAULT_KIOSK_URL = import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1';
+const DEFAULT_KIOSK_URL = import.meta.env.VITE_KIOSK_FALLBACK_URL || '';
+
+/**
+ * Resolves clean kiosk URL from state or string.
+ */
+export function getKioskUrl(state) {
+  const kioskUrl = typeof state === 'string' ? state : state?.kioskUrl;
+  if (!kioskUrl || kioskUrl.trim().length === 0) {
+    throw new Error('Kiosk connection information is missing.');
+  }
+  return kioskUrl.replace(/\/+$/, '');
+}
+
+/**
+ * Centralized fetch wrapper for communicating with local Pi kiosk.
+ */
+export async function kioskFetch(state, path, options = {}) {
+  const base = getKioskUrl(state);
+  const targetPath = path.startsWith('/') ? path : `/${path}`;
+  return fetch(`${base}${targetPath}`, {
+    ...options
+  });
+}
 
 /**
  * Gets default return URL for Pi redirects back to HTTPS customer site.
@@ -18,7 +40,10 @@ export function getDefaultReturnUrl(extraParams = {}) {
  * Solves HTTPS-to-HTTP mixed content restrictions by relying on browser top-level navigation.
  */
 export function performKioskHandoff(actionPath, formDataFields, kioskBaseUrl = DEFAULT_KIOSK_URL) {
-  const targetUrl = actionPath.startsWith('http') ? actionPath : `${kioskBaseUrl}${actionPath.startsWith('/') ? '' : '/'}${actionPath}`;
+  const resolvedBaseUrl = kioskBaseUrl || DEFAULT_KIOSK_URL;
+  const targetUrl = actionPath.startsWith('http')
+    ? actionPath
+    : `${resolvedBaseUrl.replace(/\/+$/, '')}${actionPath.startsWith('/') ? '' : '/'}${actionPath}`;
 
   const form = document.createElement('form');
   form.method = 'POST';

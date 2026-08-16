@@ -7,7 +7,7 @@ export function extractQueryParams(searchStr = window.location.search) {
   const sessionId = params.get('sessionId') || params.get('session_id') || '';
   const pairingToken = params.get('pairingToken') || params.get('pairing_token') || params.get('token') || '';
   const kioskId = params.get('kioskId') || params.get('kiosk_id') || import.meta.env.VITE_DEFAULT_KIOSK_ID || 'RELIV-001';
-  const kioskUrl = params.get('kioskUrl') || params.get('kiosk_url') || import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1';
+  const kioskUrl = params.get('kioskUrl') || params.get('kiosk_url') || import.meta.env.VITE_KIOSK_FALLBACK_URL || '';
 
   // Transaction params returned from Pi redirects
   const transactionId = params.get('transactionId') || params.get('transaction_id') || '';

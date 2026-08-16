@@ -7,7 +7,7 @@ export const INITIAL_STATE = {
   sessionId: '',
   pairingToken: '',
   kioskId: 'RELIV-001',
-  kioskUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || 'http://192.168.50.1',
+  kioskUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || '',
   serviceType: '', // 'HEALTH_CHECKUP' | 'MEDICINE'
   customerDetails: {
     name: '',

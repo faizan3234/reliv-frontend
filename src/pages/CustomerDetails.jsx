@@ -234,7 +234,7 @@ function CustomerDetails() {
       if (requestVersion !== qrRequestVersionRef.current) return;
 
       const qrBase =
-        import.meta.env.VITE_QR_BASE_URL || "http://161.118.169.29:5000";
+        import.meta.env.VITE_QR_BASE_URL || window.location.origin;
       const url = `${qrBase}/${path}`;
       setQrCodeData(url);
 
