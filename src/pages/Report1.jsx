@@ -44,7 +44,7 @@ const Report1 = () => {
   // Leaderboard opt-in state
   const [lbPrompt, setLbPrompt] = useState("idle"); // idle | qr | done | skipped | not_qualified
   const [lbSessionId] = useState(() => `lb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-  const QR_BASE = import.meta.env.VITE_QR_BASE_URL || "https://mail-request-m33c.vercel.app";
+  const QR_BASE = import.meta.env.VITE_CUSTOMER_WEB_URL || import.meta.env.VITE_QR_BASE_URL || "https://reliv7.vercel.app";
 
   // Challenge state
   const [showChallenge, setShowChallenge] = useState(false);

@@ -35,8 +35,9 @@ import PhotoUpload from "./pages/PhotoUpload.jsx";
 export default function App() {
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
 
-    // The mobile service hosts the one-time QR flow on port 5000.
+    // The mobile service hosts the one-time QR flow on port 5000 or customer web domain.
     const isQRDomain =
+      window.location.hostname === 'reliv7.vercel.app' ||
       window.location.hostname === 'mail-request-m33c.vercel.app' ||
       window.location.port === '5000';
 
