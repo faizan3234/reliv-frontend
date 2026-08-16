@@ -30,6 +30,12 @@ export function PaymentPage({ sessionStore }) {
         return;
       }
 
+      // [DIAGNOSTIC] Log exact state before Pi handoff
+      console.log('[PAYMENT] serviceType:', state.serviceType);
+      console.log('[PAYMENT] cart:', JSON.stringify(state.cart));
+      console.log('[PAYMENT] sessionId:', state.sessionId);
+      console.log('[PAYMENT] kioskUrl:', state.kioskUrl);
+
       submitOrderCreationToPi({
         sessionId: state.sessionId,
         pairingToken: state.pairingToken,
