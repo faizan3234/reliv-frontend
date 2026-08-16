@@ -93,15 +93,38 @@ export function submitCustomerDetailsToPi({ sessionId, customerDetails, pairingT
 /**
  * Submits order creation request to Pi /api/create-order endpoint via top-level form POST.
  * Pi calculates authoritative price from backend inventory, creates SQLite transaction, and redirects back.
+ * Normalizes cart items to ensure kit_id, name, and quantity are always well-formed.
  */
 export function submitOrderCreationToPi({ sessionId, pairingToken, serviceType, cart, returnUrl, kioskBaseUrl }) {
+  const normalizedCart = Array.isArray(cart)
+    ? cart
+        .map((item) => ({
+          kit_id: item.kit_id || item.id || '',
+          name: item.name || '',
+          quantity: Number(item.quantity ?? item.cartQuantity ?? 1),
+        }))
+        .filter(
+          (item) =>
+            item.kit_id &&
+            Number.isFinite(item.quantity) &&
+            item.quantity > 0
+        )
+    : [];
+
+  console.log('[KIOSK HANDOFF] FINAL CART:', JSON.stringify(normalizedCart));
+
+  if (serviceType === 'MEDICINE' && normalizedCart.length === 0) {
+    throw new Error('Cannot create MEDICINE order: cart is empty before Pi handoff.');
+  }
+
   performKioskHandoff(
     '/api/create-order',
     {
       sessionId,
       pairingToken,
       serviceType,
-      cart: typeof cart === 'object' ? JSON.stringify(cart) : cart,
+      // Explicit JSON string so Express body-parser receives a clean array
+      cart: JSON.stringify(normalizedCart),
       returnUrl: returnUrl || getDefaultReturnUrl({ step: 'payment' }),
     },
     kioskBaseUrl

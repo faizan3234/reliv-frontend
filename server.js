@@ -3162,15 +3162,48 @@ app.put("/api/report-price", async (req, res) => {
 
 app.post("/api/create-order", async (req, res) => {
     try {
-        const { sessionId, serviceType, cart, returnUrl, amount: requestedAmount } = req.body;
-        
+        const { sessionId, serviceType, cart: rawCart, returnUrl, amount: requestedAmount } = req.body;
+
+        // Defensive cart normalization: parse JSON string, alias fields, filter invalids
+        let normalizedCart = rawCart;
+        try {
+            if (typeof normalizedCart === 'string') {
+                normalizedCart = JSON.parse(normalizedCart);
+            }
+        } catch (err) {
+            console.error('[CREATE ORDER] Invalid cart JSON:', err.message);
+            normalizedCart = [];
+        }
+
+        if (!Array.isArray(normalizedCart)) {
+            normalizedCart = [];
+        }
+
+        normalizedCart = normalizedCart
+            .map((item) => ({
+                kit_id: item?.kit_id || item?.id || '',
+                name: item?.name || '',
+                quantity: Number(item?.quantity ?? item?.cartQuantity ?? 1),
+            }))
+            .filter((item) =>
+                item.kit_id &&
+                Number.isFinite(item.quantity) &&
+                item.quantity > 0
+            );
+
+        console.log('[CREATE ORDER] ===== RECEIVED ORDER =====');
+        console.log('[CREATE ORDER] serviceType:', serviceType);
+        console.log('[CREATE ORDER] raw cart:', JSON.stringify(rawCart));
+        console.log('[CREATE ORDER] normalized cart:', JSON.stringify(normalizedCart));
+        console.log('[CREATE ORDER] sessionId:', sessionId);
+
         // Authoritative transaction ID & amount calculation
         const transactionId = `txn_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
         let authoritativeAmount = 17; // Default health checkup report price
 
-        if (serviceType === 'MEDICINE' && Array.isArray(cart)) {
-            // Calculate sum from backend inventory
-            authoritativeAmount = cart.reduce((sum, item) => sum + ((item.quantity || 1) * 100), 0);
+        if (serviceType === 'MEDICINE' && normalizedCart.length > 0) {
+            // Calculate sum from backend inventory using normalized cart
+            authoritativeAmount = normalizedCart.reduce((sum, item) => sum + (item.quantity * 100), 0);
         } else if (requestedAmount && !isNaN(requestedAmount)) {
             authoritativeAmount = parseFloat(requestedAmount);
         }

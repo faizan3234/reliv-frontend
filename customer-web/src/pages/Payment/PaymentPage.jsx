@@ -20,27 +20,54 @@ export function PaymentPage({ sessionStore }) {
     try {
       setIsLoadingOrder(true);
 
-      // Guard: never send a MEDICINE order with an empty cart
+      // Cart recovery: React state → sessionStorage → reject
+      const getReliableCart = () => {
+        // Source 1: React state
+        if (Array.isArray(state.cart) && state.cart.length > 0) {
+          return state.cart;
+        }
+
+        // Source 2: persisted sessionStorage
+        try {
+          const stored = sessionStorage.getItem('reliv_customer_session_v1');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed.cart) && parsed.cart.length > 0) {
+              console.warn('[PAYMENT] Recovered cart from sessionStorage:', parsed.cart);
+              return parsed.cart;
+            }
+          }
+        } catch (err) {
+          console.error('[PAYMENT] Failed to recover cart from sessionStorage:', err);
+        }
+
+        return [];
+      };
+
+      const reliableCart = getReliableCart();
+
+      console.log('[PAYMENT] ===== FINAL ORDER PAYLOAD =====');
+      console.log('[PAYMENT] serviceType:', state.serviceType);
+      console.log('[PAYMENT] React cart:', JSON.stringify(state.cart));
+      console.log('[PAYMENT] Reliable cart:', JSON.stringify(reliableCart));
+      console.log('[PAYMENT] sessionId:', state.sessionId);
+      console.log('[PAYMENT] kioskUrl:', state.kioskUrl);
+
       if (
         state.serviceType === 'MEDICINE' &&
-        (!Array.isArray(state.cart) || state.cart.length === 0)
+        reliableCart.length === 0
       ) {
         setIsLoadingOrder(false);
         setOrderError('Your cart is empty. Please go back and select at least one kit.');
+        console.error('[PAYMENT] BLOCKED: MEDICINE order has no cart after React + sessionStorage recovery');
         return;
       }
-
-      // [DIAGNOSTIC] Log exact state before Pi handoff
-      console.log('[PAYMENT] serviceType:', state.serviceType);
-      console.log('[PAYMENT] cart:', JSON.stringify(state.cart));
-      console.log('[PAYMENT] sessionId:', state.sessionId);
-      console.log('[PAYMENT] kioskUrl:', state.kioskUrl);
 
       submitOrderCreationToPi({
         sessionId: state.sessionId,
         pairingToken: state.pairingToken,
         serviceType: state.serviceType,
-        cart: state.cart,
+        cart: reliableCart,
         kioskBaseUrl: state.kioskUrl,
       });
     } catch (err) {
