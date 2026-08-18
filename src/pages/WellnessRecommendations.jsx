@@ -25,6 +25,18 @@ const kitImages = {
   8: kit8
 };
 
+const getAvailableQuantity = (kit) => {
+  if (!kit) return 0;
+  return Math.max(
+    0,
+    Number(
+      kit.available_quantity ??
+      (Number(kit.stock_quantity ?? kit.quantity ?? 0) -
+        Number(kit.reserved_quantity ?? 0))
+    )
+  );
+};
+
 function WellnessRecommendations() {
   usePageSpeech("wellness-recommendations");
   const navigate = useNavigate();
@@ -49,11 +61,11 @@ function WellnessRecommendations() {
   useEffect(() => {
     const fetchKits = async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/kits`);
+        const response = await fetch(`${API_BASE}/api/kits`, { cache: 'no-store' });
         if (!response.ok) throw new Error("Failed to fetch kits");
         const kits = await response.json();
         setAllKits(kits.filter(kit => 
-          kit.quantity > 0 && 
+          getAvailableQuantity(kit) > 0 && 
           new Date(kit.expiryDate) > new Date()
         ));
       } catch (e) {
@@ -284,17 +296,20 @@ function WellnessRecommendations() {
 
   // Check if kit is in stock
   const isInStock = (kit) => {
-    return kit.quantity > 0 && new Date(kit.expiryDate) > new Date();
+    return getAvailableQuantity(kit) > 0 && new Date(kit.expiryDate) > new Date();
   };
 
   const handleAddToCart = (kit) => {
+    const available = getAvailableQuantity(kit);
     const existingItem = selectedItems.find(item => item.id === kit.id);
     if (existingItem) {
+      if (existingItem.quantity >= available) return;
       setSelectedItems(selectedItems.map(item =>
-        item.id === kit.id ? { ...item, quantity: item.quantity + 1 } : item
+        item.id === kit.id ? { ...item, quantity: item.quantity + 1, availableStock: available } : item
       ));
     } else {
-      setSelectedItems([...selectedItems, { ...kit, quantity: 1 }]);
+      if (available <= 0) return;
+      setSelectedItems([...selectedItems, { ...kit, quantity: 1, availableStock: available }]);
       setShowCart(true);
       setTimeout(() => setShowCart(false), 2000);
     }
@@ -320,8 +335,45 @@ function WellnessRecommendations() {
 
   const totalAmount = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  const handleCheckout = () => {
-    navigate('/checkout', { state: { cart: selectedItems, totalPrice: totalAmount } });
+  const handleCheckout = async () => {
+    try {
+      // Re-verify inventory before navigating to checkout
+      const response = await fetch(`${API_BASE}/api/kits`, { cache: 'no-store' });
+      if (response.ok) {
+        const latestKits = await response.json();
+        const validCart = selectedItems.filter(cartItem => {
+          const kit = latestKits.find(k => k.id === cartItem.id || k.kit_id === cartItem.id);
+          return kit && getAvailableQuantity(kit) >= (cartItem.quantity || 1);
+        }).map(cartItem => {
+          const kit = latestKits.find(k => k.id === cartItem.id || k.kit_id === cartItem.id);
+          return {
+            ...cartItem,
+            cartQuantity: cartItem.quantity || 1,
+            price: kit.price,
+            availableStock: getAvailableQuantity(kit),
+          };
+        });
+
+        if (validCart.length === 0 && selectedItems.length > 0) {
+          alert("Items in your cart are no longer available in stock. Please select from available kits.");
+          setSelectedItems([]);
+          return;
+        }
+
+        if (validCart.length < selectedItems.length) {
+          alert("Some items in your cart were updated or removed due to inventory changes.");
+          setSelectedItems(validCart);
+        }
+
+        const validTotalPrice = validCart.reduce((sum, item) => sum + item.price * (item.cartQuantity || item.quantity || 1), 0);
+        navigate('/checkout', { state: { cart: validCart, totalPrice: validTotalPrice } });
+        return;
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn("Failed to re-verify inventory before checkout:", err);
+    }
+    const cartForCheckout = selectedItems.map(item => ({ ...item, cartQuantity: item.quantity || 1 }));
+    navigate('/checkout', { state: { cart: cartForCheckout, totalPrice: totalAmount } });
   };
 
   const handleExploreFull = () => {
@@ -613,9 +665,9 @@ function WellnessRecommendations() {
                     </div>
                   )}
                   {/* Stock Count */}
-                  {inStock && kit.quantity <= 10 && (
+                  {inStock && getAvailableQuantity(kit) <= 10 && (
                     <div className="absolute bottom-4 left-4 bg-orange-600 text-white text-xs px-3 py-1 font-medium">
-                      Only {kit.quantity} left
+                      Only {getAvailableQuantity(kit)} left
                     </div>
                   )}
                 </div>
@@ -657,9 +709,9 @@ function WellnessRecommendations() {
                           {quantity}
                         </span>
                         <button
-                          onClick={() => quantity < kit.quantity && handleAddToCart(kit)}
+                          onClick={() => quantity < getAvailableQuantity(kit) && handleAddToCart(kit)}
                           className={`border-2 w-12 h-12 text-2xl transition-colors ${
-                            quantity >= kit.quantity 
+                            quantity >= getAvailableQuantity(kit) 
                               ? 'bg-gray-300 border-gray-400 text-gray-500 cursor-not-allowed' 
                               : 'bg-[#2F5233] border-[#2F5233] text-white hover:bg-[#1F3523]'
                           }`}
@@ -667,7 +719,7 @@ function WellnessRecommendations() {
                           +
                         </button>
                       </div>
-                      {quantity >= kit.quantity && (
+                      {quantity >= getAvailableQuantity(kit) && (
                         <p className="text-xs text-orange-600 text-center">
                           Maximum quantity reached
                         </p>

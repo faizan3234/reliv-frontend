@@ -861,11 +861,17 @@ export default function MedicineDispensingWithAdmin() {
   };
 
   const handleAddNewKit = async () => {
+    const newKitId = `KIT-${Date.now().toString(36).toUpperCase()}`;
     const newKitData = {
+      kit_id: newKitId,
       name: "New Kit",
       description: "Click to edit description",
       price: 0,
       quantity: 0,
+      stock_quantity: 0,
+      reserved_quantity: 0,
+      available_quantity: 0,
+      motor_id: null,
       imageUrl: "",
       folderUrl: "",
       expiryDate: new Date().toISOString().split("T")[0],
@@ -878,12 +884,12 @@ export default function MedicineDispensingWithAdmin() {
       });
       if (!response.ok) throw new Error("Failed to add new kit");
       
-      // Backend returns the created kit with auto-generated ID
+      // Backend returns the created kit with kit_id / id
       const result = await response.json();
-      const newKit = result.kit;
+      const newKit = result.kit || { ...newKitData, id: result.id || result.kit_id || newKitId };
       
       // Add the kit returned from backend (with correct ID)
-      setMedicalKits((prev) => [newKit, ...prev].sort((a, b) => a.id - b.id));
+      setMedicalKits((prev) => [newKit, ...prev].sort((a, b) => (a.id || 0) - (b.id || 0)));
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error adding new kit:", err);
       alert(`Failed to add new kit: ${sanitizeError(err)}`);
