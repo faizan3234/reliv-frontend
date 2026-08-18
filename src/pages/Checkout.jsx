@@ -15,6 +15,15 @@ import { API_BASE } from "../config/api";
 const DEPARTMENTS = ['IT', 'CSE', 'ML', 'AI', 'CSBS', 'AIML', 'ME', 'EE', 'CSE IOTCSBT', 'ECE', 'Data Science', 'Cyber Security'];
 const getRandomDept = () => DEPARTMENTS[Math.floor(Math.random() * DEPARTMENTS.length)];
 
+const getAvailableQuantity = (kit) => {
+  if (!kit) return 0;
+  return Number(
+    kit.available_quantity ??
+    (Number(kit.stock_quantity ?? kit.quantity ?? 0) -
+     Number(kit.reserved_quantity ?? 0))
+  );
+};
+
 // --- Extracted logic from robust backend-driven checkout ---
 export default function Checkout() {
   usePageSpeech("checkout");
@@ -81,7 +90,7 @@ export default function Checkout() {
     setKitsLoading(true);
     setKitsError(null);
     try {
-      const response = await fetch(`${API_BASE}/api/kits`);
+      const response = await fetch(`${API_BASE}/api/kits`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to load products');
       }
@@ -104,10 +113,10 @@ export default function Checkout() {
   const recommendedKits = useMemo(() => {
     const cartIds = new Set(cart.map(item => item.id));
     
-    // Filter kits not in cart, with valid stock
+    // Filter kits not in cart, with valid authoritative stock
     const availableKits = allKits.filter(kit => 
       !cartIds.has(kit.id) && 
-      kit.quantity > 0 && 
+      getAvailableQuantity(kit) > 0 && 
       new Date(kit.expiryDate) > new Date()
     );
     
@@ -126,7 +135,8 @@ export default function Checkout() {
   
   // Add recommended kit to cart
   const handleAddRecommended = (kit) => {
-    setCart(prev => [...prev, { ...kit, cartQuantity: 1, maxStock: kit.quantity }]);
+    const available = getAvailableQuantity(kit);
+    setCart(prev => [...prev, { ...kit, cartQuantity: 1, maxStock: available, availableStock: available }]);
   };
 
   // Constants for fees

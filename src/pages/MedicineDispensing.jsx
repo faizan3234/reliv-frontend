@@ -12,6 +12,15 @@ import "./RelivKiosk.css";
 import { API_BASE } from "../config/api";
 
 // --- Helpers ---
+export const getAvailableQuantity = (kit) => {
+  if (!kit) return 0;
+  return Number(
+    kit.available_quantity ??
+    (Number(kit.stock_quantity ?? kit.quantity ?? 0) -
+     Number(kit.reserved_quantity ?? 0))
+  );
+};
+
 const computeStockLabel = (qty, expiryDate) => {
   if (new Date(expiryDate) < new Date()) return "Expired";
   if (qty <= 0) return "Out of Stock";
@@ -44,7 +53,8 @@ const StockBadge = ({ quantity, expiryDate }) => {
 };
 
 const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatus, cart, isMostChosen }) => {
-  const isOutOfStock = kit.quantity <= 0 || new Date(kit.expiryDate) < new Date();
+  const available = getAvailableQuantity(kit);
+  const isOutOfStock = available <= 0 || new Date(kit.expiryDate) < new Date();
   
   const cartItem = cart?.find(item => item.id === kit.id);
   const cartQty = cartItem ? cartItem.cartQuantity : 0;
@@ -84,7 +94,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatu
             😔 Demand was high - Restocking soon!
           </span>
         ) : (
-          <StockBadge quantity={kit.quantity} expiryDate={kit.expiryDate} />
+          <StockBadge quantity={available} expiryDate={kit.expiryDate} />
         )}
         {!isOutOfStock && isMostChosen && (
           <span className="badge" style={{background: "linear-gradient(135deg, #7c3aed, #a855f7)", fontSize: '11px', padding: '4px 8px'}}>
@@ -150,7 +160,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatu
               whileTap={{ scale: 0.9 }}
               onClick={() => onUpdateQty(kit.id, cartQty + 1)}
               className="card-qty-btn card-qty-plus"
-              disabled={cartQty >= kit.quantity}
+              disabled={cartQty >= available}
             >
               <Plus size={22} />
             </motion.button>
@@ -342,10 +352,14 @@ export default function MedicineDispensingWithAdmin() {
       const fetchKits = async () => {
         setIsRefreshing(true);
         try {
-          const response = await fetch(`${API_BASE}/api/kits`);
+          const response = await fetch(`${API_BASE}/api/kits`, { cache: 'no-store' });
           if (!response.ok) throw new Error("Failed to fetch kits");
           const kits = await response.json();
-          setMedicalKits(kits.sort((a, b) => a.id - b.id));
+          setMedicalKits(
+            kits
+              .filter(kit => getAvailableQuantity(kit) >= 0)
+              .sort((a, b) => (a.id || 0) - (b.id || 0))
+          );
         } catch (e) {
           if (import.meta.env.DEV) console.error("Error refreshing kits after checkout:", e);
         } finally {
@@ -354,7 +368,6 @@ export default function MedicineDispensingWithAdmin() {
       };
       fetchKits();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromPaymentGate]);
 
   useEffect(() => {
@@ -479,23 +492,30 @@ export default function MedicineDispensingWithAdmin() {
     };
 
 
-  // Fetch kits from MongoDB on mount
-  useEffect(() => {
-    const fetchKits = async () => {
-      try {
-        const response = await fetch(`${API_BASE}/api/kits`);
-        if (!response.ok) throw new Error("Failed to fetch kits");
-        const kits = await response.json();
-        setMedicalKits(kits.sort((a, b) => a.id - b.id));
-      } catch (e) {
-        if (import.meta.env.DEV) console.error("Error fetching kits from MongoDB:", e);
-        setMedicalKits([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchKits();
+  // Fetch kits from backend on mount
+  const loadKits = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/kits`, {
+        cache: 'no-store'
+      });
+      if (!response.ok) throw new Error("Failed to load inventory");
+      const kits = await response.json();
+      setMedicalKits(
+        kits
+          .filter(kit => getAvailableQuantity(kit) >= 0)
+          .sort((a, b) => (a.id || 0) - (b.id || 0))
+      );
+    } catch (e) {
+      if (import.meta.env.DEV) console.error("Error fetching kits from backend:", e);
+      setMedicalKits([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadKits();
+  }, [loadKits]);
 
   const { activeKits, expiredKits } = useMemo(() => {
     const today = new Date();
@@ -518,8 +538,10 @@ export default function MedicineDispensingWithAdmin() {
       return;
     }
 
+    const available = getAvailableQuantity(kitToAdd);
+
     // Check if kit is out of stock
-    if (kitToAdd.quantity <= 0) {
+    if (available <= 0) {
       alert(`${kitToAdd.name} is out of stock and cannot be added to cart.`);
       return;
     }
@@ -527,20 +549,20 @@ export default function MedicineDispensingWithAdmin() {
     const existingCartItem = cart.find((item) => item.id === kitToAdd.id);
     const currentQuantityInCart = existingCartItem ? existingCartItem.cartQuantity : 0;
 
-    // Check against current inventory quantity
-    if (currentQuantityInCart >= kitToAdd.quantity) {
-      alert(`Cannot add more. You already have ${currentQuantityInCart} in cart (${kitToAdd.quantity} available).`);
+    // Check against current authoritative inventory quantity
+    if (currentQuantityInCart >= available) {
+      alert(`Cannot add more. You already have ${currentQuantityInCart} in cart (${available} available).`);
       return;
     }
 
     setCart((prevCart) => {
       if (existingCartItem) {
         return prevCart.map((item) =>
-          item.id === kitToAdd.id ? { ...item, cartQuantity: item.cartQuantity + 1 } : item
+          item.id === kitToAdd.id ? { ...item, cartQuantity: item.cartQuantity + 1, availableStock: available } : item
         );
       }
       // Store both cartQuantity (items in cart) and availableStock (inventory quantity)
-      return [...prevCart, { ...kitToAdd, cartQuantity: 1, availableStock: kitToAdd.quantity }];
+      return [...prevCart, { ...kitToAdd, cartQuantity: 1, availableStock: available }];
     });
   };
 
@@ -559,7 +581,7 @@ export default function MedicineDispensingWithAdmin() {
         if (item.id === itemId) {
           const currentKit = medicalKits.find(k => k.id === itemId);
           if (!currentKit) return item;
-          const maxAvailable = currentKit.quantity;
+          const maxAvailable = getAvailableQuantity(currentKit);
           const clampedQty = Math.min(newQty, maxAvailable);
           if (newQty > maxAvailable) {
             alert(`Only ${maxAvailable} units available in stock`);
@@ -575,14 +597,14 @@ export default function MedicineDispensingWithAdmin() {
     setCart((prevCart) =>
       prevCart.map((item) => {
         if (item.id === itemId) {
-          // ALWAYS use current inventory, not stale cart data (prevents race conditions)
+          // ALWAYS use current authoritative inventory, not stale cart data (prevents race conditions)
           const currentKit = medicalKits.find(k => k.id === itemId);
           if (!currentKit) {
             alert('Kit not found in inventory');
             return item;
           }
           
-          const maxAvailable = currentKit.quantity;
+          const maxAvailable = getAvailableQuantity(currentKit);
           const newQuantity = Math.max(1, Math.min(item.cartQuantity + change, maxAvailable));
           
           // Alert user if they try to exceed available stock
@@ -604,7 +626,42 @@ export default function MedicineDispensingWithAdmin() {
     return { totalItems: items, totalPrice: price };
   }, [cart]);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    try {
+      // Re-verify inventory before navigating to checkout
+      const response = await fetch(`${API_BASE}/api/kits`, { cache: 'no-store' });
+      if (response.ok) {
+        const latestKits = await response.json();
+        const validCart = cart.filter(cartItem => {
+          const kit = latestKits.find(k => k.id === cartItem.id || k.kit_id === cartItem.id);
+          return kit && getAvailableQuantity(kit) >= (cartItem.cartQuantity || 1);
+        }).map(cartItem => {
+          const kit = latestKits.find(k => k.id === cartItem.id || k.kit_id === cartItem.id);
+          return {
+            ...cartItem,
+            price: kit.price, // Use latest authoritative price from backend
+            availableStock: getAvailableQuantity(kit),
+          };
+        });
+
+        if (validCart.length === 0 && cart.length > 0) {
+          alert("Items in your cart are no longer available in stock. Please select from available kits.");
+          setCart([]);
+          return;
+        }
+
+        if (validCart.length < cart.length) {
+          alert("Some items in your cart were updated or removed due to inventory changes.");
+          setCart(validCart);
+        }
+
+        const validTotalPrice = validCart.reduce((sum, item) => sum + item.price * (item.cartQuantity || 1), 0);
+        navigate("/checkout", { state: { cart: validCart, totalPrice: validTotalPrice, fromPaymentGate } });
+        return;
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn("Failed to re-verify inventory before checkout:", err);
+    }
     navigate("/checkout", { state: { cart, totalPrice, fromPaymentGate } });
   };
 
