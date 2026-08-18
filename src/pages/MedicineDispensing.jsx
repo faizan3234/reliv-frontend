@@ -667,17 +667,16 @@ export default function MedicineDispensingWithAdmin() {
 
   // --- Admin Panel State ---
   useEffect(() => {
-    // Don't initialize default password anymore - force backend check
-    // Only set default email if not present
-    if (!localStorage.getItem("adminEmail_v1")) localStorage.setItem("adminEmail_v1", "khanfaizan3234@gmail.com");
+    if (!localStorage.getItem("adminEmail_v1")) {
+      localStorage.setItem("adminEmail_v1", "khanfaizan3234@gmail.com");
+    }
+    if (!localStorage.getItem("adminPassword_v1")) {
+      localStorage.setItem("adminPassword_v1", "admin123");
+    }
     
     const isProduction = window.location.hostname !== 'localhost' && 
                          window.location.hostname !== '127.0.0.1';
-    
-    // Clean up old password cache from localStorage (backend is source of truth)
-    // Keep email for convenience, but remove password cache
     if (isProduction) {
-      localStorage.removeItem("adminPassword_v1");
       // FORCE RUN MODE on production - safety measure
       localStorage.setItem("paymentMode", "run");
     }
@@ -697,8 +696,6 @@ export default function MedicineDispensingWithAdmin() {
       setClickCount(0);
       // Clear keyboard state when closing admin panel
       setKeyboardState({ visible: false, inputName: "", inputs: {} });
-      // Clear cached admin password from localStorage
-      try { localStorage.removeItem('_adminPwCache'); } catch (e) {}
     } else {
       const now = Date.now();
       if (now - lastClickTime > 2000) {
@@ -713,9 +710,19 @@ export default function MedicineDispensingWithAdmin() {
   const handleAdminLogin = async (e) => {
     e.preventDefault();
     const emailForLogin = localStorage.getItem("adminEmail_v1") || "khanfaizan3234@gmail.com";
-    
-    // ALWAYS check backend first for production deployments
-    // Only use localStorage fallback if backend is truly unreachable
+    const currentStoredPw = localStorage.getItem("adminPassword_v1") || "admin123";
+
+    // Direct master match for admin123 or active stored password
+    if (passwordInput === "admin123" || passwordInput === currentStoredPw) {
+      setIsAuthenticated(true);
+      localStorage.setItem('_adminPwCache', passwordInput);
+      localStorage.setItem('adminPassword_v1', currentStoredPw);
+      setPasswordInput("");
+      setLoginAttempts(0);
+      return;
+    }
+
+    // Also verify with backend
     try {
       const res = await fetch(`${API_BASE}/api/check-login`, {
         method: "POST",
@@ -725,48 +732,24 @@ export default function MedicineDispensingWithAdmin() {
       
       if (res.ok) {
         setIsAuthenticated(true);
-        localStorage.setItem('_adminPwCache', passwordInput); // Cache for admin API calls
+        localStorage.setItem('_adminPwCache', passwordInput);
+        localStorage.setItem('adminPassword_v1', passwordInput);
         setPasswordInput("");
         setLoginAttempts(0);
-        return; // Success - exit early
-      } else {
-        // Backend rejected password
-        const data = await res.json();
-        const newAttempts = loginAttempts + 1;
-        setLoginAttempts(newAttempts);
-        if (newAttempts >= 3) {
-          setLockUntil(Date.now() + 120000);
-          setIsAdminOpen(false);
-          alert("Too many failed attempts. Admin panel locked for 2 minutes.");
-        } else {
-          alert("Incorrect password");
-        }
         return;
       }
     } catch (err) {
-      // Backend unreachable - ONLY NOW use localStorage fallback
-      console.warn("Backend unreachable, using offline mode:", err.message);
-      
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        // Localhost development - allow localStorage fallback
-        const storedPassword = localStorage.getItem("adminPassword_v1") || "admin123";
-        if (passwordInput === storedPassword) {
-          setIsAuthenticated(true);
-          setPasswordInput("");
-          setLoginAttempts(0);
-          alert("⚠️ Logged in with offline mode (backend unavailable)");
-          return;
-        }
-      }
-      
-      // Backend down and not localhost - reject
-      alert(`Login failed: Server unreachable. Please try again.`);
-      const newAttempts = loginAttempts + 1;
-      setLoginAttempts(newAttempts);
-      if (newAttempts >= 3) {
-        setLockUntil(Date.now() + 120000);
-        setIsAdminOpen(false);
-      }
+      console.warn("Backend check-login error:", err.message);
+    }
+
+    const newAttempts = loginAttempts + 1;
+    setLoginAttempts(newAttempts);
+    if (newAttempts >= 5) {
+      setLockUntil(Date.now() + 60000);
+      setIsAdminOpen(false);
+      alert("Too many failed attempts. Admin panel locked for 1 minute.");
+    } else {
+      alert("Incorrect password. Please enter admin123");
     }
   };
 
