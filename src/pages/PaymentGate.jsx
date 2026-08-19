@@ -113,18 +113,9 @@ const PaymentGate = () => {
       }).catch(() => {});
     }
 
-    // DISPENSE: Send MQTT command to rotate motors (only after payment confirmed)
-    if (hasKits && cart.length > 0) {
-      fetch(`${API_BASE}/api/dispense`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cart,
-          authorization: authData?.authorization,
-          signature: authData?.signature,
-        }),
-      }).catch(() => {});
-    }
+    // Note: Physical dispensing is handled authoritatively by the backend
+    // (Payment Bridge -> Pi paymentComplete -> FulfillmentManager -> MQTT -> ESP32).
+    // The frontend never triggers motor dispensing directly.
 
     // Navigate after a brief delay to show success message
     setTimeout(() => {
