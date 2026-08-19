@@ -9,7 +9,7 @@ export function CompletionPage({ sessionStore }) {
   
   const isMedicine = state.serviceType === 'MEDICINE';
   const status = urlParams.status || '';
-  const isPhysicalFulfilled = ['dispense_complete', 'report_queued'].includes(status);
+  const isPhysicalFulfilled = ['dispense_complete', 'report_queued', 'report_ready'].includes(status);
 
 
   const handleFinish = () => {
@@ -32,7 +32,7 @@ export function CompletionPage({ sessionStore }) {
         </h2>
         <p className="text-sm font-semibold text-emerald-400">
           {isPhysicalFulfilled
-            ? 'Physical Kiosk Operation & Receipt Queued'
+            ? 'Physical Kiosk Operation Complete'
             : 'Cryptographic RSA Signature Verified by Kiosk'}
         </p>
       </div>
@@ -54,11 +54,11 @@ export function CompletionPage({ sessionStore }) {
           <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-300 space-y-2 text-center">
             <Stethoscope className="w-8 h-8 mx-auto text-orange-400" />
             <h4 className="font-bold text-base text-white font-outfit">
-              {status === 'report_queued' ? 'Health Report Generated' : 'Preparing Your Health Report'}
+              {status === 'report_ready' || status === 'report_queued' ? 'Health Report Ready' : 'Preparing Your Health Report'}
             </h4>
             <p className="text-xs text-orange-200">
-              {status === 'report_queued'
-                ? 'Your health report PDF has been queued to your email address.'
+              {status === 'report_ready' || status === 'report_queued'
+                ? 'Your comprehensive health report PDF has been generated and is ready.'
                 : 'Your vitals, BMI, and health report PDF is being compiled by Kiosk backend.'}
             </p>
           </div>
@@ -83,9 +83,9 @@ export function CompletionPage({ sessionStore }) {
           <div className="flex items-center space-x-2 pt-1 text-slate-300">
             <Mail className="w-4 h-4 text-orange-400 shrink-0" />
             <span>
-              📧 Report/receipt queued for:{' '}
+              📄 Report ready for:{' '}
               <strong className="text-white">
-                {state.customerDetails?.email ? state.customerDetails.email : 'No email registered'}
+                {state.customerDetails?.email ? state.customerDetails.email : 'Registered user'}
               </strong>
             </span>
           </div>

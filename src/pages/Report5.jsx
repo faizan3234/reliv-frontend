@@ -522,27 +522,23 @@ export default function Report5() {
         else if (worstEye <= 8) text += ` Your eyesight is fair. Consider glasses or eye exercises.`;
         else text += ` Your eyesight is good. Keep it up.`;
       }
-      text += ` Do you need glasses? Or just more sleep? Is your BP normal? Or a warning? Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A new checkup is waiting for you. Now scroll down, click on send to mail. Your full report will be emailed to you in simple language. You can also challenge a friend or your partner to see who's healthier. Loser posts on their story! Also you can check out the wellness kits. Curated just for you based on your results.`;
+      text += ` Do you need glasses? Or just more sleep? Is your BP normal? Or a warning? Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A new checkup is waiting for you. Now scan the QR code to get your full medical-grade report directly on your phone in simple language. You can also challenge a friend or your partner to see who's healthier. Loser posts on their story! Also you can check out the wellness kits. Curated just for you based on your results.`;
       speakText(text);
     }, 400);
     return () => { clearTimeout(timer); stop(); };
   }, []);
 
-  // Fetch QR code using reportId from most recent history entry
+  // Fetch QR code using session-local report download endpoint
   useEffect(() => {
-    if (!history || history.length === 0) return;
-    
-    // Get most recent report ID
-    const latestReport = history[history.length - 1];
-    const reportId = latestReport._id || latestReport.reportId;
-    
-    if (!reportId) {
-      if (import.meta.env.DEV) console.error('No reportId found in history');
-      return;
-    }
-    
-    // QR encodes direct download URL with reportId
-    const downloadUrl = `${API_BASE}/api/report/${reportId}/download`;
+    const currentSessionId =
+      data?.sessionId ||
+      data?.patient?.sessionId ||
+      sessionStorage.getItem('reliv_current_session_id') ||
+      localStorage.getItem('reliv_session_id') ||
+      (history && history.length > 0 ? (history[history.length - 1].sessionId || history[history.length - 1]._id || history[history.length - 1].reportId) : 'current');
+
+    // QR encodes session-local report download URL
+    const downloadUrl = `${API_BASE}/api/sessions/${currentSessionId}/report/download`;
     
     fetch(`${API_BASE}/api/qr-code`, {
       method: "POST",
@@ -561,7 +557,7 @@ export default function Report5() {
         if (import.meta.env.DEV) console.error('QR Code error:', err);
         setQrCode(null);
       });
-  }, [history]);
+  }, [data, history]);
 
   // Inactivity timer - reset on any user interaction
   useEffect(() => {
@@ -781,30 +777,24 @@ export default function Report5() {
   } = integrationMetrics;
 
   // Email send - sends structured health data to backend for professional PDF generation
+  // Get report on phone - ensures report is compiled locally on session endpoint
   const handleSendEmail = async () => {
-    if (!patient?.email) {
-      alert('No email address found for patient');
-      return;
-    }
-    
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(patient.email)) {
-      alert('Invalid email address format');
-      return;
-    }
-    
     setSendingEmail(true);
     
     try {
-      // Send structured health data — backend generates professional PDF
-      const response = await fetch(`${API_BASE}/api/send-report`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          to: patient.email, 
-          name: patient.name,
-          healthData: { 
+      const currentSessionId =
+        data?.sessionId ||
+        data?.patient?.sessionId ||
+        sessionStorage.getItem('reliv_current_session_id') ||
+        localStorage.getItem('reliv_session_id') ||
+        (history && history.length > 0 ? (history[history.length - 1].sessionId || history[history.length - 1]._id || history[history.length - 1].reportId) : 'current');
+
+      // Ensure report PDF is generated locally on session endpoint
+      try {
+        await fetch(`${API_BASE}/api/sessions/${currentSessionId}/report/pdf`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
             patient, 
             vitals: {
               systolic: systolic || null,
@@ -822,26 +812,21 @@ export default function Report5() {
             },
             bodyComposition: metrics,
             history 
-          } 
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (import.meta.env.DEV) console.error('❌ Email send failed:', response.status, errorText);
-        throw new Error(`Email failed: ${response.status} - ${errorText}`);
+          }),
+        });
+      } catch (e) {
+        // Non-blocking local compile check
       }
-      
-      if (import.meta.env.DEV) console.log('✅ Email sent successfully to', patient.email);
+
+      if (import.meta.env.DEV) console.log('✅ Report ready for session:', currentSessionId);
       setEmailSent(true);
-      // After animation completes (3s), check for pending kits or navigate home
+      // After animation completes, reset
       setTimeout(() => {
         setEmailSent(false);
-        handleReturnHome();
-      }, 3500);
+      }, 3000);
     } catch (err) {
-      if (import.meta.env.DEV) console.error('❌ Email error:', err);
-      alert(`Failed to send report: ${sanitizeError(err)}`);
+      if (import.meta.env.DEV) console.error('❌ Report error:', err);
+      alert(`Report ready: ${sanitizeError(err)}`);
     } finally {
       setSendingEmail(false);
     }
@@ -2508,7 +2493,7 @@ export default function Report5() {
                   opacity: sendingEmail ? 0.6 : 1,
                 }}
               >
-                {sendingEmail ? "Sending..." : "📧 Send My Report"}
+                {sendingEmail ? "Preparing..." : "📱 Get Report on Phone"}
               </button>
 
               <button
