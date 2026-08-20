@@ -887,7 +887,7 @@ export default function Report5() {
             fontSize: "18px",
             border: "2px solid #dc2626"
           }}>
-            ⚠️ Health data is missing or incomplete. Please complete a scan before sending your report. Data will persist across refreshes unless reset.
+            ⚠️ Health data is missing or incomplete. Please complete a scan before generating your report. Data will persist across refreshes unless reset.
           </div>
         )}
         
@@ -898,7 +898,7 @@ export default function Report5() {
             <div style={{ position: "absolute", right: 0, top: 0 }}>
               <img src={qrCode} alt="QR Code" style={{ width: "140px", height: "140px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
               <div style={{ fontSize: "12px", color: "#666666", marginTop: "8px", textAlign: "center", maxWidth: "140px" }}>
-                Scan for report
+                Scan to open report on phone
               </div>
             </div>
           )}
