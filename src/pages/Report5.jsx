@@ -6,7 +6,6 @@ import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
 import Logo from "../components/Logo";
 import EmailSendingAnimation from "../components/EmailSendingAnimation";
-import VirtualKeyboard from "../components/VirtualKeyboard";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { sanitizeError } from "../utils/errorSanitizer";
 import { useSpeech } from "../context/SpeechContext";
@@ -464,13 +463,9 @@ export default function Report5() {
   const [ecoStats, setEcoStats] = useState(null);
   const [qrCode, setQrCode] = useState(null);
   const [emailSent, setEmailSent] = useState(false);
-  const [doctorEmail, setDoctorEmail] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const [inactivityTimer, setInactivityTimer] = useState(120);
-  const [activeInput, setActiveInput] = useState(null);
-  const [keyboardInputs, setKeyboardInputs] = useState({ doctorEmail: "" });
-  const doctorEmailInputRef = useRef(null);
 
   const confettiRef = useRef(false);
   const inactivityIntervalRef = useRef(null);
@@ -776,7 +771,6 @@ export default function Report5() {
     subcutFatMassData
   } = integrationMetrics;
 
-  // Email send - sends structured health data to backend for professional PDF generation
   // Get report on phone - ensures report is compiled locally on session endpoint
   const handleSendEmail = async () => {
     setSendingEmail(true);
@@ -791,7 +785,7 @@ export default function Report5() {
 
       // Ensure report PDF is generated locally on session endpoint
       try {
-        await fetch(`${API_BASE}/api/sessions/${currentSessionId}/report/pdf`, {
+        await fetch(`${API_BASE}/api/sessions/${currentSessionId}/report`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
@@ -827,73 +821,6 @@ export default function Report5() {
     } catch (err) {
       if (import.meta.env.DEV) console.error('❌ Report error:', err);
       alert(`Report ready: ${sanitizeError(err)}`);
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
-  const handleSendToDoctor = async () => {
-    if (!doctorEmail) {
-      alert('Please enter doctor\'s email address');
-      return;
-    }
-    
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(doctorEmail)) {
-      alert('Please enter a valid email address');
-      return;
-    }
-    
-    setSendingEmail(true);
-    
-    try {
-      // Send structured health data — backend generates professional PDF
-      const response = await fetch(`${API_BASE}/api/send-report`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          to: doctorEmail, 
-          name: patient.name,
-          healthData: { 
-            patient, 
-            vitals: {
-              systolic: systolic || null,
-              diastolic: diastolic || null,
-              bpm: bpm || null,
-              oxygen: oxygen || null,
-              temperature: temperature || null,
-              weight: vitals.weight || null,
-              height: vitals.height || null,
-              impedance: vitals.impedance || null,
-              leftEye: vitals.leftEye || null,
-              rightEye: vitals.rightEye || null,
-              leftEyeAdvice: vitals.leftEyeAdvice || null,
-              rightEyeAdvice: vitals.rightEyeAdvice || null,
-            },
-            bodyComposition: metrics,
-            history 
-          } 
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (import.meta.env.DEV) console.error('❌ Doctor email send failed:', response.status, errorText);
-        throw new Error(`Email failed: ${response.status} - ${errorText}`);
-      }
-      
-      if (import.meta.env.DEV) console.log('✅ Report sent successfully to doctor:', doctorEmail);
-      setEmailSent(true);
-      setDoctorEmail("");
-      // After animation completes, check for pending kits or navigate home
-      setTimeout(() => {
-        setEmailSent(false);
-        handleReturnHome();
-      }, 3500);
-    } catch (err) {
-      if (import.meta.env.DEV) console.error('❌ Doctor email error:', err);
-      alert(`Failed to send report: ${sanitizeError(err)}`);
     } finally {
       setSendingEmail(false);
     }
@@ -943,7 +870,7 @@ export default function Report5() {
       background: "#ffffff", 
       padding: "48px 32px", 
       position: "relative",
-      paddingBottom: activeInput === 'doctorEmail' ? "350px" : "48px",
+      paddingBottom: "48px",
       overflowY: "auto",
       WebkitOverflowScrolling: "touch"
     }} className="scrollable-container">
@@ -2562,92 +2489,9 @@ export default function Report5() {
                 ⚔️ Challenge a Friend
               </button>
             </motion.div>
-
-            {/* Send to Doctor */}
-            <div style={{ 
-              textAlign: "center", 
-              marginBottom: "32px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "16px"
-            }}>
-              <div style={{ 
-                background: "#f9fafb", 
-                padding: "16px", 
-                borderRadius: "12px",
-                minWidth: "300px",
-                border: "2px solid #e5e7eb"
-              }}>
-                <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px" }}>Doctor's Email:</div>
-                <div style={{ 
-                  fontSize: "16px", 
-                  fontWeight: "600", 
-                  color: keyboardInputs.doctorEmail ? "#111827" : "#9ca3af",
-                  minHeight: "24px",
-                  wordBreak: "break-all"
-                }}>
-                  {keyboardInputs.doctorEmail || "Tap below to enter email"}
-                </div>
-              </div>
-              <input
-                ref={doctorEmailInputRef}
-                type="email"
-                placeholder="Tap to enter doctor's email"
-                value={keyboardInputs.doctorEmail}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  setKeyboardInputs(prev => ({ ...prev, doctorEmail: newValue }));
-                  setDoctorEmail(newValue);
-                }}
-                onClick={() => setActiveInput('doctorEmail')}
-                readOnly
-                style={{
-                  padding: "12px 20px",
-                  border: "2px solid #e5e7eb",
-                  borderRadius: "12px",
-                  fontSize: "15px",
-                  minWidth: "300px",
-                  cursor: "pointer",
-                  textAlign: "center",
-                  background: "#ffffff"
-                }}
-              />
-              <button
-                onClick={handleSendToDoctor}
-                disabled={!doctorEmail}
-                style={{
-                  background: !doctorEmail ? "#d1d5db" : "#6366f1",
-                  color: "white",
-                  fontWeight: "600",
-                  fontSize: "15px",
-                  padding: "12px 24px",
-                  borderRadius: "9999px",
-                  border: "none",
-                  cursor: !doctorEmail ? "not-allowed" : "pointer",
-                }}
-              >
-                Send to Doctor
-              </button>
-            </div>
           </>
 
-        {/* Virtual Keyboard - Fixed at bottom */}
-        {activeInput === 'doctorEmail' && (
-          <div className="fixed bottom-0 left-0 right-0 z-[10000]">
-            <VirtualKeyboard
-              inputName="doctorEmail"
-              inputs={keyboardInputs}
-              onChange={(inputName, value) => {
-                setKeyboardInputs(prev => ({ ...prev, [inputName]: value }));
-                setDoctorEmail(value);
-              }}
-              onClose={() => setActiveInput(null)}
-            />
-          </div>
-        )}
-
-        {/* Email sent animation */}
+        {/* Email / Report sent animation */}
         {emailSent && (
           <EmailSendingAnimation 
             onComplete={() => {
