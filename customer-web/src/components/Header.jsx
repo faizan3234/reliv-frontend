@@ -1,22 +1,16 @@
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { Logo } from './Logo';
 
 export function Header({ kioskId }) {
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-orange-100 px-4 py-3 shadow-sm">
       <div className="max-w-md mx-auto flex items-center justify-between">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center font-bold text-white shadow-sm">
-            R
-          </div>
-          <div>
-            <span className="font-extrabold text-lg tracking-tight text-slate-900 font-outfit">
-              RELIV <span className="text-orange-500 font-light">HEALTH</span>
-            </span>
-            <div className="flex items-center space-x-1 text-[10px] text-slate-500 font-medium">
-              <ShieldCheck className="w-3 h-3 text-emerald-600" />
-              <span>Secure Health & Care</span>
-            </div>
+        <div className="flex items-center space-x-3">
+          <Logo className="h-7 w-auto" />
+          <div className="flex items-center space-x-1 text-[10px] text-slate-500 font-medium pl-1 border-l border-slate-200">
+            <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+            <span>Secure Health</span>
           </div>
         </div>
 

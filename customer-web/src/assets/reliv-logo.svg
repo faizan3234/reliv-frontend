@@ -8,6 +8,7 @@
     <!-- Dot of i -->
     <circle cx="123" cy="18" r="7" />
   </g>
+  
   <!-- liv in Black (#000000) -->
   <g fill="#000000">
     <!-- Lowercase l -->

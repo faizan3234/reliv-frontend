@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { extractQueryParams, validateSessionParams } from '../../services/session';
 import { Button } from '../../components/Button';
-import { CheckCircle2, QrCode, ArrowRight, ShieldCheck, Smartphone } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Logo } from '../../components/Logo';
 
 export function StartPage({ sessionStore }) {
   const { state, updateState } = sessionStore;
@@ -41,12 +42,9 @@ export function StartPage({ sessionStore }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-orange-100 border border-orange-200 text-orange-600 mb-2 shadow-sm">
-          {hasValidSession ? <Smartphone className="w-8 h-8" /> : <QrCode className="w-8 h-8" />}
+        <div className="flex justify-center pb-1">
+          <Logo className="h-11 w-auto" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 font-outfit">
-          Reliv Health
-        </h2>
         <p className="text-sm text-slate-600">
           {hasValidSession ? 'Your health and payment session is ready' : 'Secure Payment Companion'}
         </p>

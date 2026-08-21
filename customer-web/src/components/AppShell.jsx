@@ -1,4 +1,5 @@
 import React from 'react';
+import { Logo } from './Logo';
 
 export default function AppShell({
   children,
@@ -11,18 +12,7 @@ export default function AppShell({
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 py-6">
         {showLogo && (
           <header className="mb-7 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-lg font-bold text-white shadow-sm">
-              R
-            </div>
-
-            <div>
-              <p className="text-lg font-bold tracking-tight text-slate-900">
-                Reliv
-              </p>
-              <p className="text-xs text-slate-500">
-                Secure Health & Care
-              </p>
-            </div>
+            <Logo className="h-9 w-auto" />
           </header>
         )}
 
