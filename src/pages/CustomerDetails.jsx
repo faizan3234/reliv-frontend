@@ -13,7 +13,7 @@ import { usePageSpeech } from "../context/SpeechContext";
 function CustomerDetails() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { update, resetHealth } = useHealth();
+  const { data: healthData, update, resetHealth } = useHealth();
   usePageSpeech("customer-details");
 
   const [slideUp, setSlideUp] = useState(false);
