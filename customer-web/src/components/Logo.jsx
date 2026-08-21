@@ -4,7 +4,7 @@ export function Logo({ className = "h-8", width, height }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 215 76"
+      viewBox="0 0 186 76"
       className={className}
       width={width}
       height={height}
@@ -13,21 +13,21 @@ export function Logo({ className = "h-8", width, height }) {
       {/* Re in Orange (#F97316) */}
       <g fill="#F97316">
         {/* Capital R */}
-        <path d="M 8 10 L 36 10 C 49 10 56 17 56 28 C 56 36 51 42 42 45 L 56 70 L 42 70 L 29 47 L 22 47 L 22 70 L 8 70 Z M 22 21 L 22 36 L 34 36 C 39.5 36 42.5 33 42.5 28.5 C 42.5 24 39.5 21 34 21 Z" />
+        <path d="M 8 10 L 34 10 C 47 10 54 17 54 28 C 54 36 49 42 41 45 L 54 70 L 41 70 L 28 47 L 21 47 L 21 70 L 8 70 Z M 21 21 L 21 36 L 33 36 C 38 36 41 33 41 28.5 C 41 24 38 21 33 21 Z" />
         {/* Lowercase e */}
-        <path d="M 110 48.5 C 110 36.5 102 28 88 28 C 74 28 65 37.5 65 50 C 65 63 75 71.5 89 71.5 C 99 71.5 106 67 109 60 L 97 56 C 95.5 59.5 92.5 61.5 88.5 61.5 C 82.5 61.5 79 57.5 78.5 52 L 110 52 C 110 50.8 110 49.6 110 48.5 Z M 78.5 44 C 79.5 39 83 36.5 88 36.5 C 93 36.5 96 39 97 44 Z" />
+        <path d="M 98 48.5 C 98 36.5 91 28 78 28 C 65 28 58 37.5 58 50 C 58 63 67 71.5 79 71.5 C 88 71.5 94 67 97 60 L 86 56 C 84.5 59.5 82 61.5 78.5 61.5 C 73.5 61.5 70.5 57.5 70 52 L 98 52 C 98 50.8 98 49.6 98 48.5 Z M 70 44 C 71 39 74 36.5 78 36.5 C 82 36.5 85 39 86 44 Z" />
         {/* Dot of i */}
-        <circle cx="146.5" cy="17" r="6.5" />
+        <circle cx="127" cy="17" r="6" />
       </g>
       
       {/* liv in Black (#000000) */}
       <g fill="#000000">
         {/* Lowercase l */}
-        <path d="M 120 10 L 133 10 L 133 70 L 120 70 Z" />
+        <path d="M 104 10 L 116 10 L 116 70 L 104 70 Z" />
         {/* Lowercase dotless i */}
-        <path d="M 140 28 L 153 28 L 153 70 L 140 70 Z" />
+        <path d="M 121 28 L 133 28 L 133 70 L 121 70 Z" />
         {/* Lowercase v */}
-        <path d="M 160 28 L 174 28 L 182 56 L 190 28 L 204 28 L 189 70 L 175 70 Z" />
+        <path d="M 138 28 L 151 28 L 158 56 L 165 28 L 178 28 L 165 70 L 151 70 Z" />
       </g>
     </svg>
   );
