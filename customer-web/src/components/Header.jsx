@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 
-export function Header({ kioskId = 'RELIV-001' }) {
+export function Header({ kioskId }) {
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-orange-100 px-4 py-3 shadow-sm">
       <div className="max-w-md mx-auto flex items-center justify-between">
@@ -20,12 +20,14 @@ export function Header({ kioskId = 'RELIV-001' }) {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <div className="px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200 text-[11px] font-mono text-orange-700 font-medium flex items-center space-x-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>{kioskId}</span>
+        {Boolean(kioskId) && (
+          <div className="flex items-center space-x-2">
+            <div className="px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200 text-[11px] font-mono text-orange-700 font-medium flex items-center space-x-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>{kioskId}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </header>
   );

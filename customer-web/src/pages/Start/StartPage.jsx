@@ -17,7 +17,7 @@ export function StartPage({ sessionStore }) {
         updateState({
           sessionId,
           pairingToken,
-          kioskId: kioskId || 'RELIV-001',
+          kioskId: kioskId || '',
           paymentState: 'START',
           error: null,
         });
@@ -45,21 +45,21 @@ export function StartPage({ sessionStore }) {
           {hasValidSession ? <Smartphone className="w-8 h-8" /> : <QrCode className="w-8 h-8" />}
         </div>
         <h2 className="text-2xl font-bold text-slate-900 font-outfit">
-          {hasValidSession ? 'Reliv' : 'Reliv'}
+          Reliv Health
         </h2>
         <p className="text-sm text-slate-600">
-          {hasValidSession ? 'Your health and payment companion' : 'Secure Health Kiosk Companion'}
+          {hasValidSession ? 'Your health and payment session is ready' : 'Secure Health & Payment Companion'}
         </p>
       </div>
 
-      <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-4">
+      <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm space-y-4">
         {hasValidSession ? (
           <>
             <div className="flex items-center space-x-3 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               <div>
                 <p className="text-sm font-semibold">Secure kiosk session</p>
-                <p className="text-xs text-emerald-700">Your health/payment session is ready.</p>
+                <p className="text-xs text-emerald-700">Your health and payment session is connected.</p>
               </div>
             </div>
 
@@ -71,10 +71,10 @@ export function StartPage({ sessionStore }) {
             </div>
           </>
         ) : (
-          <div className="text-center py-3 space-y-2">
-            <h3 className="text-base font-semibold text-slate-900">No active kiosk session</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Scan the QR displayed on a Reliv kiosk to continue.
+          <div className="text-center py-2 space-y-2.5">
+            <h3 className="text-base font-semibold text-slate-900">Scan Kiosk QR Code</h3>
+            <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
+              Scan the QR code displayed on a Reliv Health Kiosk to complete your payment or view your health report.
             </p>
           </div>
         )}

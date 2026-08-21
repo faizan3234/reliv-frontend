@@ -64,12 +64,16 @@ export function App() {
     }
   };
 
+  const hasActiveSession = Boolean(state.sessionId);
+  const showProgress = hasActiveSession &&
+    !['START', 'CONNECTING', 'SESSION_VALID', 'ERROR', 'COMPLETED'].includes(state.paymentState);
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-orange-50 via-white to-white text-slate-900 selection:bg-orange-500 selection:text-white">
-      <Header kioskId={state.kioskId} />
+      <Header kioskId={hasActiveSession ? state.kioskId : null} />
       
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 space-y-4">
-        {state.paymentState !== 'ERROR' && state.paymentState !== 'COMPLETED' && (
+        {showProgress && (
           <ProgressBar currentState={state.paymentState} />
         )}
 

@@ -6,7 +6,7 @@ const STORAGE_KEY = 'reliv_customer_session_v1';
 export const INITIAL_STATE = {
   sessionId: '',
   pairingToken: '',
-  kioskId: 'RELIV-001',
+  kioskId: '',
   kioskUrl: import.meta.env.VITE_KIOSK_FALLBACK_URL || '',
   serviceType: '', // 'HEALTH_CHECKUP' | 'MEDICINE'
   customerDetails: {
