@@ -1,4 +1,7 @@
-const BRIDGE_BASE_URL = import.meta.env.VITE_PAYMENT_BRIDGE_URL || 'https://bridge.reliv.in';
+const BRIDGE_BASE_URL = (
+  import.meta.env.VITE_PAYMENT_BRIDGE_URL ||
+  'https://80.225.243.51'
+).replace(/\/$/, '');
 
 /**
  * Calls Payment Bridge POST /create-order to create Razorpay Order server-side.
