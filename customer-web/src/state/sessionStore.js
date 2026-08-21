@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { extractQueryParams } from '../services/session';
+import { extractQueryParams, extractPaymentPackage } from '../services/session';
 
 const STORAGE_KEY = 'reliv_customer_session_v1';
 
 export const INITIAL_STATE = {
+  encryptedPackage: '',
+  requestId: '',
+  confirmationCode: '',
   sessionId: '',
   pairingToken: '',
   kioskId: '',
@@ -41,7 +44,14 @@ export function useSessionStore() {
       console.warn('Failed to parse sessionStorage:', e);
     }
 
-    // Check URL parameters for return redirects from Pi
+    // Check for Payment V2 encrypted package in window.location.hash (#p=...)
+    const pkg = extractPaymentPackage();
+    if (pkg) {
+      initial.encryptedPackage = pkg;
+      initial.paymentState = 'PAYMENT_V2_FLOW';
+    }
+
+    // Check URL parameters for legacy query params / redirects
     const urlParams = extractQueryParams();
     if (urlParams.sessionId) initial.sessionId = urlParams.sessionId;
     if (urlParams.pairingToken) initial.pairingToken = urlParams.pairingToken;
@@ -50,14 +60,11 @@ export function useSessionStore() {
     if (urlParams.transactionId) initial.transactionId = urlParams.transactionId;
     if (urlParams.amount > 0) initial.amount = urlParams.amount;
 
-
-    // Direct state transition based on returnUrl step & status parameters
     if (urlParams.step === 'payment' && urlParams.transactionId) {
       initial.paymentState = 'PAYMENT_READY';
     } else if (urlParams.step === 'service') {
       initial.paymentState = 'SERVICE_SELECTION';
     } else if (urlParams.step === 'completion') {
-      // STRICT RULE: step=completion alone NEVER means COMPLETED without verified backend status!
       if (['dispense_complete', 'report_queued', 'report_ready'].includes(urlParams.status)) {
         initial.paymentState = 'COMPLETED';
       } else if (urlParams.status === 'dispensing') {
@@ -67,13 +74,28 @@ export function useSessionStore() {
       } else {
         initial.paymentState = 'PAYMENT_HANDOFF';
       }
-
     }
-
 
     initial.isLoaded = true;
     return initial;
   });
+
+  // Listen for hash changes (e.g. navigation to /pay#p=...)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const pkg = extractPaymentPackage();
+      if (pkg) {
+        setState((prev) => ({
+          ...prev,
+          encryptedPackage: pkg,
+          paymentState: 'PAYMENT_V2_FLOW'
+        }));
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Sync state changes to sessionStorage
   useEffect(() => {

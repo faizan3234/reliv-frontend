@@ -10,6 +10,8 @@ import { PaymentPage } from './pages/Payment/PaymentPage';
 import { PaymentProcessingPage } from './pages/PaymentProcessing/PaymentProcessingPage';
 import { CompletionPage } from './pages/Completion/CompletionPage';
 import { ErrorPage } from './pages/Error/ErrorPage';
+import { PaymentV2Page } from './pages/PaymentV2/PaymentV2Page';
+import { extractPaymentPackage } from './services/session';
 
 export function App() {
   const sessionStore = useSessionStore();
@@ -23,7 +25,19 @@ export function App() {
     );
   }
 
+  // Detect Payment V2 URL route /pay or #p=...
+  const isPayRoute = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/pay') ||
+    Boolean(extractPaymentPackage()) ||
+    state.paymentState === 'PAYMENT_V2_FLOW'
+  );
+
   const renderActiveScreen = () => {
+    // If on /pay route or #p= package present, use Payment V2 screen
+    if (isPayRoute || state.paymentState === 'PAYMENT_V2_FLOW') {
+      return <PaymentV2Page sessionStore={sessionStore} />;
+    }
+
     switch (state.paymentState) {
       case 'START':
       case 'CONNECTING':
@@ -65,8 +79,8 @@ export function App() {
   };
 
   const hasActiveSession = Boolean(state.sessionId);
-  const showProgress = hasActiveSession &&
-    !['START', 'CONNECTING', 'SESSION_VALID', 'ERROR', 'COMPLETED'].includes(state.paymentState);
+  const showProgress = hasActiveSession && !isPayRoute &&
+    !['START', 'CONNECTING', 'SESSION_VALID', 'ERROR', 'COMPLETED', 'PAYMENT_V2_FLOW'].includes(state.paymentState);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-orange-50 via-white to-white text-slate-900 selection:bg-orange-500 selection:text-white">
