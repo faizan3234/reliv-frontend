@@ -1,509 +1,513 @@
 // src/pages/PaymentGate.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import Logo from "../components/Logo";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
-import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
-import { createBridgeOrder, verifyBridgePayment } from "../../customer-web/src/services/bridgeApi";
+import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Delete } from "lucide-react";
 
-const INACTIVITY_TIMEOUT = 45000; // 45 seconds - strict for payment screen
-const DOUBLE_CLICK_PREVENTION_MS = 1800;
+const INACTIVITY_TIMEOUT = 120000; // 2 minutes inactivity timeout
 
-const PaymentGate = () => {
+export default function PaymentGate() {
   usePageSpeech("payment");
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: healthData } = useHealth();
-
-  // Fetch report price from backend (single source of truth)
-  const [reportPrice, setReportPrice] = useState(27); // Default fallback
+  const { data: healthData, update: updateHealth } = useHealth();
 
   const { cart = [], totalPrice = 0, fromPaymentGate = false } = location.state || {};
-
-  // PRODUCTION SAFETY: Force RUN mode on deployed domains
-  const isProduction = window.location.hostname !== 'localhost' && 
-                       window.location.hostname !== '127.0.0.1';
-  const isRunMode = isProduction ? true : (localStorage.getItem("paymentMode") === "run");
-  
-  const isProcessingRef = useRef(false);
-
-  // Determine navigation path after payment
-  const needsReport = fromPaymentGate || cart.length === 0;
   const hasKits = cart.length > 0;
-  
-  // Calculate final amount correctly
-  const finalAmount = totalPrice > 0 ? totalPrice : reportPrice;
+  const needsReport = fromPaymentGate || !hasKits;
+  const serviceType = hasKits ? "MEDICINE" : "HEALTH_CHECKUP";
 
-  // Fetch report price from backend on mount
-  useEffect(() => {
-    fetch(`${API_BASE}/api/report-price`)
-      .then(res => res.json())
-      .then(data => setReportPrice(data.price))
-      .catch(() => setReportPrice(27)); // Fallback to default if fetch fails
-  }, []);
+  // Resolve active sessionId from context or storage
+  const activeSessionId =
+    location.state?.sessionId ||
+    healthData?.sessionId ||
+    healthData?.patient?.sessionId ||
+    localStorage.getItem("reliv_session_id") ||
+    sessionStorage.getItem("reliv_session_id") ||
+    "current";
 
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState("idle"); // idle | processing | success | failed | cancelled
-  const [lastClickTime, setLastClickTime] = useState(0);
+  // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR'
+  const [uiState, setUiState] = useState("PREPARING");
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [authoritativeAmount, setAuthoritativeAmount] = useState(totalPrice > 0 ? totalPrice : 27);
+  const [requestId, setRequestId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [attemptsRemaining, setAttemptsRemaining] = useState(5);
+  const [codeDigits, setCodeDigits] = useState(["", "", "", ""]);
+  const [timeLeft, setTimeLeft] = useState(300);
 
-  // ── Inactivity timer (stops during Razorpay modal) ───────────────────────
-  const timeoutRef = useRef(null);
+  const isRequestingRef = useRef(false);
+  const expiryTimerRef = useRef(null);
+  const inactivityTimerRef = useRef(null);
 
-  const startInactivityTimer = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
-    timeoutRef.current = setTimeout(() => {
-      // Hard reload to kill any possible lingering Razorpay iframe/overlay
+  // ── 1. Inactivity Timer ──────────────────────────────────────────────────
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    inactivityTimerRef.current = setTimeout(() => {
       window.location.href = "/";
     }, INACTIVITY_TIMEOUT);
   }, []);
 
-  const stopInactivityTimer = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
   useEffect(() => {
-    const events = ["click", "touchstart"];
+    const events = ["click", "touchstart", "keydown"];
+    const handleActivity = () => resetInactivityTimer();
 
-    const resetTimer = () => {
-      // Only manage timer when idle AND not processing
-      if (paymentStatus === "idle" && !isProcessing) {
-        startInactivityTimer();
-      }
-    };
-
-    events.forEach((ev) => window.addEventListener(ev, resetTimer));
-
-    // Initial start only if we begin idle
-    if (paymentStatus === "idle" && !isProcessing) {
-      startInactivityTimer();
-    }
+    events.forEach((ev) => window.addEventListener(ev, handleActivity));
+    resetInactivityTimer();
 
     return () => {
-      events.forEach((ev) => window.removeEventListener(ev, resetTimer));
-      stopInactivityTimer();
+      events.forEach((ev) => window.removeEventListener(ev, handleActivity));
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
-  }, [startInactivityTimer, stopInactivityTimer, paymentStatus, isProcessing]);
+  }, [resetInactivityTimer]);
 
-  // ── Send receipt & navigate after success ───────
-  const completeSuccessfulPayment = useCallback(async (authData = null) => {
-    // Show success IMMEDIATELY — no flicker back to idle/button
-    setPaymentStatus("success");
+  // ── 2. Create Payment Request on Local Pi ─────────────────────────────────
+  const createPaymentRequest = useCallback(async () => {
+    if (isRequestingRef.current) return;
+    isRequestingRef.current = true;
 
-    const patient = healthData?.patient;
+    setUiState("PREPARING");
+    setErrorMessage("");
+    setCodeDigits(["", "", "", ""]);
 
-    // Send receipt email (non-blocking, don't delay UI)
-    if ((needsReport || cart.length > 0) && patient?.email) {
-      fetch(`${API_BASE}/api/send-receipt`, {
+    try {
+      // Format cart if applicable
+      const formattedCart = cart.map((item) => ({
+        kit_id: item.kit_id || item._id || item.id,
+        name: item.name,
+        quantity: item.quantity || item.cartQuantity || 1,
+      }));
+
+      const res = await fetch(`${API_BASE}/api/sessions/${activeSessionId}/payment-v2/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patient,
-          cart,
-          totalPrice: finalAmount,
-          needsReport,
-          authorization: authData?.authorization,
+          serviceType,
+          cart: formattedCart,
         }),
-      }).catch(() => {});
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Payment request failed (HTTP ${res.status})`);
+      }
+
+      const data = await res.json();
+      if (!data.ok || !data.paymentUrl) {
+        throw new Error(data.message || "Invalid payment request response from kiosk backend");
+      }
+
+      setRequestId(data.requestId);
+      setPaymentUrl(data.paymentUrl);
+
+      // Amount in rupees
+      const rawAmt = Number(data.amount) || 0;
+      const displayAmt = rawAmt >= 100 ? Math.round(rawAmt / 100) : rawAmt;
+      if (displayAmt > 0) {
+        setAuthoritativeAmount(displayAmt);
+      }
+
+      // Compute expiry TTL
+      const expiresAt = Number(data.expiresAt) || (Date.now() + 300000);
+      const remainingSeconds = Math.max(10, Math.floor((expiresAt - Date.now()) / 1000));
+      setTimeLeft(remainingSeconds);
+
+      setUiState("QR_READY");
+    } catch (err) {
+      console.error("[KioskPaymentV2] Failed to create payment request:", err);
+      setErrorMessage(err.message || "Payment service unavailable. Please try again.");
+      setUiState("ERROR");
+    } finally {
+      isRequestingRef.current = false;
     }
+  }, [activeSessionId, serviceType, cart]);
 
-    // Note: Physical dispensing is handled authoritatively by the backend
-    // (Payment Bridge -> Pi paymentComplete -> FulfillmentManager -> MQTT -> ESP32).
-    // The frontend never triggers motor dispensing directly.
+  // Initial load
+  useEffect(() => {
+    createPaymentRequest();
+  }, [createPaymentRequest]);
 
-    // Navigate after a brief delay to show success message
-    setTimeout(() => {
-      isProcessingRef.current = false;
-      setIsProcessing(false);
-      
-      // If user bought kits along with report, store cart for later
-      if (hasKits && needsReport) {
-        localStorage.setItem('reliv_pending_kits', JSON.stringify(cart));
-      }
-      
-      // Navigate based on purchase type
-      if (needsReport && !hasKits) {
-        // Report only - go to report flow
-        navigate("/report-1", { replace: true });
-      } else if (hasKits) {
-        // Has physical kits - go to order success
-        navigate("/order-success", { replace: true, state: { cart } });
-      } else {
-        navigate("/order-success", { replace: true });
-      }
-    }, 1500);
-  }, [healthData, cart, finalAmount, needsReport, hasKits, navigate]);
-
-  // ── Main payment initiation ──────────────────────────────────────────────
-  const initiatePayment = useCallback(async () => {
-    const now = Date.now();
-    if (now - lastClickTime < DOUBLE_CLICK_PREVENTION_MS) return;
-    setLastClickTime(now);
-
-    if (isProcessingRef.current) return;
-
-    isProcessingRef.current = true;
-    setIsProcessing(true);
-    setPaymentStatus("processing");
-
-    // STOP inactivity timer as soon as payment flow starts
-    stopInactivityTimer();
-
-    if (!isRunMode) {
-      // Simulation mode
-      await new Promise((r) => setTimeout(r, 1800));
-      await completeSuccessfulPayment();
+  // ── 3. Expiry Countdown Timer ────────────────────────────────────────────
+  useEffect(() => {
+    if (uiState !== "QR_READY" && uiState !== "WRONG_CODE" && uiState !== "VERIFYING") {
+      if (expiryTimerRef.current) clearInterval(expiryTimerRef.current);
       return;
     }
 
-    // Real Razorpay flow via Payment Bridge (Render)
-    try {
-      const storedSession = (() => {
-        try {
-          return JSON.parse(
-            sessionStorage.getItem("reliv_customer_session_v1") || "{}"
-          );
-        } catch {
-          return {};
+    expiryTimerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(expiryTimerRef.current);
+          setUiState("EXPIRED");
+          return 0;
         }
-      })();
+        return prev - 1;
+      });
+    }, 1000);
 
-      const kioskId =
-        location.state?.kioskId ||
-        storedSession.kioskId ||
-        localStorage.getItem("reliv_kiosk_id") ||
-        import.meta.env.VITE_DEFAULT_KIOSK_ID ||
-        "RELIV-001";
+    return () => {
+      if (expiryTimerRef.current) clearInterval(expiryTimerRef.current);
+    };
+  }, [uiState]);
 
-      const sessionId =
-        location.state?.sessionId ||
-        storedSession.sessionId ||
-        localStorage.getItem("reliv_session_id");
+  // ── 4. Verify 4-Digit Confirmation Code ──────────────────────────────────
+  const handleConfirmCode = async (codeToVerify) => {
+    const code = codeToVerify || codeDigits.join("");
+    if (code.length !== 4) return;
 
-      const transactionId =
-        location.state?.transactionId ||
-        storedSession.transactionId ||
-        localStorage.getItem("reliv_transaction_id");
+    setUiState("VERIFYING");
+    setErrorMessage("");
 
-      const pairingToken =
-        location.state?.pairingToken ||
-        storedSession.pairingToken ||
-        localStorage.getItem("reliv_pairing_token");
-
-      if (!sessionId || !transactionId) {
-        throw new Error(
-          "Payment session or transaction is missing. Please restart the transaction."
-        );
-      }
-
-      if (!pairingToken) {
-        throw new Error(
-          "Payment pairing token is missing. Please restart the transaction."
-        );
-      }
-
-      const orderData = await createBridgeOrder({
-        sessionId,
-        transactionId,
-        kioskId,
-        amount: finalAmount,
-        currency: "INR",
+    try {
+      const res = await fetch(`${API_BASE}/api/sessions/${activeSessionId}/payment-v2/confirm-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          code,
+        }),
       });
 
-      const orderId = orderData?.orderId;
+      const data = await res.json().catch(() => ({}));
 
-      if (!orderId) {
-        throw new Error("Payment Bridge did not return a Razorpay order ID.");
-      }
-
-      const options = {
-        key: orderData.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: orderData.amount || finalAmount * 100,
-        currency: orderData.currency || "INR",
-        name: "Reliv Health",
-        description: needsReport
-          ? "Health Report Access"
-          : "Medical Kits Purchase",
-        order_id: orderId,
-
-        handler: async (response) => {
-          try {
-            const verificationResult = await verifyBridgePayment({
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature,
-              sessionId,
-              transactionId,
-              kioskId,
-            });
-
-            if (!verificationResult?.success) {
-              throw new Error("Payment Bridge verification failed.");
-            }
-
-            if (
-              !verificationResult.authorization ||
-              !verificationResult.signature
-            ) {
-              throw new Error(
-                "Payment Bridge did not return a valid authorization."
-              );
-            }
-
-            // Payment is cryptographically verified.
-            await completeSuccessfulPayment(verificationResult);
-          } catch (err) {
-            console.error("Payment verification failed:", err);
-
-            setPaymentStatus("failed");
-            isProcessingRef.current = false;
-            setIsProcessing(false);
-            startInactivityTimer();
-          }
-        },
-
-        prefill: {
-          name: healthData?.patient?.name || "",
-          email: healthData?.patient?.email || "",
-          contact: healthData?.patient?.phone || "",
-        },
-
-        theme: {
-          color: "#E85C25",
-        },
-
-        modal: {
-          confirm_close: true,
-          escape: false,
-          ondismiss: () => {
-            if (import.meta.env.DEV) console.log("Razorpay modal dismissed by user");
-            setPaymentStatus("cancelled");
-
-            setTimeout(() => {
-              setPaymentStatus("idle");
-              isProcessingRef.current = false;
-              setIsProcessing(false);
-              startInactivityTimer();
-            }, 3000);
-          },
-        },
-      };
-
-      if (typeof window.Razorpay !== 'function') {
-        setPaymentStatus("failed");
-        setTimeout(() => {
-          setPaymentStatus("idle");
-          isProcessingRef.current = false;
-          setIsProcessing(false);
-          startInactivityTimer();
-        }, 3000);
+      if (res.status === 423 || data.code === "LOCKED") {
+        setUiState("LOCKED");
         return;
       }
 
-      const rzp = new window.Razorpay(options);
+      if (data.code === "EXPIRED" || res.status === 410) {
+        setUiState("EXPIRED");
+        return;
+      }
 
-      rzp.on("payment.failed", (response) => {
-        if (import.meta.env.DEV) console.error("Payment failed:", response.error);
-        setPaymentStatus("failed");
-        
-        // Auto-reset to idle after showing error for 3 seconds
-        setTimeout(() => {
-          setPaymentStatus("idle");
-          isProcessingRef.current = false;
-          setIsProcessing(false);
-          startInactivityTimer();
-        }, 3000);
-      });
+      if (!res.ok || !data.ok) {
+        // Wrong code
+        const remaining = typeof data.attemptsRemaining === "number" ? data.attemptsRemaining : attemptsRemaining - 1;
+        setAttemptsRemaining(Math.max(0, remaining));
+        setCodeDigits(["", "", "", ""]);
+        setErrorMessage(data.message || "Incorrect confirmation code. Please check your phone.");
+        setUiState("WRONG_CODE");
+        return;
+      }
 
-      rzp.open();
-    } catch (err) {
-      if (import.meta.env.DEV) console.error("Payment initiation error:", err);
-      // alert(`Payment failed: ${sanitizeError(err)}`); // Optional: show more detail sanitized
-      setPaymentStatus("failed");
-      
-      // Auto-reset to idle after showing error for 3 seconds
+      // Trusted verification success from local Pi!
+      setUiState("SUCCESS");
+
+      // Mark payment verified in Health Context & storage
+      try {
+        localStorage.setItem("reliv_payment_verified", "true");
+        updateHealth({ paymentVerified: true });
+      } catch {
+        // ignore
+      }
+
+      // Navigate after brief confirmation message
       setTimeout(() => {
-        setPaymentStatus("idle");
-        isProcessingRef.current = false;
-        setIsProcessing(false);
-        startInactivityTimer();
-      }, 3000);
+        if (needsReport && !hasKits) {
+          navigate("/report-1", { replace: true });
+        } else if (hasKits) {
+          navigate("/order-success", { replace: true, state: { cart } });
+        } else {
+          navigate("/order-success", { replace: true });
+        }
+      }, 1800);
+    } catch (err) {
+      console.error("[KioskPaymentV2] Code verification error:", err);
+      setErrorMessage("Could not verify code with kiosk system. Please try again.");
+      setUiState("WRONG_CODE");
     }
-  }, [
-    finalAmount,
-    isRunMode,
-    healthData,
-    needsReport,
-    completeSuccessfulPayment,
-    lastClickTime,
-    stopInactivityTimer,
-    startInactivityTimer,
-  ]);
+  };
 
-  const containerOpacity = isProcessing || paymentStatus !== "idle" ? "opacity-75" : "opacity-100";
-  const pointerEvents = isProcessing || paymentStatus !== "idle" ? "pointer-events-none" : "";
+  // ── 5. On-Screen Touch Keypad Handlers ────────────────────────────────────
+  const handleKeypadPress = (key) => {
+    resetInactivityTimer();
+    if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED") return;
+
+    if (key === "CLEAR") {
+      setCodeDigits(["", "", "", ""]);
+      if (uiState === "WRONG_CODE") setUiState("QR_READY");
+      return;
+    }
+
+    if (key === "BACKSPACE") {
+      const next = [...codeDigits];
+      for (let i = 3; i >= 0; i--) {
+        if (next[i] !== "") {
+          next[i] = "";
+          break;
+        }
+      }
+      setCodeDigits(next);
+      if (uiState === "WRONG_CODE") setUiState("QR_READY");
+      return;
+    }
+
+    // Append digit (0-9)
+    const next = [...codeDigits];
+    const emptyIndex = next.findIndex((d) => d === "");
+    if (emptyIndex !== -1) {
+      next[emptyIndex] = String(key);
+      setCodeDigits(next);
+      if (uiState === "WRONG_CODE") setUiState("QR_READY");
+
+      // Auto-submit when 4th digit is entered
+      if (emptyIndex === 3) {
+        const fullCode = next.join("");
+        handleConfirmCode(fullCode);
+      }
+    }
+  };
+
+  // Format time mm:ss
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  const isCodeComplete = codeDigits.every((d) => d !== "");
 
   return (
-    <div className="relative w-full h-screen bg-gradient-to-b from-white to-orange-50/30 font-sans overflow-y-auto scrollable-container">
-      <TopEllipseBackground color="#FFF1EA" height="65%" />
+    <div className="relative min-h-screen bg-white flex flex-col items-center justify-between px-6 py-6 overflow-hidden select-none font-sans">
+      <TopEllipseBackground height="42%" color="#FFF4EC" />
 
-      <div className={`relative z-10 flex min-h-full flex-col items-center justify-center px-5 transition-all duration-400 ${containerOpacity} ${pointerEvents}`}>
-        <div className="mb-8 scale-110 transform">
-          <Logo />
+      {/* Header with Back Button */}
+      <div className="relative z-10 w-full max-w-xl flex items-center justify-between pt-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white/90 border border-orange-200 text-slate-700 font-semibold text-sm shadow-sm active:scale-95 transition-transform"
+        >
+          <ArrowLeft size={18} className="text-orange-500" />
+          <span>Back</span>
+        </button>
+
+        <Logo size="text-2xl" />
+
+        <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+          <Lock size={14} className="text-emerald-600" />
+          <span>Offline Secure</span>
         </div>
+      </div>
 
-        <div className="w-full max-w-md rounded-2xl bg-white/95 p-8 shadow-xl backdrop-blur-sm ring-1 ring-orange-100">
-          <h1 className="mb-3 text-center text-2xl font-bold text-gray-900 md:text-3xl">
-            {needsReport ? "Your Report is Ready!" : "Complete Your Purchase"}
-          </h1>
+      {/* Main Content Area */}
+      <div className="relative z-10 w-full max-w-xl flex flex-col items-center justify-center flex-grow py-4">
 
-          <p className="mb-2 text-center text-base text-gray-700 leading-relaxed">
-            {needsReport
-              ? `Please pay ₹${finalAmount} to unlock your detailed health report${
-                  cart.length > 0 ? " + selected kits" : ""
-                }`
-              : `Secure payment of ₹${finalAmount} for your medical kits`}
-          </p>
-
-          <p className="mb-6 text-center text-xs text-gray-500">
-            You will be charged exactly ₹{finalAmount}. No hidden fees.
-          </p>
-
-          {/* Main Action Area */}
-          {paymentStatus === "idle" && (
-            <>
-              <button
-                onClick={initiatePayment}
-                disabled={isProcessing}
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-[#E85C25] to-[#f97316] px-8 py-5 text-lg font-bold text-white shadow-lg transition-all hover:shadow-orange-500/30 hover:scale-[1.02] active:scale-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2.5">
-                  Pay ₹{finalAmount}
-                  <svg
-                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </span>
-                <div className="absolute inset-0 scale-x-0 bg-white/20 transition-transform group-hover:scale-x-100 group-active:scale-x-110 origin-left" />
-              </button>
-
-              {cart.length > 0 && (
-                <button
-                  onClick={() => navigate('/checkout', { state: { cart, totalPrice, fromPaymentGate } })}
-                  className="mt-4 w-full rounded-xl bg-white border-2 border-gray-200 px-6 py-3.5 font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back to Checkout
-                </button>
-              )}
-            </>
-          )}
-
-          {/* Status messages */}
-          {paymentStatus === "processing" && (
-            <div className="flex flex-col items-center space-y-4 py-6">
-              <div className="h-12 w-12 animate-spin rounded-full border-4 border-orange-200 border-t-orange-600" />
-              <p className="text-lg font-medium text-orange-700">Processing Secure Payment...</p>
-              <p className="text-sm text-gray-500">Please do not close or refresh</p>
-            </div>
-          )}
-
-          {paymentStatus === "success" && (
-            <div className="rounded-xl bg-green-50 py-10 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
-                <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-bold text-green-800">Payment Successful!</h3>
-              <p className="mt-2 text-green-700">Thank you for choosing Reliv</p>
-              <p className="mt-4 text-sm text-gray-600">Redirecting you now...</p>
-            </div>
-          )}
-
-          {(paymentStatus === "failed" || paymentStatus === "cancelled") && (
-            <div className="rounded-xl bg-gray-50 p-6 text-center border border-gray-200">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-                {paymentStatus === "cancelled" ? (
-                  <svg className="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                )}
-              </div>
-              
-              <h3 className="text-xl font-semibold text-gray-800">
-                {paymentStatus === "cancelled" ? "Payment Cancelled" : "Payment Failed"}
-              </h3>
-              <p className="mt-2 text-sm text-gray-600">
-                {paymentStatus === "cancelled"
-                  ? "No worries! No amount was deducted."
-                  : "Something went wrong. Your money is safe."}
-              </p>
-
-              {/* Action Buttons */}
-              <div className="mt-6 space-y-3">
-                <button
-                  onClick={initiatePayment}
-                  className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3.5 font-semibold text-white shadow-md hover:shadow-lg hover:scale-[1.02] transition-all"
-                >
-                  Try Again →
-                </button>
-                
-                {cart.length > 0 && (
-                  <button
-                    onClick={() => navigate('/checkout', { state: { cart, totalPrice, fromPaymentGate } })}
-                    className="w-full rounded-xl bg-white border-2 border-gray-300 px-6 py-3 font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
-                  >
-                    ← Back to Checkout
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Trust & Help */}
-          <div className="mt-8 text-center text-xs text-gray-500">
-            <div className="flex items-center justify-center gap-1.5">
-              <span>🔒 100% Secure Payment</span>
-              <span className="font-medium text-orange-600">Powered by Razorpay</span>
-            </div>
-            <div className="mt-1.5">All major cards, UPI, Netbanking</div>
+        {/* PREPARING PAYMENT STATE */}
+        {uiState === "PREPARING" && (
+          <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-xl text-center space-y-4 w-full max-w-md animate-fadeIn">
+            <div className="w-14 h-14 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto" />
+            <h2 className="text-xl font-bold text-slate-800">Preparing Secure Payment...</h2>
+            <p className="text-sm text-slate-500">Generating encrypted kiosk QR code</p>
           </div>
+        )}
 
-
-        </div>
-
-        {/* Optional kits upsell */}
-        {fromPaymentGate && cart.length === 0 && paymentStatus === "idle" && !isProcessing && (
-          <div className="mt-10 text-center">
-            <p className="text-sm text-gray-600">Also interested in wellness kits?</p>
+        {/* ERROR STATE */}
+        {uiState === "ERROR" && (
+          <div className="bg-white rounded-3xl p-8 border border-red-200 shadow-xl text-center space-y-5 w-full max-w-md animate-fadeIn">
+            <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto border border-red-200">
+              <AlertCircle size={36} />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800">Payment Service Unavailable</h2>
+            <p className="text-sm text-slate-600">{errorMessage || "Unable to initiate payment on the kiosk."}</p>
             <button
-              onClick={() => navigate("/medicine-dispensing", { state: { fromPaymentGate: true, cart } })}
-              className="mt-2 text-base font-semibold text-orange-600 hover:text-orange-700 hover:underline"
+              onClick={createPaymentRequest}
+              className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
             >
-              Explore Medical Kits →
+              <RefreshCw size={20} />
+              <span>Retry</span>
             </button>
           </div>
         )}
+
+        {/* LOCKED STATE */}
+        {uiState === "LOCKED" && (
+          <div className="bg-white rounded-3xl p-8 border border-red-300 shadow-xl text-center space-y-5 w-full max-w-md animate-fadeIn">
+            <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto border border-red-300">
+              <ShieldAlert size={36} />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Payment Locked</h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Too many incorrect code attempts. For your security, this payment session has been locked.
+            </p>
+            <button
+              onClick={createPaymentRequest}
+              className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all"
+            >
+              Restart Payment Process
+            </button>
+          </div>
+        )}
+
+        {/* EXPIRED STATE */}
+        {uiState === "EXPIRED" && (
+          <div className="bg-white rounded-3xl p-8 border border-amber-200 shadow-xl text-center space-y-5 w-full max-w-md animate-fadeIn">
+            <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+              <Clock size={36} />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Payment QR Expired</h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              The 5-minute payment window has expired. Please generate a new QR code to continue.
+            </p>
+            <button
+              onClick={createPaymentRequest}
+              className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
+            >
+              <RefreshCw size={20} />
+              <span>Generate New QR</span>
+            </button>
+          </div>
+        )}
+
+        {/* SUCCESS STATE */}
+        {uiState === "SUCCESS" && (
+          <div className="bg-white rounded-3xl p-8 border border-emerald-200 shadow-2xl text-center space-y-5 w-full max-w-md animate-scaleUp">
+            <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-300">
+              <CheckCircle2 size={48} className="stroke-[2.5]" />
+            </div>
+            <h2 className="text-3xl font-extrabold text-slate-900">Payment Verified!</h2>
+            <p className="text-base text-slate-600">Starting your health service now...</p>
+            <div className="w-8 h-8 border-4 border-emerald-100 border-t-emerald-500 rounded-full animate-spin mx-auto" />
+          </div>
+        )}
+
+        {/* QR CODE & CONFIRMATION CODE INPUT (QR_READY, VERIFYING, WRONG_CODE) */}
+        {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && (
+          <div className="w-full max-w-lg flex flex-col items-center gap-5">
+
+            {/* Top Title & Price Pill */}
+            <div className="text-center space-y-1">
+              <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
+                <span>₹{authoritativeAmount}</span>
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Scan to Pay</h1>
+              <p className="text-xs text-slate-500">Scan this QR with your phone camera or GPay / PhonePe</p>
+            </div>
+
+            {/* QR Code Container */}
+            <div className="relative p-4 rounded-3xl bg-white border-2 border-orange-100 shadow-lg flex flex-col items-center">
+              {paymentUrl ? (
+                <QRCodeSVG
+                  value={paymentUrl}
+                  size={200}
+                  level="M"
+                  includeMargin={false}
+                  className="rounded-xl"
+                />
+              ) : (
+                <div className="w-[200px] h-[200px] bg-slate-100 rounded-xl flex items-center justify-center text-xs text-slate-400">
+                  Generating QR...
+                </div>
+              )}
+
+              {/* Live Countdown Badge */}
+              <div className="mt-2.5 flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-orange-200 text-xs font-semibold text-orange-700">
+                <Clock size={13} className="text-orange-500 animate-pulse" />
+                <span>Valid for {formatTime(timeLeft)}</span>
+              </div>
+            </div>
+
+            {/* 4-Digit Code Entry Section */}
+            <div className="w-full bg-white/95 rounded-3xl p-4 border border-orange-100 shadow-md flex flex-col items-center space-y-3">
+              <div className="text-center space-y-0.5">
+                <p className="text-xs font-bold text-slate-800">
+                  Enter 4-digit code shown on your phone after payment:
+                </p>
+                {uiState === "WRONG_CODE" && (
+                  <p className="text-xs font-bold text-red-600 animate-shake">
+                    {errorMessage || "Incorrect code."} ({attemptsRemaining} attempts left)
+                  </p>
+                )}
+              </div>
+
+              {/* 4 Digit Boxes */}
+              <div className="flex justify-center items-center gap-3">
+                {codeDigits.map((digit, idx) => {
+                  const isCurrent = codeDigits.findIndex((d) => d === "") === idx;
+                  return (
+                    <div
+                      key={idx}
+                      className={`w-12 h-14 sm:w-14 sm:h-16 rounded-2xl border-2 flex items-center justify-center font-mono text-2xl sm:text-3xl font-extrabold shadow-inner transition-all ${
+                        digit
+                          ? "bg-orange-50 border-orange-500 text-orange-700 scale-105"
+                          : isCurrent
+                          ? "bg-white border-orange-400 animate-pulse"
+                          : "bg-slate-50 border-slate-200 text-slate-400"
+                      }`}
+                    >
+                      {digit || ""}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Confirm Button */}
+              <button
+                onClick={() => handleConfirmCode()}
+                disabled={!isCodeComplete || uiState === "VERIFYING"}
+                className={`w-full py-3.5 rounded-2xl font-bold text-base transition-all shadow-md flex items-center justify-center gap-2 ${
+                  isCodeComplete && uiState !== "VERIFYING"
+                    ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                }`}
+              >
+                {uiState === "VERIFYING" ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Verifying Code...</span>
+                  </>
+                ) : (
+                  <span>Confirm Code</span>
+                )}
+              </button>
+
+              {/* On-Screen Touch Keypad */}
+              <div className="w-full grid grid-cols-3 gap-2 pt-1">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => handleKeypadPress(num)}
+                    disabled={uiState === "VERIFYING"}
+                    className="h-11 rounded-xl bg-orange-50/70 active:bg-orange-200 border border-orange-100 text-slate-900 font-bold text-xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handleKeypadPress("CLEAR")}
+                  disabled={uiState === "VERIFYING"}
+                  className="h-11 rounded-xl bg-slate-100 active:bg-slate-200 border border-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center uppercase shadow-sm active:scale-95"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => handleKeypadPress(0)}
+                  disabled={uiState === "VERIFYING"}
+                  className="h-11 rounded-xl bg-orange-50/70 active:bg-orange-200 border border-orange-100 text-slate-900 font-bold text-xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"
+                >
+                  0
+                </button>
+                <button
+                  onClick={() => handleKeypadPress("BACKSPACE")}
+                  disabled={uiState === "VERIFYING"}
+                  className="h-11 rounded-xl bg-slate-100 active:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center shadow-sm active:scale-95"
+                >
+                  <Delete size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Minimal Footer */}
+      <div className="relative z-10 w-full text-center text-[11px] text-slate-400">
+        Reliv Health System • Secure Offline Payment Gateway
       </div>
     </div>
   );
-};
-
-export default PaymentGate;
+}
