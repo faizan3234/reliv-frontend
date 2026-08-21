@@ -167,10 +167,33 @@ function CustomerDetails() {
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
     if (validateForm()) {
-      update({ patient: form });
-      navigate("/two-options");
+      let currentSid = healthData?.sessionId || localStorage.getItem("reliv_session_id");
+      if (!currentSid || currentSid === "current" || currentSid === "default" || currentSid === "RELIV-001") {
+        try {
+          const fallbackSessionId = generateSessionId();
+          const res = await fetch(`${API_BASE}/api/create-qr-session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: fallbackSessionId }),
+          });
+          if (res.ok) {
+            const sData = await res.json();
+            currentSid = sData.id || sData.sessionId || fallbackSessionId;
+          } else {
+            currentSid = fallbackSessionId;
+          }
+        } catch (e) {
+          currentSid = generateSessionId();
+        }
+      }
+
+      update({ sessionId: currentSid, patient: form });
+      try {
+        localStorage.setItem("reliv_session_id", currentSid);
+      } catch (e) {}
+      navigate("/two-options", { state: { sessionId: currentSid } });
     }
   };
 
@@ -214,7 +237,12 @@ function CustomerDetails() {
     }
   };
 
+  const isCreatingQrSessionRef = useRef(false);
+
   const startQRMode = async () => {
+    if (isCreatingQrSessionRef.current) return;
+    isCreatingQrSessionRef.current = true;
+
     stopQRTasks();
     const requestVersion = ++qrRequestVersionRef.current;
     const fallbackSessionId = generateSessionId();
@@ -234,12 +262,20 @@ function CustomerDetails() {
       if (requestVersion !== qrRequestVersionRef.current) return;
 
       const {
-        sessionId = sessionData.id || fallbackSessionId,
+        sessionId = sessionData.id || sessionData.sessionId || fallbackSessionId,
         pairingToken,
         kioskId = 'RELIV-001',
         kioskUrl = API_BASE,
         path
       } = sessionData;
+
+      const authoritativeSessionId = sessionId;
+
+      // Save real KSK session ID to HealthContext & storage immediately
+      update({ sessionId: authoritativeSessionId });
+      try {
+        localStorage.setItem('reliv_session_id', authoritativeSessionId);
+      } catch (e) {}
 
       const customerBase =
         import.meta.env.VITE_CUSTOMER_WEB_URL ||
@@ -248,7 +284,7 @@ function CustomerDetails() {
       let url;
       if (pairingToken) {
         const params = new URLSearchParams({
-          sessionId,
+          sessionId: authoritativeSessionId,
           pairingToken,
           kioskId,
           kioskUrl
@@ -259,7 +295,7 @@ function CustomerDetails() {
         url = `${qrBase}/${path}`;
       } else {
         const params = new URLSearchParams({
-          sessionId,
+          sessionId: authoritativeSessionId,
           kioskId,
           kioskUrl
         });
@@ -269,7 +305,7 @@ function CustomerDetails() {
       setQrCodeData(url);
 
       // Start polling for customer data with the backend authoritative sessionId
-      startPolling(sessionId, requestVersion);
+      startPolling(authoritativeSessionId, requestVersion);
 
       // Auto-refresh QR before the 10-min backend TTL expires
       qrRefreshTimerRef.current = setTimeout(() => {
@@ -279,14 +315,16 @@ function CustomerDetails() {
       }, 9 * 60 * 1000); // 9 minutes
     } catch (error) {
       console.error('Failed to create QR session:', error);
-      // Retry after 2 seconds
+      // Retry after 3 seconds
       if (requestVersion === qrRequestVersionRef.current) {
         qrRetryTimerRef.current = setTimeout(() => {
           if (requestVersion === qrRequestVersionRef.current) {
             startQRMode();
           }
-        }, 2000);
+        }, 3000);
       }
+    } finally {
+      isCreatingQrSessionRef.current = false;
     }
   };
 

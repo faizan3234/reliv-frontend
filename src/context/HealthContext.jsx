@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { API_BASE } from "../config/api";
 
 const defaultData = {
+  sessionId: "",
   patient: {
     name: "",
     age: "",
@@ -52,6 +53,7 @@ export function HealthProvider({ children }) {
       return {
         ...defaultData,
         ...parsed,
+        sessionId: parsed.sessionId || localStorage.getItem("reliv_session_id") || "",
         patient: { ...defaultData.patient, ...parsed.patient },
         vitals: { ...defaultData.vitals, ...parsed.vitals },
         history: Array.isArray(parsed.history) ? parsed.history : [],
@@ -64,6 +66,9 @@ export function HealthProvider({ children }) {
   useEffect(() => {
     try {
       localStorage.setItem("healthData", JSON.stringify(data));
+      if (data.sessionId) {
+        localStorage.setItem("reliv_session_id", data.sessionId);
+      }
     } catch (e) {}
   }, [data]);
 
@@ -92,11 +97,15 @@ export function HealthProvider({ children }) {
       const next = {
         ...prev,
         ...(partial || {}),
+        sessionId: partial?.sessionId !== undefined ? partial.sessionId : (prev.sessionId || ""),
         patient: { ...prev.patient, ...(partial?.patient || {}) },
         vitals: { ...prev.vitals, ...(partial?.vitals || {}) },
       };
       try {
         localStorage.setItem("healthData", JSON.stringify(next));
+        if (next.sessionId) {
+          localStorage.setItem("reliv_session_id", next.sessionId);
+        }
       } catch (e) {}
       return next;
     });
@@ -105,6 +114,8 @@ export function HealthProvider({ children }) {
   const resetHealth = () => {
     try {
       localStorage.removeItem("healthData");
+      localStorage.removeItem("reliv_session_id");
+      sessionStorage.removeItem("reliv_session_id");
     } catch (e) {}
     setData(defaultData);
   };

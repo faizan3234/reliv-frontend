@@ -7,7 +7,7 @@ import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
-import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Delete } from "lucide-react";
+import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Delete, Home } from "lucide-react";
 
 const INACTIVITY_TIMEOUT = 120000; // 2 minutes inactivity timeout
 
@@ -22,16 +22,26 @@ export default function PaymentGate() {
   const needsReport = fromPaymentGate || !hasKits;
   const serviceType = hasKits ? "MEDICINE" : "HEALTH_CHECKUP";
 
-  // Resolve active sessionId from context or storage
-  const activeSessionId =
+  // Resolve authoritative sessionId strictly from context or storage (NEVER fallback to "current" or "default")
+  const rawSessionId =
     location.state?.sessionId ||
     healthData?.sessionId ||
     healthData?.patient?.sessionId ||
     localStorage.getItem("reliv_session_id") ||
     sessionStorage.getItem("reliv_session_id") ||
-    "current";
+    "";
 
-  // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR'
+  const activeSessionId = typeof rawSessionId === "string" ? rawSessionId.trim() : "";
+
+  const isValidSession = Boolean(
+    activeSessionId &&
+    activeSessionId.length > 0 &&
+    activeSessionId !== "current" &&
+    activeSessionId !== "default" &&
+    activeSessionId !== "RELIV-001"
+  );
+
+  // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR' | 'SESSION_INVALID'
   const [uiState, setUiState] = useState("PREPARING");
   const [paymentUrl, setPaymentUrl] = useState("");
   const [authoritativeAmount, setAuthoritativeAmount] = useState(totalPrice > 0 ? totalPrice : 27);
@@ -66,8 +76,14 @@ export default function PaymentGate() {
     };
   }, [resetInactivityTimer]);
 
-  // ── 2. Create Fresh Payment Request ───────────────────────────────────────
+  // ── 2. Create Fresh Payment Request on Local Pi ───────────────────────────
   const createNewPaymentRequest = useCallback(async () => {
+    if (!isValidSession) {
+      setErrorMessage("Payment session unavailable. Please restart this session.");
+      setUiState("SESSION_INVALID");
+      return;
+    }
+
     if (isRequestingRef.current) return;
     isRequestingRef.current = true;
 
@@ -82,7 +98,7 @@ export default function PaymentGate() {
         quantity: item.quantity || item.cartQuantity || 1,
       }));
 
-      const reqRes = await fetch(`${API_BASE}/api/sessions/${activeSessionId}/payment-v2/request`, {
+      const reqRes = await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -121,10 +137,16 @@ export default function PaymentGate() {
     } finally {
       isRequestingRef.current = false;
     }
-  }, [activeSessionId, serviceType, cart]);
+  }, [isValidSession, activeSessionId, serviceType, cart]);
 
   // ── 3. Initialize / Restore Payment State using Pi Status Endpoint ───────
   const initPaymentFlow = useCallback(async () => {
+    if (!isValidSession) {
+      setErrorMessage("Payment session unavailable. Please restart this session.");
+      setUiState("SESSION_INVALID");
+      return;
+    }
+
     if (isRequestingRef.current) return;
     isRequestingRef.current = true;
 
@@ -135,7 +157,7 @@ export default function PaymentGate() {
       // Query local Pi payment status first
       let statusData = null;
       try {
-        const statusRes = await fetch(`${API_BASE}/api/sessions/${activeSessionId}/payment-v2/status`);
+        const statusRes = await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/status`);
         if (statusRes.ok) {
           statusData = await statusRes.json();
         }
@@ -204,7 +226,7 @@ export default function PaymentGate() {
     } finally {
       isRequestingRef.current = false;
     }
-  }, [activeSessionId, needsReport, hasKits, navigate, updateHealth, createNewPaymentRequest]);
+  }, [isValidSession, activeSessionId, needsReport, hasKits, navigate, updateHealth, createNewPaymentRequest]);
 
   // Initial load: Query status then restore or create
   useEffect(() => {
@@ -236,6 +258,12 @@ export default function PaymentGate() {
 
   // ── 5. Verify 4-Digit Confirmation Code with Pi ──────────────────────────
   const handleConfirmCode = async (codeToVerify) => {
+    if (!isValidSession) {
+      setErrorMessage("Payment session unavailable. Please restart this session.");
+      setUiState("SESSION_INVALID");
+      return;
+    }
+
     const code = codeToVerify || codeDigits.join("");
     if (code.length !== 4) return;
 
@@ -243,7 +271,7 @@ export default function PaymentGate() {
     setErrorMessage("");
 
     try {
-      const res = await fetch(`${API_BASE}/api/sessions/${activeSessionId}/payment-v2/confirm-code`, {
+      const res = await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/confirm-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -298,7 +326,7 @@ export default function PaymentGate() {
   // ── 6. On-Screen Touch Keypad Handlers ────────────────────────────────────
   const handleKeypadPress = (key) => {
     resetInactivityTimer();
-    if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED") return;
+    if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED" || uiState === "SESSION_INVALID") return;
 
     if (key === "CLEAR") {
       setCodeDigits(["", "", "", ""]);
@@ -375,6 +403,28 @@ export default function PaymentGate() {
             <div className="w-14 h-14 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto" />
             <h2 className="text-xl font-bold text-slate-800">Preparing Secure Payment...</h2>
             <p className="text-sm text-slate-500">Checking payment state with kiosk backend</p>
+          </div>
+        )}
+
+        {/* SESSION_INVALID STATE (Fail-closed when no valid session exists) */}
+        {uiState === "SESSION_INVALID" && (
+          <div className="bg-white rounded-3xl p-8 border border-red-200 shadow-xl text-center space-y-5 w-full max-w-md animate-fadeIn">
+            <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto border border-red-200">
+              <AlertCircle size={36} />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800">Payment Session Unavailable</h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {errorMessage || "Payment session unavailable. Please restart this session."}
+            </p>
+            <button
+              onClick={() => {
+                window.location.href = "/";
+              }}
+              className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
+            >
+              <Home size={20} />
+              <span>Start New Session</span>
+            </button>
           </div>
         )}
 
