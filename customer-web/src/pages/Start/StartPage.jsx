@@ -48,7 +48,7 @@ export function StartPage({ sessionStore }) {
           Reliv Health
         </h2>
         <p className="text-sm text-slate-600">
-          {hasValidSession ? 'Your health and payment session is ready' : 'Secure Health & Payment Companion'}
+          {hasValidSession ? 'Your health and payment session is ready' : 'Secure Payment Companion'}
         </p>
       </div>
 
@@ -72,9 +72,9 @@ export function StartPage({ sessionStore }) {
           </>
         ) : (
           <div className="text-center py-2 space-y-2.5">
-            <h3 className="text-base font-semibold text-slate-900">Scan Kiosk QR Code</h3>
+            <h3 className="text-base font-semibold text-slate-900">No active payment session</h3>
             <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
-              Scan the QR code displayed on a Reliv Health Kiosk to complete your payment or view your health report.
+              Scan the payment QR displayed on a Reliv kiosk to continue.
             </p>
           </div>
         )}
