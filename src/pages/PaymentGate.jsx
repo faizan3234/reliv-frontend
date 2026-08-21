@@ -119,10 +119,10 @@ export default function PaymentGate() {
 
       // Backend must return a valid authoritative amount in paise
       const rawPaise = Number(reqData.amount);
-      if (!rawPaise || rawPaise <= 0 || isNaN(rawPaise)) {
+      if (!Number.isInteger(rawPaise) || rawPaise <= 0) {
         throw new Error("Unable to load the payment amount. Please restart payment.");
       }
-      const displayRupees = Math.round(rawPaise / 100);
+      const displayRupees = rawPaise / 100;
       setAuthoritativeAmount(displayRupees);
 
       setRequestId(reqData.requestId);
@@ -195,10 +195,10 @@ export default function PaymentGate() {
       ) {
         // Backend must return a valid authoritative amount in paise
         const rawPaise = Number(statusData.amount);
-        if (!rawPaise || rawPaise <= 0 || isNaN(rawPaise)) {
+        if (!Number.isInteger(rawPaise) || rawPaise <= 0) {
           throw new Error("Unable to load the payment amount. Please restart payment.");
         }
-        const displayRupees = Math.round(rawPaise / 100);
+        const displayRupees = rawPaise / 100;
         setAuthoritativeAmount(displayRupees);
 
         setRequestId(statusData.requestId);
@@ -379,6 +379,12 @@ export default function PaymentGate() {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
+  // Format rupees display without losing paise precision (e.g. 27 -> "27", 170.5 -> "170.50", 170.05 -> "170.05")
+  const formatRupees = (amount) => {
+    if (typeof amount !== "number" || isNaN(amount)) return "";
+    return Number.isInteger(amount) ? amount.toString() : amount.toFixed(2);
+  };
+
   const isCodeComplete = codeDigits.every((d) => d !== "");
 
   return (
@@ -514,7 +520,7 @@ export default function PaymentGate() {
             <div className="text-center space-y-1">
               {authoritativeAmount !== null && (
                 <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
-                  <span>₹{authoritativeAmount}</span>
+                  <span>₹{formatRupees(authoritativeAmount)}</span>
                 </div>
               )}
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Secure Payment</h1>
