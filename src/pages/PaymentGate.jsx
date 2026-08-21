@@ -22,6 +22,9 @@ export default function PaymentGate() {
   const needsReport = fromPaymentGate || !hasKits;
   const serviceType = hasKits ? "MEDICINE" : "HEALTH_CHECKUP";
 
+  // Initial display amount in Rupees (defaults to ₹27 for health checkup, or passed cart total)
+  const initialRupees = totalPrice > 0 ? Math.round(totalPrice) : 27;
+
   // Resolve authoritative sessionId strictly from context or storage (NEVER fallback to "current" or "default")
   const rawSessionId =
     location.state?.sessionId ||
@@ -44,7 +47,7 @@ export default function PaymentGate() {
   // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR' | 'SESSION_INVALID'
   const [uiState, setUiState] = useState("PREPARING");
   const [paymentUrl, setPaymentUrl] = useState("");
-  const [authoritativeAmount, setAuthoritativeAmount] = useState(totalPrice > 0 ? totalPrice : 27);
+  const [authoritativeAmount, setAuthoritativeAmount] = useState(initialRupees);
   const [requestId, setRequestId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [attemptsRemaining, setAttemptsRemaining] = useState(5);
@@ -120,9 +123,10 @@ export default function PaymentGate() {
       setRequestId(reqData.requestId);
       setPaymentUrl(reqData.paymentUrl);
 
-      const rawAmt = Number(reqData.amount) || 0;
-      const displayAmt = rawAmt >= 100 ? Math.round(rawAmt / 100) : rawAmt;
-      if (displayAmt > 0) setAuthoritativeAmount(displayAmt);
+      // Backend returns amount in paise; convert to Rupees (e.g. 17000 paise -> ₹170, 2700 paise -> ₹27)
+      const rawPaise = Number(reqData.amount) || 0;
+      const displayRupees = rawPaise > 0 ? Math.round(rawPaise / 100) : (totalPrice > 0 ? Math.round(totalPrice) : 27);
+      setAuthoritativeAmount(displayRupees);
 
       const expiresAt = Number(reqData.expiresAt) || (Date.now() + 300000);
       const remainingSeconds = Math.max(10, Math.floor((expiresAt - Date.now()) / 1000));
@@ -137,7 +141,7 @@ export default function PaymentGate() {
     } finally {
       isRequestingRef.current = false;
     }
-  }, [isValidSession, activeSessionId, serviceType, cart]);
+  }, [isValidSession, activeSessionId, serviceType, cart, totalPrice]);
 
   // ── 3. Initialize / Restore Payment State using Pi Status Endpoint ───────
   const initPaymentFlow = useCallback(async () => {
@@ -191,9 +195,11 @@ export default function PaymentGate() {
       ) {
         setRequestId(statusData.requestId);
         setPaymentUrl(statusData.paymentUrl);
-        const rawAmt = Number(statusData.amount) || 0;
-        const displayAmt = rawAmt >= 100 ? Math.round(rawAmt / 100) : rawAmt;
-        if (displayAmt > 0) setAuthoritativeAmount(displayAmt);
+
+        // Convert paise to Rupees accurately
+        const rawPaise = Number(statusData.amount) || 0;
+        const displayRupees = rawPaise > 0 ? Math.round(rawPaise / 100) : (totalPrice > 0 ? Math.round(totalPrice) : 27);
+        setAuthoritativeAmount(displayRupees);
 
         const remainingSeconds = Math.max(10, Math.floor((statusData.expiresAt - now) / 1000));
         setTimeLeft(remainingSeconds);
@@ -226,7 +232,7 @@ export default function PaymentGate() {
     } finally {
       isRequestingRef.current = false;
     }
-  }, [isValidSession, activeSessionId, needsReport, hasKits, navigate, updateHealth, createNewPaymentRequest]);
+  }, [isValidSession, activeSessionId, needsReport, hasKits, navigate, updateHealth, createNewPaymentRequest, totalPrice]);
 
   // Initial load: Query status then restore or create
   useEffect(() => {
@@ -373,11 +379,11 @@ export default function PaymentGate() {
   const isCodeComplete = codeDigits.every((d) => d !== "");
 
   return (
-    <div className="relative min-h-screen bg-white flex flex-col items-center justify-between px-6 py-6 overflow-hidden select-none font-sans">
-      <TopEllipseBackground height="42%" color="#FFF4EC" />
+    <div className="relative min-h-screen bg-white flex flex-col items-center justify-between px-4 py-4 overflow-y-auto font-sans select-none">
+      <TopEllipseBackground height="35%" color="#FFF4EC" />
 
       {/* Header with Back Button */}
-      <div className="relative z-10 w-full max-w-xl flex items-center justify-between pt-2">
+      <div className="relative z-10 w-full max-w-lg flex items-center justify-between pt-1">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white/90 border border-orange-200 text-slate-700 font-semibold text-sm shadow-sm active:scale-95 transition-transform"
@@ -395,14 +401,14 @@ export default function PaymentGate() {
       </div>
 
       {/* Main Content Area */}
-      <div className="relative z-10 w-full max-w-xl flex flex-col items-center justify-center flex-grow py-4">
+      <div className="relative z-10 w-full max-w-lg flex flex-col items-center justify-center flex-grow py-3">
 
         {/* PREPARING PAYMENT STATE */}
         {uiState === "PREPARING" && (
           <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-xl text-center space-y-4 w-full max-w-md animate-fadeIn">
             <div className="w-14 h-14 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto" />
             <h2 className="text-xl font-bold text-slate-800">Preparing Secure Payment...</h2>
-            <p className="text-sm text-slate-500">Checking payment state with kiosk backend</p>
+            <p className="text-sm text-slate-500">Connecting with kiosk payment engine</p>
           </div>
         )}
 
@@ -499,45 +505,51 @@ export default function PaymentGate() {
 
         {/* QR CODE & CONFIRMATION CODE INPUT (QR_READY, VERIFYING, WRONG_CODE) */}
         {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && (
-          <div className="w-full max-w-lg flex flex-col items-center gap-5">
+          <div className="w-full max-w-md flex flex-col items-center gap-4">
 
             {/* Top Title & Price Pill */}
             <div className="text-center space-y-1">
-              <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
+              <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
                 <span>₹{authoritativeAmount}</span>
               </div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Scan to Pay</h1>
-              <p className="text-xs text-slate-500">Scan this QR with your phone camera or GPay / PhonePe</p>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Secure Payment</h1>
             </div>
 
-            {/* QR Code Container */}
-            <div className="relative p-4 rounded-3xl bg-white border-2 border-orange-100 shadow-lg flex flex-col items-center">
+            {/* Large High-Scannability QR Code Container (360x360 QR with quiet zone) */}
+            <div className="relative p-3 rounded-3xl bg-white border-2 border-orange-200 shadow-xl flex flex-col items-center">
               {paymentUrl ? (
-                <QRCodeSVG
-                  value={paymentUrl}
-                  size={200}
-                  level="M"
-                  includeMargin={false}
-                  className="rounded-xl"
-                />
+                <div className="bg-white p-2 rounded-2xl">
+                  <QRCodeSVG
+                    value={paymentUrl}
+                    size={360}
+                    level="M"
+                    marginSize={2}
+                    className="w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] block"
+                  />
+                </div>
               ) : (
-                <div className="w-[200px] h-[200px] bg-slate-100 rounded-xl flex items-center justify-center text-xs text-slate-400">
+                <div className="w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] bg-slate-100 rounded-2xl flex items-center justify-center text-xs text-slate-400">
                   Generating QR...
                 </div>
               )}
 
+              {/* Subtitle directly below QR */}
+              <p className="text-xs font-semibold text-slate-600 mt-2">
+                Scan with your phone camera
+              </p>
+
               {/* Live Countdown Badge */}
-              <div className="mt-2.5 flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-orange-200 text-xs font-semibold text-orange-700">
+              <div className="mt-1.5 flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-orange-200 text-xs font-semibold text-orange-700">
                 <Clock size={13} className="text-orange-500 animate-pulse" />
                 <span>Valid for {formatTime(timeLeft)}</span>
               </div>
             </div>
 
             {/* 4-Digit Code Entry Section */}
-            <div className="w-full bg-white/95 rounded-3xl p-4 border border-orange-100 shadow-md flex flex-col items-center space-y-3">
+            <div className="w-full bg-white rounded-3xl p-4 border border-orange-100 shadow-md flex flex-col items-center space-y-3">
               <div className="text-center space-y-0.5">
                 <p className="text-xs font-bold text-slate-800">
-                  Enter 4-digit code shown on your phone after payment:
+                  Complete payment and enter the 4-digit code below:
                 </p>
                 {uiState === "WRONG_CODE" && (
                   <p className="text-xs font-bold text-red-600 animate-shake">
@@ -546,7 +558,7 @@ export default function PaymentGate() {
                 )}
               </div>
 
-              {/* 4 Digit Boxes */}
+              {/* 4 Large Digit Boxes */}
               <div className="flex justify-center items-center gap-3">
                 {codeDigits.map((digit, idx) => {
                   const isCurrent = codeDigits.findIndex((d) => d === "") === idx;
@@ -571,7 +583,7 @@ export default function PaymentGate() {
               <button
                 onClick={() => handleConfirmCode()}
                 disabled={!isCodeComplete || uiState === "VERIFYING"}
-                className={`w-full py-3.5 rounded-2xl font-bold text-base transition-all shadow-md flex items-center justify-center gap-2 ${
+                className={`w-full py-3 rounded-2xl font-bold text-base transition-all shadow-md flex items-center justify-center gap-2 ${
                   isCodeComplete && uiState !== "VERIFYING"
                     ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98"
                     : "bg-slate-200 text-slate-400 cursor-not-allowed"
@@ -587,7 +599,7 @@ export default function PaymentGate() {
                 )}
               </button>
 
-              {/* On-Screen Touch Keypad */}
+              {/* On-Screen Touch Numeric Keypad */}
               <div className="w-full grid grid-cols-3 gap-2 pt-1">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                   <button
@@ -627,7 +639,7 @@ export default function PaymentGate() {
       </div>
 
       {/* Minimal Footer */}
-      <div className="relative z-10 w-full text-center text-[11px] text-slate-400">
+      <div className="relative z-10 w-full text-center text-[11px] text-slate-400 py-1">
         Reliv Health System • Secure Offline Payment Gateway
       </div>
     </div>
