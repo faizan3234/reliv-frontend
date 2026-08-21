@@ -66,8 +66,8 @@ export default function PaymentGate() {
     };
   }, [resetInactivityTimer]);
 
-  // ── 2. Create Payment Request on Local Pi ─────────────────────────────────
-  const createPaymentRequest = useCallback(async () => {
+  // ── 2. Create Fresh Payment Request ───────────────────────────────────────
+  const createNewPaymentRequest = useCallback(async () => {
     if (isRequestingRef.current) return;
     isRequestingRef.current = true;
 
@@ -76,14 +76,13 @@ export default function PaymentGate() {
     setCodeDigits(["", "", "", ""]);
 
     try {
-      // Format cart if applicable
       const formattedCart = cart.map((item) => ({
         kit_id: item.kit_id || item._id || item.id,
         name: item.name,
         quantity: item.quantity || item.cartQuantity || 1,
       }));
 
-      const res = await fetch(`${API_BASE}/api/sessions/${activeSessionId}/payment-v2/request`, {
+      const reqRes = await fetch(`${API_BASE}/api/sessions/${activeSessionId}/payment-v2/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -92,30 +91,27 @@ export default function PaymentGate() {
         }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || `Payment request failed (HTTP ${res.status})`);
+      if (!reqRes.ok) {
+        const errData = await reqRes.json().catch(() => ({}));
+        throw new Error(errData.message || `Payment request failed (HTTP ${reqRes.status})`);
       }
 
-      const data = await res.json();
-      if (!data.ok || !data.paymentUrl) {
-        throw new Error(data.message || "Invalid payment request response from kiosk backend");
+      const reqData = await reqRes.json();
+      if (!reqData.ok || !reqData.paymentUrl) {
+        throw new Error(reqData.message || "Invalid payment request response from kiosk backend");
       }
 
-      setRequestId(data.requestId);
-      setPaymentUrl(data.paymentUrl);
+      setRequestId(reqData.requestId);
+      setPaymentUrl(reqData.paymentUrl);
 
-      // Amount in rupees
-      const rawAmt = Number(data.amount) || 0;
+      const rawAmt = Number(reqData.amount) || 0;
       const displayAmt = rawAmt >= 100 ? Math.round(rawAmt / 100) : rawAmt;
-      if (displayAmt > 0) {
-        setAuthoritativeAmount(displayAmt);
-      }
+      if (displayAmt > 0) setAuthoritativeAmount(displayAmt);
 
-      // Compute expiry TTL
-      const expiresAt = Number(data.expiresAt) || (Date.now() + 300000);
+      const expiresAt = Number(reqData.expiresAt) || (Date.now() + 300000);
       const remainingSeconds = Math.max(10, Math.floor((expiresAt - Date.now()) / 1000));
       setTimeLeft(remainingSeconds);
+      setAttemptsRemaining(5);
 
       setUiState("QR_READY");
     } catch (err) {
@@ -127,12 +123,95 @@ export default function PaymentGate() {
     }
   }, [activeSessionId, serviceType, cart]);
 
-  // Initial load
-  useEffect(() => {
-    createPaymentRequest();
-  }, [createPaymentRequest]);
+  // ── 3. Initialize / Restore Payment State using Pi Status Endpoint ───────
+  const initPaymentFlow = useCallback(async () => {
+    if (isRequestingRef.current) return;
+    isRequestingRef.current = true;
 
-  // ── 3. Expiry Countdown Timer ────────────────────────────────────────────
+    setUiState("PREPARING");
+    setErrorMessage("");
+
+    try {
+      // Query local Pi payment status first
+      let statusData = null;
+      try {
+        const statusRes = await fetch(`${API_BASE}/api/sessions/${activeSessionId}/payment-v2/status`);
+        if (statusRes.ok) {
+          statusData = await statusRes.json();
+        }
+      } catch (statusErr) {
+        console.warn("[KioskPaymentV2] Could not check initial status:", statusErr.message);
+      }
+
+      // Check 1: If Pi backend already verified payment for this session
+      if (statusData && (statusData.paymentVerified || statusData.status === "VERIFIED")) {
+        setUiState("SUCCESS");
+        updateHealth({ paymentVerified: true });
+        setTimeout(() => {
+          if (needsReport && !hasKits) {
+            navigate("/report-1", { replace: true });
+          } else if (hasKits) {
+            navigate("/order-success", { replace: true, state: { cart } });
+          } else {
+            navigate("/order-success", { replace: true });
+          }
+        }, 1200);
+        return;
+      }
+
+      // Check 2: If active request exists and is not expired
+      const now = Date.now();
+      if (
+        statusData &&
+        statusData.status === "ACTIVE" &&
+        statusData.paymentUrl &&
+        statusData.expiresAt > now
+      ) {
+        setRequestId(statusData.requestId);
+        setPaymentUrl(statusData.paymentUrl);
+        const rawAmt = Number(statusData.amount) || 0;
+        const displayAmt = rawAmt >= 100 ? Math.round(rawAmt / 100) : rawAmt;
+        if (displayAmt > 0) setAuthoritativeAmount(displayAmt);
+
+        const remainingSeconds = Math.max(10, Math.floor((statusData.expiresAt - now) / 1000));
+        setTimeLeft(remainingSeconds);
+        if (typeof statusData.attemptsRemaining === "number") {
+          setAttemptsRemaining(statusData.attemptsRemaining);
+        }
+        setUiState("QR_READY");
+        return;
+      }
+
+      // Check 3: If locked on Pi
+      if (statusData && statusData.status === "LOCKED") {
+        setUiState("LOCKED");
+        return;
+      }
+
+      // Check 4: If expired on Pi
+      if (statusData && (statusData.status === "EXPIRED" || (statusData.expiresAt && statusData.expiresAt <= now))) {
+        setUiState("EXPIRED");
+        return;
+      }
+
+      // Otherwise, request a new payment package from local Pi backend
+      isRequestingRef.current = false;
+      await createNewPaymentRequest();
+    } catch (err) {
+      console.error("[KioskPaymentV2] Payment flow initialization error:", err);
+      setErrorMessage(err.message || "Payment service unavailable. Please try again.");
+      setUiState("ERROR");
+    } finally {
+      isRequestingRef.current = false;
+    }
+  }, [activeSessionId, needsReport, hasKits, navigate, updateHealth, createNewPaymentRequest]);
+
+  // Initial load: Query status then restore or create
+  useEffect(() => {
+    initPaymentFlow();
+  }, [initPaymentFlow]);
+
+  // ── 4. Expiry Countdown Timer ────────────────────────────────────────────
   useEffect(() => {
     if (uiState !== "QR_READY" && uiState !== "WRONG_CODE" && uiState !== "VERIFYING") {
       if (expiryTimerRef.current) clearInterval(expiryTimerRef.current);
@@ -155,7 +234,7 @@ export default function PaymentGate() {
     };
   }, [uiState]);
 
-  // ── 4. Verify 4-Digit Confirmation Code ──────────────────────────────────
+  // ── 5. Verify 4-Digit Confirmation Code with Pi ──────────────────────────
   const handleConfirmCode = async (codeToVerify) => {
     const code = codeToVerify || codeDigits.join("");
     if (code.length !== 4) return;
@@ -195,16 +274,9 @@ export default function PaymentGate() {
         return;
       }
 
-      // Trusted verification success from local Pi!
+      // Authoritative verification success from local Pi!
       setUiState("SUCCESS");
-
-      // Mark payment verified in Health Context & storage
-      try {
-        localStorage.setItem("reliv_payment_verified", "true");
-        updateHealth({ paymentVerified: true });
-      } catch {
-        // ignore
-      }
+      updateHealth({ paymentVerified: true });
 
       // Navigate after brief confirmation message
       setTimeout(() => {
@@ -223,7 +295,7 @@ export default function PaymentGate() {
     }
   };
 
-  // ── 5. On-Screen Touch Keypad Handlers ────────────────────────────────────
+  // ── 6. On-Screen Touch Keypad Handlers ────────────────────────────────────
   const handleKeypadPress = (key) => {
     resetInactivityTimer();
     if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED") return;
@@ -302,7 +374,7 @@ export default function PaymentGate() {
           <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-xl text-center space-y-4 w-full max-w-md animate-fadeIn">
             <div className="w-14 h-14 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto" />
             <h2 className="text-xl font-bold text-slate-800">Preparing Secure Payment...</h2>
-            <p className="text-sm text-slate-500">Generating encrypted kiosk QR code</p>
+            <p className="text-sm text-slate-500">Checking payment state with kiosk backend</p>
           </div>
         )}
 
@@ -315,7 +387,7 @@ export default function PaymentGate() {
             <h2 className="text-xl font-bold text-slate-800">Payment Service Unavailable</h2>
             <p className="text-sm text-slate-600">{errorMessage || "Unable to initiate payment on the kiosk."}</p>
             <button
-              onClick={createPaymentRequest}
+              onClick={createNewPaymentRequest}
               className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
             >
               <RefreshCw size={20} />
@@ -335,7 +407,7 @@ export default function PaymentGate() {
               Too many incorrect code attempts. For your security, this payment session has been locked.
             </p>
             <button
-              onClick={createPaymentRequest}
+              onClick={createNewPaymentRequest}
               className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all"
             >
               Restart Payment Process
@@ -354,7 +426,7 @@ export default function PaymentGate() {
               The 5-minute payment window has expired. Please generate a new QR code to continue.
             </p>
             <button
-              onClick={createPaymentRequest}
+              onClick={createNewPaymentRequest}
               className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
             >
               <RefreshCw size={20} />
