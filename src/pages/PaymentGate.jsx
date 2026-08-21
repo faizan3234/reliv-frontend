@@ -17,13 +17,10 @@ export default function PaymentGate() {
   const location = useLocation();
   const { data: healthData, update: updateHealth } = useHealth();
 
-  const { cart = [], totalPrice = 0, fromPaymentGate = false } = location.state || {};
+  const { cart = [], fromPaymentGate = false } = location.state || {};
   const hasKits = cart.length > 0;
   const needsReport = fromPaymentGate || !hasKits;
   const serviceType = hasKits ? "MEDICINE" : "HEALTH_CHECKUP";
-
-  // Initial display amount in Rupees (defaults to ₹27 for health checkup, or passed cart total)
-  const initialRupees = totalPrice > 0 ? Math.round(totalPrice) : 27;
 
   // Resolve authoritative sessionId strictly from context or storage (NEVER fallback to "current" or "default")
   const rawSessionId =
@@ -47,7 +44,7 @@ export default function PaymentGate() {
   // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR' | 'SESSION_INVALID'
   const [uiState, setUiState] = useState("PREPARING");
   const [paymentUrl, setPaymentUrl] = useState("");
-  const [authoritativeAmount, setAuthoritativeAmount] = useState(initialRupees);
+  const [authoritativeAmount, setAuthoritativeAmount] = useState(null);
   const [requestId, setRequestId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [attemptsRemaining, setAttemptsRemaining] = useState(5);
@@ -120,13 +117,16 @@ export default function PaymentGate() {
         throw new Error(reqData.message || "Invalid payment request response from kiosk backend");
       }
 
+      // Backend must return a valid authoritative amount in paise
+      const rawPaise = Number(reqData.amount);
+      if (!rawPaise || rawPaise <= 0 || isNaN(rawPaise)) {
+        throw new Error("Unable to load the payment amount. Please restart payment.");
+      }
+      const displayRupees = Math.round(rawPaise / 100);
+      setAuthoritativeAmount(displayRupees);
+
       setRequestId(reqData.requestId);
       setPaymentUrl(reqData.paymentUrl);
-
-      // Backend returns amount in paise; convert to Rupees (e.g. 17000 paise -> ₹170, 2700 paise -> ₹27)
-      const rawPaise = Number(reqData.amount) || 0;
-      const displayRupees = rawPaise > 0 ? Math.round(rawPaise / 100) : (totalPrice > 0 ? Math.round(totalPrice) : 27);
-      setAuthoritativeAmount(displayRupees);
 
       const expiresAt = Number(reqData.expiresAt) || (Date.now() + 300000);
       const remainingSeconds = Math.max(10, Math.floor((expiresAt - Date.now()) / 1000));
@@ -141,7 +141,7 @@ export default function PaymentGate() {
     } finally {
       isRequestingRef.current = false;
     }
-  }, [isValidSession, activeSessionId, serviceType, cart, totalPrice]);
+  }, [isValidSession, activeSessionId, serviceType, cart]);
 
   // ── 3. Initialize / Restore Payment State using Pi Status Endpoint ───────
   const initPaymentFlow = useCallback(async () => {
@@ -193,13 +193,16 @@ export default function PaymentGate() {
         statusData.paymentUrl &&
         statusData.expiresAt > now
       ) {
+        // Backend must return a valid authoritative amount in paise
+        const rawPaise = Number(statusData.amount);
+        if (!rawPaise || rawPaise <= 0 || isNaN(rawPaise)) {
+          throw new Error("Unable to load the payment amount. Please restart payment.");
+        }
+        const displayRupees = Math.round(rawPaise / 100);
+        setAuthoritativeAmount(displayRupees);
+
         setRequestId(statusData.requestId);
         setPaymentUrl(statusData.paymentUrl);
-
-        // Convert paise to Rupees accurately
-        const rawPaise = Number(statusData.amount) || 0;
-        const displayRupees = rawPaise > 0 ? Math.round(rawPaise / 100) : (totalPrice > 0 ? Math.round(totalPrice) : 27);
-        setAuthoritativeAmount(displayRupees);
 
         const remainingSeconds = Math.max(10, Math.floor((statusData.expiresAt - now) / 1000));
         setTimeLeft(remainingSeconds);
@@ -232,7 +235,7 @@ export default function PaymentGate() {
     } finally {
       isRequestingRef.current = false;
     }
-  }, [isValidSession, activeSessionId, needsReport, hasKits, navigate, updateHealth, createNewPaymentRequest, totalPrice]);
+  }, [isValidSession, activeSessionId, needsReport, hasKits, navigate, updateHealth, createNewPaymentRequest]);
 
   // Initial load: Query status then restore or create
   useEffect(() => {
@@ -509,9 +512,11 @@ export default function PaymentGate() {
 
             {/* Top Title & Price Pill */}
             <div className="text-center space-y-1">
-              <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
-                <span>₹{authoritativeAmount}</span>
-              </div>
+              {authoritativeAmount !== null && (
+                <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
+                  <span>₹{authoritativeAmount}</span>
+                </div>
+              )}
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Secure Payment</h1>
             </div>
 
@@ -522,8 +527,8 @@ export default function PaymentGate() {
                   <QRCodeSVG
                     value={paymentUrl}
                     size={360}
-                    level="M"
-                    marginSize={2}
+                    level="L"
+                    marginSize={4}
                     className="w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] block"
                   />
                 </div>
