@@ -44,8 +44,6 @@ export function CustomerDetailsPage({ sessionStore }) {
     setIsSubmitting(true);
     updateCustomerDetails(formData);
 
-    // If Pi handoff is triggered, form POST will submit to Pi endpoint.
-    // Also save in local state for seamless transitions.
     try {
       submitCustomerDetailsToPi({
         sessionId: state.sessionId,
@@ -57,8 +55,6 @@ export function CustomerDetailsPage({ sessionStore }) {
       console.warn('Pi handoff form POST fallback:', err);
     }
 
-
-    // Move to next step in UI state
     setTimeout(() => {
       setIsSubmitting(false);
       updateState({ paymentState: 'SERVICE_SELECTION' });
@@ -68,11 +64,11 @@ export function CustomerDetailsPage({ sessionStore }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-1">
-        <h2 className="text-2xl font-extrabold text-white font-outfit">Your Information</h2>
-        <p className="text-sm text-slate-400">Entered ONCE • Used for reports & receipts</p>
+        <h2 className="text-2xl font-bold text-slate-900 font-outfit">Your Information</h2>
+        <p className="text-sm text-slate-600">Used for your health assessment & receipts</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4">
+      <form onSubmit={handleSubmit} className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-4">
         <InputField
           label="Full Name"
           id="name"
@@ -100,14 +96,14 @@ export function CustomerDetailsPage({ sessionStore }) {
           />
 
           <div className="space-y-1.5 w-full">
-            <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
+            <label className="block text-xs font-semibold text-slate-700 tracking-wide">
               Gender <span className="text-orange-500">*</span>
             </label>
             <select
               name="gender"
               value={formData.gender}
               onChange={handleChange}
-              className="w-full bg-slate-900/90 text-slate-100 text-sm font-medium rounded-xl border border-slate-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 px-3.5 py-3"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 text-sm font-medium outline-none transition duration-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 hover:border-slate-300"
             >
               <option value="Male">Male</option>
               <option value="Female">Female</option>
@@ -127,7 +123,7 @@ export function CustomerDetailsPage({ sessionStore }) {
           required
           error={errors.email}
           icon={Mail}
-          helperText="Your health report PDF will be queued to this email."
+          helperText="Your health report and receipt will be associated with this email."
         />
 
         <InputField
@@ -149,9 +145,9 @@ export function CustomerDetailsPage({ sessionStore }) {
           </Button>
         </div>
 
-        <div className="flex items-center justify-center space-x-1 text-[11px] text-slate-400">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Information is saved directly to local kiosk SQLite database</span>
+        <div className="flex items-center justify-center space-x-1.5 text-[11px] text-slate-500 pt-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Your information is encrypted and securely stored</span>
         </div>
       </form>
     </div>

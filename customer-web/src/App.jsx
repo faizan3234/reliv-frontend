@@ -17,7 +17,7 @@ export function App() {
 
   if (!state.isLoaded) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-white flex items-center justify-center text-slate-500 text-sm">
         Loading session context...
       </div>
     );
@@ -65,7 +65,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-orange-50 via-white to-white text-slate-900 selection:bg-orange-500 selection:text-white">
       <Header kioskId={state.kioskId} />
       
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 space-y-4">
@@ -78,8 +78,8 @@ export function App() {
         </div>
       </main>
 
-      <footer className="py-4 text-center text-slate-500 text-xs border-t border-slate-900 bg-slate-950/80">
-        Reliv Health System • Encrypted Kiosk Handoff v1.0
+      <footer className="py-4 text-center text-slate-400 text-xs border-t border-orange-100/80 bg-white/60">
+        Secure payments powered by Razorpay • Reliv Health
       </footer>
     </div>
   );

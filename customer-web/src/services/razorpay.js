@@ -71,6 +71,8 @@ export async function openRazorpayCheckout({
       }
     },
     modal: {
+      confirm_close: true,
+      escape: false,
       ondismiss: function () {
         if (onDismiss) onDismiss();
       },

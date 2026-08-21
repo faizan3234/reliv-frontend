@@ -14,19 +14,19 @@ export function Button({
   className = '',
   id,
 }) {
-  const baseStyles = 'inline-flex items-center justify-center font-bold tracking-wide rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:transform-none select-none shadow-lg';
+  const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-2xl transition duration-200 focus:outline-none focus:ring-4 focus:ring-orange-100 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed select-none shadow-sm';
   
   const sizeStyles = {
-    sm: 'px-3 py-2 text-xs font-semibold',
+    sm: 'px-3 py-2 text-xs',
     md: 'px-4 py-2.5 text-sm',
-    lg: 'px-6 py-3.5 text-base',
+    lg: 'px-5 py-3.5 text-base',
   };
 
   const variantStyles = {
-    primary: 'bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-orange-500/25 focus:ring-orange-500',
-    secondary: 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 focus:ring-slate-500 shadow-slate-900/50',
-    outline: 'bg-transparent border border-orange-500/50 hover:bg-orange-500/10 text-orange-400 focus:ring-orange-500 shadow-none',
-    danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 shadow-red-600/25',
+    primary: 'bg-orange-500 hover:bg-orange-600 text-white focus:ring-orange-200',
+    secondary: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 focus:ring-orange-100',
+    outline: 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 focus:ring-slate-100 shadow-none',
+    danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-100',
   };
 
   return (

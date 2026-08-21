@@ -1,16 +1,10 @@
 import React from 'react';
-import { extractQueryParams } from '../../services/session';
 import { Button } from '../../components/Button';
-import { CheckCircle2, Pill, Stethoscope, Mail, ShieldCheck, RefreshCw, Loader2 } from 'lucide-react';
+import { CheckCircle2, Pill, Stethoscope, Mail, ShieldCheck } from 'lucide-react';
 
 export function CompletionPage({ sessionStore }) {
   const { state, resetSession } = sessionStore;
-  const urlParams = extractQueryParams();
-  
   const isMedicine = state.serviceType === 'MEDICINE';
-  const status = urlParams.status || '';
-  const isPhysicalFulfilled = ['dispense_complete', 'report_queued', 'report_ready'].includes(status);
-
 
   const handleFinish = () => {
     resetSession();
@@ -20,85 +14,77 @@ export function CompletionPage({ sessionStore }) {
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-400">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 mb-1 glow-cyan">
-          {isPhysicalFulfilled ? (
-            <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
-          ) : (
-            <Loader2 className="w-10 h-10 animate-spin" />
-          )}
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-600 mb-1 shadow-sm">
+          <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
         </div>
-        <h2 className="text-2xl font-extrabold text-white font-outfit">
-          {isPhysicalFulfilled ? 'Order Fulfilled ✓' : 'Payment Authorized ✓'}
+        <h2 className="text-2xl font-bold text-slate-900 font-outfit">
+          You're all set
         </h2>
-        <p className="text-sm font-semibold text-emerald-400">
-          {isPhysicalFulfilled
-            ? 'Physical Kiosk Operation Complete'
-            : 'Cryptographic RSA Signature Verified by Kiosk'}
+        <p className="text-sm text-slate-600">
+          Your Reliv session has been completed successfully.
         </p>
       </div>
 
-      <div className="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4">
+      <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-4">
         {isMedicine ? (
-          <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 space-y-2 text-center">
-            <Pill className="w-8 h-8 mx-auto text-cyan-400 animate-pulse" />
-            <h4 className="font-bold text-base text-white font-outfit">
-              {status === 'dispense_complete' ? 'Dispensing Complete' : 'Dispensing Your Order...'}
+          <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 text-orange-950 space-y-2 text-center">
+            <Pill className="w-8 h-8 mx-auto text-orange-500" />
+            <h4 className="font-bold text-base text-slate-900 font-outfit">
+              Payment confirmed
             </h4>
-            <p className="text-xs text-cyan-200">
-              {status === 'dispense_complete'
-                ? 'Your items have been dispensed. Please collect them from the tray.'
-                : 'Please collect your items from the kiosk dispensing tray below the screen.'}
+            <p className="text-xs text-slate-600">
+              Please return to the kiosk. Your medicine is being prepared.
             </p>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-300 space-y-2 text-center">
-            <Stethoscope className="w-8 h-8 mx-auto text-orange-400" />
-            <h4 className="font-bold text-base text-white font-outfit">
-              {status === 'report_ready' || status === 'report_queued' ? 'Health Report Ready' : 'Preparing Your Health Report'}
+          <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 text-orange-950 space-y-2 text-center">
+            <Stethoscope className="w-8 h-8 mx-auto text-orange-500" />
+            <h4 className="font-bold text-base text-slate-900 font-outfit">
+              Payment confirmed
             </h4>
-            <p className="text-xs text-orange-200">
-              {status === 'report_ready' || status === 'report_queued'
-                ? 'Your comprehensive health report PDF has been generated and is ready.'
-                : 'Your vitals, BMI, and health report PDF is being compiled by Kiosk backend.'}
+            <p className="text-xs text-slate-600">
+              Your health report is being prepared.
             </p>
           </div>
         )}
 
-        {/* Receipt & Email Summary Card (STRICT: Zero dummy string fallbacks) */}
-        <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5 text-xs text-slate-300">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span className="text-slate-400">Transaction ID</span>
-            <span className="font-mono text-slate-200">
-              {state.transactionId ? state.transactionId.slice(0, 16) : 'Transaction ID unavailable'}
+        {/* Receipt & Summary Card */}
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2.5 text-xs text-slate-600">
+          {state.transactionId && (
+            <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+              <span className="text-slate-500">Transaction ID</span>
+              <span className="font-mono text-slate-800">
+                {state.transactionId.slice(0, 16)}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+            <span className="text-slate-500">Amount Paid</span>
+            <span className="font-bold text-slate-900 text-sm">
+              {state.amount > 0 ? `₹${state.amount}` : 'Paid'}
             </span>
           </div>
 
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span className="text-slate-400">Amount Paid</span>
-            <span className="font-bold text-white text-sm">
-              {state.amount > 0 ? `₹${state.amount}` : 'Amount unavailable'}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-2 pt-1 text-slate-300">
-            <Mail className="w-4 h-4 text-orange-400 shrink-0" />
+          <div className="flex items-center space-x-2 pt-1 text-slate-600">
+            <Mail className="w-4 h-4 text-orange-500 shrink-0" />
             <span>
-              📄 Report ready for:{' '}
-              <strong className="text-white">
-                {state.customerDetails?.email ? state.customerDetails.email : 'Registered user'}
+              Report ready for:{' '}
+              <strong className="text-slate-900">
+                {state.customerDetails?.email || 'Registered user'}
               </strong>
             </span>
           </div>
         </div>
 
-        <div className="flex items-center justify-center space-x-1.5 text-[11px] text-slate-400">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Session securely completed. Single QR authorization fulfilled.</span>
+        <div className="flex items-center justify-center space-x-1.5 text-[11px] text-slate-500">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>Session securely completed.</span>
         </div>
       </div>
 
-      <Button onClick={handleFinish} variant="secondary" icon={RefreshCw}>
-        Done / Close Session
+      <Button onClick={handleFinish} variant="primary">
+        Done
       </Button>
     </div>
   );

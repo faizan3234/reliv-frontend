@@ -3,6 +3,56 @@ const BRIDGE_BASE_URL = (
   'https://80.225.243.51'
 ).replace(/\/$/, '');
 
+if (!BRIDGE_BASE_URL.startsWith('https://')) {
+  throw new Error(
+    'Payment Bridge must use HTTPS in production.'
+  );
+}
+
+export { BRIDGE_BASE_URL };
+
+/**
+ * Checks Payment Bridge /health status
+ */
+export async function checkBridgeHealth() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(`${BRIDGE_BASE_URL}/health`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Payment service returned HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      ok:
+        data?.status === 'healthy' &&
+        data?.razorpay === true &&
+        data?.database === true,
+      data,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error?.name === 'AbortError'
+          ? 'Payment service timed out.'
+          : error?.message || 'Payment service unavailable.',
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * Calls Payment Bridge POST /create-order to create Razorpay Order server-side.
  */

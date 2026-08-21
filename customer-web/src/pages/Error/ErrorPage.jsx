@@ -1,14 +1,59 @@
 import React from 'react';
 import { Button } from '../../components/Button';
-import { AlertOctagon, RefreshCw, QrCode, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { AlertCircle, RefreshCw, QrCode, ShieldAlert } from 'lucide-react';
+
+export function getFriendlyErrorMessage(error) {
+  const message = String(
+    error?.message || error?.title || error || ''
+  ).toLowerCase();
+
+  if (
+    message.includes('network') ||
+    message.includes('fetch') ||
+    message.includes('timeout')
+  ) {
+    return {
+      title: 'Connection problem',
+      message:
+        'We could not reach the payment service. Check your mobile Internet and try again.',
+    };
+  }
+
+  if (
+    message.includes('expired') ||
+    message.includes('invalid') ||
+    message.includes('session')
+  ) {
+    return {
+      title: 'Session expired',
+      message:
+        'This payment session is no longer active. Please return to the Reliv kiosk.',
+    };
+  }
+
+  if (
+    message.includes('payment') ||
+    message.includes('declined') ||
+    message.includes('verify')
+  ) {
+    return {
+      title: 'Payment could not be confirmed',
+      message:
+        'Please check your payment status and try again.',
+    };
+  }
+
+  return {
+    title: 'Something went wrong',
+    message:
+      'Please try again. If the problem continues, return to the Reliv kiosk.',
+  };
+}
 
 export function ErrorPage({ sessionStore }) {
   const { state, updateState, resetSession } = sessionStore;
-  const error = state.error || {
-    title: 'An Unexpected Error Occurred',
-    message: 'Please try scanning the QR code on the kiosk again.',
-    code: 'UNKNOWN_ERROR',
-  };
+  const rawError = state.error || {};
+  const friendly = getFriendlyErrorMessage(rawError);
 
   const handleRetryPayment = () => {
     updateState({
@@ -22,28 +67,27 @@ export function ErrorPage({ sessionStore }) {
     window.location.reload();
   };
 
-  const isPaymentError = ['PAYMENT_FAILED', 'PAYMENT_VERIFICATION_FAILED', 'RAZORPAY_ERROR'].includes(state.paymentState) || error.code?.includes('PAYMENT');
+  const isPaymentError = ['PAYMENT_FAILED', 'PAYMENT_VERIFICATION_FAILED', 'RAZORPAY_ERROR'].includes(state.paymentState) || rawError.code?.includes('PAYMENT');
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 mb-1">
-          <AlertOctagon className="w-8 h-8" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 border border-red-200 text-red-600 mb-1 shadow-sm">
+          <AlertCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-extrabold text-white font-outfit">{error.title}</h2>
-        <p className="text-xs text-red-400 font-mono">Error Code: {error.code || 'ERR_GENERIC'}</p>
+        <h2 className="text-2xl font-bold text-slate-900 font-outfit">{friendly.title}</h2>
       </div>
 
-      <div className="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4">
-        <p className="text-sm text-slate-300 leading-relaxed text-center">
-          {error.message}
+      <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm space-y-4">
+        <p className="text-sm text-slate-600 leading-relaxed text-center">
+          {friendly.message}
         </p>
 
         {isPaymentError && (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start space-x-2">
-            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="p-3.5 rounded-2xl bg-orange-50 border border-orange-200 text-slate-700 text-xs flex items-start space-x-2">
+            <ShieldAlert className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
             <span>
-              If money was deducted, do not make a second payment attempt. The kiosk will verify your transaction status automatically.
+              If money was deducted from your account, your payment is safe. Please return to the kiosk for automatic verification.
             </span>
           </div>
         )}
@@ -53,7 +97,7 @@ export function ErrorPage({ sessionStore }) {
         {isPaymentError ? (
           <>
             <Button onClick={handleRetryPayment} icon={RefreshCw}>
-              Retry Payment Attempt
+              Try Again
             </Button>
             <Button onClick={handleRestart} variant="secondary" icon={QrCode}>
               Scan Kiosk QR Again
@@ -61,7 +105,7 @@ export function ErrorPage({ sessionStore }) {
           </>
         ) : (
           <Button onClick={handleRestart} icon={QrCode}>
-            Please Scan Kiosk QR Code Again
+            Scan Kiosk QR Again
           </Button>
         )}
       </div>
