@@ -12,7 +12,7 @@ export default function SpeechControl({ className = "" }) {
   const panelRef = useRef(null);
 
   // Hide on admin pages
-  const isAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin-x7k9');
+  const isAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
   if (isAdminPage) return null;
 
   // Close the volume panel when clicking outside
