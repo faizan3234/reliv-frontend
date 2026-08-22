@@ -120,7 +120,8 @@ export default function AdminMedicinePage() {
       } catch {}
 
       // Default fallback passwords for kiosk offline operation
-      if (!isAuthed && (passwordInput === "reliv" || passwordInput === "admin" || passwordInput === "1234")) {
+      const normalized = passwordInput.trim().toLowerCase();
+      if (!isAuthed && (normalized === "admin123" || normalized === "admin 123" || normalized === "reliv" || normalized === "admin" || normalized === "1234")) {
         isAuthed = true;
       }
 

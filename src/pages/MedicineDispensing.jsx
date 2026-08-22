@@ -357,30 +357,26 @@ export default function MedicineDispensing() {
         </button>
 
         {/* Header Branding */}
-        <div className="kiosk-header">
+        <header className="kiosk-header">
           <Logo />
-          <h1 className="kiosk-title">Medicine Dispenser</h1>
-          <p className="kiosk-subtitle">
-            Sanitized, verified healthcare products dispensed instantly
-          </p>
-        </div>
+          <h2>WELLNESS PRODUCTS</h2>
+          <p>Tap items to add to your order. Instant dispensing.</p>
+        </header>
 
-        {/* Medicine Product Grid */}
-        <div className="medicine-grid-container">
-          <div className="medicine-grid">
-            {medicalKits.map((kit, index) => (
-              <KitCard
-                key={kit.kit_id || kit.id || index}
-                kit={kit}
-                onAddToCart={handleAddToCart}
-                onUpdateQty={handleUpdateQuantity}
-                onRemoveFromCart={handleRemoveFromCart}
-                cart={cart}
-                isMostChosen={index === 0}
-              />
-            ))}
-          </div>
-        </div>
+        {/* 3-by-3 Product Grid (3 kits top row, 3 kits bottom row) */}
+        <main className="product-grid">
+          {medicalKits.map((kit, index) => (
+            <KitCard
+              key={kit.kit_id || kit.id || index}
+              kit={kit}
+              onAddToCart={handleAddToCart}
+              onUpdateQty={handleUpdateQuantity}
+              onRemoveFromCart={handleRemoveFromCart}
+              cart={cart}
+              isMostChosen={index === 0}
+            />
+          ))}
+        </main>
 
         {/* Luxury Slide-up Cart Drawer */}
         <AnimatePresence>
