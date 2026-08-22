@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+﻿import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft } from "lucide-react";
@@ -10,6 +10,29 @@ import VirtualKeyboard from "../components/VirtualKeyboard";
 import AuraBackground from "../components/AuraBackground";
 import "./RelivKiosk.css";
 import { API_BASE } from "../config/api";
+
+// Helper to resolve canonical medicine image URL (local Pi file or external URL)
+export const getMedicineImageUrl = (kit) => {
+  const imagePath =
+    kit?.image_path ||
+    kit?.imageUrl ||
+    "";
+
+  if (!imagePath) {
+    return "";
+  }
+
+  if (
+    imagePath.startsWith("http://") ||
+    imagePath.startsWith("https://") ||
+    imagePath.startsWith("data:") ||
+    imagePath.startsWith("blob:")
+  ) {
+    return imagePath;
+  }
+
+  return `${API_BASE}${imagePath}`;
+};
 
 // --- Helpers ---
 export const getAvailableQuantity = (kit) => {
@@ -55,10 +78,10 @@ const StockBadge = ({ quantity, expiryDate }) => {
 const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatus, cart, isMostChosen }) => {
   const available = getAvailableQuantity(kit);
   const isOutOfStock = available <= 0 || new Date(kit.expiryDate) < new Date();
-  
+
   const cartItem = cart?.find(item => item.id === kit.id);
   const cartQty = cartItem ? cartItem.cartQuantity : 0;
-  
+
   // Smart social proof - show badge on exactly 2 kits (looks authentic, not fake)
   // Using deterministic selection based on kit id for consistency
   const showSocialProof = useMemo(() => {
@@ -66,20 +89,20 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatu
     // Only kits with id ending in 2 or 7 show the badge (roughly 2 out of 10)
     return (seed % 10 === 2 || seed % 10 === 7);
   }, [kit.id]);
-  
+
   const recentBuyers = useMemo(() => {
     const seed = kit.id || 1;
     return ((seed * 3) % 4) + 2; // Returns 2-5 based on kit id
   }, [kit.id]);
-  
+
   return (
-    <motion.div 
+    <motion.div
       whileHover={{ y: -10 }}
       className={`glass-card lift-hover ${isOutOfStock ? "disabled" : ""}`}
     >
       {/* SPARKLE EFFECT LAYER */}
       <div className="sparkle-layer">
-        <motion.div 
+        <motion.div
           initial={{ x: '-100%' }}
           animate={{ x: '200%' }}
           transition={{ repeat: Infinity, duration: 3, ease: "linear", repeatDelay: 2 }}
@@ -91,14 +114,14 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatu
       <div className="card-top">
         {isOutOfStock ? (
           <span className="stock out" style={{fontSize: '11px', padding: '5px 10px'}}>
-            😔 Demand was high - Restocking soon!
+            ðŸ˜” Demand was high - Restocking soon!
           </span>
         ) : (
           <StockBadge quantity={available} expiryDate={kit.expiryDate} />
         )}
         {!isOutOfStock && isMostChosen && (
           <span className="badge" style={{background: "linear-gradient(135deg, #7c3aed, #a855f7)", fontSize: '11px', padding: '4px 8px'}}>
-            ⭐ Most Chosen
+            â­ Most Chosen
           </span>
         )}
         {!isOutOfStock && showSocialProof && !isMostChosen && (
@@ -115,8 +138,8 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatu
 
       {/* IMAGE */}
       <div className="product-img">
-        {kit.imageUrl ? (
-          <img src={kit.imageUrl} alt={kit.name} />
+        {getMedicineImageUrl(kit) ? (
+          <img src={getMedicineImageUrl(kit)} alt={kit.name} />
         ) : (
           <span>{kit.name.split(" ")[0]}</span>
         )}
@@ -129,10 +152,10 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatu
       {/* PRICE ROW - Price on left, controls on right */}
       <div className="price-row">
         <div className="price-stack">
-          <span className="mrp-price">₹{Math.round(kit.price * 1.25)}</span>
-          <span className="price">₹{kit.price}</span>
+          <span className="mrp-price">â‚¹{Math.round(kit.price * 1.25)}</span>
+          <span className="price">â‚¹{kit.price}</span>
         </div>
-        
+
         {/* ADD TO CART - When not in cart */}
         {!isOutOfStock && cartQty === 0 && (
           <motion.button
@@ -144,7 +167,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatu
             Add
           </motion.button>
         )}
-        
+
         {/* QUANTITY CONTROLS - When in cart */}
         {!isOutOfStock && cartQty > 0 && (
           <div className="card-qty-controls">
@@ -171,8 +194,8 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatu
       {/* ITEM TOTAL - Shows when in cart */}
       {cartQty > 0 && (
         <div className="item-total">
-          <span>{cartQty} × ₹{kit.price}</span>
-          <span className="item-total-price">₹{cartQty * kit.price}</span>
+          <span>{cartQty} Ã— â‚¹{kit.price}</span>
+          <span className="item-total-price">â‚¹{cartQty * kit.price}</span>
         </div>
       )}
     </motion.div>
@@ -202,8 +225,6 @@ export default function MedicineDispensingWithAdmin() {
   const [medicalKits, setMedicalKits] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState(cartFromPrevPage || []);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshStatuses, setRefreshStatuses] = useState({}); // Per-kit refresh status
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -213,23 +234,23 @@ export default function MedicineDispensingWithAdmin() {
   const [resetStage, setResetStage] = useState("request");
   const [verificationCodeInput, setVerificationCodeInput] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
-  
+
   // Payment mode: PRODUCTION-SAFE
   // Force RUN mode on production domains (not localhost)
   const [isRunMode, setIsRunMode] = useState(() => {
-    const isProduction = window.location.hostname !== 'localhost' && 
+    const isProduction = window.location.hostname !== 'localhost' &&
                          window.location.hostname !== '127.0.0.1';
-    
+
     if (isProduction) {
       // Production domain: ALWAYS run mode (real payments)
       localStorage.setItem("paymentMode", "run");
       return true;
     }
-    
+
     // Localhost: Allow test mode for development
     return localStorage.getItem("paymentMode") === "run";
   });
-  
+
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState(null);
 
@@ -242,7 +263,46 @@ export default function MedicineDispensingWithAdmin() {
   const [updateStatus, setUpdateStatus] = useState({}); // Track update status for visual feedback
   const [clickCount, setClickCount] = useState(0);
   const [lastClickTime, setLastClickTime] = useState(0);
-  
+
+  // New kit image selection state
+  const [newKitImageFile, setNewKitImageFile] = useState(null);
+  const [newKitImagePreview, setNewKitImagePreview] = useState("");
+
+  const handleNewKitImageSelect = (file) => {
+    if (!file) {
+      setNewKitImageFile(null);
+      setNewKitImagePreview("");
+      return;
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please choose a JPG, PNG or WEBP image.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be 5 MB or smaller.");
+      return;
+    }
+
+    setNewKitImageFile(file);
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setNewKitImagePreview((previous) => {
+      if (previous?.startsWith("blob:")) {
+        URL.revokeObjectURL(previous);
+      }
+      return previewUrl;
+    });
+  };
+
   // PROFIT MARGIN SYSTEM - Stored in localStorage (persists across restarts)
   const [kitMargins, setKitMargins] = useState(() => {
     try {
@@ -296,22 +356,22 @@ export default function MedicineDispensingWithAdmin() {
       setReportPriceSaving(false);
     }
   };
-  
+
   // Save margins to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('reliv_kit_margins', JSON.stringify(kitMargins));
   }, [kitMargins]);
-  
+
   // Compute top 2 margin kits for badges
   const marginBadges = useMemo(() => {
     const badges = {};
-    
+
     // Get kits with margins set and sort by margin (descending)
     const kitsWithMargins = medicalKits
       .filter(kit => kitMargins[kit.id] !== undefined && kitMargins[kit.id] > 0)
       .map(kit => ({ id: kit.id, margin: kitMargins[kit.id] || 0 }))
       .sort((a, b) => b.margin - a.margin);
-    
+
     // Top 1 = Value Deal, Top 2 = Recommended
     if (kitsWithMargins.length >= 1) {
       badges[kitsWithMargins[0].id] = 'value-deal';
@@ -319,23 +379,23 @@ export default function MedicineDispensingWithAdmin() {
     if (kitsWithMargins.length >= 2) {
       badges[kitsWithMargins[1].id] = 'recommended';
     }
-    
+
     return badges;
   }, [medicalKits, kitMargins]);
-  
+
   // Calculate Most Chosen kit based on actual purchase data
   const mostChosenKitId = useMemo(() => {
     const kitsWithPurchases = medicalKits.filter(kit => kit.totalPurchases && kit.totalPurchases > 0);
     if (kitsWithPurchases.length === 0) return null;
-    
+
     // Find kit with highest totalPurchases
-    const mostChosen = kitsWithPurchases.reduce((max, kit) => 
+    const mostChosen = kitsWithPurchases.reduce((max, kit) =>
       kit.totalPurchases > max.totalPurchases ? kit : max
     );
-    
+
     return mostChosen.id;
   }, [medicalKits]);
-  
+
   // Update margin for a kit
   const handleUpdateMargin = (kitId, margin) => {
     const numMargin = parseFloat(margin) || 0;
@@ -399,8 +459,8 @@ export default function MedicineDispensingWithAdmin() {
     }));
     // Scroll input into view smoothly after keyboard appears
     setTimeout(() => {
-      e.target.scrollIntoView({ 
-        behavior: 'smooth', 
+      e.target.scrollIntoView({
+        behavior: 'smooth',
         block: 'center',
         inline: 'nearest'
       });
@@ -430,9 +490,9 @@ export default function MedicineDispensingWithAdmin() {
 
   const handleUpdateKitField = async (id, field, value) => {
       const statusKey = `${id}-${field}`;
-      
+
       setUpdateStatus(prev => ({ ...prev, [statusKey]: 'updating' }));
-      
+
       try {
         // Convert value to proper type
         let updatedValue = value;
@@ -442,9 +502,9 @@ export default function MedicineDispensingWithAdmin() {
             throw new Error("Invalid number");
           }
         }
-        
+
         if (import.meta.env.DEV) console.log(`Updating kit ${id} field ${field} to:`, updatedValue);
-        
+
         const response = await fetch(`${API_BASE}/api/kits/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -458,27 +518,27 @@ export default function MedicineDispensingWithAdmin() {
           if (import.meta.env.DEV) console.error(`Update failed:`, errorText);
           throw new Error(errorText || "Failed to update kit");
         }
-        
+
         const result = await response.json();
         if (import.meta.env.DEV) console.log(`Update successful:`, result);
-        
+
         // Update local state with the kit returned from backend
         if (result.kit) {
-          setMedicalKits((prev) => prev.map((k) => 
+          setMedicalKits((prev) => prev.map((k) =>
             k.id === id ? result.kit : k
           ));
         } else {
           // Fallback to manual update if no kit in response
-          setMedicalKits((prev) => prev.map((k) => 
+          setMedicalKits((prev) => prev.map((k) =>
             k.id === id ? { ...k, [field]: updatedValue } : k
           ));
         }
-        
+
         setUpdateStatus(prev => ({ ...prev, [statusKey]: 'success' }));
         setTimeout(() => {
           setUpdateStatus(prev => ({ ...prev, [statusKey]: null }));
         }, 2000);
-        
+
         return true; // Success
       } catch (err) {
         if (import.meta.env.DEV) console.error(`Error updating kit ${field}:`, err.message);
@@ -486,7 +546,7 @@ export default function MedicineDispensingWithAdmin() {
         setTimeout(() => {
           setUpdateStatus(prev => ({ ...prev, [statusKey]: null }));
         }, 3000);
-        
+
         return false; // Failure
       }
     };
@@ -603,15 +663,15 @@ export default function MedicineDispensingWithAdmin() {
             alert('Kit not found in inventory');
             return item;
           }
-          
+
           const maxAvailable = getAvailableQuantity(currentKit);
           const newQuantity = Math.max(1, Math.min(item.cartQuantity + change, maxAvailable));
-          
+
           // Alert user if they try to exceed available stock
           if (item.cartQuantity + change > maxAvailable && change > 0) {
             alert(`Only ${maxAvailable} units currently available in stock`);
           }
-          
+
           // Also update availableStock to reflect current inventory
           return { ...item, cartQuantity: newQuantity, availableStock: maxAvailable };
         }
@@ -673,8 +733,8 @@ export default function MedicineDispensingWithAdmin() {
     if (!localStorage.getItem("adminPassword_v1")) {
       localStorage.setItem("adminPassword_v1", "admin123");
     }
-    
-    const isProduction = window.location.hostname !== 'localhost' && 
+
+    const isProduction = window.location.hostname !== 'localhost' &&
                          window.location.hostname !== '127.0.0.1';
     if (isProduction) {
       // FORCE RUN MODE on production - safety measure
@@ -729,7 +789,7 @@ export default function MedicineDispensingWithAdmin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: emailForLogin, password: passwordInput }),
       });
-      
+
       if (res.ok) {
         setIsAuthenticated(true);
         localStorage.setItem('_adminPwCache', passwordInput);
@@ -813,14 +873,14 @@ export default function MedicineDispensingWithAdmin() {
   };
 
   const handleModeToggle = () => {
-    const isProduction = window.location.hostname !== 'localhost' && 
+    const isProduction = window.location.hostname !== 'localhost' &&
                          window.location.hostname !== '127.0.0.1';
-    
+
     if (isProduction) {
-      alert("⚠️ Payment mode is locked to RUN MODE on production deployment. Test mode is only available on localhost.");
+      alert("âš ï¸ Payment mode is locked to RUN MODE on production deployment. Test mode is only available on localhost.");
       return;
     }
-    
+
     const newMode = !isRunMode;
     setIsRunMode(newMode);
     localStorage.setItem("paymentMode", newMode ? "run" : "test");
@@ -843,7 +903,7 @@ export default function MedicineDispensingWithAdmin() {
     }
   };
 
-  const handleAddNewKit = async () => {
+    const handleAddNewKit = async () => {
     const newKitId = `KIT-${Date.now().toString(36).toUpperCase()}`;
     const newKitData = {
       kit_id: newKitId,
@@ -855,8 +915,6 @@ export default function MedicineDispensingWithAdmin() {
       reserved_quantity: 0,
       available_quantity: 0,
       motor_id: null,
-      imageUrl: "",
-      folderUrl: "",
       expiryDate: new Date().toISOString().split("T")[0],
     };
     try {
@@ -865,140 +923,162 @@ export default function MedicineDispensingWithAdmin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newKitData),
       });
-      if (!response.ok) throw new Error("Failed to add new kit");
-      
-      // Backend returns the created kit with kit_id / id
-      const result = await response.json();
-      const newKit = result.kit || { ...newKitData, id: result.id || result.kit_id || newKitId };
-      
-      // Add the kit returned from backend (with correct ID)
-      setMedicalKits((prev) => [newKit, ...prev].sort((a, b) => (a.id || 0) - (b.id || 0)));
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message || "Failed to create medicine");
+      }
+
+      let finalKit = data.kit || { ...newKitData, id: data.id || data.kit_id || newKitId };
+
+      // Automatically upload selected image if one was chosen
+      if (newKitImageFile) {
+        try {
+          const uploadedKit = await handleImageUpload(
+            finalKit.kit_id || finalKit.id,
+            newKitImageFile
+          );
+          if (uploadedKit) finalKit = uploadedKit;
+        } catch (uploadErr) {
+          console.warn("[MedicineDispensing] Image upload after create failed:", uploadErr);
+        }
+      }
+
+      setMedicalKits((currentKits) => {
+        const exists = currentKits.some(
+          (kit) => (kit.kit_id || kit.id) === (finalKit.kit_id || finalKit.id)
+        );
+        if (exists) {
+          return currentKits.map((kit) =>
+            (kit.kit_id || kit.id) === (finalKit.kit_id || finalKit.id)
+              ? finalKit
+              : kit
+          );
+        }
+        return [finalKit, ...currentKits];
+      });
+
+      if (newKitImagePreview && newKitImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(newKitImagePreview);
+      }
+      setNewKitImageFile(null);
+      setNewKitImagePreview("");
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error adding new kit:", err);
       alert(`Failed to add new kit: ${sanitizeError(err)}`);
     }
   };
 
-  const handleImageUpload = (id, file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const response = await fetch(`${API_BASE}/api/kits/${id}/image`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl: event.target.result }),
-        });
-        if (!response.ok) throw new Error("Failed to update image");
-        handleUpdateKitField(id, "imageUrl", event.target.result);
-      } catch (err) {
-        if (import.meta.env.DEV) console.error("Error uploading image:", err);
-        alert(`Failed to upload image: ${sanitizeError(err)}`);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const fetchGdriveImage = useCallback(async (url) => {
-    if (!url || !url.includes("drive.google.com")) {
-      return "";
+  const handleImageUpload = async (id, file) => {
+    if (!file) {
+      return;
     }
-    try {
-      const isFolder = url.includes('/drive/folders/');
-      const regex = isFolder 
-        ? /drive\.google\.com\/drive\/folders\/([a-zA-Z0-9_-]+)/ 
-        : /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
-      const match = url.match(regex);
-      if (!match || !match[1]) {
-        return "";
-      }
-      const id = match[1];
-      const endpoint = isFolder ? `gdrive-folder-image/${id}` : `gdrive-image/${id}`;
 
-      const response = await fetch(`${API_BASE}/api/${endpoint}?t=${Date.now()}`, {
-        headers: { 'Cache-Control': 'no-cache' }
-      });
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please choose a JPG, PNG or WEBP image.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be 5 MB or smaller.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch(
+        `${API_BASE}/api/kits/${encodeURIComponent(id)}/image`,
+        {
+          method: "PATCH",
+          body: formData
+        }
+      );
+
       const data = await response.json();
 
-      if (!response.ok) {
-        if (import.meta.env.DEV) console.warn(`Failed to fetch image for ${isFolder ? 'folder' : 'file'} ${id}: ${data.message || 'Unknown error'}`);
-        return "";
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.message ||
+          "Failed to upload medicine image"
+        );
       }
 
-      return data.imageUrl || "";
-    } catch (error) {
-      if (import.meta.env.DEV) console.error("Error fetching GDrive image:", error);
-      return "";
-    }
-  }, []);
+      setMedicalKits((currentKits) =>
+        currentKits.map((kit) =>
+          kit.id === id || kit.kit_id === id
+            ? {
+                ...kit,
+                ...data.kit
+              }
+            : kit
+        )
+      );
 
-  const handleRefreshGdriveImages = useCallback(async () => {
-    setIsRefreshing(true);
-    setRefreshStatuses({}); // Clear previous statuses
+      return data.kit;
+
+    } catch (error) {
+      console.error(
+        "Medicine image upload failed:",
+        error
+      );
+
+      alert(
+        error.message ||
+        "Failed to upload medicine image."
+      );
+
+      throw error;
+    }
+  };
+
+  const handleRemoveImage = async (id) => {
     try {
-      const updatedKits = [...medicalKits];
-      const newStatuses = {};
-
-      for (const kit of medicalKits) {
-        if (kit.folderUrl && kit.folderUrl.includes("drive.google.com")) {
-          newStatuses[kit.id] = "Refreshing...";
-          setRefreshStatuses((prev) => ({ ...prev, [kit.id]: "Refreshing..." }));
-          const newImageUrl = await fetchGdriveImage(kit.folderUrl);
-          
-          if (newImageUrl) {
-            try {
-              const response = await fetch(`${API_BASE}/api/kits/${kit.id}/image`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl: newImageUrl }),
-              });
-              if (!response.ok) throw new Error("Failed to update image in MongoDB");
-              const index = updatedKits.findIndex((k) => k.id === kit.id);
-              updatedKits[index] = { ...kit, imageUrl: newImageUrl };
-              newStatuses[kit.id] = "Image refreshed";
-            } catch (err) {
-              if (import.meta.env.DEV) console.error(`Error updating image for kit ${kit.id}:`, err);
-              newStatuses[kit.id] = "Failed to fetch";
-            }
-          } else {
-            try {
-              const response = await fetch(`${API_BASE}/api/kits/${kit.id}/image`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl: "" }),
-              });
-              if (!response.ok) throw new Error("Failed to clear image in MongoDB");
-              const index = updatedKits.findIndex((k) => k.id === kit.id);
-              updatedKits[index] = { ...kit, imageUrl: "" };
-              newStatuses[kit.id] = "No image found";
-            } catch (err) {
-              if (import.meta.env.DEV) console.error(`Error clearing image for kit ${kit.id}:`, err);
-              newStatuses[kit.id] = "Failed to fetch";
-            }
-          }
-          setRefreshStatuses((prev) => ({ ...prev, [kit.id]: newStatuses[kit.id] }));
-        } else {
-          newStatuses[kit.id] = "No Google Drive link";
-          setRefreshStatuses((prev) => ({ ...prev, [kit.id]: newStatuses[kit.id] }));
+      const response = await fetch(
+        `${API_BASE}/api/kits/${encodeURIComponent(id)}/image`,
+        {
+          method: "DELETE"
         }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.message ||
+          "Failed to remove medicine image"
+        );
       }
 
-      setMedicalKits(updatedKits);
-      setTimeout(() => setRefreshStatuses({}), 3000); // Clear statuses after 3 seconds
+      setMedicalKits((currentKits) =>
+        currentKits.map((kit) =>
+          kit.id === id || kit.kit_id === id
+            ? {
+                ...kit,
+                ...data.kit
+              }
+            : kit
+        )
+      );
+
     } catch (error) {
-      if (import.meta.env.DEV) console.error("Error refreshing Google Drive images:", error);
-      setRefreshStatuses((prev) => {
-        const newStatuses = {};
-        medicalKits.forEach((kit) => {
-          newStatuses[kit.id] = prev[kit.id] || "Failed to fetch";
-        });
-        return newStatuses;
-      });
-      setTimeout(() => setRefreshStatuses({}), 3000);
-    } finally {
-      setIsRefreshing(false);
+      console.error(
+        "Remove medicine image failed:",
+        error
+      );
+
+      alert(
+        error.message ||
+        "Failed to remove medicine image."
+      );
     }
-  }, [medicalKits, fetchGdriveImage]);
+  };
 
   if (isLoading) {
     return (
@@ -1041,20 +1121,20 @@ export default function MedicineDispensingWithAdmin() {
           <p style={{ color: '#6b7280', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.18em', fontSize: '17px', marginTop: '6px' }}>
             Curated health essentials for your well-being
           </p>
-          
+
           {/* First Kiosk Launch Celebration */}
-          <div style={{ 
-            marginTop: '20px', 
-            background: 'linear-gradient(135deg, #FFF7ED, #FEF3C7)', 
+          <div style={{
+            marginTop: '20px',
+            background: 'linear-gradient(135deg, #FFF7ED, #FEF3C7)',
             border: '1px solid #FCD34D',
-            borderRadius: '12px', 
+            borderRadius: '12px',
             padding: '14px 24px',
             maxWidth: '600px',
             margin: '20px auto 0',
             textAlign: 'center'
           }}>
             <p style={{ fontSize: '13px', color: '#92400E', margin: 0, lineHeight: '1.6' }}>
-              🎉 <span style={{ fontWeight: '600', color: '#B45309' }}>First Kiosk Ever - We're Celebrating!</span> <span style={{ color: '#78350F' }}>These prices are our joy gift to you. After 17th April, market rates return (we can't afford these discounts long-term!)</span> 💛
+              ðŸŽ‰ <span style={{ fontWeight: '600', color: '#B45309' }}>First Kiosk Ever - We're Celebrating!</span> <span style={{ color: '#78350F' }}>These prices are our joy gift to you. After 17th April, market rates return (we can't afford these discounts long-term!)</span> ðŸ’›
             </p>
           </div>
         </header>
@@ -1079,7 +1159,6 @@ export default function MedicineDispensingWithAdmin() {
                 onAddToCart={handleAddToCart}
                 onUpdateQty={handleSetQuantity}
                 onRemoveFromCart={handleRemoveFromCart}
-                refreshStatus={refreshStatuses[kit.id]}
                 cart={cart}
                 isMostChosen={kit.id === mostChosenKitId}
               />
@@ -1088,7 +1167,7 @@ export default function MedicineDispensingWithAdmin() {
         </main>
       </div>
 
-      {/* LUXURY CART - Hermès/LV Side Drawer Style */}
+      {/* LUXURY CART - HermÃ¨s/LV Side Drawer Style */}
       <AnimatePresence>
         {totalItems > 0 && (
           <motion.div
@@ -1099,7 +1178,7 @@ export default function MedicineDispensingWithAdmin() {
           >
             {/* Liquid Silk Wave Background */}
             <div className="cart-silk-wave" />
-            
+
             {/* Cart Header - Minimal Luxury */}
             <div className="luxury-cart-header">
               <div className="luxury-cart-title">
@@ -1108,15 +1187,15 @@ export default function MedicineDispensingWithAdmin() {
               </div>
               <div className="luxury-cart-total">
                 <span className="total-label">TOTAL</span>
-                <span className="total-price">₹{totalPrice.toLocaleString()}</span>
+                <span className="total-price">â‚¹{totalPrice.toLocaleString()}</span>
               </div>
             </div>
 
             {/* Cart Items - Vertical Card Layout */}
             <div className="luxury-cart-items">
               {cart.map((item) => (
-                <motion.div 
-                  key={item.id} 
+                <motion.div
+                  key={item.id}
                   className="luxury-cart-item"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1126,15 +1205,15 @@ export default function MedicineDispensingWithAdmin() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%' }}>
                     <div className="luxury-item-image">
                       <div className="item-image-glow" />
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.name} />
+                      {getMedicineImageUrl(item) ? (
+                        <img src={getMedicineImageUrl(item)} alt={item.name} />
                       ) : (
                         <span className="item-placeholder">{item.name.split(' ')[0]}</span>
                       )}
                     </div>
                     <div className="luxury-item-details">
                       <h3 className="luxury-item-name">{item.name}</h3>
-                      <p className="luxury-item-meta">SANITIZED • INSTANT</p>
+                      <p className="luxury-item-meta">SANITIZED â€¢ INSTANT</p>
                     </div>
                   </div>
 
@@ -1147,7 +1226,7 @@ export default function MedicineDispensingWithAdmin() {
                         disabled={item.cartQuantity <= 1}
                         className="luxury-qty-btn"
                       >
-                        −
+                        âˆ’
                       </button>
                       <span className="luxury-qty-value">
                         {String(item.cartQuantity).padStart(2, '0')}
@@ -1163,7 +1242,7 @@ export default function MedicineDispensingWithAdmin() {
 
                   {/* Price & Remove Row */}
                   <div className="luxury-item-price">
-                    <span className="price-value">₹{(item.price * item.cartQuantity).toLocaleString()}</span>
+                    <span className="price-value">â‚¹{(item.price * item.cartQuantity).toLocaleString()}</span>
                     <button
                       onClick={() => handleRemoveFromCart(item.id)}
                       className="luxury-remove-btn"
@@ -1176,14 +1255,14 @@ export default function MedicineDispensingWithAdmin() {
             </div>
 
             {/* Emissive Checkout Button with Liquid Silk */}
-            <motion.button 
+            <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleCheckout}
               className="luxury-checkout-btn"
             >
               <span className="checkout-silk-wave" />
               <span className="checkout-text">PROCEED TO CHECKOUT</span>
-              <span className="checkout-arrow">→</span>
+              <span className="checkout-arrow">â†’</span>
             </motion.button>
           </motion.div>
         )}
@@ -1199,12 +1278,12 @@ export default function MedicineDispensingWithAdmin() {
             className="fixed inset-0 flex items-start justify-center pt-20 px-4 backdrop-blur-sm"
             style={{ zIndex: 9999 }}
           >
-            <div 
-              className="absolute inset-0 bg-black/50" 
+            <div
+              className="absolute inset-0 bg-black/50"
               onClick={handleAdminToggle}
               style={{ zIndex: 9998 }}
             />
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: -20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: -20 }}
@@ -1214,12 +1293,12 @@ export default function MedicineDispensingWithAdmin() {
             >
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
-              <button 
-                onClick={handleAdminToggle} 
+              <button
+                onClick={handleAdminToggle}
                 className="text-gray-500 hover:text-gray-700 text-2xl font-bold hover:bg-gray-100 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200"
                 aria-label="Close admin panel"
               >
-                ×
+                Ã—
               </button>
             </div>
             {!isAuthenticated ? (
@@ -1342,12 +1421,12 @@ export default function MedicineDispensingWithAdmin() {
                     <button
                       onClick={() => setShowMarginPanel(!showMarginPanel)}
                       className={`text-sm px-4 py-2 rounded-lg border-2 transition-all duration-200 font-semibold shadow-sm ${
-                        showMarginPanel 
-                          ? 'border-green-500 bg-green-500 text-white' 
+                        showMarginPanel
+                          ? 'border-green-500 bg-green-500 text-white'
                           : 'border-green-500 text-green-600 hover:bg-green-500 hover:text-white'
                       }`}
                     >
-                      💰 {showMarginPanel ? 'Hide Margins' : 'Profit Margins'}
+                      ðŸ’° {showMarginPanel ? 'Hide Margins' : 'Profit Margins'}
                     </button>
                   </div>
                   <div className="flex items-center gap-4">
@@ -1364,7 +1443,7 @@ export default function MedicineDispensingWithAdmin() {
                         className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                           isRunMode ? 'bg-green-500 focus:ring-green-500' : 'bg-orange-400 focus:ring-orange-400'
                         }`}
-                        title={window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? '🔒 Locked to RUN mode on production' : 'Toggle payment mode'}
+                        title={window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? 'ðŸ”’ Locked to RUN mode on production' : 'Toggle payment mode'}
                       >
                         <span
                           className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
@@ -1377,17 +1456,11 @@ export default function MedicineDispensingWithAdmin() {
                       </span>
                       {window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && (
                         <span className="text-xs ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full font-semibold">
-                          🔒 Locked
+                          ðŸ”’ Locked
                         </span>
                       )}
                     </div>
-                    <PrimaryButton
-                      onClick={handleRefreshGdriveImages}
-                      disabled={isRefreshing}
-                      className={`${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''} text-sm px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-sm transition-all duration-200`}
-                    >
-                      {isRefreshing ? "Refreshing..." : "Refresh Images"}
-                    </PrimaryButton>
+
                     <PrimaryButton
                       onClick={() => {
                         setIsAuthenticated(false);
@@ -1403,10 +1476,10 @@ export default function MedicineDispensingWithAdmin() {
 
                 {/* REPORT PRICE CONTROL */}
                 <div className="mb-4 flex items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl px-5 py-3 border border-blue-200">
-                  <span className="text-xl">📋</span>
+                  <span className="text-xl">ðŸ“‹</span>
                   <span className="text-sm font-bold text-blue-800 whitespace-nowrap">Report Price</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">₹</span>
+                    <span className="text-sm text-gray-600">â‚¹</span>
                     <input
                       type="number"
                       min="0"
@@ -1433,38 +1506,38 @@ export default function MedicineDispensingWithAdmin() {
                     {reportPriceSaving ? 'Saving...' : 'Save'}
                   </button>
                   {reportPriceStatus === 'saved' && (
-                    <span className="text-xs text-green-600 font-semibold animate-pulse">✓ Saved</span>
+                    <span className="text-xs text-green-600 font-semibold animate-pulse">âœ“ Saved</span>
                   )}
                   {reportPriceStatus === 'error' && (
-                    <span className="text-xs text-red-500 font-semibold">✗ Failed</span>
+                    <span className="text-xs text-red-500 font-semibold">âœ— Failed</span>
                   )}
                   <span className="text-xs text-gray-400 ml-auto">Shown on payment screen</span>
                 </div>
-                
+
                 {/* PROFIT MARGIN PANEL - Hidden from customers */}
                 {showMarginPanel && (
                   <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">💰</span>
+                        <span className="text-2xl">ðŸ’°</span>
                         <div>
                           <h3 className="text-lg font-bold text-green-800">Profit Margins (Hidden from customers)</h3>
-                          <p className="text-xs text-green-600">Top 2 highest margins show as "🔥 Value Deal" & "⭐ Recommended"</p>
+                          <p className="text-xs text-green-600">Top 2 highest margins show as "ðŸ”¥ Value Deal" & "â­ Recommended"</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500">Data saved in localStorage</p>
-                        <p className="text-xs text-green-600 font-semibold">✓ Persists across restarts</p>
+                        <p className="text-xs text-green-600 font-semibold">âœ“ Persists across restarts</p>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {medicalKits.map((kit) => {
                         const margin = kitMargins[kit.id] || 0;
                         const badge = marginBadges[kit.id];
                         return (
-                          <div 
-                            key={kit.id} 
+                          <div
+                            key={kit.id}
                             className={`bg-white rounded-lg p-3 border-2 transition-all ${
                               badge === 'value-deal' ? 'border-orange-400 shadow-md shadow-orange-100' :
                               badge === 'recommended' ? 'border-purple-400 shadow-md shadow-purple-100' :
@@ -1473,16 +1546,16 @@ export default function MedicineDispensingWithAdmin() {
                           >
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-semibold text-gray-800 text-sm truncate flex-1">{kit.name}</span>
-                              {badge === 'value-deal' && <span className="text-xs bg-gradient-to-r from-orange-500 to-orange-400 text-white px-2 py-0.5 rounded-full ml-2">🔥 #1</span>}
-                              {badge === 'recommended' && <span className="text-xs bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 py-0.5 rounded-full ml-2">⭐ #2</span>}
+                              {badge === 'value-deal' && <span className="text-xs bg-gradient-to-r from-orange-500 to-orange-400 text-white px-2 py-0.5 rounded-full ml-2">ðŸ”¥ #1</span>}
+                              {badge === 'recommended' && <span className="text-xs bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 py-0.5 rounded-full ml-2">â­ #2</span>}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500">Price: ₹{kit.price}</span>
+                              <span className="text-xs text-gray-500">Price: â‚¹{kit.price}</span>
                               <span className="text-xs text-gray-400">|</span>
-                              <span className="text-xs text-green-600 font-semibold">Profit: ₹{margin}</span>
+                              <span className="text-xs text-green-600 font-semibold">Profit: â‚¹{margin}</span>
                             </div>
                             <div className="mt-2 flex items-center gap-2">
-                              <label className="text-xs text-gray-500 whitespace-nowrap">Margin ₹</label>
+                              <label className="text-xs text-gray-500 whitespace-nowrap">Margin â‚¹</label>
                               <input
                                 type="number"
                                 name={`margin-${kit.id}`}
@@ -1507,11 +1580,11 @@ export default function MedicineDispensingWithAdmin() {
                         );
                       })}
                     </div>
-                    
+
                     <div className="mt-4 pt-3 border-t border-green-200 flex items-center justify-between">
                       <div className="text-xs text-gray-500">
                         <span className="font-semibold text-green-700">Total potential profit:</span>{' '}
-                        ₹{Object.values(kitMargins).reduce((a, b) => a + (parseFloat(b) || 0), 0).toFixed(0)} per kit sold
+                        â‚¹{Object.values(kitMargins).reduce((a, b) => a + (parseFloat(b) || 0), 0).toFixed(0)} per kit sold
                       </div>
                       <button
                         onClick={() => {
@@ -1526,18 +1599,18 @@ export default function MedicineDispensingWithAdmin() {
                     </div>
                   </div>
                 )}
-                
+
                 <div className={`space-y-4 overflow-auto pr-2 transition-all duration-300 ${keyboardState.visible ? 'pb-[320px]' : ''}`}>
                   {activeKits.map((kit) => (
                     <div
                       key={kit.id}
                       className="border rounded-xl p-4 flex gap-4 items-start shadow-sm hover:shadow-md transition-all duration-200 bg-white"
                     >
-                      <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center">
-                        {kit.imageUrl ? (
+                      <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
+                        {getMedicineImageUrl(kit) ? (
                           <img
-                            src={kit.imageUrl}
-                            alt=""
+                            src={getMedicineImageUrl(kit)}
+                            alt={kit.name || "Medicine"}
                             className="w-full h-full object-cover rounded-md"
                           />
                         ) : (
@@ -1560,7 +1633,7 @@ export default function MedicineDispensingWithAdmin() {
                                 const val = keyboardState.inputs[inputKey] ?? kit.name;
                                 const trimmedVal = String(val).trim();
                                 const trimmedCurrent = String(kit.name).trim();
-                                
+
                                 if (trimmedVal && trimmedVal !== trimmedCurrent) {
                                   const success = await handleUpdateKitField(kit.id, "name", trimmedVal);
                                   if (success) {
@@ -1579,13 +1652,13 @@ export default function MedicineDispensingWithAdmin() {
                               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                             />
                             {updateStatus[`${kit.id}-name`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">⏳</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">â³</span>
                             )}
                             {updateStatus[`${kit.id}-name`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">✓</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">âœ“</span>
                             )}
                             {updateStatus[`${kit.id}-name`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">✗</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">âœ—</span>
                             )}
                           </div>
                         </div>
@@ -1605,7 +1678,7 @@ export default function MedicineDispensingWithAdmin() {
                                 const val = keyboardState.inputs[inputKey] ?? kit.description;
                                 const trimmedVal = String(val).trim();
                                 const trimmedCurrent = String(kit.description).trim();
-                                
+
                                 if (trimmedVal && trimmedVal !== trimmedCurrent) {
                                   const success = await handleUpdateKitField(kit.id, "description", trimmedVal);
                                   if (success) {
@@ -1624,18 +1697,18 @@ export default function MedicineDispensingWithAdmin() {
                               className="w-full rounded-md border border-gray-300 px-3 py-2 resize-y focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                             />
                             {updateStatus[`${kit.id}-description`] === 'updating' && (
-                              <span className="absolute right-2 top-2 text-blue-500 text-xs">⏳</span>
+                              <span className="absolute right-2 top-2 text-blue-500 text-xs">â³</span>
                             )}
                             {updateStatus[`${kit.id}-description`] === 'success' && (
-                              <span className="absolute right-2 top-2 text-green-500 text-lg">✓</span>
+                              <span className="absolute right-2 top-2 text-green-500 text-lg">âœ“</span>
                             )}
                             {updateStatus[`${kit.id}-description`] === 'error' && (
-                              <span className="absolute right-2 top-2 text-red-500 text-xs">✗</span>
+                              <span className="absolute right-2 top-2 text-red-500 text-xs">âœ—</span>
                             )}
                           </div>
                         </div>
                         <div className="md:col-span-1 relative">
-                          <label className="text-xs font-medium text-gray-600">Price (₹)</label>
+                          <label className="text-xs font-medium text-gray-600">Price (â‚¹)</label>
                           <div className="relative">
                             <input
                               type="number"
@@ -1650,7 +1723,7 @@ export default function MedicineDispensingWithAdmin() {
                                 const val = keyboardState.inputs[inputKey] ?? kit.price;
                                 const numVal = Number(val);
                                 const currentNum = Number(kit.price);
-                                
+
                                 if (!isNaN(numVal) && numVal >= 0 && numVal !== currentNum) {
                                   const success = await handleUpdateKitField(kit.id, "price", numVal);
                                   if (success) {
@@ -1669,13 +1742,13 @@ export default function MedicineDispensingWithAdmin() {
                               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                             />
                             {updateStatus[`${kit.id}-price`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">⏳</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">â³</span>
                             )}
                             {updateStatus[`${kit.id}-price`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">✓</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">âœ“</span>
                             )}
                             {updateStatus[`${kit.id}-price`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">✗</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">âœ—</span>
                             )}
                           </div>
                         </div>
@@ -1695,7 +1768,7 @@ export default function MedicineDispensingWithAdmin() {
                                 const val = keyboardState.inputs[inputKey] ?? kit.quantity;
                                 const numVal = Number(val);
                                 const currentNum = Number(kit.quantity);
-                                
+
                                 if (!isNaN(numVal) && numVal >= 0 && numVal !== currentNum) {
                                   const success = await handleUpdateKitField(kit.id, "quantity", numVal);
                                   if (success) {
@@ -1714,13 +1787,13 @@ export default function MedicineDispensingWithAdmin() {
                               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                             />
                             {updateStatus[`${kit.id}-quantity`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">⏳</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">â³</span>
                             )}
                             {updateStatus[`${kit.id}-quantity`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">✓</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">âœ“</span>
                             )}
                             {updateStatus[`${kit.id}-quantity`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">✗</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">âœ—</span>
                             )}
                           </div>
                         </div>
@@ -1738,7 +1811,7 @@ export default function MedicineDispensingWithAdmin() {
                               onBlur={async () => {
                                 const inputKey = `kit-${kit.id}-expiryDate`;
                                 const val = keyboardState.inputs[inputKey] ?? kit.expiryDate;
-                                
+
                                 if (val && val !== kit.expiryDate) {
                                   const success = await handleUpdateKitField(kit.id, "expiryDate", val);
                                   if (success) {
@@ -1757,77 +1830,47 @@ export default function MedicineDispensingWithAdmin() {
                               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                             />
                             {updateStatus[`${kit.id}-expiryDate`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">⏳</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">â³</span>
                             )}
                             {updateStatus[`${kit.id}-expiryDate`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">✓</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">âœ“</span>
                             )}
                             {updateStatus[`${kit.id}-expiryDate`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">✗</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">âœ—</span>
                             )}
                           </div>
                         </div>
-                        <div className="md:col-span-1 relative">
-                          <label className="text-xs font-medium text-gray-600">Folder URL</label>
-                          <div className="relative">
-                            <input
-                              name={`kit-${kit.id}-folderUrl`}
-                              value={keyboardState.inputs[`kit-${kit.id}-folderUrl`] ?? (kit.folderUrl || '')}
-                              onFocus={handleInputFocus} onClick={handleInputFocus}
-                              onChange={(e) =>
-                                handleKeyboardChange(`kit-${kit.id}-folderUrl`, e.target.value)
-                              }
-                              onBlur={async () => {
-                                const inputKey = `kit-${kit.id}-folderUrl`;
-                                const val = keyboardState.inputs[inputKey] ?? kit.folderUrl ?? '';
-                                const trimmedVal = String(val).trim();
-                                const trimmedCurrent = String(kit.folderUrl || '').trim();
-                                
-                                if (trimmedVal !== trimmedCurrent) {
-                                  const success = await handleUpdateKitField(kit.id, "folderUrl", trimmedVal);
-                                  if (success) {
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [inputKey]: undefined },
-                                    }));
-                                  }
-                                } else {
-                                  setKeyboardState((prev) => ({
-                                    ...prev,
-                                    inputs: { ...prev.inputs, [inputKey]: undefined },
-                                  }));
-                                }
-                              }}
-                              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                            />
-                            {updateStatus[`${kit.id}-folderUrl`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">⏳</span>
-                            )}
-                            {updateStatus[`${kit.id}-folderUrl`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">✓</span>
-                            )}
-                            {updateStatus[`${kit.id}-folderUrl`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">✗</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="md:col-span-1 flex flex-col gap-3">
-                          <label className="text-xs font-medium text-gray-600">Image Upload</label>
-                          <div className="flex flex-col gap-2">
-                            <label className="cursor-pointer">
-                              <div className="text-xs text-center bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg py-2 px-3 transition-colors duration-200">
-                                Choose File
+                        <div className="md:col-span-2 flex flex-col gap-2">
+                          <label className="text-xs font-medium text-gray-600">Picture</label>
+                          <div className="flex flex-wrap gap-2 items-center">
+                            <label className="cursor-pointer flex-1">
+                              <div className="text-xs text-center bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg py-2 px-2 transition-colors duration-200 font-medium text-blue-700">
+                                {getMedicineImageUrl(kit) ? "Change Picture" : "Choose Picture"}
                               </div>
                               <input
                                 type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(kit.id, e.target.files[0])}
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  await handleImageUpload(kit.kit_id || kit.id, file);
+                                  e.target.value = "";
+                                }}
                                 className="hidden"
                               />
                             </label>
+                            {getMedicineImageUrl(kit) && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(kit.kit_id || kit.id)}
+                                className="text-xs px-2.5 py-2 rounded-lg bg-red-50 border border-red-300 text-red-600 hover:bg-red-500 hover:text-white transition-all font-medium"
+                              >
+                                Remove Picture
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleDeleteKit(kit.id)}
-                              className="text-sm px-3 py-2 rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-semibold"
+                              onClick={() => handleDeleteKit(kit.kit_id || kit.id)}
+                              className="text-xs px-3 py-2 rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-semibold"
                             >
                               Delete Kit
                             </button>
@@ -1844,9 +1887,9 @@ export default function MedicineDispensingWithAdmin() {
                     <div className={`space-y-4 mt-2 overflow-auto pr-2 transition-all duration-300 ${keyboardState.visible ? 'pb-[320px]' : ''}`}>
                       {expiredKits.map((kit) => (
                         <div key={kit.id} className="border border-red-300 rounded-xl p-4 flex gap-4 items-start bg-red-50 shadow-sm hover:shadow-md transition-all duration-200">
-                          <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center">
-                            {kit.imageUrl ? (
-                              <img src={kit.imageUrl} alt="" className="w-20 h-20 object-cover rounded-md opacity-50" />
+                          <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
+                            {getMedicineImageUrl(kit) ? (
+                              <img src={getMedicineImageUrl(kit)} alt={kit.name || "Medicine"} className="w-20 h-20 object-cover rounded-md opacity-50" />
                             ) : (
                               <span className="text-xs text-gray-500">No Image</span>
                             )}
@@ -1906,7 +1949,7 @@ export default function MedicineDispensingWithAdmin() {
                               />
                             </div>
                             <div className="md:col-span-1">
-                              <label className="text-xs text-gray-600">Price (₹)</label>
+                              <label className="text-xs text-gray-600">Price (â‚¹)</label>
                               <input
                                 type="number"
                                 name={`kit-${kit.id}-price`}
@@ -1986,47 +2029,41 @@ export default function MedicineDispensingWithAdmin() {
                                 className="w-full rounded-md border px-2 py-1"
                               />
                             </div>
-                            <div className="md:col-span-1">
-                              <label className="text-xs text-gray-600">Folder URL</label>
-                              <input
-                                name={`kit-${kit.id}-folderUrl`}
-                                value={keyboardState.inputs[`kit-${kit.id}-folderUrl`] ?? (kit.folderUrl || '')}
-                                onFocus={handleInputFocus} onClick={handleInputFocus}
-                                onChange={(e) =>
-                                  handleKeyboardChange(`kit-${kit.id}-folderUrl`, e.target.value)
-                                }
-                                onBlur={() => {
-                                  (async () => {
-                                    const val = keyboardState.inputs[`kit-${kit.id}-folderUrl`] ?? kit.folderUrl;
-                                    if (val !== kit.folderUrl) {
-                                      try {
-                                        await handleUpdateKitField(kit.id, "folderUrl", val);
-                                      } catch {}
-                                    }
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [`kit-${kit.id}-folderUrl`]: undefined },
-                                    }));
-                                  })();
-                                }}
-                                className="w-full rounded-md border px-2 py-1"
-                              />
-                            </div>
-                            <div className="md:col-span-1 flex flex-col gap-2">
-                              <label className="text-xs text-gray-600">Image</label>
-                              <span className="text-xs text-gray-500 text-center">upload</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(kit.id, e.target.files[0])}
-                                className="text-xs"
-                              />
-                              <button
-                                onClick={() => handleDeleteKit(kit.id)}
-                                className="text-sm px-3 py-1 rounded-md border text-red-600 mt-2"
-                              >
-                                Delete
-                              </button>
+                            <div className="md:col-span-2 flex flex-col gap-2">
+                              <label className="text-xs text-gray-600">Picture</label>
+                              <div className="flex flex-wrap gap-2 items-center">
+                                <label className="cursor-pointer flex-1">
+                                  <div className="text-xs text-center bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg py-1.5 px-2 transition-colors duration-200 font-medium text-blue-700">
+                                    {getMedicineImageUrl(kit) ? "Change" : "Upload"}
+                                  </div>
+                                  <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      await handleImageUpload(kit.kit_id || kit.id, file);
+                                      e.target.value = "";
+                                    }}
+                                    className="hidden"
+                                  />
+                                </label>
+                                {getMedicineImageUrl(kit) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage(kit.kit_id || kit.id)}
+                                    className="text-xs px-2 py-1.5 rounded-lg bg-red-50 border border-red-300 text-red-600 hover:bg-red-500 hover:text-white transition-all font-medium"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteKit(kit.kit_id || kit.id)}
+                                  className="text-xs px-3 py-1.5 rounded-lg border-2 border-red-300 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-semibold"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
