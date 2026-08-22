@@ -41,6 +41,9 @@ export default function PaymentGate() {
     activeSessionId !== "RELIV-001"
   );
 
+  // Two UI Modes: 'WAITING_PAYMENT' (Mode 1: 400px QR) | 'ENTER_CODE' (Mode 2: Large Keypad)
+  const [step, setStep] = useState("WAITING_PAYMENT");
+
   // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR' | 'SESSION_INVALID'
   const [uiState, setUiState] = useState("PREPARING");
   const [paymentUrl, setPaymentUrl] = useState("");
@@ -50,6 +53,7 @@ export default function PaymentGate() {
   const [attemptsRemaining, setAttemptsRemaining] = useState(5);
   const [codeDigits, setCodeDigits] = useState(["", "", "", ""]);
   const [timeLeft, setTimeLeft] = useState(300);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const isRequestingRef = useRef(false);
   const expiryTimerRef = useRef(null);
@@ -275,7 +279,33 @@ export default function PaymentGate() {
     };
   }, [uiState]);
 
-  // ── 5. Verify 4-Digit Confirmation Code with Pi ──────────────────────────
+  // ── 5. Explicit Cancel and Back Action ────────────────────────────────────
+  const handleCancelAndBack = useCallback(async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
+
+    try {
+      if (isValidSession) {
+        await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }).catch((err) => {
+          console.warn("[PaymentGate] Cancel notification error:", err.message);
+        });
+      }
+    } catch (err) {
+      console.warn("[PaymentGate] Cancel request failed:", err);
+    } finally {
+      setPaymentUrl("");
+      setRequestId("");
+      setAuthoritativeAmount(null);
+      setCodeDigits(["", "", "", ""]);
+      setIsCancelling(false);
+      navigate(-1);
+    }
+  }, [isCancelling, isValidSession, activeSessionId, navigate]);
+
+  // ── 6. Verify 4-Digit Confirmation Code with Pi ──────────────────────────
   const handleConfirmCode = useCallback(async (codeToVerify) => {
     if (!isValidSession) {
       setErrorMessage("Payment session unavailable. Please restart this session.");
@@ -311,6 +341,12 @@ export default function PaymentGate() {
         return;
       }
 
+      if (data.code === "PAYMENT_REQUEST_CANCELLED" || data.code === "CANCELLED") {
+        setErrorMessage("This payment request was cancelled. Please restart payment.");
+        setUiState("ERROR");
+        return;
+      }
+
       if (!res.ok || !data.ok) {
         // Wrong code: Decrement attempts and let customer re-type and verify explicitly
         const remaining = typeof data.attemptsRemaining === "number" ? data.attemptsRemaining : attemptsRemaining - 1;
@@ -342,7 +378,7 @@ export default function PaymentGate() {
     }
   }, [isValidSession, activeSessionId, codeDigits, requestId, attemptsRemaining, needsReport, hasKits, navigate, updateHealth]);
 
-  // ── 6. On-Screen Touch Keypad Handlers (NO AUTO-SUBMIT) ───────────────────
+  // ── 7. On-Screen Touch Keypad Handlers (NO AUTO-SUBMIT) ───────────────────
   const handleKeypadPress = useCallback((key) => {
     resetInactivityTimer();
     if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED" || uiState === "SESSION_INVALID") return;
@@ -380,27 +416,29 @@ export default function PaymentGate() {
     });
   }, [uiState, resetInactivityTimer]);
 
-  // ── 7. Physical Keyboard Support (Dev & Accessibility) ────────────────────
+  // ── 8. Physical Keyboard Support (Dev & Accessibility) ────────────────────
   const isCodeComplete = codeDigits.every((d) => d !== "");
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED" || uiState === "SESSION_INVALID") return;
 
-      if (e.key >= "0" && e.key <= "9") {
-        handleKeypadPress(parseInt(e.key, 10));
-      } else if (e.key === "Backspace") {
-        handleKeypadPress("BACKSPACE");
-      } else if (e.key === "Escape" || e.key === "Delete") {
-        handleKeypadPress("CLEAR");
-      } else if (e.key === "Enter" && isCodeComplete && uiState !== "VERIFYING") {
-        handleConfirmCode();
+      if (step === "ENTER_CODE") {
+        if (e.key >= "0" && e.key <= "9") {
+          handleKeypadPress(parseInt(e.key, 10));
+        } else if (e.key === "Backspace") {
+          handleKeypadPress("BACKSPACE");
+        } else if (e.key === "Escape" || e.key === "Delete") {
+          handleKeypadPress("CLEAR");
+        } else if (e.key === "Enter" && isCodeComplete && uiState !== "VERIFYING") {
+          handleConfirmCode();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [uiState, isCodeComplete, handleKeypadPress, handleConfirmCode]);
+  }, [uiState, step, isCodeComplete, handleKeypadPress, handleConfirmCode]);
 
   // Format time mm:ss
   const formatTime = (seconds) => {
@@ -416,29 +454,30 @@ export default function PaymentGate() {
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-50 flex flex-col items-center justify-between px-4 py-2 font-sans select-none overflow-x-hidden">
+    <div className="relative min-h-screen bg-slate-50 flex flex-col items-center justify-between px-4 py-3 font-sans select-none overflow-x-hidden">
       <TopEllipseBackground height="25%" color="#FFF4EC" />
 
       {/* Top Header */}
       <div className="relative z-10 w-full max-w-md flex items-center justify-between pt-1">
         <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/90 border border-orange-200 text-slate-700 font-semibold text-xs shadow-sm active:scale-95 transition-transform"
+          onClick={handleCancelAndBack}
+          disabled={isCancelling}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/90 border border-orange-200 text-slate-700 font-bold text-xs shadow-sm active:scale-95 transition-transform disabled:opacity-50"
         >
           <ArrowLeft size={16} className="text-orange-500" />
-          <span>Back</span>
+          <span>{isCancelling ? "Cancelling..." : "Back"}</span>
         </button>
 
         <Logo size="text-xl" />
 
-        <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
-          <Lock size={12} className="text-emerald-600" />
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+          <Lock size={13} className="text-emerald-600" />
           <span>Offline Secure</span>
         </div>
       </div>
 
-      {/* Main Content Area (Compact, fits seamlessly in 720x1280 portrait kiosk) */}
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center justify-center flex-grow py-1">
+      {/* Main Content Area */}
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center justify-center flex-grow py-2">
 
         {/* PREPARING PAYMENT STATE */}
         {uiState === "PREPARING" && (
@@ -538,158 +577,214 @@ export default function PaymentGate() {
           </div>
         )}
 
-        {/* ACTIVE PAYMENT VIEW: QR + CONFIRMATION CODE KEYPAD */}
-        {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && (
-          <div className="w-full max-w-sm flex flex-col items-center gap-2.5">
-
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {/* MODE 1 — WAITING FOR PAYMENT (LARGE ~400px QR CODE VIEW)           */}
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && step === "WAITING_PAYMENT" && (
+          <div className="w-full flex flex-col items-center gap-3.5 animate-fadeIn">
             {/* Top Title & Price Pill */}
-            <div className="flex items-center justify-between w-full px-2">
-              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Scan &amp; Pay</h1>
+            <div className="flex items-center justify-between w-full max-w-[440px] px-1">
+              <div>
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Scan to Pay</h1>
+                <p className="text-xs text-slate-500">Scan with Google Lens / Camera / UPI</p>
+              </div>
               {authoritativeAmount !== null && (
-                <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-orange-500 text-white font-extrabold text-lg shadow-sm">
+                <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-orange-500 text-white font-extrabold text-xl shadow-md shadow-orange-500/20">
                   <span>₹{formatRupees(authoritativeAmount)}</span>
                 </div>
               )}
             </div>
 
-            {/* Sharp, Crisp High-Scannability QR Card (240px QR with 4-module quiet zone) */}
-            <div className="relative p-2.5 rounded-2xl bg-white border border-orange-200/80 shadow-md flex flex-col items-center w-full">
+            {/* Large ~400px QR Code Card (Pure Black Modules, Crisp Edges, Dedicated Quiet Zone) */}
+            <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-orange-200/90 shadow-xl flex flex-col items-center w-full max-w-[440px]">
               {paymentUrl ? (
-                <div className="bg-white p-2 rounded-xl shadow-inner border border-slate-100 flex items-center justify-center">
+                <div className="bg-white p-2 rounded-2xl flex items-center justify-center">
                   <QRCodeSVG
                     value={paymentUrl}
-                    size={240}
+                    size={400}
                     level="L"
                     marginSize={4}
                     fgColor="#000000"
                     bgColor="#FFFFFF"
                     shapeRendering="crispEdges"
-                    className="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] block"
+                    className="w-[360px] h-[360px] sm:w-[400px] sm:h-[400px] block"
                   />
                 </div>
               ) : (
-                <div className="w-[200px] h-[200px] bg-slate-100 rounded-xl flex items-center justify-center text-xs text-slate-400">
-                  Generating QR...
+                <div className="w-[360px] h-[360px] sm:w-[400px] sm:h-[400px] bg-slate-100 rounded-2xl flex items-center justify-center text-sm text-slate-400 font-medium">
+                  Generating Secure QR...
                 </div>
               )}
 
-              {/* Subtitle & Live Countdown Badge */}
-              <div className="mt-1.5 flex items-center justify-between w-full px-1 text-[11px]">
-                <span className="font-semibold text-slate-500">Scan with phone camera</span>
-                <div className="flex items-center gap-1 font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
-                  <Clock size={11} className="text-orange-500 animate-pulse" />
+              {/* Subtitle & Countdown Badge */}
+              <div className="mt-2.5 flex items-center justify-between w-full px-2 text-xs">
+                <span className="font-bold text-slate-600">Scan with Google Lens / UPI app</span>
+                <div className="flex items-center gap-1.5 font-bold text-orange-700 bg-orange-50 px-3 py-1 rounded-full border border-orange-200 shadow-sm">
+                  <Clock size={13} className="text-orange-500 animate-pulse" />
                   <span>{formatTime(timeLeft)}</span>
                 </div>
               </div>
             </div>
 
-            {/* 4-Digit Code Entry & Integrated Keypad Card */}
-            <div className="w-full bg-white rounded-2xl p-3 sm:p-3.5 border border-orange-100 shadow-md flex flex-col items-center space-y-2">
-              <div className="text-center">
-                <p className="text-xs font-bold text-slate-800">
-                  Enter 4-digit code shown on your phone:
+            {/* Primary Action: Go to Enter Code Screen */}
+            <button
+              type="button"
+              onClick={() => {
+                resetInactivityTimer();
+                setStep("ENTER_CODE");
+              }}
+              className="w-full max-w-[440px] py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-98 text-white font-extrabold text-lg sm:text-xl shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>I've Paid — Enter Code →</span>
+            </button>
+
+            {/* Secondary Action: Cancel / Back to Cart */}
+            <button
+              type="button"
+              onClick={handleCancelAndBack}
+              disabled={isCancelling}
+              className="w-full max-w-[440px] py-2.5 rounded-xl bg-white hover:bg-slate-50 active:scale-98 border border-slate-200 text-slate-700 font-bold text-sm shadow-sm transition-all disabled:opacity-50"
+            >
+              {isCancelling ? "Cancelling payment..." : "← Back / Change Order"}
+            </button>
+          </div>
+        )}
+
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {/* MODE 2 — ENTER CONFIRMATION CODE (FULL LARGE KIOSK KEYPAD VIEW)     */}
+        {/* ═════════════════════════════════════════════════════════════════════ */}
+        {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && step === "ENTER_CODE" && (
+          <div className="w-full max-w-sm flex flex-col items-center gap-3 animate-fadeIn">
+
+            {/* Header & Price Pill */}
+            <div className="flex items-center justify-between w-full px-1">
+              <div>
+                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Payment Confirmation</h1>
+                <p className="text-xs text-slate-500">Enter the 4-digit code shown on your phone</p>
+              </div>
+              {authoritativeAmount !== null && (
+                <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-orange-500 text-white font-extrabold text-base shadow-sm">
+                  <span>₹{formatRupees(authoritativeAmount)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Wrong Code Warning */}
+            {uiState === "WRONG_CODE" && (
+              <div className="w-full py-1.5 px-3 rounded-xl bg-red-50 border border-red-200 text-center animate-shake">
+                <p className="text-xs font-bold text-red-600">
+                  {errorMessage || "Incorrect confirmation code."} ({attemptsRemaining} attempts left)
                 </p>
-                {uiState === "WRONG_CODE" && (
-                  <p className="text-[11px] font-bold text-red-600 animate-shake mt-0.5">
-                    {errorMessage || "Incorrect code."} ({attemptsRemaining} attempts left)
-                  </p>
-                )}
               </div>
+            )}
 
-              {/* 4 Digit Display Boxes */}
-              <div className="flex justify-center items-center gap-2.5 py-0.5">
-                {codeDigits.map((digit, idx) => {
-                  const isCurrent = codeDigits.findIndex((d) => d === "") === idx;
-                  return (
-                    <div
-                      key={idx}
-                      className={`w-11 h-13 sm:w-12 sm:h-14 rounded-xl border-2 flex items-center justify-center font-mono text-2xl font-extrabold shadow-inner transition-all ${
-                        digit
-                          ? "bg-orange-50 border-orange-500 text-orange-700 scale-105"
-                          : isCurrent
-                          ? "bg-white border-orange-400 ring-2 ring-orange-400/20 animate-pulse"
-                          : "bg-slate-50 border-slate-200 text-slate-400"
-                      }`}
-                    >
-                      {digit || ""}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Integrated Touch Keypad (50-54px buttons, perfect for 720x1280 kiosk) */}
-              <div className="w-full grid grid-cols-3 gap-1.5 pt-0.5">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => handleKeypadPress(num)}
-                    disabled={uiState === "VERIFYING"}
-                    className="h-12 sm:h-13 rounded-xl bg-orange-50/80 hover:bg-orange-100 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            {/* 4 Large Digit Display Boxes */}
+            <div className="flex justify-center items-center gap-3 py-1">
+              {codeDigits.map((digit, idx) => {
+                const isCurrent = codeDigits.findIndex((d) => d === "") === idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`w-14 h-16 sm:w-16 sm:h-18 rounded-2xl border-2 flex items-center justify-center font-mono text-3xl sm:text-4xl font-extrabold shadow-inner transition-all ${
+                      digit
+                        ? "bg-orange-50 border-orange-500 text-orange-700 scale-105"
+                        : isCurrent
+                        ? "bg-white border-orange-400 ring-4 ring-orange-400/20 animate-pulse"
+                        : "bg-slate-50 border-slate-200 text-slate-400"
+                    }`}
                   >
-                    {num}
-                  </button>
-                ))}
+                    {digit || ""}
+                  </div>
+                );
+              })}
+            </div>
 
-                {/* Left: [ ← ] (Backspace) */}
+            {/* Full Touch Keypad (68-74px height buttons, large fonts, touch optimized) */}
+            <div className="w-full grid grid-cols-3 gap-2.5 pt-0.5">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                 <button
+                  key={num}
                   type="button"
-                  onClick={() => handleKeypadPress("BACKSPACE")}
+                  onClick={() => handleKeypadPress(num)}
                   disabled={uiState === "VERIFYING"}
-                  className="h-12 sm:h-13 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-200 text-slate-700 font-bold text-lg flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Delete last digit"
+                  className="h-[68px] sm:h-[72px] rounded-2xl bg-orange-50/80 hover:bg-orange-100 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-2xl sm:text-3xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ArrowLeft size={20} className="stroke-[2.5]" />
+                  {num}
                 </button>
+              ))}
 
-                {/* Center: [ 0 ] */}
-                <button
-                  type="button"
-                  onClick={() => handleKeypadPress(0)}
-                  disabled={uiState === "VERIFYING"}
-                  className="h-12 sm:h-13 rounded-xl bg-orange-50/80 hover:bg-orange-100 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  0
-                </button>
-
-                {/* Right: [ Clear ] */}
-                <button
-                  type="button"
-                  onClick={() => handleKeypadPress("CLEAR")}
-                  disabled={uiState === "VERIFYING"}
-                  className="h-12 sm:h-13 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-200 text-slate-600 font-bold text-xs sm:text-sm flex items-center justify-center uppercase tracking-wide shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Clear
-                </button>
-              </div>
-
-              {/* Verify Payment Button (Directly below Keypad) */}
+              {/* Left: [ ← ] (Backspace) */}
               <button
                 type="button"
-                onClick={() => handleConfirmCode()}
-                disabled={!isCodeComplete || uiState === "VERIFYING"}
-                className={`w-full py-3 rounded-xl font-bold text-base transition-all shadow-md flex items-center justify-center gap-2 ${
-                  isCodeComplete && uiState !== "VERIFYING"
-                    ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98 shadow-orange-500/25 cursor-pointer"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                }`}
+                onClick={() => handleKeypadPress("BACKSPACE")}
+                disabled={uiState === "VERIFYING"}
+                className="h-[68px] sm:h-[72px] rounded-2xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-200 text-slate-700 font-bold text-xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Delete last digit"
               >
-                {uiState === "VERIFYING" ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Verifying Code...</span>
-                  </>
-                ) : (
-                  <span>Verify Payment</span>
-                )}
+                <ArrowLeft size={26} className="stroke-[2.5]" />
+              </button>
+
+              {/* Center: [ 0 ] */}
+              <button
+                type="button"
+                onClick={() => handleKeypadPress(0)}
+                disabled={uiState === "VERIFYING"}
+                className="h-[68px] sm:h-[72px] rounded-2xl bg-orange-50/80 hover:bg-orange-100 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-2xl sm:text-3xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                0
+              </button>
+
+              {/* Right: [ Clear ] */}
+              <button
+                type="button"
+                onClick={() => handleKeypadPress("CLEAR")}
+                disabled={uiState === "VERIFYING"}
+                className="h-[68px] sm:h-[72px] rounded-2xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-200 text-slate-600 font-bold text-sm sm:text-base flex items-center justify-center uppercase tracking-wide shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Clear
               </button>
             </div>
+
+            {/* Verify Payment Button */}
+            <button
+              type="button"
+              onClick={() => handleConfirmCode()}
+              disabled={!isCodeComplete || uiState === "VERIFYING"}
+              className={`w-full py-4 rounded-2xl font-bold text-lg sm:text-xl transition-all shadow-md flex items-center justify-center gap-2 ${
+                isCodeComplete && uiState !== "VERIFYING"
+                  ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98 shadow-orange-500/25 cursor-pointer"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+              }`}
+            >
+              {uiState === "VERIFYING" ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Verifying Payment...</span>
+                </>
+              ) : (
+                <span>Verify Payment</span>
+              )}
+            </button>
+
+            {/* Back to QR Button */}
+            <button
+              type="button"
+              onClick={() => {
+                resetInactivityTimer();
+                setStep("WAITING_PAYMENT");
+              }}
+              disabled={uiState === "VERIFYING"}
+              className="w-full py-2.5 rounded-xl bg-white hover:bg-slate-50 active:scale-98 border border-slate-200 text-slate-600 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <ArrowLeft size={16} />
+              <span>← Back to QR</span>
+            </button>
           </div>
         )}
       </div>
 
       {/* Minimal Footer */}
-      <div className="relative z-10 w-full text-center text-[10px] text-slate-400 py-0.5">
+      <div className="relative z-10 w-full text-center text-[10px] text-slate-400 py-1">
         Reliv Health System • Secure Offline Payment Gateway
       </div>
     </div>

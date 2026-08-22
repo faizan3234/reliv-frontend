@@ -5,6 +5,7 @@ import { useSpeech } from "../context/SpeechContext";
 import { useHealth } from "../context/HealthContext";
 import CampusLeaderboard from "../components/CampusLeaderboard";
 import { AnimatePresence } from "framer-motion";
+import { API_BASE } from "../config/api";
 
 
 
@@ -12,6 +13,19 @@ const Splash = () => {
   const navigate = useNavigate();
   const { speak, stop } = useSpeech();
   const { resetHealth } = useHealth();
+  // Best-effort cancel of prior unpaid payment request when customer starts new journey
+  const cancelStalePaymentSession = useCallback(() => {
+    try {
+      const oldSessionId = localStorage.getItem("reliv_session_id") || sessionStorage.getItem("reliv_session_id");
+      if (oldSessionId && oldSessionId.startsWith("KSK-")) {
+        fetch(`${API_BASE}/api/sessions/${encodeURIComponent(oldSessionId)}/payment-v2/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }).catch(() => {});
+      }
+    } catch {}
+  }, []);
+
   const idleInterval = useRef(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const lbCycleRef = useRef(null);
@@ -36,8 +50,9 @@ const Splash = () => {
 
   // Reset any stale customer session on home/splash mount
   useEffect(() => {
+    cancelStalePaymentSession();
     resetHealth();
-  }, [resetHealth]);
+  }, [resetHealth, cancelStalePaymentSession]);
 
   // Speak welcome on mount
   useEffect(() => {
@@ -111,6 +126,7 @@ const Splash = () => {
       setErrorMessage("Please agree to the Terms & Conditions to proceed.");
       return;
     }
+    cancelStalePaymentSession();
     resetHealth();
     navigate("/choose-language");
   };
