@@ -302,7 +302,7 @@ export default function PaymentGate() {
       }
 
       if (!res.ok || !data.ok) {
-        // Wrong code
+        // Wrong code: Decrement attempts and let customer re-type and verify explicitly
         const remaining = typeof data.attemptsRemaining === "number" ? data.attemptsRemaining : attemptsRemaining - 1;
         setAttemptsRemaining(Math.max(0, remaining));
         setCodeDigits(["", "", "", ""]);
@@ -332,7 +332,7 @@ export default function PaymentGate() {
     }
   }, [isValidSession, activeSessionId, codeDigits, requestId, attemptsRemaining, needsReport, hasKits, navigate, updateHealth]);
 
-  // ── 6. On-Screen Touch Keypad Handlers ────────────────────────────────────
+  // ── 6. On-Screen Touch Keypad Handlers (NO AUTO-SUBMIT) ───────────────────
   const handleKeypadPress = useCallback((key) => {
     resetInactivityTimer();
     if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED" || uiState === "SESSION_INVALID") return;
@@ -358,23 +358,17 @@ export default function PaymentGate() {
       return;
     }
 
-    // Append digit (0-9) - preserves leading zero, e.g. 0042
+    // Append digit (0-9) - preserves leading zero, e.g. 0042. Does NOT auto-submit.
     setCodeDigits((prev) => {
       const next = [...prev];
       const emptyIndex = next.findIndex((d) => d === "");
       if (emptyIndex !== -1) {
         next[emptyIndex] = String(key);
         if (uiState === "WRONG_CODE") setUiState("QR_READY");
-
-        // Auto-submit when 4th digit is entered
-        if (emptyIndex === 3) {
-          const fullCode = next.join("");
-          setTimeout(() => handleConfirmCode(fullCode), 50);
-        }
       }
       return next;
     });
-  }, [uiState, resetInactivityTimer, handleConfirmCode]);
+  }, [uiState, resetInactivityTimer]);
 
   // ── 7. Physical Keyboard Support (Dev & Accessibility) ────────────────────
   const isCodeComplete = codeDigits.every((d) => d !== "");
@@ -389,7 +383,7 @@ export default function PaymentGate() {
         handleKeypadPress("BACKSPACE");
       } else if (e.key === "Escape" || e.key === "Delete") {
         handleKeypadPress("CLEAR");
-      } else if (e.key === "Enter" && isCodeComplete) {
+      } else if (e.key === "Enter" && isCodeComplete && uiState !== "VERIFYING") {
         handleConfirmCode();
       }
     };
@@ -550,10 +544,10 @@ export default function PaymentGate() {
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Secure Payment</h1>
             </div>
 
-            {/* Large High-Scannability Universal QR Card (320px QR with 4-module quiet zone + white padding) */}
+            {/* Large High-Scannability Universal QR Card (320px QR with 4-module quiet zone, crisp sharp edges, & white padding) */}
             <div className="relative p-4 rounded-3xl bg-white border-2 border-orange-200 shadow-xl flex flex-col items-center">
               {paymentUrl ? (
-                <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100">
+                <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center">
                   <QRCodeSVG
                     value={paymentUrl}
                     size={320}
@@ -561,6 +555,7 @@ export default function PaymentGate() {
                     marginSize={4}
                     fgColor="#000000"
                     bgColor="#FFFFFF"
+                    shapeRendering="crispEdges"
                     className="w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] block"
                   />
                 </div>
