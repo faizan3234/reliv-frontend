@@ -294,17 +294,26 @@ export default function MedicineDispensing() {
     });
   };
 
-  const handleUpdateQuantity = (kitKey, delta) => {
+  const handleUpdateQuantity = (kitKey, newQuantity) => {
     setCart((prev) =>
-      prev
-        .map((item) => {
-          if ((item.kit_id || item.id) === kitKey) {
-            const newQty = item.cartQuantity + delta;
-            return newQty > 0 ? { ...item, cartQuantity: newQty } : null;
+      prev.map((item) => {
+        if ((item.kit_id || item.id) === kitKey) {
+          const currentKit = medicalKits.find(
+            (k) => (k.kit_id || k.id) === kitKey
+          );
+          if (!currentKit) return item;
+
+          const maxAvailable = getAvailableQuantity(currentKit);
+          const clampedQty = Math.max(1, Math.min(newQuantity, maxAvailable));
+
+          if (newQuantity > maxAvailable) {
+            alert(`Only ${maxAvailable} units currently available in stock`);
           }
-          return item;
-        })
-        .filter(Boolean)
+
+          return { ...item, cartQuantity: clampedQty, availableStock: maxAvailable };
+        }
+        return item;
+      }).filter((item) => item.cartQuantity > 0)
     );
   };
 
@@ -312,17 +321,64 @@ export default function MedicineDispensing() {
     setCart((prev) => prev.filter((item) => (item.kit_id || item.id) !== kitKey));
   };
 
-  const totalItems = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (item.cartQuantity || 0), 0);
+  const { totalItems, totalPrice } = useMemo(() => {
+    const items = cart.reduce((sum, item) => sum + (item.cartQuantity || 0), 0);
+    const price = cart.reduce((sum, item) => sum + item.price * (item.cartQuantity || 0), 0);
+    return { totalItems: items, totalPrice: price };
   }, [cart]);
 
-  const totalPrice = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.price * (item.cartQuantity || 0), 0);
-  }, [cart]);
-
-  const handleProceedToPayment = () => {
+  // Re-verify inventory and navigate to CHECKOUT (not payment directly)
+  const handleCheckout = async () => {
     if (cart.length === 0) return;
-    navigate("/payment", { state: { cart, totalAmount: totalPrice } });
+    try {
+      const response = await fetch(`${API_BASE}/api/kits`, { cache: "no-store" });
+      if (response.ok) {
+        const latestKits = await response.json();
+        const kitList = Array.isArray(latestKits) ? latestKits : latestKits.kits || [];
+
+        const validCart = cart
+          .filter((cartItem) => {
+            const kit = kitList.find(
+              (k) => k.id === (cartItem.kit_id || cartItem.id) || k.kit_id === (cartItem.kit_id || cartItem.id)
+            );
+            return kit && getAvailableQuantity(kit) >= (cartItem.cartQuantity || 1);
+          })
+          .map((cartItem) => {
+            const kit = kitList.find(
+              (k) => k.id === (cartItem.kit_id || cartItem.id) || k.kit_id === (cartItem.kit_id || cartItem.id)
+            );
+            return {
+              ...cartItem,
+              price: kit.price,
+              availableStock: getAvailableQuantity(kit),
+            };
+          });
+
+        if (validCart.length === 0 && cart.length > 0) {
+          alert("Items in your cart are no longer available in stock. Please select from available kits.");
+          setCart([]);
+          return;
+        }
+
+        if (validCart.length < cart.length) {
+          alert("Some items in your cart were updated or removed due to inventory changes.");
+          setCart(validCart);
+        }
+
+        const validTotalPrice = validCart.reduce(
+          (sum, item) => sum + item.price * (item.cartQuantity || 1),
+          0
+        );
+        navigate("/checkout", {
+          state: { cart: validCart, totalPrice: validTotalPrice, fromPaymentGate },
+        });
+        return;
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn("Failed to re-verify inventory before checkout:", err);
+    }
+    // Fallback if re-verification fails
+    navigate("/checkout", { state: { cart, totalPrice, fromPaymentGate } });
   };
 
   if (isLoading) {
@@ -438,7 +494,7 @@ export default function MedicineDispensing() {
                       <span className="qty-label">QUANTITY</span>
                       <div className="luxury-qty-controls">
                         <button
-                          onClick={() => handleUpdateQuantity(item.kit_id || item.id, -1)}
+                          onClick={() => handleUpdateQuantity(item.kit_id || item.id, item.cartQuantity - 1)}
                           disabled={item.cartQuantity <= 1}
                           className="luxury-qty-btn"
                         >
@@ -448,7 +504,7 @@ export default function MedicineDispensing() {
                           {String(item.cartQuantity).padStart(2, "0")}
                         </span>
                         <button
-                          onClick={() => handleUpdateQuantity(item.kit_id || item.id, 1)}
+                          onClick={() => handleUpdateQuantity(item.kit_id || item.id, item.cartQuantity + 1)}
                           className="luxury-qty-btn"
                         >
                           +
@@ -465,10 +521,10 @@ export default function MedicineDispensing() {
               {/* Proceed Action Button */}
               <div className="luxury-cart-footer">
                 <PrimaryButton
-                  onClick={handleProceedToPayment}
+                  onClick={handleCheckout}
                   className="luxury-pay-btn"
                 >
-                  <span>Proceed to Payment ({formatINR(totalPrice)})</span>
+                  <span>Proceed to Checkout ({formatINR(totalPrice)})</span>
                 </PrimaryButton>
               </div>
             </motion.div>
