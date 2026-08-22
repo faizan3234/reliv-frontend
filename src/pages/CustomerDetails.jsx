@@ -1,220 +1,104 @@
+// src/pages/CustomerDetails.jsx
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import Logo from "../components/Logo";
-import PrimaryButton from "../components/PrimaryButton";
+import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { useHealth } from "../context/HealthContext";
 import VirtualKeyboard from "../components/VirtualKeyboard";
-import { ArrowLeft, Plus, Minus, QrCode, Smartphone } from "lucide-react";
+import { ArrowLeft, Plus, Minus, User, Calendar, Users, Check } from "lucide-react";
 import { API_BASE } from "../config/api";
-import { QRCodeSVG } from "qrcode.react";
 import { usePageSpeech } from "../context/SpeechContext";
 
-function CustomerDetails() {
+export default function CustomerDetails() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const { data: healthData, update, resetHealth } = useHealth();
+  const { data: healthData, update } = useHealth();
   usePageSpeech("customer-details");
 
-  const [slideUp, setSlideUp] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [activeInputName, setActiveInputName] = useState("");
-  const [keyboardInputs, setKeyboardInputs] = useState({});
 
   const [form, setForm] = useState({
     name: "",
-    age: "",
-    email: "",
-    phone: "", // OPTIONAL
+    age: "22",
     gender: "",
   });
 
-  const [errors, setErrors] = useState({});
+  const [keyboardInputs, setKeyboardInputs] = useState({
+    name: "",
+    age: "22",
+  });
 
-  // QR Code functionality
-  const [entryMode, setEntryMode] = useState('qr'); // 'manual' or 'qr' - default to QR
-  const [qrCodeData, setQrCodeData] = useState(null);
-  const pollingIntervalRef = useRef(null);
-  const qrRefreshTimerRef = useRef(null);
-  const qrRetryTimerRef = useRef(null);
-  const qrRequestVersionRef = useRef(0);
+  const isCreatingSessionRef = useRef(false);
 
-  // Inactivity timeout is handled globally by KioskGuardian (120s)
-  // No per-page timer needed here — avoids conflicting timeouts
-
-  /* Slide-up animation */
-  useEffect(() => {
-    const timer = setTimeout(() => setSlideUp(true), 20);
-    return () => clearTimeout(timer);
-  }, []);
-
-  /* Sync keyboard inputs with form */
+  // Sync keyboard inputs with form
   useEffect(() => {
     setKeyboardInputs({
       name: form.name,
       age: form.age,
-      email: form.email,
-      phone: form.phone,
     });
-  }, [form.name, form.age, form.email, form.phone]);
+  }, [form.name, form.age]);
 
-  // Handle keyboard input changes
+  // Handle on-screen keyboard input changes
   const handleKeyboardChange = useCallback((inputName, value) => {
-    // Validate age - only allow positive numbers 1-120
-    if (inputName === 'age') {
-      const numValue = value.replace(/[^0-9]/g, '');
+    if (inputName === "age") {
+      const numValue = value.replace(/[^0-9]/g, "");
       const ageNum = parseInt(numValue, 10);
-      if (numValue === '' || (ageNum >= 0 && ageNum <= 120)) {
-        setForm(prev => ({ ...prev, age: numValue }));
-        setKeyboardInputs(prev => ({ ...prev, age: numValue }));
+      if (numValue === "" || (ageNum >= 1 && ageNum <= 120)) {
+        setForm((prev) => ({ ...prev, age: numValue }));
+        setKeyboardInputs((prev) => ({ ...prev, age: numValue }));
       }
       return;
     }
-    setForm(prev => ({ ...prev, [inputName]: value }));
-    setKeyboardInputs(prev => ({ ...prev, [inputName]: value }));
-    setErrors(prev => ({ ...prev, [inputName]: "" }));
+
+    setForm((prev) => ({ ...prev, [inputName]: value }));
+    setKeyboardInputs((prev) => ({ ...prev, [inputName]: value }));
   }, []);
 
-  // Open keyboard for a specific input
   const openKeyboard = (inputName) => {
     setActiveInputName(inputName);
     setKeyboardVisible(true);
   };
 
-  // Close keyboard
   const closeKeyboard = () => {
     setKeyboardVisible(false);
     setActiveInputName("");
   };
 
-  // Age increment/decrement handlers
+  // Age increment / decrement handlers
   const handleAgeIncrement = () => {
-    const currentAge = parseInt(form.age, 10) || 0;
+    const currentAge = parseInt(form.age, 10) || 20;
     if (currentAge < 120) {
       const newAge = (currentAge + 1).toString();
-      setForm(prev => ({ ...prev, age: newAge }));
-      setKeyboardInputs(prev => ({ ...prev, age: newAge }));
-      setErrors(prev => ({ ...prev, age: "" }));
+      setForm((prev) => ({ ...prev, age: newAge }));
+      setKeyboardInputs((prev) => ({ ...prev, age: newAge }));
     }
   };
 
   const handleAgeDecrement = () => {
-    const currentAge = parseInt(form.age, 10) || 0;
+    const currentAge = parseInt(form.age, 10) || 22;
     if (currentAge > 1) {
       const newAge = (currentAge - 1).toString();
-      setForm(prev => ({ ...prev, age: newAge }));
-      setKeyboardInputs(prev => ({ ...prev, age: newAge }));
-      setErrors(prev => ({ ...prev, age: "" }));
+      setForm((prev) => ({ ...prev, age: newAge }));
+      setKeyboardInputs((prev) => ({ ...prev, age: newAge }));
     }
   };
 
-  /* Validation */
-  const validateForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    if (!form.name.trim()) {
-      newErrors.name = t("nameRequired");
-      isValid = false;
-    }
-
-    if (!form.age || form.age < 1 || form.age > 120) {
-      newErrors.age = t("ageInvalid");
-      isValid = false;
-    }
-
-    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      newErrors.email = t("emailInvalid");
-      isValid = false;
-    }
-
-    /* Phone is OPTIONAL — validate only if entered */
-    if (form.phone) {
-      const digits = form.phone.replace(/\D/g, "");
-      if (digits.length < 10 || digits.length > 15) {
-        newErrors.phone = t("phoneInvalid");
-        isValid = false;
-      }
-    }
-
-    if (!form.gender) {
-      newErrors.gender = t("genderRequired");
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
+  const handleGenderSelect = (genderValue) => {
+    setForm((prev) => ({ ...prev, gender: genderValue }));
   };
 
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    
-    // Handle age validation - prevent negative and non-numeric
-    if (name === 'age') {
-      const numValue = value.replace(/[^0-9]/g, '');
-      const ageNum = parseInt(numValue, 10);
-      if (numValue === '' || (ageNum >= 0 && ageNum <= 120)) {
-        setForm(prev => ({ ...prev, age: numValue }));
-        setKeyboardInputs(prev => ({ ...prev, age: numValue }));
-        setErrors(prev => ({ ...prev, age: "" }));
-      }
-      return;
-    }
-    
-    const sanitizedValue = type === "radio" ? value : value.trimStart();
-    setForm((prev) => ({ ...prev, [name]: sanitizedValue }));
-    setKeyboardInputs(prev => ({ ...prev, [name]: sanitizedValue }));
-    setErrors((prev) => ({ ...prev, [name]: "" }));
-  };
+  // Validation rules
+  const ageNum = parseInt(form.age, 10);
+  const isNameValid = form.name.trim().length >= 2;
+  const isAgeValid = !isNaN(ageNum) && ageNum >= 1 && ageNum <= 120;
+  const isGenderValid = Boolean(form.gender);
+  const isFormValid = isNameValid && isAgeValid && isGenderValid;
 
-  const handleProceed = async () => {
-    if (validateForm()) {
-      let currentSid = healthData?.sessionId || localStorage.getItem("reliv_session_id");
-      if (!currentSid || currentSid === "current" || currentSid === "default" || currentSid === "RELIV-001") {
-        try {
-          const fallbackSessionId = generateSessionId();
-          const res = await fetch(`${API_BASE}/api/create-qr-session`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: fallbackSessionId }),
-          });
-          if (res.ok) {
-            const sData = await res.json();
-            currentSid = sData.id || sData.sessionId || fallbackSessionId;
-          } else {
-            currentSid = fallbackSessionId;
-          }
-        } catch (e) {
-          currentSid = generateSessionId();
-        }
-      }
-
-      update({ sessionId: currentSid, patient: form });
-      try {
-        localStorage.setItem("reliv_session_id", currentSid);
-      } catch (e) {}
-      navigate("/two-options", { state: { sessionId: currentSid } });
-    }
-  };
-
-  const handleClear = () => {
-    resetHealth();
-    setForm({
-      name: "",
-      age: "",
-      email: "",
-      phone: "",
-      gender: "",
-    });
-    setErrors({});
-  };
-
-  // QR Code functions
+  // Session Helper
   const generateSessionId = () => {
     if (window.crypto?.randomUUID) {
       return window.crypto.randomUUID();
     }
-
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
       const r = Math.floor(Math.random() * 16);
       const v = c === "x" ? r : (r & 0x3) | 0x8;
@@ -222,487 +106,282 @@ function CustomerDetails() {
     });
   };
 
-  const stopQRTasks = () => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-    if (qrRefreshTimerRef.current) {
-      clearTimeout(qrRefreshTimerRef.current);
-      qrRefreshTimerRef.current = null;
-    }
-    if (qrRetryTimerRef.current) {
-      clearTimeout(qrRetryTimerRef.current);
-      qrRetryTimerRef.current = null;
-    }
-  };
+  // Ensure authoritative Pi session exists on mount
+  useEffect(() => {
+    const initKioskSession = async () => {
+      if (isCreatingSessionRef.current) return;
 
-  const isCreatingQrSessionRef = useRef(false);
+      const existingSid =
+        healthData?.sessionId ||
+        localStorage.getItem("reliv_session_id") ||
+        sessionStorage.getItem("reliv_session_id");
 
-  const startQRMode = async () => {
-    if (isCreatingQrSessionRef.current) return;
-    isCreatingQrSessionRef.current = true;
-
-    stopQRTasks();
-    const requestVersion = ++qrRequestVersionRef.current;
-    const fallbackSessionId = generateSessionId();
-    setEntryMode('qr');
-    setQrCodeData(null); // Show "Generating..." while fetching token
-
-    try {
-      const res = await fetch(`${API_BASE}/api/create-qr-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: fallbackSessionId }),
-      });
-
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
-      const sessionData = await res.json();
-      if (requestVersion !== qrRequestVersionRef.current) return;
-
-      const {
-        sessionId = sessionData.id || sessionData.sessionId || fallbackSessionId,
-        pairingToken,
-        kioskId = 'RELIV-001',
-        kioskUrl = API_BASE,
-        path
-      } = sessionData;
-
-      const authoritativeSessionId = sessionId;
-
-      // Save real KSK session ID to HealthContext & storage immediately
-      update({ sessionId: authoritativeSessionId });
-      try {
-        localStorage.setItem('reliv_session_id', authoritativeSessionId);
-      } catch (e) {}
-
-      const customerBase =
-        import.meta.env.VITE_CUSTOMER_WEB_URL ||
-        "https://reliv7.vercel.app";
-
-      let url;
-      if (pairingToken) {
-        const params = new URLSearchParams({
-          sessionId: authoritativeSessionId,
-          pairingToken,
-          kioskId,
-          kioskUrl
-        });
-        url = `${customerBase}?${params.toString()}`;
-      } else if (path) {
-        const qrBase = import.meta.env.VITE_QR_BASE_URL || window.location.origin;
-        url = `${qrBase}/${path}`;
-      } else {
-        const params = new URLSearchParams({
-          sessionId: authoritativeSessionId,
-          kioskId,
-          kioskUrl
-        });
-        url = `${customerBase}?${params.toString()}`;
-      }
-
-      setQrCodeData(url);
-
-      // Start polling for customer data with the backend authoritative sessionId
-      startPolling(authoritativeSessionId, requestVersion);
-
-      // Auto-refresh QR before the 10-min backend TTL expires
-      qrRefreshTimerRef.current = setTimeout(() => {
-        if (requestVersion === qrRequestVersionRef.current) {
-          startQRMode();
-        }
-      }, 9 * 60 * 1000); // 9 minutes
-    } catch (error) {
-      console.error('Failed to create QR session:', error);
-      // Retry after 3 seconds
-      if (requestVersion === qrRequestVersionRef.current) {
-        qrRetryTimerRef.current = setTimeout(() => {
-          if (requestVersion === qrRequestVersionRef.current) {
-            startQRMode();
-          }
-        }, 3000);
-      }
-    } finally {
-      isCreatingQrSessionRef.current = false;
-    }
-  };
-
-  const startPolling = (sid, requestVersion) => {
-    const interval = setInterval(async () => {
-      if (requestVersion !== qrRequestVersionRef.current) {
-        clearInterval(interval);
+      if (
+        existingSid &&
+        existingSid !== "current" &&
+        existingSid !== "default" &&
+        existingSid !== "RELIV-001"
+      ) {
         return;
       }
+
+      isCreatingSessionRef.current = true;
       try {
-        const response = await fetch(`${API_BASE}/api/get-customer-data`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: sid })
+        const fallbackSessionId = generateSessionId();
+        const res = await fetch(`${API_BASE}/api/create-qr-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: fallbackSessionId }),
         });
-        if (response.ok) {
-          const data = await response.json();
-          if (requestVersion === qrRequestVersionRef.current && data.customerData) {
-            // Auto-fill form
-            setForm(data.customerData);
-            setEntryMode('manual');
-            clearInterval(interval);
-            pollingIntervalRef.current = null;
-          }
+
+        if (res.ok) {
+          const sessionData = await res.json();
+          const authoritativeId =
+            sessionData.id || sessionData.sessionId || fallbackSessionId;
+          update({ sessionId: authoritativeId });
+          localStorage.setItem("reliv_session_id", authoritativeId);
         }
-      } catch (error) {
-        console.error('Error polling for data:', error);
+      } catch (err) {
+        console.warn("[CustomerDetails] Session init warning:", err.message);
+      } finally {
+        isCreatingSessionRef.current = false;
       }
-    }, 2000); // Poll every 2 seconds
-    
-    pollingIntervalRef.current = interval;
-  };
-
-  const switchToManual = () => {
-    ++qrRequestVersionRef.current;
-    stopQRTasks();
-    setEntryMode('manual');
-    setQrCodeData(null);
-  };
-
-  // Cleanup polling and QR refresh timer on unmount
-  useEffect(() => {
-    return () => {
-      ++qrRequestVersionRef.current;
-      stopQRTasks();
     };
-  }, []);
 
-  /* Start QR mode on mount since it's default */
-  useEffect(() => {
-    if (entryMode === 'qr') {
-      startQRMode();
+    initKioskSession();
+  }, [healthData?.sessionId, update]);
+
+  // Proceed handler
+  const handleProceed = async () => {
+    if (!isFormValid) return;
+
+    closeKeyboard();
+
+    let currentSid =
+      healthData?.sessionId ||
+      localStorage.getItem("reliv_session_id") ||
+      sessionStorage.getItem("reliv_session_id");
+
+    if (
+      !currentSid ||
+      currentSid === "current" ||
+      currentSid === "default" ||
+      currentSid === "RELIV-001"
+    ) {
+      try {
+        const fallbackSessionId = generateSessionId();
+        const res = await fetch(`${API_BASE}/api/create-qr-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: fallbackSessionId }),
+        });
+        if (res.ok) {
+          const sData = await res.json();
+          currentSid = sData.id || sData.sessionId || fallbackSessionId;
+        } else {
+          currentSid = fallbackSessionId;
+        }
+      } catch (e) {
+        currentSid = generateSessionId();
+      }
     }
-  }, []); // Empty dependency array to run only on mount
+
+    const patientPayload = {
+      name: form.name.trim(),
+      age: parseInt(form.age, 10),
+      gender: form.gender,
+    };
+
+    update({
+      sessionId: currentSid,
+      patient: patientPayload,
+    });
+
+    try {
+      localStorage.setItem("reliv_session_id", currentSid);
+    } catch (e) {}
+
+    navigate("/two-options", { state: { sessionId: currentSid } });
+  };
 
   return (
-    <div className={`h-screen bg-white flex flex-col overflow-y-auto scrollable-container ${keyboardVisible ? 'pb-80' : 'pb-20 md:pb-64'}`}> 
-      {/* BIG PROMINENT BACK BUTTON */}
-      <button
-        onClick={() => navigate(-1)}
-        className="kiosk-back-btn"
-        aria-label={t("go_back")}
-      >
-        <ArrowLeft size={22} />
-        <span>Back</span>
-      </button>
+    <div
+      className={`relative min-h-screen bg-slate-50 flex flex-col justify-between font-sans select-none overflow-x-hidden ${
+        keyboardVisible ? "pb-80" : "pb-6"
+      }`}
+    >
+      <TopEllipseBackground height="35%" color="#FFF4EC" />
 
-      {/* Header */}
-      <div className="bg-gradient-to-b from-orange-50 to-white pt-8 pb-4 flex flex-col items-center relative">
-        <Logo size="text-3xl md:text-4xl" />
-        <p className="mt-2 text-gray-600 text-center text-sm md:text-base">
-          {t("introMessage")}
-        </p>
+      {/* Top Header */}
+      <div className="relative z-10 w-full max-w-lg mx-auto px-5 pt-4 flex items-center justify-between">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/90 border border-orange-200 text-slate-700 font-semibold text-sm shadow-sm active:scale-95 transition-transform"
+        >
+          <ArrowLeft size={18} className="text-orange-500" />
+          <span>Back</span>
+        </button>
+
+        <Logo size="text-2xl sm:text-3xl" />
+
+        <div className="w-16" />
       </div>
 
-      {/* Sliding Card */}
-      <div
-        className={`mt-2 transform transition-transform duration-700 ease-out ${
-          slideUp ? "translate-y-0" : "translate-y-full"
-        }`}
-      >
-        <div className="bg-white rounded-t-3xl shadow-2xl border border-gray-300 px-6 py-8 max-w-lg mx-auto md:max-w-2xl"> 
-          <h2 className="text-lg md:text-xl font-semibold mb-6 text-center">
-            {t("whoIsReliv")}
-          </h2>
+      {/* Main Content Area */}
+      <div className="relative z-10 w-full max-w-lg mx-auto px-5 py-4 flex-1 flex flex-col justify-center">
+        {/* Title Card */}
+        <div className="text-center mb-6 space-y-1">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Tell us about you
+          </h1>
+          <p className="text-sm text-slate-500 font-medium">
+            Personalize your health checkup and reports
+          </p>
+        </div>
 
-          {entryMode === 'qr' ? (
-            /* QR Code Mode — visual-first, no reading required */
-            <div className="mb-8">
-
-              {/* ── VISUAL DO / DON'T row ── works for illiterate users ── */}
-              <div className="flex gap-3 justify-center mb-5">
-
-                {/* DON'T — red card with payment app icons crossed out */}
-                <div className="flex-1 max-w-[160px] rounded-2xl bg-red-50 border-2 border-red-400 p-3 text-center">
-                  <div className="text-4xl mb-1">🚫</div>
-                  {/* Payment app logos as emoji stand-ins — universally recognised */}
-                  <div className="flex justify-center gap-1 mb-1 text-2xl grayscale opacity-60">
-                    <span>G</span><span style={{color:'#5f6368',fontWeight:900,fontSize:'1.4rem'}}>Pay</span>
-                  </div>
-                  <div className="text-red-600 font-black text-sm leading-tight">
-                    GPay / PhonePe<br/>
-                    <span className="text-xs font-bold">mat kholo ❌</span>
-                  </div>
-                </div>
-
-                {/* Arrow between */}
-                <div className="flex items-center text-gray-400 text-2xl font-bold self-center">→</div>
-
-                {/* DO — green card with camera icon */}
-                <div className="flex-1 max-w-[160px] rounded-2xl bg-green-50 border-2 border-green-400 p-3 text-center">
-                  <div className="text-4xl mb-1">📷</div>
-                  <div className="text-green-700 font-black text-sm leading-tight">
-                    Camera app ✅
-                  </div>
-                  <div className="text-green-600 text-xs mt-1 font-semibold">
-                    (iPhone / Android)
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-green-200 text-green-500 text-xs">
-                    ya 🔍 Google Lens
-                  </div>
-                </div>
-              </div>
-
-              {/* ── 3-step visual guide ── */}
-              <div className="flex justify-center gap-2 mb-5">
-                {[
-                  { icon: '📱', label: 'Camera\nkholo' },
-                  { icon: '→', label: '' },
-                  { icon: '🔲', label: 'QR pe\npoint karo' },
-                  { icon: '→', label: '' },
-                  { icon: '✍️', label: 'Form\nbharo' },
-                ].map((s, i) => s.icon === '→' ? (
-                  <div key={i} className="self-center text-gray-400 text-xl font-bold">{s.icon}</div>
-                ) : (
-                  <div key={i} className="flex flex-col items-center bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
-                    <span className="text-3xl">{s.icon}</span>
-                    <span className="text-xs text-gray-600 font-semibold text-center whitespace-pre-line leading-tight mt-1">{s.label}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* ── QR code itself ── */}
-              <div className="text-center mb-4">
-                {qrCodeData ? (
-                  <div className="flex flex-col items-center">
-                    <QRCodeSVG
-                      value={qrCodeData}
-                      size={240}
-                      level="M"
-                      className="border-4 border-blue-400 rounded-xl shadow-lg"
-                    />
-                    <p className="mt-3 text-sm text-gray-500 max-w-xs">
-                      📲 Scan karein · স্ক্যান করুন · Waiting...
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <div className="w-60 h-60 border-4 border-gray-200 rounded-xl bg-gray-50 flex items-center justify-center">
-                      <div className="text-center">
-                        <QrCode size={48} className="mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500">Generating QR code...</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Manual Entry Button Below QR */}
-              <div className="text-center">
-                <button
-                  onClick={switchToManual}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors font-medium shadow-md"
-                >
-                  <Smartphone size={20} />
-                  Enter Details Manually Instead
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              {/* Switch to QR Mode Button */}
-              <div className="text-center mb-6">
-                <button
-                  onClick={startQRMode}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium shadow-md"
-                >
-                  <QrCode size={20} />
-                  Use QR Code Instead
-                </button>
-              </div>
-              
-              {/* Name */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
-              {t("enterName")}
+        {/* Form Container Card */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-orange-100/80 shadow-xl space-y-6">
+          {/* 1. Name Field */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <User size={16} className="text-orange-500" />
+              <span>Full Name</span>
             </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              readOnly
-              onChange={handleChange}
-              onFocus={() => openKeyboard("name")}
+            <div
               onClick={() => openKeyboard("name")}
-              className={`w-full border ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              } rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400`}
-              placeholder="Enter your name"
-            />
-            {errors.name && (
-              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-            )}
+              className={`w-full rounded-2xl border-2 px-4 py-3.5 flex items-center bg-slate-50/50 cursor-pointer transition-all ${
+                activeInputName === "name" && keyboardVisible
+                  ? "border-orange-500 bg-white ring-4 ring-orange-500/10 shadow-sm"
+                  : form.name.trim()
+                  ? "border-slate-300 bg-white"
+                  : "border-slate-200 hover:border-orange-300"
+              }`}
+            >
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                readOnly
+                placeholder="Enter your full name"
+                className="w-full bg-transparent text-lg font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none cursor-pointer"
+              />
+              {isNameValid && (
+                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <Check size={14} className="stroke-[3]" />
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Age - With Arrow Buttons */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
-              {t("enterAge")}
+          {/* 2. Age Stepper Field */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <Calendar size={16} className="text-orange-500" />
+              <span>Age</span>
             </label>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center justify-between gap-3 bg-slate-50/70 p-2 rounded-2xl border border-slate-200">
               {/* Decrement Button */}
               <button
                 type="button"
                 onClick={handleAgeDecrement}
-                className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 hover:from-orange-200 hover:to-orange-300 active:from-orange-300 active:to-orange-400 text-orange-700 rounded-xl border-2 border-orange-300 shadow-md transition-all duration-150 touch-manipulation text-2xl font-bold"
+                className="w-14 h-14 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-orange-600 active:scale-90 active:bg-orange-50 flex items-center justify-center shadow-sm font-bold text-2xl transition-all"
                 aria-label="Decrease age"
               >
-                <Minus size={26} strokeWidth={3} />
+                <Minus size={22} className="stroke-[2.5]" />
               </button>
-              
-              {/* Age Input */}
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                name="age"
-                value={form.age}
-                readOnly
-                onChange={handleChange}
-                onFocus={() => openKeyboard("age")}
+
+              {/* Central Display / Touch Target */}
+              <div
                 onClick={() => openKeyboard("age")}
-                className={`flex-1 border ${
-                  errors.age ? "border-red-500" : "border-gray-300"
-                } rounded-lg px-4 py-3 text-xl font-bold text-center focus:ring-2 focus:ring-orange-400`}
-                placeholder="Age"
-                maxLength={3}
-              />
-              
+                className="flex-1 flex flex-col items-center justify-center py-1 cursor-pointer"
+              >
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-extrabold text-slate-900 tracking-tight font-mono">
+                    {form.age || "--"}
+                  </span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    yrs
+                  </span>
+                </div>
+                <span className="text-[11px] font-medium text-slate-400">
+                  Tap to type or use + / -
+                </span>
+              </div>
+
               {/* Increment Button */}
               <button
                 type="button"
                 onClick={handleAgeIncrement}
-                className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200 hover:from-green-200 hover:to-green-300 active:from-green-300 active:to-green-400 text-green-700 rounded-xl border-2 border-green-300 shadow-md transition-all duration-150 touch-manipulation text-2xl font-bold"
+                className="w-14 h-14 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-orange-600 active:scale-90 active:bg-orange-50 flex items-center justify-center shadow-sm font-bold text-2xl transition-all"
                 aria-label="Increase age"
               >
-                <Plus size={26} strokeWidth={3} />
+                <Plus size={22} className="stroke-[2.5]" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1 text-center">Tap +/- or enter age (1-120)</p>
-            {errors.age && (
-              <p className="text-red-500 text-sm mt-1">{errors.age}</p>
-            )}
           </div>
 
-          {/* Email */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
-              {t("enterEmail")}
+          {/* 3. Gender Selection Field */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <Users size={16} className="text-orange-500" />
+              <span>Gender</span>
             </label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              readOnly
-              onChange={handleChange}
-              onFocus={() => openKeyboard("email")}
-              onClick={() => openKeyboard("email")}
-              className={`w-full border ${
-                errors.email ? "border-red-500" : "border-gray-300"
-              } rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400`}
-              placeholder="your.email@example.com"
-            />
-            <p className="text-sm text-gray-500 mt-1">For privacy, please enter your email to continue</p>
+
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: "male", label: "Male", icon: "👨" },
+                { id: "female", label: "Female", icon: "👩" },
+                { id: "other", label: "Other", icon: "⚧" },
+              ].map((item) => {
+                const isSelected =
+                  form.gender.toLowerCase() === item.id.toLowerCase();
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleGenderSelect(item.id)}
+                    className={`h-16 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 font-bold text-sm transition-all active:scale-95 ${
+                      isSelected
+                        ? "bg-gradient-to-br from-orange-500 to-orange-600 border-orange-500 text-white shadow-md shadow-orange-500/20 scale-[1.02]"
+                        : "bg-slate-50/80 border-slate-200 text-slate-700 hover:border-orange-200 hover:bg-white"
+                    }`}
+                  >
+                    <span className="text-lg leading-none">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Continue Button */}
+          <div className="pt-2">
             <button
               type="button"
-              onClick={() => {
-                resetHealth();
-                setForm({
-                  name: "",
-                  age: "",
-                  email: "",
-                  phone: "",
-                  gender: "",
-                });
-                setKeyboardInputs({});
-              }}
-              className="text-sm text-orange-600 underline mt-1"
-            >
-              Not you? Start new user
-            </button>
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          {/* Phone (Optional) */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
-              {t("enterPhone")} <span className="text-gray-400">(Optional)</span>
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={form.phone}
-              readOnly
-              onChange={handleChange}
-              onFocus={() => openKeyboard("phone")}
-              onClick={() => openKeyboard("phone")}
-              onTouchStart={() => openKeyboard("phone")}
-              className={`w-full border ${
-                errors.phone ? "border-red-500" : "border-gray-300"
-              } rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400`}
-              placeholder="+91 98765 43210"
-            />
-            {errors.phone && (
-              <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-            )}
-          </div>
-
-          {/* Gender */}
-          <div className="mb-6">
-            <p className="mb-2 font-medium text-sm">{t("selectGender")}</p>
-            <div className="flex gap-4 flex-wrap">
-              {['male', 'female', 'others'].map((g) => (
-                <label key={g} className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border-2 border-gray-200 hover:border-orange-300 transition-colors">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value={g}
-                    checked={form.gender === g}
-                    onChange={handleChange}
-                    className="w-5 h-5 accent-orange-500"
-                  />
-                  <span className="text-base font-medium">{t(g)}</span>
-                </label>
-              ))}
-            </div>
-            {errors.gender && (
-              <p className="text-red-500 text-sm mt-1">{errors.gender}</p>
-            )}
-          </div>
-
-          {/* Buttons */}
-          <div className="flex flex-col gap-4 md:flex-row">
-            <PrimaryButton
-              className="w-full md:w-1/2 justify-center"
               onClick={handleProceed}
+              disabled={!isFormValid}
+              className={`w-full py-4 rounded-2xl font-bold text-lg transition-all shadow-md flex items-center justify-center gap-2 ${
+                isFormValid
+                  ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98 shadow-orange-500/25"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+              }`}
             >
-              {t("proceed")}
-            </PrimaryButton>
-
-            <button
-              type="button"
-              onClick={handleClear}
-              className="w-full md:w-1/2 bg-gray-200 text-gray-700 rounded-lg px-4 py-2 hover:bg-gray-300"
-            >
-              {t("clearForm")}
+              <span>Continue</span>
+              <span className="text-xl">→</span>
             </button>
           </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Virtual Keyboard */}
+      {/* Minimal Footer */}
+      <div className="relative z-10 w-full text-center text-xs text-slate-400 py-2">
+        Reliv Health System • Fast & Private
+      </div>
+
+      {/* Virtual Keyboard (On-Screen Touch Keyboard) */}
       {keyboardVisible && (
-        <div className="fixed bottom-0 left-0 right-0 z-[10000]">
+        <div className="fixed bottom-0 left-0 right-0 z-[10000] bg-white border-t border-slate-200 shadow-2xl animate-slideUp">
           <VirtualKeyboard
             inputName={activeInputName}
             inputs={keyboardInputs}
@@ -714,5 +393,3 @@ function CustomerDetails() {
     </div>
   );
 }
-
-export default CustomerDetails;

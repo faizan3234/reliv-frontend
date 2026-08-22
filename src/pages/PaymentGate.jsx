@@ -526,20 +526,22 @@ export default function PaymentGate() {
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Secure Payment</h1>
             </div>
 
-            {/* Large High-Scannability QR Code Container (360x360 QR with quiet zone) */}
-            <div className="relative p-3 rounded-3xl bg-white border-2 border-orange-200 shadow-xl flex flex-col items-center">
+            {/* Large High-Scannability Universal QR Card (approx 320px QR with 4-module quiet zone + white padding) */}
+            <div className="relative p-4 rounded-3xl bg-white border-2 border-orange-200 shadow-xl flex flex-col items-center">
               {paymentUrl ? (
-                <div className="bg-white p-2 rounded-2xl">
+                <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100">
                   <QRCodeSVG
                     value={paymentUrl}
-                    size={360}
+                    size={320}
                     level="L"
                     marginSize={4}
-                    className="w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] block"
+                    fgColor="#000000"
+                    bgColor="#FFFFFF"
+                    className="w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] block"
                   />
                 </div>
               ) : (
-                <div className="w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] bg-slate-100 rounded-2xl flex items-center justify-center text-xs text-slate-400">
+                <div className="w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] bg-slate-100 rounded-2xl flex items-center justify-center text-xs text-slate-400">
                   Generating QR...
                 </div>
               )}
