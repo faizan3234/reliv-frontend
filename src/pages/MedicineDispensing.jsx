@@ -1,22 +1,19 @@
-﻿import React, { useEffect, useMemo, useState, useCallback } from "react";
+// src/pages/MedicineDispensing.jsx
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft, Heart, ShieldCheck } from "lucide-react";
 import { sanitizeError } from "../utils/errorSanitizer";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
-import { KeyboardWrapper } from "../components/KeyboardWrapper";
-import VirtualKeyboard from "../components/VirtualKeyboard";
 import AuraBackground from "../components/AuraBackground";
 import "./RelivKiosk.css";
 import { API_BASE } from "../config/api";
+import { formatINR } from "../utils/currency";
 
 // Helper to resolve canonical medicine image URL (local Pi file or external URL)
 export const getMedicineImageUrl = (kit) => {
-  const imagePath =
-    kit?.image_path ||
-    kit?.imageUrl ||
-    "";
+  const imagePath = kit?.image_path || kit?.imageUrl || "";
 
   if (!imagePath) {
     return "";
@@ -34,7 +31,7 @@ export const getMedicineImageUrl = (kit) => {
   return `${API_BASE}${imagePath}`;
 };
 
-// --- Helpers ---
+// --- Quantity & Stock Helpers ---
 export const getAvailableQuantity = (kit) => {
   if (!kit) return 0;
   return Number(
@@ -45,13 +42,12 @@ export const getAvailableQuantity = (kit) => {
 };
 
 const computeStockLabel = (qty, expiryDate) => {
-  if (new Date(expiryDate) < new Date()) return "Expired";
+  if (expiryDate && new Date(expiryDate) < new Date()) return "Expired";
   if (qty <= 0) return "Out of Stock";
   if (qty <= 5) return "Low Stock";
   return "In Stock";
 };
 
-// Helper to compute stock class for CSS
 const computeStockClass = (qty, expiryDate) => {
   const label = computeStockLabel(qty, expiryDate);
   switch (label) {
@@ -68,156 +64,176 @@ const computeStockClass = (qty, expiryDate) => {
   }
 };
 
-// --- Components ---
 const StockBadge = ({ quantity, expiryDate }) => {
   const stock = computeStockLabel(quantity, expiryDate);
   const stockClass = computeStockClass(quantity, expiryDate);
   return <span className={stockClass}>{stock}</span>;
 };
 
-const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, refreshStatus, cart, isMostChosen }) => {
+// --- Customer Kit Card Component ---
+const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMostChosen }) => {
   const available = getAvailableQuantity(kit);
-  const isOutOfStock = available <= 0 || new Date(kit.expiryDate) < new Date();
+  const isOutOfStock = available <= 0 || (kit.expiryDate && new Date(kit.expiryDate) < new Date());
 
-  const cartItem = cart?.find(item => item.id === kit.id);
+  const cartItem = cart?.find((item) => (item.kit_id || item.id) === (kit.kit_id || kit.id));
   const cartQty = cartItem ? cartItem.cartQuantity : 0;
 
-  // Smart social proof - show badge on exactly 2 kits (looks authentic, not fake)
-  // Using deterministic selection based on kit id for consistency
+  // Authentic social proof based on kit ID
   const showSocialProof = useMemo(() => {
-    const seed = kit.id || 1;
-    // Only kits with id ending in 2 or 7 show the badge (roughly 2 out of 10)
-    return (seed % 10 === 2 || seed % 10 === 7);
-  }, [kit.id]);
+    const seed = typeof kit.id === "number" ? kit.id : (kit.kit_id || "1").charCodeAt(0);
+    return seed % 10 === 2 || seed % 10 === 7;
+  }, [kit.id, kit.kit_id]);
 
   const recentBuyers = useMemo(() => {
-    const seed = kit.id || 1;
-    return ((seed * 3) % 4) + 2; // Returns 2-5 based on kit id
-  }, [kit.id]);
+    const seed = typeof kit.id === "number" ? kit.id : (kit.kit_id || "1").charCodeAt(0);
+    return ((seed * 3) % 4) + 2;
+  }, [kit.id, kit.kit_id]);
 
   return (
     <motion.div
-      whileHover={{ y: -10 }}
+      whileHover={{ y: -6 }}
       className={`glass-card lift-hover ${isOutOfStock ? "disabled" : ""}`}
     >
-      {/* SPARKLE EFFECT LAYER */}
+      {/* Sparkle Effect Layer */}
       <div className="sparkle-layer">
         <motion.div
-          initial={{ x: '-100%' }}
-          animate={{ x: '200%' }}
-          transition={{ repeat: Infinity, duration: 3, ease: "linear", repeatDelay: 2 }}
+          initial={{ x: "-100%" }}
+          animate={{ x: "200%" }}
+          transition={{ repeat: Infinity, duration: 3.5, ease: "linear", repeatDelay: 2 }}
           className="shimmer-sweep"
         />
       </div>
 
-      {/* BADGES */}
+      {/* Badges */}
       <div className="card-top">
         {isOutOfStock ? (
-          <span className="stock out" style={{fontSize: '11px', padding: '5px 10px'}}>
-            ðŸ˜” Demand was high - Restocking soon!
+          <span className="stock out" style={{ fontSize: "11px", padding: "5px 10px" }}>
+            Restocking soon
           </span>
         ) : (
           <StockBadge quantity={available} expiryDate={kit.expiryDate} />
         )}
+
         {!isOutOfStock && isMostChosen && (
-          <span className="badge" style={{background: "linear-gradient(135deg, #7c3aed, #a855f7)", fontSize: '11px', padding: '4px 8px'}}>
-            â­ Most Chosen
+          <span
+            className="badge"
+            style={{
+              background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+              fontSize: "11px",
+              padding: "4px 8px",
+            }}
+          >
+            ★ Most Chosen
           </span>
         )}
+
         {!isOutOfStock && showSocialProof && !isMostChosen && (
-          <span className="badge" style={{background: "linear-gradient(135deg, #059669, #10B981)", fontSize: '11px', padding: '4px 8px'}}>
+          <span
+            className="badge"
+            style={{
+              background: "linear-gradient(135deg, #059669, #10B981)",
+              fontSize: "11px",
+              padding: "4px 8px",
+            }}
+          >
             {recentBuyers} bought today
-          </span>
-        )}
-        {refreshStatus && (
-          <span className="badge" style={{background: "#6b7280"}}>
-            {refreshStatus}
           </span>
         )}
       </div>
 
-      {/* IMAGE */}
+      {/* Image */}
       <div className="product-img">
         {getMedicineImageUrl(kit) ? (
           <img src={getMedicineImageUrl(kit)} alt={kit.name} />
         ) : (
-          <span>{kit.name.split(" ")[0]}</span>
+          <span>{(kit.name || "Medicine").split(" ")[0]}</span>
         )}
       </div>
 
-      {/* TEXT */}
+      {/* Text Details */}
       <h3>{kit.name}</h3>
-      <p>{kit.description}</p>
+      <p>{kit.description || "Essential health & wellness support"}</p>
 
-      {/* PRICE ROW - Price on left, controls on right */}
+      {/* Price & Cart Actions */}
       <div className="price-row">
         <div className="price-stack">
-          <span className="mrp-price">â‚¹{Math.round(kit.price * 1.25)}</span>
-          <span className="price">â‚¹{kit.price}</span>
+          <span className="mrp-price">{formatINR(Math.round(kit.price * 1.25))}</span>
+          <span className="price">{formatINR(kit.price)}</span>
         </div>
 
-        {/* ADD TO CART - When not in cart */}
+        {/* Add to Cart button */}
         {!isOutOfStock && cartQty === 0 && (
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => onAddToCart(kit)}
             className="add-cart-btn"
           >
-            <Plus size={20} />
-            Add
+            <Plus size={18} />
+            <span>Add</span>
           </motion.button>
         )}
 
-        {/* QUANTITY CONTROLS - When in cart */}
+        {/* Quantity Controls */}
         {!isOutOfStock && cartQty > 0 && (
           <div className="card-qty-controls">
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => cartQty > 1 ? onUpdateQty(kit.id, cartQty - 1) : onRemoveFromCart(kit.id)}
+              onClick={() =>
+                cartQty > 1
+                  ? onUpdateQty(kit.kit_id || kit.id, cartQty - 1)
+                  : onRemoveFromCart(kit.kit_id || kit.id)
+              }
               className="card-qty-btn card-qty-minus"
             >
-              <Minus size={22} />
+              <Minus size={18} />
             </motion.button>
             <span className="card-qty-value">{cartQty}</span>
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => onUpdateQty(kit.id, cartQty + 1)}
+              onClick={() => onUpdateQty(kit.kit_id || kit.id, cartQty + 1)}
               className="card-qty-btn card-qty-plus"
               disabled={cartQty >= available}
             >
-              <Plus size={22} />
+              <Plus size={18} />
             </motion.button>
           </div>
         )}
       </div>
 
-      {/* ITEM TOTAL - Shows when in cart */}
+      {/* Item Total in Cart */}
       {cartQty > 0 && (
         <div className="item-total">
-          <span>{cartQty} Ã— â‚¹{kit.price}</span>
-          <span className="item-total-price">â‚¹{cartQty * kit.price}</span>
+          <span>
+            {cartQty} × {formatINR(kit.price)}
+          </span>
+          <span className="item-total-price">{formatINR(cartQty * kit.price)}</span>
         </div>
       )}
     </motion.div>
   );
 };
 
-// --- Main Component with Admin Panel ---
-export default function MedicineDispensingWithAdmin() {
+// ═════════════════════════════════════════════════════════════════════════
+// MAIN CUSTOMER DISPENSING COMPONENT
+// ═════════════════════════════════════════════════════════════════════════
+export default function MedicineDispensing() {
   const navigate = useNavigate();
   const location = useLocation();
   const { fromPaymentGate, cart: cartFromPrevPage } = location.state || {};
 
-  // Feature flag: toggle medicine dispensing
-  const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
+  const isMedicineDispensingEnabled =
+    localStorage.getItem("reliv_medicine_dispensing_enabled") !== "false";
 
-  // If disabled, show message and block UI
   if (!isMedicineDispensingEnabled) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
         <Logo />
-        <h2 className="text-3xl font-bold text-red-600 mt-8 mb-4">Medicine Dispensing Disabled</h2>
-        <p className="text-lg text-gray-700 mb-6">This feature is currently turned off. Please contact support or admin to enable medicine dispensing.</p>
+        <h2 className="text-3xl font-bold text-red-600 mt-8 mb-4">
+          Medicine Dispensing Disabled
+        </h2>
+        <p className="text-lg text-gray-700 mb-6">
+          This feature is currently turned off. Please contact support.
+        </p>
       </div>
     );
   }
@@ -225,872 +241,101 @@ export default function MedicineDispensingWithAdmin() {
   const [medicalKits, setMedicalKits] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState(cartFromPrevPage || []);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [showForgot, setShowForgot] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [adminEmail, setAdminEmail] = useState(() => localStorage.getItem("adminEmail_v1") || "khanfaizan3234@gmail.com");
-  const [resetStage, setResetStage] = useState("request");
-  const [verificationCodeInput, setVerificationCodeInput] = useState("");
-  const [statusMessage, setStatusMessage] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
 
-  // Payment mode: PRODUCTION-SAFE
-  // Force RUN mode on production domains (not localhost)
-  const [isRunMode, setIsRunMode] = useState(() => {
-    const isProduction = window.location.hostname !== 'localhost' &&
-                         window.location.hostname !== '127.0.0.1';
-
-    if (isProduction) {
-      // Production domain: ALWAYS run mode (real payments)
-      localStorage.setItem("paymentMode", "run");
-      return true;
-    }
-
-    // Localhost: Allow test mode for development
-    return localStorage.getItem("paymentMode") === "run";
-  });
-
-  const [loginAttempts, setLoginAttempts] = useState(0);
-  const [lockUntil, setLockUntil] = useState(null);
-
-  const [keyboardState, setKeyboardState] = useState({
-    visible: false,
-    inputName: "",
-    inputs: {},
-  });
-
-  const [updateStatus, setUpdateStatus] = useState({}); // Track update status for visual feedback
-  const [clickCount, setClickCount] = useState(0);
-  const [lastClickTime, setLastClickTime] = useState(0);
-
-  // New kit image selection state
-  const [newKitImageFile, setNewKitImageFile] = useState(null);
-  const [newKitImagePreview, setNewKitImagePreview] = useState("");
-
-  const handleNewKitImageSelect = (file) => {
-    if (!file) {
-      setNewKitImageFile(null);
-      setNewKitImagePreview("");
-      return;
-    }
-
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp"
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      alert("Please choose a JPG, PNG or WEBP image.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image must be 5 MB or smaller.");
-      return;
-    }
-
-    setNewKitImageFile(file);
-
-    const previewUrl = URL.createObjectURL(file);
-
-    setNewKitImagePreview((previous) => {
-      if (previous?.startsWith("blob:")) {
-        URL.revokeObjectURL(previous);
-      }
-      return previewUrl;
-    });
-  };
-
-  // PROFIT MARGIN SYSTEM - Stored in localStorage (persists across restarts)
-  const [kitMargins, setKitMargins] = useState(() => {
+  // Fetch Inventory from Kiosk Backend
+  const fetchKits = useCallback(async () => {
     try {
-      const saved = localStorage.getItem('reliv_kit_margins');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [showMarginPanel, setShowMarginPanel] = useState(false);
-
-  // REPORT PRICE - Admin-adjustable, fetched from backend
-  const [adminReportPrice, setAdminReportPrice] = useState('');
-  const [reportPriceSaving, setReportPriceSaving] = useState(false);
-  const [reportPriceStatus, setReportPriceStatus] = useState(''); // '', 'saved', 'error'
-
-  // Fetch current report price when admin panel opens
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetch(`${API_BASE}/api/report-price`)
-        .then(r => r.json())
-        .then(d => setAdminReportPrice(String(d.price)))
-        .catch(() => {});
-    }
-  }, [isAuthenticated]);
-
-  const handleSaveReportPrice = async () => {
-    const price = parseFloat(adminReportPrice);
-    if (isNaN(price) || price < 0) { setReportPriceStatus('error'); return; }
-    setReportPriceSaving(true);
-    setReportPriceStatus('');
-    try {
-      const res = await fetch(`${API_BASE}/api/report-price`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price, password: passwordInput || localStorage.getItem('_adminPwCache') }),
+      const response = await fetch(`${API_BASE}/api/kits?t=${Date.now()}`, {
+        cache: "no-store",
       });
-      const data = await res.json();
-      if (data.ok) {
-        setAdminReportPrice(String(data.price));
-        setReportPriceStatus('saved');
-        setTimeout(() => setReportPriceStatus(''), 3000);
-      } else {
-        setReportPriceStatus('error');
-        setTimeout(() => setReportPriceStatus(''), 3000);
-      }
-    } catch {
-      setReportPriceStatus('error');
-      setTimeout(() => setReportPriceStatus(''), 3000);
-    } finally {
-      setReportPriceSaving(false);
-    }
-  };
-
-  // Save margins to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('reliv_kit_margins', JSON.stringify(kitMargins));
-  }, [kitMargins]);
-
-  // Compute top 2 margin kits for badges
-  const marginBadges = useMemo(() => {
-    const badges = {};
-
-    // Get kits with margins set and sort by margin (descending)
-    const kitsWithMargins = medicalKits
-      .filter(kit => kitMargins[kit.id] !== undefined && kitMargins[kit.id] > 0)
-      .map(kit => ({ id: kit.id, margin: kitMargins[kit.id] || 0 }))
-      .sort((a, b) => b.margin - a.margin);
-
-    // Top 1 = Value Deal, Top 2 = Recommended
-    if (kitsWithMargins.length >= 1) {
-      badges[kitsWithMargins[0].id] = 'value-deal';
-    }
-    if (kitsWithMargins.length >= 2) {
-      badges[kitsWithMargins[1].id] = 'recommended';
-    }
-
-    return badges;
-  }, [medicalKits, kitMargins]);
-
-  // Calculate Most Chosen kit based on actual purchase data
-  const mostChosenKitId = useMemo(() => {
-    const kitsWithPurchases = medicalKits.filter(kit => kit.totalPurchases && kit.totalPurchases > 0);
-    if (kitsWithPurchases.length === 0) return null;
-
-    // Find kit with highest totalPurchases
-    const mostChosen = kitsWithPurchases.reduce((max, kit) =>
-      kit.totalPurchases > max.totalPurchases ? kit : max
-    );
-
-    return mostChosen.id;
-  }, [medicalKits]);
-
-  // Update margin for a kit
-  const handleUpdateMargin = (kitId, margin) => {
-    const numMargin = parseFloat(margin) || 0;
-    setKitMargins(prev => ({
-      ...prev,
-      [kitId]: numMargin
-    }));
-  };
-
-  // --- Refresh inventory after successful checkout/payment ---
-  useEffect(() => {
-    // If coming back from PaymentGate (checkout), refresh inventory
-    if (fromPaymentGate) {
-      const fetchKits = async () => {
-        setIsRefreshing(true);
-        try {
-          const response = await fetch(`${API_BASE}/api/kits`, { cache: 'no-store' });
-          if (!response.ok) throw new Error("Failed to fetch kits");
-          const kits = await response.json();
-          setMedicalKits(
-            kits
-              .filter(kit => getAvailableQuantity(kit) >= 0)
-              .sort((a, b) => (a.id || 0) - (b.id || 0))
-          );
-        } catch (e) {
-          if (import.meta.env.DEV) console.error("Error refreshing kits after checkout:", e);
-        } finally {
-          setIsRefreshing(false);
-        }
-      };
-      fetchKits();
-    }
-  }, [fromPaymentGate]);
-
-  useEffect(() => {
-    let timer;
-    if (clickCount > 0 && clickCount < 12) {
-      timer = setTimeout(() => {
-        alert("Face not detected");
-        setClickCount(0);
-      }, 2000);
-    }
-    if (clickCount >= 12) {
-      if (lockUntil && Date.now() < lockUntil) {
-        alert("Admin panel is locked for 2 minutes due to multiple failed attempts.");
-      } else {
-        setIsAdminOpen(true);
-        setKeyboardState({ visible: true, inputName: "passwordInput", inputs: { passwordInput: "" } });
-      }
-      setClickCount(0);
-    }
-    return () => clearTimeout(timer);
-  }, [clickCount, lockUntil]);
-
-  const handleInputFocus = (e) => {
-    const name = e.target.name;
-    setKeyboardState(prev => ({
-      ...prev,
-      visible: true,
-      inputName: name,
-    }));
-    // Scroll input into view smoothly after keyboard appears
-    setTimeout(() => {
-      e.target.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest'
-      });
-    }, 100);
-  };
-
-  const handleKeyboardChange = (inputName, value) => {
-    setKeyboardState((prev) => ({
-      ...prev,
-      inputs: { ...prev.inputs, [inputName]: value },
-    }));
-
-    if (inputName === "passwordInput") {
-      setPasswordInput(value);
-    } else if (inputName === "newPassword") {
-      setNewPassword(value);
-    } else if (inputName === "verificationCodeInput") {
-      setVerificationCodeInput(value);
-    } else if (inputName.startsWith("margin-")) {
-      // Handle margin input from virtual keyboard
-      const kitId = parseInt(inputName.replace("margin-", ""));
-      if (!isNaN(kitId)) {
-        handleUpdateMargin(kitId, value);
-      }
-    }
-  };
-
-  const handleUpdateKitField = async (id, field, value) => {
-      const statusKey = `${id}-${field}`;
-
-      setUpdateStatus(prev => ({ ...prev, [statusKey]: 'updating' }));
-
-      try {
-        // Convert value to proper type
-        let updatedValue = value;
-        if (field === "price" || field === "quantity") {
-          updatedValue = Number(value);
-          if (isNaN(updatedValue) || updatedValue < 0) {
-            throw new Error("Invalid number");
-          }
-        }
-
-        if (import.meta.env.DEV) console.log(`Updating kit ${id} field ${field} to:`, updatedValue);
-
-        const response = await fetch(`${API_BASE}/api/kits/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ [field]: updatedValue }),
-        });
-
-        if (import.meta.env.DEV) console.log(`Response status: ${response.status}`);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          if (import.meta.env.DEV) console.error(`Update failed:`, errorText);
-          throw new Error(errorText || "Failed to update kit");
-        }
-
-        const result = await response.json();
-        if (import.meta.env.DEV) console.log(`Update successful:`, result);
-
-        // Update local state with the kit returned from backend
-        if (result.kit) {
-          setMedicalKits((prev) => prev.map((k) =>
-            k.id === id ? result.kit : k
-          ));
-        } else {
-          // Fallback to manual update if no kit in response
-          setMedicalKits((prev) => prev.map((k) =>
-            k.id === id ? { ...k, [field]: updatedValue } : k
-          ));
-        }
-
-        setUpdateStatus(prev => ({ ...prev, [statusKey]: 'success' }));
-        setTimeout(() => {
-          setUpdateStatus(prev => ({ ...prev, [statusKey]: null }));
-        }, 2000);
-
-        return true; // Success
-      } catch (err) {
-        if (import.meta.env.DEV) console.error(`Error updating kit ${field}:`, err.message);
-        setUpdateStatus(prev => ({ ...prev, [statusKey]: 'error' }));
-        setTimeout(() => {
-          setUpdateStatus(prev => ({ ...prev, [statusKey]: null }));
-        }, 3000);
-
-        return false; // Failure
-      }
-    };
-
-
-  // Fetch kits from backend on mount
-  const loadKits = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/kits`, {
-        cache: 'no-store'
-      });
-      if (!response.ok) throw new Error("Failed to load inventory");
-      const kits = await response.json();
-      setMedicalKits(
-        kits
-          .filter(kit => getAvailableQuantity(kit) >= 0)
-          .sort((a, b) => (a.id || 0) - (b.id || 0))
-      );
-    } catch (e) {
-      if (import.meta.env.DEV) console.error("Error fetching kits from backend:", e);
-      setMedicalKits([]);
+      if (!response.ok) throw new Error("Failed to fetch medical kits");
+      const data = await response.json();
+      const kits = Array.isArray(data) ? data : data.kits || [];
+      setMedicalKits(kits);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error("Error loading kits:", err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadKits();
-  }, [loadKits]);
+    fetchKits();
+  }, [fetchKits]);
 
-  const { activeKits, expiredKits } = useMemo(() => {
-    const today = new Date();
-    const active = [];
-    const expired = [];
-    medicalKits.forEach(kit => {
-      if (new Date(kit.expiryDate) < today) {
-        expired.push(kit);
-      } else {
-        active.push(kit);
-      }
-    });
-    return { activeKits: active, expiredKits: expired };
-  }, [medicalKits]);
-
-  const handleAddToCart = (kitToAdd) => {
-    // Check if kit is expired
-    if (new Date(kitToAdd.expiryDate) < new Date()) {
-      alert(`${kitToAdd.name} is expired and cannot be added to cart.`);
-      return;
+  // Load / Persist Cart
+  useEffect(() => {
+    if (!cartFromPrevPage) {
+      try {
+        const saved = sessionStorage.getItem("reliv_cart");
+        if (saved) setCart(JSON.parse(saved));
+      } catch {}
     }
+  }, [cartFromPrevPage]);
 
-    const available = getAvailableQuantity(kitToAdd);
-
-    // Check if kit is out of stock
-    if (available <= 0) {
-      alert(`${kitToAdd.name} is out of stock and cannot be added to cart.`);
-      return;
-    }
-
-    const existingCartItem = cart.find((item) => item.id === kitToAdd.id);
-    const currentQuantityInCart = existingCartItem ? existingCartItem.cartQuantity : 0;
-
-    // Check against current authoritative inventory quantity
-    if (currentQuantityInCart >= available) {
-      alert(`Cannot add more. You already have ${currentQuantityInCart} in cart (${available} available).`);
-      return;
-    }
-
-    setCart((prevCart) => {
-      if (existingCartItem) {
-        return prevCart.map((item) =>
-          item.id === kitToAdd.id ? { ...item, cartQuantity: item.cartQuantity + 1, availableStock: available } : item
-        );
-      }
-      // Store both cartQuantity (items in cart) and availableStock (inventory quantity)
-      return [...prevCart, { ...kitToAdd, cartQuantity: 1, availableStock: available }];
-    });
-  };
-
-  const handleRemoveFromCart = (itemId) => {
-    setCart((prevCart) => prevCart.filter(item => item.id !== itemId));
-  };
-
-  // Set absolute quantity (for +/- buttons on card)
-  const handleSetQuantity = (itemId, newQty) => {
-    if (newQty <= 0) {
-      handleRemoveFromCart(itemId);
-      return;
-    }
-    setCart((prevCart) =>
-      prevCart.map((item) => {
-        if (item.id === itemId) {
-          const currentKit = medicalKits.find(k => k.id === itemId);
-          if (!currentKit) return item;
-          const maxAvailable = getAvailableQuantity(currentKit);
-          const clampedQty = Math.min(newQty, maxAvailable);
-          if (newQty > maxAvailable) {
-            alert(`Only ${maxAvailable} units available in stock`);
-          }
-          return { ...item, cartQuantity: clampedQty, availableStock: maxAvailable };
-        }
-        return item;
-      })
-    );
-  };
-
-  const handleUpdateQuantity = (itemId, change) => {
-    setCart((prevCart) =>
-      prevCart.map((item) => {
-        if (item.id === itemId) {
-          // ALWAYS use current authoritative inventory, not stale cart data (prevents race conditions)
-          const currentKit = medicalKits.find(k => k.id === itemId);
-          if (!currentKit) {
-            alert('Kit not found in inventory');
-            return item;
-          }
-
-          const maxAvailable = getAvailableQuantity(currentKit);
-          const newQuantity = Math.max(1, Math.min(item.cartQuantity + change, maxAvailable));
-
-          // Alert user if they try to exceed available stock
-          if (item.cartQuantity + change > maxAvailable && change > 0) {
-            alert(`Only ${maxAvailable} units currently available in stock`);
-          }
-
-          // Also update availableStock to reflect current inventory
-          return { ...item, cartQuantity: newQuantity, availableStock: maxAvailable };
-        }
-        return item;
-      }).filter(item => item.cartQuantity > 0)
-    );
-  };
-
-  const { totalItems, totalPrice } = useMemo(() => {
-    const items = cart.reduce((sum, item) => sum + (item.cartQuantity || 0), 0);
-    const price = cart.reduce((sum, item) => sum + item.price * (item.cartQuantity || 0), 0);
-    return { totalItems: items, totalPrice: price };
+  useEffect(() => {
+    sessionStorage.setItem("reliv_cart", JSON.stringify(cart));
   }, [cart]);
 
-  const handleCheckout = async () => {
-    try {
-      // Re-verify inventory before navigating to checkout
-      const response = await fetch(`${API_BASE}/api/kits`, { cache: 'no-store' });
-      if (response.ok) {
-        const latestKits = await response.json();
-        const validCart = cart.filter(cartItem => {
-          const kit = latestKits.find(k => k.id === cartItem.id || k.kit_id === cartItem.id);
-          return kit && getAvailableQuantity(kit) >= (cartItem.cartQuantity || 1);
-        }).map(cartItem => {
-          const kit = latestKits.find(k => k.id === cartItem.id || k.kit_id === cartItem.id);
-          return {
-            ...cartItem,
-            price: kit.price, // Use latest authoritative price from backend
-            availableStock: getAvailableQuantity(kit),
-          };
-        });
-
-        if (validCart.length === 0 && cart.length > 0) {
-          alert("Items in your cart are no longer available in stock. Please select from available kits.");
-          setCart([]);
-          return;
-        }
-
-        if (validCart.length < cart.length) {
-          alert("Some items in your cart were updated or removed due to inventory changes.");
-          setCart(validCart);
-        }
-
-        const validTotalPrice = validCart.reduce((sum, item) => sum + item.price * (item.cartQuantity || 1), 0);
-        navigate("/checkout", { state: { cart: validCart, totalPrice: validTotalPrice, fromPaymentGate } });
-        return;
-      }
-    } catch (err) {
-      if (import.meta.env.DEV) console.warn("Failed to re-verify inventory before checkout:", err);
-    }
-    navigate("/checkout", { state: { cart, totalPrice, fromPaymentGate } });
-  };
-
-  // --- Admin Panel State ---
-  useEffect(() => {
-    if (!localStorage.getItem("adminEmail_v1")) {
-      localStorage.setItem("adminEmail_v1", "khanfaizan3234@gmail.com");
-    }
-    if (!localStorage.getItem("adminPassword_v1")) {
-      localStorage.setItem("adminPassword_v1", "admin123");
-    }
-
-    const isProduction = window.location.hostname !== 'localhost' &&
-                         window.location.hostname !== '127.0.0.1';
-    if (isProduction) {
-      // FORCE RUN MODE on production - safety measure
-      localStorage.setItem("paymentMode", "run");
-    }
-  }, []);
-
-  const handleAdminToggle = () => {
-    if (isAdminOpen) {
-      setIsAdminOpen(false);
-      setIsAuthenticated(false);
-      setPasswordInput("");
-      setShowForgot(false);
-      setNewPassword("");
-      setResetStage("request");
-      setVerificationCodeInput("");
-      setStatusMessage("");
-      setRefreshStatuses({});
-      setClickCount(0);
-      // Clear keyboard state when closing admin panel
-      setKeyboardState({ visible: false, inputName: "", inputs: {} });
-    } else {
-      const now = Date.now();
-      if (now - lastClickTime > 2000) {
-        setClickCount(1);
-      } else {
-        setClickCount((prev) => prev + 1);
-      }
-      setLastClickTime(now);
-    }
-  };
-
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    const emailForLogin = localStorage.getItem("adminEmail_v1") || "khanfaizan3234@gmail.com";
-    const currentStoredPw = localStorage.getItem("adminPassword_v1") || "admin123";
-
-    // Direct master match for admin123 or active stored password
-    if (passwordInput === "admin123" || passwordInput === currentStoredPw) {
-      setIsAuthenticated(true);
-      localStorage.setItem('_adminPwCache', passwordInput);
-      localStorage.setItem('adminPassword_v1', currentStoredPw);
-      setPasswordInput("");
-      setLoginAttempts(0);
-      return;
-    }
-
-    // Also verify with backend
-    try {
-      const res = await fetch(`${API_BASE}/api/check-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailForLogin, password: passwordInput }),
-      });
-
-      if (res.ok) {
-        setIsAuthenticated(true);
-        localStorage.setItem('_adminPwCache', passwordInput);
-        localStorage.setItem('adminPassword_v1', passwordInput);
-        setPasswordInput("");
-        setLoginAttempts(0);
-        return;
-      }
-    } catch (err) {
-      console.warn("Backend check-login error:", err.message);
-    }
-
-    const newAttempts = loginAttempts + 1;
-    setLoginAttempts(newAttempts);
-    if (newAttempts >= 5) {
-      setLockUntil(Date.now() + 60000);
-      setIsAdminOpen(false);
-      alert("Too many failed attempts. Admin panel locked for 1 minute.");
-    } else {
-      alert("Incorrect password. Please enter admin123");
-    }
-  };
-
-  const requestPasswordReset = async (e) => {
-    e.preventDefault();
-    setStatusMessage("Sending request...");
-    try {
-      const res = await fetch(`${API_BASE}/api/send-reset-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: adminEmail }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setStatusMessage("A recovery email has been sent. Please check your inbox.");
-        setResetStage("verify");
-      } else {
-        throw new Error(data.message || "Failed to send email.");
-      }
-    } catch (err) {
-      setStatusMessage(`Error: ${sanitizeError(err)}`);
-    }
-  };
-
-  const verifyAndResetPassword = async (e) => {
-    e.preventDefault();
-    setStatusMessage("Verifying...");
-    try {
-      const res = await fetch(`${API_BASE}/api/confirm-reset`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: adminEmail,
-          token: verificationCodeInput.trim(),
-          newPassword: newPassword,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        // Only update localStorage password for localhost (offline mode)
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          localStorage.setItem("adminPassword_v1", newPassword);
-        }
-        alert("Password has been reset successfully! Please log in with your new password.");
-        setShowForgot(false);
-        setResetStage("request");
-        setVerificationCodeInput("");
-        setNewPassword("");
-        setStatusMessage("");
-      } else {
-        throw new Error(data.message || "Failed to reset password.");
-      }
-    } catch (err) {
-      setStatusMessage(`Error: ${sanitizeError(err)}`);
-    }
-  };
-
-  const handleSaveAdminEmail = () => {
-    localStorage.setItem("adminEmail_v1", adminEmail || "");
-    alert("Admin email saved.");
-  };
-
-  const handleModeToggle = () => {
-    const isProduction = window.location.hostname !== 'localhost' &&
-                         window.location.hostname !== '127.0.0.1';
-
-    if (isProduction) {
-      alert("âš ï¸ Payment mode is locked to RUN MODE on production deployment. Test mode is only available on localhost.");
-      return;
-    }
-
-    const newMode = !isRunMode;
-    setIsRunMode(newMode);
-    localStorage.setItem("paymentMode", newMode ? "run" : "test");
-    alert(`Payment mode set to ${newMode ? "Run Mode" : "Test Mode"}.`);
-  };
-
-  // --- Admin kit operations ---
-
-  const handleDeleteKit = async (id) => {
-    if (!window.confirm("Delete this kit? This is permanent.")) return;
-    try {
-      const response = await fetch(`${API_BASE}/api/kits/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete kit");
-      setMedicalKits((prev) => prev.filter((k) => k.id !== id));
-    } catch (err) {
-      if (import.meta.env.DEV) console.error("Error deleting kit:", err);
-      alert(`Failed to delete kit: ${sanitizeError(err)}`);
-    }
-  };
-
-    const handleAddNewKit = async () => {
-    const newKitId = `KIT-${Date.now().toString(36).toUpperCase()}`;
-    const newKitData = {
-      kit_id: newKitId,
-      name: "New Kit",
-      description: "Click to edit description",
-      price: 0,
-      quantity: 0,
-      stock_quantity: 0,
-      reserved_quantity: 0,
-      available_quantity: 0,
-      motor_id: null,
-      expiryDate: new Date().toISOString().split("T")[0],
-    };
-    try {
-      const response = await fetch(`${API_BASE}/api/kits`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newKitData),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        throw new Error(data.message || "Failed to create medicine");
-      }
-
-      let finalKit = data.kit || { ...newKitData, id: data.id || data.kit_id || newKitId };
-
-      // Automatically upload selected image if one was chosen
-      if (newKitImageFile) {
-        try {
-          const uploadedKit = await handleImageUpload(
-            finalKit.kit_id || finalKit.id,
-            newKitImageFile
-          );
-          if (uploadedKit) finalKit = uploadedKit;
-        } catch (uploadErr) {
-          console.warn("[MedicineDispensing] Image upload after create failed:", uploadErr);
-        }
-      }
-
-      setMedicalKits((currentKits) => {
-        const exists = currentKits.some(
-          (kit) => (kit.kit_id || kit.id) === (finalKit.kit_id || finalKit.id)
-        );
-        if (exists) {
-          return currentKits.map((kit) =>
-            (kit.kit_id || kit.id) === (finalKit.kit_id || finalKit.id)
-              ? finalKit
-              : kit
-          );
-        }
-        return [finalKit, ...currentKits];
-      });
-
-      if (newKitImagePreview && newKitImagePreview.startsWith("blob:")) {
-        URL.revokeObjectURL(newKitImagePreview);
-      }
-      setNewKitImageFile(null);
-      setNewKitImagePreview("");
-    } catch (err) {
-      if (import.meta.env.DEV) console.error("Error adding new kit:", err);
-      alert(`Failed to add new kit: ${sanitizeError(err)}`);
-    }
-  };
-
-  const handleImageUpload = async (id, file) => {
-    if (!file) {
-      return;
-    }
-
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp"
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      alert("Please choose a JPG, PNG or WEBP image.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image must be 5 MB or smaller.");
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
-
-      const response = await fetch(
-        `${API_BASE}/api/kits/${encodeURIComponent(id)}/image`,
-        {
-          method: "PATCH",
-          body: formData
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(
-          data.message ||
-          "Failed to upload medicine image"
+  // Cart operations
+  const handleAddToCart = (kit) => {
+    const kitKey = kit.kit_id || kit.id;
+    setCart((prev) => {
+      const existing = prev.find((item) => (item.kit_id || item.id) === kitKey);
+      if (existing) {
+        return prev.map((item) =>
+          (item.kit_id || item.id) === kitKey
+            ? { ...item, cartQuantity: item.cartQuantity + 1 }
+            : item
         );
       }
-
-      setMedicalKits((currentKits) =>
-        currentKits.map((kit) =>
-          kit.id === id || kit.kit_id === id
-            ? {
-                ...kit,
-                ...data.kit
-              }
-            : kit
-        )
-      );
-
-      return data.kit;
-
-    } catch (error) {
-      console.error(
-        "Medicine image upload failed:",
-        error
-      );
-
-      alert(
-        error.message ||
-        "Failed to upload medicine image."
-      );
-
-      throw error;
-    }
+      return [...prev, { ...kit, cartQuantity: 1 }];
+    });
   };
 
-  const handleRemoveImage = async (id) => {
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/kits/${encodeURIComponent(id)}/image`,
-        {
-          method: "DELETE"
-        }
-      );
+  const handleUpdateQuantity = (kitKey, delta) => {
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if ((item.kit_id || item.id) === kitKey) {
+            const newQty = item.cartQuantity + delta;
+            return newQty > 0 ? { ...item, cartQuantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean)
+    );
+  };
 
-      const data = await response.json();
+  const handleRemoveFromCart = (kitKey) => {
+    setCart((prev) => prev.filter((item) => (item.kit_id || item.id) !== kitKey));
+  };
 
-      if (!response.ok || !data.ok) {
-        throw new Error(
-          data.message ||
-          "Failed to remove medicine image"
-        );
-      }
+  const totalItems = useMemo(() => {
+    return cart.reduce((sum, item) => sum + (item.cartQuantity || 0), 0);
+  }, [cart]);
 
-      setMedicalKits((currentKits) =>
-        currentKits.map((kit) =>
-          kit.id === id || kit.kit_id === id
-            ? {
-                ...kit,
-                ...data.kit
-              }
-            : kit
-        )
-      );
+  const totalPrice = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.price * (item.cartQuantity || 0), 0);
+  }, [cart]);
 
-    } catch (error) {
-      console.error(
-        "Remove medicine image failed:",
-        error
-      );
-
-      alert(
-        error.message ||
-        "Failed to remove medicine image."
-      );
-    }
+  const handleProceedToPayment = () => {
+    if (cart.length === 0) return;
+    navigate("/payment", { state: { cart, totalAmount: totalPrice } });
   };
 
   if (isLoading) {
     return (
       <AuraBackground>
-        <div className="flex items-center justify-center h-screen overflow-y-auto scrollable-container">
-          <div className="text-center">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center space-y-4">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-              className="w-16 h-16 border-4 border-[#FF7A00] border-t-transparent rounded-full mx-auto mb-4"
+              className="w-14 h-14 border-4 border-orange-500 border-t-transparent rounded-full mx-auto"
             />
-            <div className="text-lg font-semibold text-gray-700">Loading wellness products...</div>
+            <div className="text-lg font-bold text-gray-700">Loading medicines...</div>
           </div>
         </div>
       </AuraBackground>
@@ -1099,8 +344,9 @@ export default function MedicineDispensingWithAdmin() {
 
   return (
     <AuraBackground>
-      <div className={`kiosk-content ${cart.length === 0 ? 'no-cart' : ''}`}>
-        {/* BACK BUTTON */}
+      <div className={`kiosk-content ${cart.length === 0 ? "no-cart" : ""}`}>
+
+        {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
           className="kiosk-back-btn"
@@ -1110,989 +356,129 @@ export default function MedicineDispensingWithAdmin() {
           <span>Back</span>
         </button>
 
-        {/* HEADER - BIGGER */}
-        <header className="kiosk-header">
-          <div className="kiosk-logo" onClick={handleAdminToggle}>
-            <Logo size="text-5xl md:text-6xl" />
-          </div>
-          <h2 style={{ fontFamily: 'Poppins', fontSize: '42px', fontWeight: '700', color: '#1F2937', marginTop: '12px' }}>
-            Wellness Marketplace
-          </h2>
-          <p style={{ color: '#6b7280', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.18em', fontSize: '17px', marginTop: '6px' }}>
-            Curated health essentials for your well-being
+        {/* Header Branding */}
+        <div className="kiosk-header">
+          <Logo />
+          <h1 className="kiosk-title">Medicine Dispenser</h1>
+          <p className="kiosk-subtitle">
+            Sanitized, verified healthcare products dispensed instantly
           </p>
+        </div>
 
-          {/* First Kiosk Launch Celebration */}
-          <div style={{
-            marginTop: '20px',
-            background: 'linear-gradient(135deg, #FFF7ED, #FEF3C7)',
-            border: '1px solid #FCD34D',
-            borderRadius: '12px',
-            padding: '14px 24px',
-            maxWidth: '600px',
-            margin: '20px auto 0',
-            textAlign: 'center'
-          }}>
-            <p style={{ fontSize: '13px', color: '#92400E', margin: 0, lineHeight: '1.6' }}>
-              ðŸŽ‰ <span style={{ fontWeight: '600', color: '#B45309' }}>First Kiosk Ever - We're Celebrating!</span> <span style={{ color: '#78350F' }}>These prices are our joy gift to you. After 17th April, market rates return (we can't afford these discounts long-term!)</span> ðŸ’›
-            </p>
-          </div>
-        </header>
-
-        {/* PRODUCT GRID */}
-        <main className="product-grid">
-          {medicalKits.length === 0 ? (
-            <div className="col-span-full text-center py-24">
-              <div className="max-w-md mx-auto">
-                <div className="w-28 h-28 mx-auto mb-6 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center shadow-lg">
-                  <ShoppingCart size={56} className="text-[#FF7A00]" />
-                </div>
-                <h3 className="text-3xl font-bold text-gray-800 mb-3" style={{ fontFamily: 'Poppins' }}>No Products Available</h3>
-                <p className="text-gray-600 mb-8 text-lg">Admin can add new products through the settings panel.</p>
-              </div>
-            </div>
-          ) : (
-            medicalKits.map((kit) => (
+        {/* Medicine Product Grid */}
+        <div className="medicine-grid-container">
+          <div className="medicine-grid">
+            {medicalKits.map((kit, index) => (
               <KitCard
-                key={kit.id}
+                key={kit.kit_id || kit.id || index}
                 kit={kit}
                 onAddToCart={handleAddToCart}
-                onUpdateQty={handleSetQuantity}
+                onUpdateQty={handleUpdateQuantity}
                 onRemoveFromCart={handleRemoveFromCart}
                 cart={cart}
-                isMostChosen={kit.id === mostChosenKitId}
+                isMostChosen={index === 0}
               />
-            ))
-          )}
-        </main>
-      </div>
+            ))}
+          </div>
+        </div>
 
-      {/* LUXURY CART - HermÃ¨s/LV Side Drawer Style */}
-      <AnimatePresence>
-        {totalItems > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="luxury-cart-drawer"
-          >
-            {/* Liquid Silk Wave Background */}
-            <div className="cart-silk-wave" />
-
-            {/* Cart Header - Minimal Luxury */}
-            <div className="luxury-cart-header">
-              <div className="luxury-cart-title">
-                <span className="cart-label">YOUR SELECTION</span>
-                <span className="cart-count">{totalItems} {totalItems === 1 ? 'ITEM' : 'ITEMS'}</span>
-              </div>
-              <div className="luxury-cart-total">
-                <span className="total-label">TOTAL</span>
-                <span className="total-price">â‚¹{totalPrice.toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* Cart Items - Vertical Card Layout */}
-            <div className="luxury-cart-items">
-              {cart.map((item) => (
-                <motion.div
-                  key={item.id}
-                  className="luxury-cart-item"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  {/* Top Row: Image + Details */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%' }}>
-                    <div className="luxury-item-image">
-                      <div className="item-image-glow" />
-                      {getMedicineImageUrl(item) ? (
-                        <img src={getMedicineImageUrl(item)} alt={item.name} />
-                      ) : (
-                        <span className="item-placeholder">{item.name.split(' ')[0]}</span>
-                      )}
-                    </div>
-                    <div className="luxury-item-details">
-                      <h3 className="luxury-item-name">{item.name}</h3>
-                      <p className="luxury-item-meta">SANITIZED â€¢ INSTANT</p>
-                    </div>
-                  </div>
-
-                  {/* Quantity Controls Row */}
-                  <div className="luxury-qty-section">
-                    <span className="qty-label">QUANTITY</span>
-                    <div className="luxury-qty-controls">
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, -1)}
-                        disabled={item.cartQuantity <= 1}
-                        className="luxury-qty-btn"
-                      >
-                        âˆ’
-                      </button>
-                      <span className="luxury-qty-value">
-                        {String(item.cartQuantity).padStart(2, '0')}
-                      </span>
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, 1)}
-                        className="luxury-qty-btn"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Price & Remove Row */}
-                  <div className="luxury-item-price">
-                    <span className="price-value">â‚¹{(item.price * item.cartQuantity).toLocaleString()}</span>
-                    <button
-                      onClick={() => handleRemoveFromCart(item.id)}
-                      className="luxury-remove-btn"
-                    >
-                      REMOVE
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Emissive Checkout Button with Liquid Silk */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={handleCheckout}
-              className="luxury-checkout-btn"
-            >
-              <span className="checkout-silk-wave" />
-              <span className="checkout-text">PROCEED TO CHECKOUT</span>
-              <span className="checkout-arrow">â†’</span>
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ADMIN PANEL */}
-      <AnimatePresence>
-        {isAdminOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 flex items-start justify-center pt-20 px-4 backdrop-blur-sm"
-            style={{ zIndex: 9999 }}
-          >
-            <div
-              className="absolute inset-0 bg-black/50"
-              onClick={handleAdminToggle}
-              style={{ zIndex: 9998 }}
-            />
+        {/* Luxury Slide-up Cart Drawer */}
+        <AnimatePresence>
+          {totalItems > 0 && (
             <motion.div
-              initial={{ scale: 0.9, y: -20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: -20 }}
-              className="relative w-[95vw] max-w-[1600px] bg-white rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto"
-              style={{ zIndex: 9999 }}
-              onClick={(e) => e.stopPropagation()}
+              initial={{ y: 120, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 120, opacity: 0 }}
+              className="luxury-cart-drawer"
             >
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>
-              <button
-                onClick={handleAdminToggle}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold hover:bg-gray-100 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200"
-                aria-label="Close admin panel"
-              >
-                Ã—
-              </button>
-            </div>
-            {!isAuthenticated ? (
-              <div>
-                {!showForgot ? (
-                  <form onSubmit={handleAdminLogin} className="space-y-4">
-                    <label className="block text-sm font-medium text-gray-700">Password</label>
-                    <input
-                      type="password"
-                      name="passwordInput"
-                      value={passwordInput}
-                      onFocus={handleInputFocus} onClick={handleInputFocus}
-                      onChange={(e) => handleKeyboardChange("passwordInput", e.target.value)}
-                      className="w-full rounded-md border px-3 py-2"
-                      placeholder="Enter admin password"
-                    />
-                    <div className="flex items-center justify-between gap-4">
-                      <PrimaryButton type="submit">Log in</PrimaryButton>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowForgot(true);
-                          setResetStage("request");
-                          setAdminEmail(localStorage.getItem("adminEmail_v1") || "");
-                        }}
-                        className="text-sm text-blue-600"
-                      >
-                        Forgot password?
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Login is now handled by the server. The default password is{" "}
-                      <span className="font-mono">admin123</span> and the default email is{" "}
-                      <span className="font-mono">khanfaizan3234@gmail.com</span>
-                    </p>
-                  </form>
-                ) : (
-                  <div className="space-y-4">
-                    {resetStage === "request" ? (
-                      <form onSubmit={requestPasswordReset} className="space-y-4">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Registered Admin Email
-                        </label>
-                        <input
-                          value="khanfaizan3234@gmail.com"
-                          readOnly
-                          className="w-full rounded-md border px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed"
-                        />
-                        <div className="flex items-center gap-4">
-                          <PrimaryButton type="submit">Send recovery email</PrimaryButton>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowForgot(false);
-                              setResetStage("request");
-                            }}
-                            className="text-sm text-gray-600"
-                          >
-                            Back to login
-                          </button>
-                        </div>
-                        {statusMessage && <p className="text-xs text-gray-600">{statusMessage}</p>}
-                      </form>
-                    ) : resetStage === "verify" ? (
-                      <form onSubmit={verifyAndResetPassword} className="space-y-4">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Recovery Code
-                        </label>
-                        <input
-                          name="verificationCodeInput"
-                          value={verificationCodeInput}
-                          onFocus={handleInputFocus} onClick={handleInputFocus}
-                          onChange={(e) => handleKeyboardChange("verificationCodeInput", e.target.value)}
-                          className="w-full rounded-md border px-3 py-2"
-                          placeholder="Enter the code you received via email"
-                        />
-                        <label className="block text-sm font-medium text-gray-700">
-                          New password
-                        </label>
-                        <input
-                          type="password"
-                          name="newPassword"
-                          value={newPassword}
-                          onFocus={handleInputFocus} onClick={handleInputFocus}
-                          onChange={(e) => handleKeyboardChange("newPassword", e.target.value)}
-                          className="w-full rounded-md border px-3 py-2"
-                          placeholder="Set a new password"
-                        />
-                        <div className="flex items-center gap-4">
-                          <PrimaryButton type="submit">Reset password</PrimaryButton>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowForgot(false);
-                              setResetStage("request");
-                            }}
-                            className="text-sm text-gray-600"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                        {statusMessage && <p className="text-xs text-red-500">{statusMessage}</p>}
-                      </form>
-                    ) : null}
-                  </div>
-                )}
+              <div className="cart-silk-wave" />
+
+              {/* Cart Header */}
+              <div className="luxury-cart-header">
+                <div className="luxury-cart-title">
+                  <span className="cart-label">YOUR SELECTION</span>
+                  <span className="cart-count">
+                    {totalItems} {totalItems === 1 ? "ITEM" : "ITEMS"}
+                  </span>
+                </div>
+                <div className="luxury-cart-total">
+                  <span className="total-label">TOTAL</span>
+                  <span className="total-price">{formatINR(totalPrice)}</span>
+                </div>
               </div>
-            ) : (
-              <div>
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold text-gray-800">Admin Controls</h2>
-                    <h3 className="text-lg font-semibold text-gray-700">Inventory</h3>
-                    <button
-                      onClick={handleAddNewKit}
-                      className="text-sm px-4 py-2 rounded-lg border-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white transition-all duration-200 font-semibold shadow-sm"
-                    >
-                      + New Kit
-                    </button>
-                    <button
-                      onClick={() => setShowMarginPanel(!showMarginPanel)}
-                      className={`text-sm px-4 py-2 rounded-lg border-2 transition-all duration-200 font-semibold shadow-sm ${
-                        showMarginPanel
-                          ? 'border-green-500 bg-green-500 text-white'
-                          : 'border-green-500 text-green-600 hover:bg-green-500 hover:text-white'
-                      }`}
-                    >
-                      ðŸ’° {showMarginPanel ? 'Hide Margins' : 'Profit Margins'}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border ${
-                      window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-                        ? 'bg-green-50 border-green-300'
-                        : 'bg-gray-50 border-gray-200'
-                    }`}>
-                      <span className={`text-sm font-semibold transition-colors duration-200 ${!isRunMode ? 'text-orange-600' : 'text-gray-500'}`}>
-                        Test
-                      </span>
-                      <button
-                        onClick={handleModeToggle}
-                        className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                          isRunMode ? 'bg-green-500 focus:ring-green-500' : 'bg-orange-400 focus:ring-orange-400'
-                        }`}
-                        title={window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? 'ðŸ”’ Locked to RUN mode on production' : 'Toggle payment mode'}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
-                            isRunMode ? 'translate-x-8' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                      <span className={`text-sm font-semibold transition-colors duration-200 ${isRunMode ? 'text-green-600' : 'text-gray-500'}`}>
-                        Run
-                      </span>
-                      {window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && (
-                        <span className="text-xs ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full font-semibold">
-                          ðŸ”’ Locked
-                        </span>
-                      )}
-                    </div>
 
-                    <PrimaryButton
-                      onClick={() => {
-                        setIsAuthenticated(false);
-                        localStorage.removeItem('_adminPwCache');
-                        alert("Logged out successfully!");
-                      }}
-                      className="text-sm px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-sm transition-all duration-200"
-                    >
-                      Log Out
-                    </PrimaryButton>
-                  </div>
-                </div>
-
-                {/* REPORT PRICE CONTROL */}
-                <div className="mb-4 flex items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl px-5 py-3 border border-blue-200">
-                  <span className="text-xl">ðŸ“‹</span>
-                  <span className="text-sm font-bold text-blue-800 whitespace-nowrap">Report Price</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">â‚¹</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      name="reportPriceInput"
-                      value={adminReportPrice}
-                      onFocus={handleInputFocus} onClick={handleInputFocus}
-                      onChange={(e) => {
-                        setAdminReportPrice(e.target.value);
-                        handleKeyboardChange('reportPriceInput', e.target.value);
-                      }}
-                      className="w-24 px-2 py-1.5 border border-blue-300 rounded-lg text-sm font-semibold focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                  <button
-                    onClick={handleSaveReportPrice}
-                    disabled={reportPriceSaving}
-                    className={`text-sm px-4 py-1.5 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
-                      reportPriceSaving
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`}
+              {/* Cart Items List */}
+              <div className="luxury-cart-items">
+                {cart.map((item) => (
+                  <motion.div
+                    key={item.kit_id || item.id}
+                    className="luxury-cart-item"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
                   >
-                    {reportPriceSaving ? 'Saving...' : 'Save'}
-                  </button>
-                  {reportPriceStatus === 'saved' && (
-                    <span className="text-xs text-green-600 font-semibold animate-pulse">âœ“ Saved</span>
-                  )}
-                  {reportPriceStatus === 'error' && (
-                    <span className="text-xs text-red-500 font-semibold">âœ— Failed</span>
-                  )}
-                  <span className="text-xs text-gray-400 ml-auto">Shown on payment screen</span>
-                </div>
-
-                {/* PROFIT MARGIN PANEL - Hidden from customers */}
-                {showMarginPanel && (
-                  <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">ðŸ’°</span>
-                        <div>
-                          <h3 className="text-lg font-bold text-green-800">Profit Margins (Hidden from customers)</h3>
-                          <p className="text-xs text-green-600">Top 2 highest margins show as "ðŸ”¥ Value Deal" & "â­ Recommended"</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">Data saved in localStorage</p>
-                        <p className="text-xs text-green-600 font-semibold">âœ“ Persists across restarts</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {medicalKits.map((kit) => {
-                        const margin = kitMargins[kit.id] || 0;
-                        const badge = marginBadges[kit.id];
-                        return (
-                          <div
-                            key={kit.id}
-                            className={`bg-white rounded-lg p-3 border-2 transition-all ${
-                              badge === 'value-deal' ? 'border-orange-400 shadow-md shadow-orange-100' :
-                              badge === 'recommended' ? 'border-purple-400 shadow-md shadow-purple-100' :
-                              'border-gray-200'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-semibold text-gray-800 text-sm truncate flex-1">{kit.name}</span>
-                              {badge === 'value-deal' && <span className="text-xs bg-gradient-to-r from-orange-500 to-orange-400 text-white px-2 py-0.5 rounded-full ml-2">ðŸ”¥ #1</span>}
-                              {badge === 'recommended' && <span className="text-xs bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 py-0.5 rounded-full ml-2">â­ #2</span>}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500">Price: â‚¹{kit.price}</span>
-                              <span className="text-xs text-gray-400">|</span>
-                              <span className="text-xs text-green-600 font-semibold">Profit: â‚¹{margin}</span>
-                            </div>
-                            <div className="mt-2 flex items-center gap-2">
-                              <label className="text-xs text-gray-500 whitespace-nowrap">Margin â‚¹</label>
-                              <input
-                                type="number"
-                                name={`margin-${kit.id}`}
-                                min="0"
-                                step="0.5"
-                                value={keyboardState.inputs[`margin-${kit.id}`] ?? kitMargins[kit.id] ?? ''}
-                                onFocus={handleInputFocus} onClick={handleInputFocus}
-                                onChange={(e) => {
-                                  handleKeyboardChange(`margin-${kit.id}`, e.target.value);
-                                  handleUpdateMargin(kit.id, e.target.value);
-                                }}
-                                placeholder="0"
-                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none"
-                              />
-                            </div>
-                            {margin > 0 && (
-                              <div className="mt-1 text-xs text-green-600">
-                                {((margin / kit.price) * 100).toFixed(0)}% profit margin
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-green-200 flex items-center justify-between">
-                      <div className="text-xs text-gray-500">
-                        <span className="font-semibold text-green-700">Total potential profit:</span>{' '}
-                        â‚¹{Object.values(kitMargins).reduce((a, b) => a + (parseFloat(b) || 0), 0).toFixed(0)} per kit sold
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (confirm('Clear all margins? This cannot be undone.')) {
-                            setKitMargins({});
-                          }
-                        }}
-                        className="text-xs text-red-500 hover:text-red-700 underline"
-                      >
-                        Clear All Margins
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className={`space-y-4 overflow-auto pr-2 transition-all duration-300 ${keyboardState.visible ? 'pb-[320px]' : ''}`}>
-                  {activeKits.map((kit) => (
-                    <div
-                      key={kit.id}
-                      className="border rounded-xl p-4 flex gap-4 items-start shadow-sm hover:shadow-md transition-all duration-200 bg-white"
-                    >
-                      <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
-                        {getMedicineImageUrl(kit) ? (
-                          <img
-                            src={getMedicineImageUrl(kit)}
-                            alt={kit.name || "Medicine"}
-                            className="w-full h-full object-cover rounded-md"
-                          />
+                    <div style={{ display: "flex", alignItems: "center", gap: "14px", width: "100%" }}>
+                      <div className="luxury-item-image">
+                        <div className="item-image-glow" />
+                        {getMedicineImageUrl(item) ? (
+                          <img src={getMedicineImageUrl(item)} alt={item.name} />
                         ) : (
-                          <span className="text-xs text-gray-500">No Image</span>
+                          <span className="item-placeholder">
+                            {(item.name || "M").split(" ")[0]}
+                          </span>
                         )}
                       </div>
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-8 gap-3 items-center">
-                        <div className="md:col-span-1 relative">
-                          <label className="text-xs font-medium text-gray-600">Name</label>
-                          <div className="relative">
-                            <input
-                              name={`kit-${kit.id}-name`}
-                              value={keyboardState.inputs[`kit-${kit.id}-name`] ?? kit.name}
-                              onFocus={handleInputFocus} onClick={handleInputFocus}
-                              onChange={(e) =>
-                                handleKeyboardChange(`kit-${kit.id}-name`, e.target.value)
-                              }
-                              onBlur={async () => {
-                                const inputKey = `kit-${kit.id}-name`;
-                                const val = keyboardState.inputs[inputKey] ?? kit.name;
-                                const trimmedVal = String(val).trim();
-                                const trimmedCurrent = String(kit.name).trim();
-
-                                if (trimmedVal && trimmedVal !== trimmedCurrent) {
-                                  const success = await handleUpdateKitField(kit.id, "name", trimmedVal);
-                                  if (success) {
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [inputKey]: undefined },
-                                    }));
-                                  }
-                                } else {
-                                  setKeyboardState((prev) => ({
-                                    ...prev,
-                                    inputs: { ...prev.inputs, [inputKey]: undefined },
-                                  }));
-                                }
-                              }}
-                              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                            />
-                            {updateStatus[`${kit.id}-name`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">â³</span>
-                            )}
-                            {updateStatus[`${kit.id}-name`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">âœ“</span>
-                            )}
-                            {updateStatus[`${kit.id}-name`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">âœ—</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="md:col-span-2 relative">
-                          <label className="text-xs font-medium text-gray-600">Description</label>
-                          <div className="relative">
-                            <textarea
-                              rows={3}
-                              name={`kit-${kit.id}-description`}
-                              value={keyboardState.inputs[`kit-${kit.id}-description`] ?? kit.description}
-                              onFocus={handleInputFocus} onClick={handleInputFocus}
-                              onChange={(e) =>
-                                handleKeyboardChange(`kit-${kit.id}-description`, e.target.value)
-                              }
-                              onBlur={async () => {
-                                const inputKey = `kit-${kit.id}-description`;
-                                const val = keyboardState.inputs[inputKey] ?? kit.description;
-                                const trimmedVal = String(val).trim();
-                                const trimmedCurrent = String(kit.description).trim();
-
-                                if (trimmedVal && trimmedVal !== trimmedCurrent) {
-                                  const success = await handleUpdateKitField(kit.id, "description", trimmedVal);
-                                  if (success) {
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [inputKey]: undefined },
-                                    }));
-                                  }
-                                } else {
-                                  setKeyboardState((prev) => ({
-                                    ...prev,
-                                    inputs: { ...prev.inputs, [inputKey]: undefined },
-                                  }));
-                                }
-                              }}
-                              className="w-full rounded-md border border-gray-300 px-3 py-2 resize-y focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                            />
-                            {updateStatus[`${kit.id}-description`] === 'updating' && (
-                              <span className="absolute right-2 top-2 text-blue-500 text-xs">â³</span>
-                            )}
-                            {updateStatus[`${kit.id}-description`] === 'success' && (
-                              <span className="absolute right-2 top-2 text-green-500 text-lg">âœ“</span>
-                            )}
-                            {updateStatus[`${kit.id}-description`] === 'error' && (
-                              <span className="absolute right-2 top-2 text-red-500 text-xs">âœ—</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="md:col-span-1 relative">
-                          <label className="text-xs font-medium text-gray-600">Price (â‚¹)</label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              name={`kit-${kit.id}-price`}
-                              value={keyboardState.inputs[`kit-${kit.id}-price`] ?? kit.price}
-                              onFocus={handleInputFocus} onClick={handleInputFocus}
-                              onChange={(e) =>
-                                handleKeyboardChange(`kit-${kit.id}-price`, e.target.value)
-                              }
-                              onBlur={async () => {
-                                const inputKey = `kit-${kit.id}-price`;
-                                const val = keyboardState.inputs[inputKey] ?? kit.price;
-                                const numVal = Number(val);
-                                const currentNum = Number(kit.price);
-
-                                if (!isNaN(numVal) && numVal >= 0 && numVal !== currentNum) {
-                                  const success = await handleUpdateKitField(kit.id, "price", numVal);
-                                  if (success) {
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [inputKey]: undefined },
-                                    }));
-                                  }
-                                } else {
-                                  setKeyboardState((prev) => ({
-                                    ...prev,
-                                    inputs: { ...prev.inputs, [inputKey]: undefined },
-                                  }));
-                                }
-                              }}
-                              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                            />
-                            {updateStatus[`${kit.id}-price`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">â³</span>
-                            )}
-                            {updateStatus[`${kit.id}-price`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">âœ“</span>
-                            )}
-                            {updateStatus[`${kit.id}-price`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">âœ—</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="md:col-span-1 relative">
-                          <label className="text-xs font-medium text-gray-600">Quantity</label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              name={`kit-${kit.id}-quantity`}
-                              value={keyboardState.inputs[`kit-${kit.id}-quantity`] ?? kit.quantity}
-                              onFocus={handleInputFocus} onClick={handleInputFocus}
-                              onChange={(e) =>
-                                handleKeyboardChange(`kit-${kit.id}-quantity`, e.target.value)
-                              }
-                              onBlur={async () => {
-                                const inputKey = `kit-${kit.id}-quantity`;
-                                const val = keyboardState.inputs[inputKey] ?? kit.quantity;
-                                const numVal = Number(val);
-                                const currentNum = Number(kit.quantity);
-
-                                if (!isNaN(numVal) && numVal >= 0 && numVal !== currentNum) {
-                                  const success = await handleUpdateKitField(kit.id, "quantity", numVal);
-                                  if (success) {
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [inputKey]: undefined },
-                                    }));
-                                  }
-                                } else {
-                                  setKeyboardState((prev) => ({
-                                    ...prev,
-                                    inputs: { ...prev.inputs, [inputKey]: undefined },
-                                  }));
-                                }
-                              }}
-                              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                            />
-                            {updateStatus[`${kit.id}-quantity`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">â³</span>
-                            )}
-                            {updateStatus[`${kit.id}-quantity`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">âœ“</span>
-                            )}
-                            {updateStatus[`${kit.id}-quantity`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">âœ—</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="md:col-span-1 relative">
-                          <label className="text-xs font-medium text-gray-600">Expiry</label>
-                          <div className="relative">
-                            <input
-                              type="date"
-                              name={`kit-${kit.id}-expiryDate`}
-                              value={keyboardState.inputs[`kit-${kit.id}-expiryDate`] ?? kit.expiryDate}
-                              onFocus={handleInputFocus} onClick={handleInputFocus}
-                              onChange={(e) =>
-                                handleKeyboardChange(`kit-${kit.id}-expiryDate`, e.target.value)
-                              }
-                              onBlur={async () => {
-                                const inputKey = `kit-${kit.id}-expiryDate`;
-                                const val = keyboardState.inputs[inputKey] ?? kit.expiryDate;
-
-                                if (val && val !== kit.expiryDate) {
-                                  const success = await handleUpdateKitField(kit.id, "expiryDate", val);
-                                  if (success) {
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [inputKey]: undefined },
-                                    }));
-                                  }
-                                } else {
-                                  setKeyboardState((prev) => ({
-                                    ...prev,
-                                    inputs: { ...prev.inputs, [inputKey]: undefined },
-                                  }));
-                                }
-                              }}
-                              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                            />
-                            {updateStatus[`${kit.id}-expiryDate`] === 'updating' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">â³</span>
-                            )}
-                            {updateStatus[`${kit.id}-expiryDate`] === 'success' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-lg">âœ“</span>
-                            )}
-                            {updateStatus[`${kit.id}-expiryDate`] === 'error' && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs">âœ—</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="md:col-span-2 flex flex-col gap-2">
-                          <label className="text-xs font-medium text-gray-600">Picture</label>
-                          <div className="flex flex-wrap gap-2 items-center">
-                            <label className="cursor-pointer flex-1">
-                              <div className="text-xs text-center bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg py-2 px-2 transition-colors duration-200 font-medium text-blue-700">
-                                {getMedicineImageUrl(kit) ? "Change Picture" : "Choose Picture"}
-                              </div>
-                              <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  await handleImageUpload(kit.kit_id || kit.id, file);
-                                  e.target.value = "";
-                                }}
-                                className="hidden"
-                              />
-                            </label>
-                            {getMedicineImageUrl(kit) && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveImage(kit.kit_id || kit.id)}
-                                className="text-xs px-2.5 py-2 rounded-lg bg-red-50 border border-red-300 text-red-600 hover:bg-red-500 hover:text-white transition-all font-medium"
-                              >
-                                Remove Picture
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteKit(kit.kit_id || kit.id)}
-                              className="text-xs px-3 py-2 rounded-lg bg-red-50 border-2 border-red-300 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-semibold"
-                            >
-                              Delete Kit
-                            </button>
-                          </div>
-                        </div>
+                      <div className="luxury-item-details">
+                        <h3 className="luxury-item-name">{item.name}</h3>
+                        <p className="luxury-item-meta">
+                          <span>SANITIZED</span>
+                          <span aria-hidden="true" style={{ margin: "0 4px" }}>•</span>
+                          <span>INSTANT</span>
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {expiredKits.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-red-600 mb-3">Expired Kits</h3>
-                    <div className={`space-y-4 mt-2 overflow-auto pr-2 transition-all duration-300 ${keyboardState.visible ? 'pb-[320px]' : ''}`}>
-                      {expiredKits.map((kit) => (
-                        <div key={kit.id} className="border border-red-300 rounded-xl p-4 flex gap-4 items-start bg-red-50 shadow-sm hover:shadow-md transition-all duration-200">
-                          <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
-                            {getMedicineImageUrl(kit) ? (
-                              <img src={getMedicineImageUrl(kit)} alt={kit.name || "Medicine"} className="w-20 h-20 object-cover rounded-md opacity-50" />
-                            ) : (
-                              <span className="text-xs text-gray-500">No Image</span>
-                            )}
-                          </div>
-                          <div className="flex-1 grid grid-cols-1 md:grid-cols-8 gap-2 items-center">
-                            <div className="md:col-span-1">
-                              <label className="text-xs text-gray-600">Name</label>
-                              <input
-                                name={`kit-${kit.id}-name`}
-                                value={keyboardState.inputs[`kit-${kit.id}-name`] ?? kit.name}
-                                onFocus={handleInputFocus} onClick={handleInputFocus}
-                                onChange={(e) =>
-                                  handleKeyboardChange(`kit-${kit.id}-name`, e.target.value)
-                                }
-                                onBlur={() => {
-                                  (async () => {
-                                    const val = keyboardState.inputs[`kit-${kit.id}-name`] ?? kit.name;
-                                    if (val !== kit.name) {
-                                      try {
-                                        await handleUpdateKitField(kit.id, "name", val);
-                                      } catch {}
-                                    }
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [`kit-${kit.id}-name`]: undefined },
-                                    }));
-                                  })();
-                                }}
-                                className="w-full rounded-md border px-2 py-1"
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <label className="text-xs text-gray-600">Description</label>
-                              <textarea
-                                rows={3}
-                                name={`kit-${kit.id}-description`}
-                                value={keyboardState.inputs[`kit-${kit.id}-description`] ?? kit.description}
-                                onFocus={handleInputFocus} onClick={handleInputFocus}
-                                onChange={(e) =>
-                                  handleKeyboardChange(`kit-${kit.id}-description`, e.target.value)
-                                }
-                                onBlur={() => {
-                                  (async () => {
-                                    const val = keyboardState.inputs[`kit-${kit.id}-description`] ?? kit.description;
-                                    if (val !== kit.description) {
-                                      try {
-                                        await handleUpdateKitField(kit.id, "description", val);
-                                      } catch {}
-                                    }
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [`kit-${kit.id}-description`]: undefined },
-                                    }));
-                                  })();
-                                }}
-                                className="w-full rounded-md border px-2 py-1 resize-y"
-                              />
-                            </div>
-                            <div className="md:col-span-1">
-                              <label className="text-xs text-gray-600">Price (â‚¹)</label>
-                              <input
-                                type="number"
-                                name={`kit-${kit.id}-price`}
-                                value={keyboardState.inputs[`kit-${kit.id}-price`] ?? kit.price}
-                                onFocus={handleInputFocus} onClick={handleInputFocus}
-                                onChange={(e) =>
-                                  handleKeyboardChange(`kit-${kit.id}-price`, e.target.value)
-                                }
-                                onBlur={() => {
-                                  (async () => {
-                                    const val = keyboardState.inputs[`kit-${kit.id}-price`] ?? kit.price;
-                                    if (val !== kit.price) {
-                                      try {
-                                        await handleUpdateKitField(kit.id, "price", val);
-                                      } catch {}
-                                    }
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [`kit-${kit.id}-price`]: undefined },
-                                    }));
-                                  })();
-                                }}
-                                className="w-full rounded-md border px-2 py-1"
-                              />
-                            </div>
-                            <div className="md:col-span-1">
-                              <label className="text-xs text-gray-600">Quantity</label>
-                              <input
-                                type="number"
-                                name={`kit-${kit.id}-quantity`}
-                                value={keyboardState.inputs[`kit-${kit.id}-quantity`] ?? kit.quantity}
-                                onFocus={handleInputFocus} onClick={handleInputFocus}
-                                onChange={(e) =>
-                                  handleKeyboardChange(`kit-${kit.id}-quantity`, e.target.value)
-                                }
-                                onBlur={() => {
-                                  (async () => {
-                                    const val = keyboardState.inputs[`kit-${kit.id}-quantity`] ?? kit.quantity;
-                                    if (val !== kit.quantity) {
-                                      try {
-                                        await handleUpdateKitField(kit.id, "quantity", val);
-                                      } catch {}
-                                    }
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [`kit-${kit.id}-quantity`]: undefined },
-                                    }));
-                                  })();
-                                }}
-                                className="w-full rounded-md border px-2 py-1"
-                              />
-                            </div>
-                            <div className="md:col-span-1">
-                              <label className="text-xs text-gray-600">Expiry</label>
-                              <input
-                                type="date"
-                                name={`kit-${kit.id}-expiryDate`}
-                                value={keyboardState.inputs[`kit-${kit.id}-expiryDate`] ?? kit.expiryDate}
-                                onFocus={handleInputFocus} onClick={handleInputFocus}
-                                onChange={(e) =>
-                                  handleKeyboardChange(`kit-${kit.id}-expiryDate`, e.target.value)
-                                }
-                                onBlur={() => {
-                                  (async () => {
-                                    const val = keyboardState.inputs[`kit-${kit.id}-expiryDate`] ?? kit.expiryDate;
-                                    if (val !== kit.expiryDate) {
-                                      try {
-                                        await handleUpdateKitField(kit.id, "expiryDate", val);
-                                      } catch {}
-                                    }
-                                    setKeyboardState((prev) => ({
-                                      ...prev,
-                                      inputs: { ...prev.inputs, [`kit-${kit.id}-expiryDate`]: undefined },
-                                    }));
-                                  })();
-                                }}
-                                className="w-full rounded-md border px-2 py-1"
-                              />
-                            </div>
-                            <div className="md:col-span-2 flex flex-col gap-2">
-                              <label className="text-xs text-gray-600">Picture</label>
-                              <div className="flex flex-wrap gap-2 items-center">
-                                <label className="cursor-pointer flex-1">
-                                  <div className="text-xs text-center bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg py-1.5 px-2 transition-colors duration-200 font-medium text-blue-700">
-                                    {getMedicineImageUrl(kit) ? "Change" : "Upload"}
-                                  </div>
-                                  <input
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    onChange={async (e) => {
-                                      const file = e.target.files?.[0];
-                                      if (!file) return;
-                                      await handleImageUpload(kit.kit_id || kit.id, file);
-                                      e.target.value = "";
-                                    }}
-                                    className="hidden"
-                                  />
-                                </label>
-                                {getMedicineImageUrl(kit) && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage(kit.kit_id || kit.id)}
-                                    className="text-xs px-2 py-1.5 rounded-lg bg-red-50 border border-red-300 text-red-600 hover:bg-red-500 hover:text-white transition-all font-medium"
-                                  >
-                                    Remove
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleDeleteKit(kit.kit_id || kit.id)}
-                                  className="text-xs px-3 py-1.5 rounded-lg border-2 border-red-300 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-semibold"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="luxury-qty-section">
+                      <span className="qty-label">QUANTITY</span>
+                      <div className="luxury-qty-controls">
+                        <button
+                          onClick={() => handleUpdateQuantity(item.kit_id || item.id, -1)}
+                          disabled={item.cartQuantity <= 1}
+                          className="luxury-qty-btn"
+                        >
+                          −
+                        </button>
+                        <span className="luxury-qty-value">
+                          {String(item.cartQuantity).padStart(2, "0")}
+                        </span>
+                        <button
+                          onClick={() => handleUpdateQuantity(item.kit_id || item.id, 1)}
+                          className="luxury-qty-btn"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="luxury-item-subtotal">
+                        {formatINR(item.price * item.cartQuantity)}
+                      </span>
                     </div>
-                  </div>
-                )}
-                <div className="mt-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
-                  <p className="text-sm text-green-800 font-medium">
-                    Changes are saved to the database and reflected in real-time on the main page.
-                  </p>
-                </div>
+                  </motion.div>
+                ))}
               </div>
-            )}
-          </motion.div>
 
-          {keyboardState.visible && (
-            <div className="fixed bottom-0 left-0 right-0 z-[10000]">
-              <VirtualKeyboard
-                inputName={keyboardState.inputName}
-                inputs={keyboardState.inputs}
-                onChange={handleKeyboardChange}
-                onClose={() => setKeyboardState(prev => ({ ...prev, visible: false }))}
-              />
-            </div>
+              {/* Proceed Action Button */}
+              <div className="luxury-cart-footer">
+                <PrimaryButton
+                  onClick={handleProceedToPayment}
+                  className="luxury-pay-btn"
+                >
+                  <span>Proceed to Payment ({formatINR(totalPrice)})</span>
+                </PrimaryButton>
+              </div>
+            </motion.div>
           )}
-        </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
     </AuraBackground>
   );
 }

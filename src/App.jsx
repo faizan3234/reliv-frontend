@@ -29,6 +29,7 @@ import WellnessRecommendations from "./pages/WellnessRecommendations.jsx";
 import MobileEntry from "./pages/MobileEntry.jsx";
 import MobileEntryGateway from "./pages/MobileEntryGateway.jsx";
 import SpeechAdmin from "./pages/SpeechAdmin.jsx";
+import AdminMedicinePage from "./pages/AdminMedicinePage.jsx";
 import SpeechControl from "./components/SpeechControl.jsx";
 import PhotoUpload from "./pages/PhotoUpload.jsx";
 
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="/mobile-entry" element={<MobileEntry />} />
           <Route path="/h" element={<MobileEntryGateway />} />
           <Route path="/photo-upload" element={<PhotoUpload />} />
+          <Route path="/admin" element={<AdminMedicinePage />} />
           <Route path="/admin-x7k9/speech" element={<SpeechAdmin />} />
         </Routes>
       </div>
