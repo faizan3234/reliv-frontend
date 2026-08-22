@@ -6,6 +6,7 @@ import Logo from '../components/Logo';
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
+import { getMedicineImageUrl } from "./MedicineDispensing";
 
 // Import kit images
 import kit1 from '../assets/1.png';
@@ -239,7 +240,7 @@ function WellnessRecommendations() {
     .map(kit => ({
       ...kit,
       ...getKitPriority(kit.name),
-      kitImage: getKitImage(kit.name),
+      kitImage: getMedicineImageUrl(kit) || getKitImage(kit.name),
       kitBgColor: getKitBackgroundColor(kit.name)
     }))
     .filter(kit => {
