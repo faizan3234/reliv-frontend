@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft, Heart, ShieldCheck } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft, Heart, ShieldCheck, Trash2 } from "lucide-react";
 import { sanitizeError } from "../utils/errorSanitizer";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
@@ -12,6 +12,12 @@ import { API_BASE } from "../config/api";
 import { formatINR } from "../utils/currency";
 
 // Helper to resolve canonical medicine image URL (local Pi file or external URL)
+// Universal kit ID resolver (ensures matching across SQLite kit_id and MongoDB id)
+export const getKitId = (kit) => {
+  if (!kit) return "";
+  return String(kit.kit_id ?? kit.id ?? kit._id ?? "");
+};
+
 export const getMedicineImageUrl = (kit) => {
   const imagePath = kit?.image_path || kit?.imageUrl || "";
 
@@ -75,7 +81,8 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMost
   const available = getAvailableQuantity(kit);
   const isOutOfStock = available <= 0 || (kit.expiryDate && new Date(kit.expiryDate) < new Date());
 
-  const cartItem = cart?.find((item) => (item.kit_id || item.id) === (kit.kit_id || kit.id));
+  const kitId = getKitId(kit);
+  const cartItem = cart?.find((item) => getKitId(item) === kitId);
   const cartQty = cartItem ? cartItem.cartQuantity : 0;
 
   // Authentic social proof based on kit ID
@@ -180,8 +187,8 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMost
               whileTap={{ scale: 0.9 }}
               onClick={() =>
                 cartQty > 1
-                  ? onUpdateQty(kit.kit_id || kit.id, cartQty - 1)
-                  : onRemoveFromCart(kit.kit_id || kit.id)
+                  ? onUpdateQty(kitId, cartQty - 1)
+                  : onRemoveFromCart(kitId)
               }
               className="card-qty-btn card-qty-minus"
             >
@@ -190,7 +197,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMost
             <span className="card-qty-value">{cartQty}</span>
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => onUpdateQty(kit.kit_id || kit.id, cartQty + 1)}
+              onClick={() => onUpdateQty(kitId, cartQty + 1)}
               className="card-qty-btn card-qty-plus"
               disabled={cartQty >= available}
             >
@@ -278,47 +285,65 @@ export default function MedicineDispensing() {
     sessionStorage.setItem("reliv_cart", JSON.stringify(cart));
   }, [cart]);
 
-  // Cart operations
+  // Cart operations with normalized IDs and robust removal
   const handleAddToCart = (kit) => {
-    const kitKey = kit.kit_id || kit.id;
+    const kitId = getKitId(kit);
+    if (!kitId) return;
+
     setCart((prev) => {
-      const existing = prev.find((item) => (item.kit_id || item.id) === kitKey);
+      const existing = prev.find((item) => getKitId(item) === kitId);
       if (existing) {
+        const currentKit = medicalKits.find((k) => getKitId(k) === kitId) || existing;
+        const maxAvailable = getAvailableQuantity(currentKit);
+        if (existing.cartQuantity >= maxAvailable) {
+          alert(`Only ${maxAvailable} units currently available in stock`);
+          return prev;
+        }
         return prev.map((item) =>
-          (item.kit_id || item.id) === kitKey
-            ? { ...item, cartQuantity: item.cartQuantity + 1 }
+          getKitId(item) === kitId
+            ? { ...item, id: kitId, kit_id: kitId, cartQuantity: Math.min(item.cartQuantity + 1, maxAvailable) }
             : item
         );
       }
-      return [...prev, { ...kit, cartQuantity: 1 }];
+      return [...prev, { ...kit, id: kitId, kit_id: kitId, cartQuantity: 1 }];
     });
   };
 
-  const handleUpdateQuantity = (kitKey, newQuantity) => {
+  const handleUpdateQuantity = (kitIdentifier, newQuantity) => {
+    const kitId = String(kitIdentifier);
+    if (newQuantity <= 0) {
+      handleRemoveFromCart(kitId);
+      return;
+    }
+
     setCart((prev) =>
-      prev.map((item) => {
-        if ((item.kit_id || item.id) === kitKey) {
-          const currentKit = medicalKits.find(
-            (k) => (k.kit_id || k.id) === kitKey
-          );
-          if (!currentKit) return item;
+      prev
+        .map((item) => {
+          if (getKitId(item) === kitId) {
+            const currentKit = medicalKits.find((k) => getKitId(k) === kitId) || item;
+            const maxAvailable = getAvailableQuantity(currentKit);
+            const clampedQty = Math.min(newQuantity, maxAvailable);
 
-          const maxAvailable = getAvailableQuantity(currentKit);
-          const clampedQty = Math.max(1, Math.min(newQuantity, maxAvailable));
+            if (newQuantity > maxAvailable) {
+              alert(`Only ${maxAvailable} units currently available in stock`);
+            }
 
-          if (newQuantity > maxAvailable) {
-            alert(`Only ${maxAvailable} units currently available in stock`);
+            return { ...item, id: kitId, kit_id: kitId, cartQuantity: clampedQty, availableStock: maxAvailable };
           }
-
-          return { ...item, cartQuantity: clampedQty, availableStock: maxAvailable };
-        }
-        return item;
-      }).filter((item) => item.cartQuantity > 0)
+          return item;
+        })
+        .filter((item) => item.cartQuantity > 0)
     );
   };
 
-  const handleRemoveFromCart = (kitKey) => {
-    setCart((prev) => prev.filter((item) => (item.kit_id || item.id) !== kitKey));
+  const handleRemoveFromCart = (kitIdentifier) => {
+    const kitId = String(kitIdentifier);
+    setCart((prev) => prev.filter((item) => getKitId(item) !== kitId));
+  };
+
+  const handleClearCart = () => {
+    setCart([]);
+    sessionStorage.removeItem("reliv_cart");
   };
 
   const { totalItems, totalPrice } = useMemo(() => {
@@ -338,17 +363,17 @@ export default function MedicineDispensing() {
 
         const validCart = cart
           .filter((cartItem) => {
-            const kit = kitList.find(
-              (k) => k.id === (cartItem.kit_id || cartItem.id) || k.kit_id === (cartItem.kit_id || cartItem.id)
-            );
+            const itemKitId = getKitId(cartItem);
+            const kit = kitList.find((k) => getKitId(k) === itemKitId);
             return kit && getAvailableQuantity(kit) >= (cartItem.cartQuantity || 1);
           })
           .map((cartItem) => {
-            const kit = kitList.find(
-              (k) => k.id === (cartItem.kit_id || cartItem.id) || k.kit_id === (cartItem.kit_id || cartItem.id)
-            );
+            const itemKitId = getKitId(cartItem);
+            const kit = kitList.find((k) => getKitId(k) === itemKitId);
             return {
               ...cartItem,
+              id: itemKitId,
+              kit_id: itemKitId,
               price: kit.price,
               availableStock: getAvailableQuantity(kit),
             };
@@ -453,9 +478,31 @@ export default function MedicineDispensing() {
                     {totalItems} {totalItems === 1 ? "ITEM" : "ITEMS"}
                   </span>
                 </div>
-                <div className="luxury-cart-total">
-                  <span className="total-label">TOTAL</span>
-                  <span className="total-price">{formatINR(totalPrice)}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  <button
+                    onClick={handleClearCart}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: "rgba(239, 68, 68, 0.1)",
+                      color: "#dc2626",
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                      borderRadius: "10px",
+                      padding: "6px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                    title="Clear entire cart"
+                  >
+                    <Trash2 size={14} />
+                    <span>CLEAR</span>
+                  </button>
+                  <div className="luxury-cart-total">
+                    <span className="total-label">TOTAL</span>
+                    <span className="total-price">{formatINR(totalPrice)}</span>
+                  </div>
                 </div>
               </div>
 
@@ -494,18 +541,19 @@ export default function MedicineDispensing() {
                       <span className="qty-label">QUANTITY</span>
                       <div className="luxury-qty-controls">
                         <button
-                          onClick={() => handleUpdateQuantity(item.kit_id || item.id, item.cartQuantity - 1)}
-                          disabled={item.cartQuantity <= 1}
+                          onClick={() => handleUpdateQuantity(getKitId(item), item.cartQuantity - 1)}
                           className="luxury-qty-btn"
+                          title={item.cartQuantity <= 1 ? "Remove item" : "Decrease quantity"}
                         >
-                          −
+                          {item.cartQuantity <= 1 ? <Trash2 size={13} style={{ color: "#ef4444" }} /> : "−"}
                         </button>
                         <span className="luxury-qty-value">
                           {String(item.cartQuantity).padStart(2, "0")}
                         </span>
                         <button
-                          onClick={() => handleUpdateQuantity(item.kit_id || item.id, item.cartQuantity + 1)}
+                          onClick={() => handleUpdateQuantity(getKitId(item), item.cartQuantity + 1)}
                           className="luxury-qty-btn"
+                          title="Increase quantity"
                         >
                           +
                         </button>
@@ -513,6 +561,22 @@ export default function MedicineDispensing() {
                       <span className="luxury-item-subtotal">
                         {formatINR(item.price * item.cartQuantity)}
                       </span>
+                      <button
+                        onClick={() => handleRemoveFromCart(getKitId(item))}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#94a3b8",
+                          cursor: "pointer",
+                          padding: "4px",
+                          display: "flex",
+                          alignItems: "center"
+                        }}
+                        title="Remove from cart"
+                        aria-label="Remove item"
+                      >
+                        <X size={18} />
+                      </button>
                     </div>
                   </motion.div>
                 ))}

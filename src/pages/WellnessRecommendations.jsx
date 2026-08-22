@@ -6,7 +6,7 @@ import Logo from '../components/Logo';
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
-import { getMedicineImageUrl } from "./MedicineDispensing";
+import { getMedicineImageUrl, getKitId } from "./MedicineDispensing";
 
 // Import kit images
 import kit1 from '../assets/1.png';
@@ -302,7 +302,8 @@ function WellnessRecommendations() {
 
   const handleAddToCart = (kit) => {
     const available = getAvailableQuantity(kit);
-    const existingItem = selectedItems.find(item => item.id === kit.id);
+    const kid = getKitId(kit);
+    const existingItem = selectedItems.find(item => getKitId(item) === kid);
     if (existingItem) {
       if (existingItem.quantity >= available) return;
       setSelectedItems(selectedItems.map(item =>
@@ -327,11 +328,11 @@ function WellnessRecommendations() {
     }
   };
 
-  const isInCart = (kitId) => selectedItems.find(item => item.id === kitId);
+  const isInCart = (kitId) => selectedItems.find(item => getKitId(item) === String(kitId));
 
   const getQuantityInCart = (kitId) => {
-    const item = selectedItems.find(item => item.id === kitId);
-    return item ? item.quantity : 0;
+    const item = selectedItems.find(item => getKitId(item) === String(kitId));
+    return item ? (item.quantity || item.cartQuantity || 0) : 0;
   };
 
   const totalAmount = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);

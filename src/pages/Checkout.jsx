@@ -6,11 +6,11 @@ import "./Checkout.css";
 import Logo from "../components/Logo";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import PrimaryButton from "../components/PrimaryButton";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
-import { getMedicineImageUrl } from "./MedicineDispensing";
+import { getMedicineImageUrl, getKitId } from "./MedicineDispensing";
 
 // Department list for random social proof
 const DEPARTMENTS = ['IT', 'CSE', 'ML', 'AI', 'CSBS', 'AIML', 'ME', 'EE', 'CSE IOTCSBT', 'ECE', 'Data Science', 'Cyber Security'];
@@ -52,6 +52,10 @@ export default function Checkout() {
   
   // Recommended kits state (fetched from API, filtered by margins)
   const [allKits, setAllKits] = useState([]);
+
+  useEffect(() => {
+    sessionStorage.setItem("reliv_cart", JSON.stringify(cart));
+  }, [cart]);
   const [kitsError, setKitsError] = useState(null);
   const [kitsLoading, setKitsLoading] = useState(false);
   const [kitMargins, setKitMargins] = useState(() => {
@@ -112,11 +116,11 @@ export default function Checkout() {
   
   // Compute recommended kits (top margin kits not in cart)
   const recommendedKits = useMemo(() => {
-    const cartIds = new Set(cart.map(item => item.id));
+    const cartIds = new Set(cart.map(item => getKitId(item)));
     
     // Filter kits not in cart, with valid authoritative stock
     const availableKits = allKits.filter(kit => 
-      !cartIds.has(kit.id) && 
+      !cartIds.has(getKitId(kit)) && 
       getAvailableQuantity(kit) > 0 && 
       new Date(kit.expiryDate) > new Date()
     );
@@ -137,7 +141,14 @@ export default function Checkout() {
   // Add recommended kit to cart
   const handleAddRecommended = (kit) => {
     const available = getAvailableQuantity(kit);
-    setCart(prev => [...prev, { ...kit, cartQuantity: 1, maxStock: available, availableStock: available }]);
+    const kid = getKitId(kit);
+    setCart(prev => {
+      const existing = prev.find(item => getKitId(item) === kid);
+      if (existing) {
+        return prev.map(item => getKitId(item) === kid ? { ...item, cartQuantity: (item.cartQuantity || 1) + 1 } : item);
+      }
+      return [...prev, { ...kit, id: kid, kit_id: kid, cartQuantity: 1, maxStock: available, availableStock: available }];
+    });
   };
 
   // Constants for fees
@@ -172,24 +183,34 @@ export default function Checkout() {
   // Final total with optional platform fee and tax
   const finalTotalPrice = subtotal + (includePlatformFee ? PLATFORM_FEE : 0) + taxAmount;
 
-  // Update quantity handler (prevents <1 and >maxStock)
-  const handleUpdateQuantity = (itemId, change) => {
+  // Update quantity handler with robust deletion when reaching 0
+  const handleUpdateQuantity = (itemIdentifier, change) => {
+    const targetId = String(itemIdentifier);
     setCart(prevCart =>
-      prevCart.map(item => {
-        if (item.id === itemId) {
-          const currentQty = item.cartQuantity || 1;
-          const maxQty = item.maxStock || item.availableStock || 99;
-          const newQuantity = Math.max(1, Math.min(currentQty + change, maxQty));
-          return { ...item, cartQuantity: newQuantity };
-        }
-        return item;
-      })
+      prevCart
+        .map(item => {
+          if (getKitId(item) === targetId) {
+            const currentQty = item.cartQuantity || 1;
+            const maxQty = item.maxStock || item.availableStock || 99;
+            const newQuantity = currentQty + change;
+            if (newQuantity <= 0) return null;
+            return { ...item, id: targetId, kit_id: targetId, cartQuantity: Math.min(newQuantity, maxQty) };
+          }
+          return item;
+        })
+        .filter(Boolean)
     );
   };
 
-  // Remove item handler
-  const handleRemoveItem = (itemId) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== itemId));
+  // Robust remove item handler
+  const handleRemoveItem = (itemIdentifier) => {
+    const targetId = String(itemIdentifier);
+    setCart(prevCart => prevCart.filter(item => getKitId(item) !== targetId));
+  };
+
+  const handleClearCart = () => {
+    setCart([]);
+    sessionStorage.removeItem("reliv_cart");
   };
 
   // If cart is empty and not from payment, show empty state
@@ -260,6 +281,20 @@ export default function Checkout() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+              <span className="text-sm font-bold uppercase tracking-wider text-gray-700">
+                Selected Items ({totalQuantity})
+              </span>
+              {cart.length > 0 && (
+                <button
+                  onClick={handleClearCart}
+                  className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                >
+                  <Trash2 size={13} />
+                  <span>Clear All Items</span>
+                </button>
+              )}
+            </div>
             {fromPaymentGate && (
               <div className="bg-white border-2 border-gray-300 p-6 mb-6">
                 <div className="flex items-center justify-between">
@@ -273,7 +308,7 @@ export default function Checkout() {
             )}
             {cart.map((item, index) => (
               <div 
-                key={item.id} 
+                key={getKitId(item) || index} 
                 className="bg-white border-2 border-gray-300 p-6 mb-6"
               >
                 <div className="flex items-start gap-6">
@@ -303,7 +338,7 @@ export default function Checkout() {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center border-2 border-gray-300">
                       <button
-                        onClick={() => handleUpdateQuantity(item.id, -1)}
+                        onClick={() => handleUpdateQuantity(getKitId(item), -1)}
                         disabled={(item.cartQuantity || 1) <= 1}
                         className="w-10 h-10 bg-white text-gray-800 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-white transition-colors flex items-center justify-center text-lg"
                       >
@@ -313,7 +348,7 @@ export default function Checkout() {
                         {item.cartQuantity || 1}
                       </span>
                       <button
-                        onClick={() => handleUpdateQuantity(item.id, 1)}
+                        onClick={() => handleUpdateQuantity(getKitId(item), 1)}
                         className="w-10 h-10 bg-white text-gray-800 hover:bg-gray-100 transition-colors flex items-center justify-center text-lg"
                       >
                         +
@@ -326,7 +361,7 @@ export default function Checkout() {
                         ₹{item.price * (item.cartQuantity || 1)}
                       </p>
                       <button
-                        onClick={() => handleRemoveItem(item.id)}
+                        onClick={() => handleRemoveItem(getKitId(item))}
                         className="text-xs uppercase tracking-wider text-gray-600 hover:text-gray-900 transition-colors"
                       >
                         Remove
