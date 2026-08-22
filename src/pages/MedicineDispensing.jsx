@@ -621,8 +621,8 @@ export default function MedicineDispensingWithAdmin() {
   };
 
   const { totalItems, totalPrice } = useMemo(() => {
-    const items = cart.reduce((sum, item) => sum + (item.cartQuantity || item.quantity || 0), 0);
-    const price = cart.reduce((sum, item) => sum + item.price * (item.cartQuantity || item.quantity || 0), 0);
+    const items = cart.reduce((sum, item) => sum + (item.cartQuantity || 0), 0);
+    const price = cart.reduce((sum, item) => sum + item.price * (item.cartQuantity || 0), 0);
     return { totalItems: items, totalPrice: price };
   }, [cart]);
 

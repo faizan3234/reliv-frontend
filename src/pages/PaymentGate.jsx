@@ -92,11 +92,21 @@ export default function PaymentGate() {
     setCodeDigits(["", "", "", ""]);
 
     try {
-      const formattedCart = cart.map((item) => ({
-        kit_id: item.kit_id || item._id || item.id,
-        name: item.name,
-        quantity: item.quantity || item.cartQuantity || 1,
-      }));
+      // Normalize cart items using cartQuantity (selected purchase quantity).
+      // ZERO fallback to inventory stock quantity (item.quantity).
+      const formattedCart = cart.map((item) => {
+        const purchaseQty = Number(
+          item.cartQuantity ??
+          item.quantityRequested ??
+          item.selectedQuantity ??
+          1
+        );
+        return {
+          kit_id: item.kit_id || item._id || item.id,
+          name: item.name,
+          quantity: Number.isInteger(purchaseQty) && purchaseQty > 0 ? purchaseQty : 1,
+        };
+      });
 
       const reqRes = await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/request`, {
         method: "POST",
@@ -406,56 +416,54 @@ export default function PaymentGate() {
   };
 
   return (
-    <div className="relative min-h-screen bg-white flex flex-col items-center justify-between px-4 py-4 overflow-y-auto font-sans select-none">
-      <TopEllipseBackground height="35%" color="#FFF4EC" />
+    <div className="relative min-h-screen bg-slate-50 flex flex-col items-center justify-between px-4 py-2 font-sans select-none overflow-x-hidden">
+      <TopEllipseBackground height="25%" color="#FFF4EC" />
 
-      {/* Header with Back Button */}
-      <div className="relative z-10 w-full max-w-lg flex items-center justify-between pt-1">
+      {/* Top Header */}
+      <div className="relative z-10 w-full max-w-md flex items-center justify-between pt-1">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white/90 border border-orange-200 text-slate-700 font-semibold text-sm shadow-sm active:scale-95 transition-transform"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/90 border border-orange-200 text-slate-700 font-semibold text-xs shadow-sm active:scale-95 transition-transform"
         >
-          <ArrowLeft size={18} className="text-orange-500" />
+          <ArrowLeft size={16} className="text-orange-500" />
           <span>Back</span>
         </button>
 
-        <Logo size="text-2xl" />
+        <Logo size="text-xl" />
 
-        <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-          <Lock size={14} className="text-emerald-600" />
+        <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+          <Lock size={12} className="text-emerald-600" />
           <span>Offline Secure</span>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="relative z-10 w-full max-w-lg flex flex-col items-center justify-center flex-grow py-3">
+      {/* Main Content Area (Compact, fits seamlessly in 720x1280 portrait kiosk) */}
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center justify-center flex-grow py-1">
 
         {/* PREPARING PAYMENT STATE */}
         {uiState === "PREPARING" && (
-          <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-xl text-center space-y-4 w-full max-w-md animate-fadeIn">
-            <div className="w-14 h-14 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto" />
-            <h2 className="text-xl font-bold text-slate-800">Preparing Secure Payment...</h2>
-            <p className="text-sm text-slate-500">Connecting with kiosk payment engine</p>
+          <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-xl text-center space-y-4 w-full max-w-sm animate-fadeIn">
+            <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto" />
+            <h2 className="text-lg font-bold text-slate-800">Preparing Secure Payment...</h2>
+            <p className="text-xs text-slate-500">Connecting with kiosk payment engine</p>
           </div>
         )}
 
-        {/* SESSION_INVALID STATE (Fail-closed when no valid session exists) */}
+        {/* SESSION_INVALID STATE */}
         {uiState === "SESSION_INVALID" && (
-          <div className="bg-white rounded-3xl p-8 border border-red-200 shadow-xl text-center space-y-5 w-full max-w-md animate-fadeIn">
-            <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto border border-red-200">
-              <AlertCircle size={36} />
+          <div className="bg-white rounded-3xl p-6 border border-red-200 shadow-xl text-center space-y-4 w-full max-w-sm animate-fadeIn">
+            <div className="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto border border-red-200">
+              <AlertCircle size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800">Payment Session Unavailable</h2>
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <h2 className="text-xl font-bold text-slate-800">Payment Session Unavailable</h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
               {errorMessage || "Payment session unavailable. Please restart this session."}
             </p>
             <button
-              onClick={() => {
-                window.location.href = "/";
-              }}
-              className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
+              onClick={() => { window.location.href = "/"; }}
+              className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-base shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
             >
-              <Home size={20} />
+              <Home size={18} />
               <span>Start New Session</span>
             </button>
           </div>
@@ -463,17 +471,17 @@ export default function PaymentGate() {
 
         {/* ERROR STATE */}
         {uiState === "ERROR" && (
-          <div className="bg-white rounded-3xl p-8 border border-red-200 shadow-xl text-center space-y-5 w-full max-w-md animate-fadeIn">
-            <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto border border-red-200">
-              <AlertCircle size={36} />
+          <div className="bg-white rounded-3xl p-6 border border-red-200 shadow-xl text-center space-y-4 w-full max-w-sm animate-fadeIn">
+            <div className="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto border border-red-200">
+              <AlertCircle size={32} />
             </div>
-            <h2 className="text-xl font-bold text-slate-800">Payment Service Unavailable</h2>
-            <p className="text-sm text-slate-600">{errorMessage || "Unable to initiate payment on the kiosk."}</p>
+            <h2 className="text-lg font-bold text-slate-800">Payment Service Unavailable</h2>
+            <p className="text-xs text-slate-600">{errorMessage || "Unable to initiate payment on the kiosk."}</p>
             <button
               onClick={createNewPaymentRequest}
-              className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-base shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
             >
-              <RefreshCw size={20} />
+              <RefreshCw size={18} />
               <span>Retry</span>
             </button>
           </div>
@@ -481,17 +489,17 @@ export default function PaymentGate() {
 
         {/* LOCKED STATE */}
         {uiState === "LOCKED" && (
-          <div className="bg-white rounded-3xl p-8 border border-red-300 shadow-xl text-center space-y-5 w-full max-w-md animate-fadeIn">
-            <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto border border-red-300">
-              <ShieldAlert size={36} />
+          <div className="bg-white rounded-3xl p-6 border border-red-300 shadow-xl text-center space-y-4 w-full max-w-sm animate-fadeIn">
+            <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto border border-red-300">
+              <ShieldAlert size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Payment Locked</h2>
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <h2 className="text-xl font-bold text-slate-900">Payment Locked</h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
               Too many incorrect code attempts. For your security, this payment session has been locked.
             </p>
             <button
               onClick={createNewPaymentRequest}
-              className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all"
+              className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-base shadow-md active:scale-98 transition-all"
             >
               Restart Payment Process
             </button>
@@ -500,19 +508,19 @@ export default function PaymentGate() {
 
         {/* EXPIRED STATE */}
         {uiState === "EXPIRED" && (
-          <div className="bg-white rounded-3xl p-8 border border-amber-200 shadow-xl text-center space-y-5 w-full max-w-md animate-fadeIn">
-            <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
-              <Clock size={36} />
+          <div className="bg-white rounded-3xl p-6 border border-amber-200 shadow-xl text-center space-y-4 w-full max-w-sm animate-fadeIn">
+            <div className="w-14 h-14 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+              <Clock size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Payment QR Expired</h2>
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <h2 className="text-xl font-bold text-slate-900">Payment QR Expired</h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
               The 5-minute payment window has expired. Please generate a new QR code to continue.
             </p>
             <button
               onClick={createNewPaymentRequest}
-              className="w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-base shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
             >
-              <RefreshCw size={20} />
+              <RefreshCw size={18} />
               <span>Generate New QR</span>
             </button>
           </div>
@@ -520,88 +528,86 @@ export default function PaymentGate() {
 
         {/* SUCCESS STATE */}
         {uiState === "SUCCESS" && (
-          <div className="bg-white rounded-3xl p-8 border border-emerald-200 shadow-2xl text-center space-y-5 w-full max-w-md animate-scaleUp">
-            <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-300">
-              <CheckCircle2 size={48} className="stroke-[2.5]" />
+          <div className="bg-white rounded-3xl p-8 border border-emerald-200 shadow-2xl text-center space-y-4 w-full max-w-sm animate-scaleUp">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-300">
+              <CheckCircle2 size={40} className="stroke-[2.5]" />
             </div>
-            <h2 className="text-3xl font-extrabold text-slate-900">Payment Verified!</h2>
-            <p className="text-base text-slate-600">Starting your health service now...</p>
-            <div className="w-8 h-8 border-4 border-emerald-100 border-t-emerald-500 rounded-full animate-spin mx-auto" />
+            <h2 className="text-2xl font-extrabold text-slate-900">Payment Verified!</h2>
+            <p className="text-sm text-slate-600">Starting your health service now...</p>
+            <div className="w-7 h-7 border-4 border-emerald-100 border-t-emerald-500 rounded-full animate-spin mx-auto" />
           </div>
         )}
 
-        {/* QR CODE & CONFIRMATION CODE INPUT (QR_READY, VERIFYING, WRONG_CODE) */}
+        {/* ACTIVE PAYMENT VIEW: QR + CONFIRMATION CODE KEYPAD */}
         {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && (
-          <div className="w-full max-w-md flex flex-col items-center gap-4">
+          <div className="w-full max-w-sm flex flex-col items-center gap-2.5">
 
             {/* Top Title & Price Pill */}
-            <div className="text-center space-y-1">
+            <div className="flex items-center justify-between w-full px-2">
+              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Scan &amp; Pay</h1>
               {authoritativeAmount !== null && (
-                <div className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
+                <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-orange-500 text-white font-extrabold text-lg shadow-sm">
                   <span>₹{formatRupees(authoritativeAmount)}</span>
                 </div>
               )}
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Secure Payment</h1>
             </div>
 
-            {/* Large High-Scannability Universal QR Card (320px QR with 4-module quiet zone, crisp sharp edges, & white padding) */}
-            <div className="relative p-4 rounded-3xl bg-white border-2 border-orange-200 shadow-xl flex flex-col items-center">
+            {/* Sharp, Crisp High-Scannability QR Card (240px QR with 4-module quiet zone) */}
+            <div className="relative p-2.5 rounded-2xl bg-white border border-orange-200/80 shadow-md flex flex-col items-center w-full">
               {paymentUrl ? (
-                <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center">
+                <div className="bg-white p-2 rounded-xl shadow-inner border border-slate-100 flex items-center justify-center">
                   <QRCodeSVG
                     value={paymentUrl}
-                    size={320}
+                    size={240}
                     level="L"
                     marginSize={4}
                     fgColor="#000000"
                     bgColor="#FFFFFF"
                     shapeRendering="crispEdges"
-                    className="w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] block"
+                    className="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] block"
                   />
                 </div>
               ) : (
-                <div className="w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] bg-slate-100 rounded-2xl flex items-center justify-center text-xs text-slate-400">
+                <div className="w-[200px] h-[200px] bg-slate-100 rounded-xl flex items-center justify-center text-xs text-slate-400">
                   Generating QR...
                 </div>
               )}
 
-              {/* Subtitle directly below QR */}
-              <p className="text-xs font-semibold text-slate-600 mt-2">
-                Scan with your phone camera
-              </p>
-
-              {/* Live Countdown Badge */}
-              <div className="mt-1.5 flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-orange-200 text-xs font-semibold text-orange-700">
-                <Clock size={13} className="text-orange-500 animate-pulse" />
-                <span>Valid for {formatTime(timeLeft)}</span>
+              {/* Subtitle & Live Countdown Badge */}
+              <div className="mt-1.5 flex items-center justify-between w-full px-1 text-[11px]">
+                <span className="font-semibold text-slate-500">Scan with phone camera</span>
+                <div className="flex items-center gap-1 font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                  <Clock size={11} className="text-orange-500 animate-pulse" />
+                  <span>{formatTime(timeLeft)}</span>
+                </div>
               </div>
             </div>
 
             {/* 4-Digit Code Entry & Integrated Keypad Card */}
-            <div className="w-full bg-white rounded-3xl p-5 border border-orange-100 shadow-md flex flex-col items-center space-y-4">
-              <div className="text-center space-y-0.5">
-                <p className="text-sm font-bold text-slate-800">
-                  Complete payment on phone &amp; enter 4-digit code:
+            <div className="w-full bg-white rounded-2xl p-3 sm:p-3.5 border border-orange-100 shadow-md flex flex-col items-center space-y-2">
+              <div className="text-center">
+                <p className="text-xs font-bold text-slate-800">
+                  Enter 4-digit code shown on your phone:
                 </p>
                 {uiState === "WRONG_CODE" && (
-                  <p className="text-xs font-bold text-red-600 animate-shake">
+                  <p className="text-[11px] font-bold text-red-600 animate-shake mt-0.5">
                     {errorMessage || "Incorrect code."} ({attemptsRemaining} attempts left)
                   </p>
                 )}
               </div>
 
-              {/* 4 Large Digit Display Boxes */}
-              <div className="flex justify-center items-center gap-3 py-1">
+              {/* 4 Digit Display Boxes */}
+              <div className="flex justify-center items-center gap-2.5 py-0.5">
                 {codeDigits.map((digit, idx) => {
                   const isCurrent = codeDigits.findIndex((d) => d === "") === idx;
                   return (
                     <div
                       key={idx}
-                      className={`w-14 h-16 sm:w-16 sm:h-18 rounded-2xl border-2 flex items-center justify-center font-mono text-3xl sm:text-4xl font-extrabold shadow-inner transition-all ${
+                      className={`w-11 h-13 sm:w-12 sm:h-14 rounded-xl border-2 flex items-center justify-center font-mono text-2xl font-extrabold shadow-inner transition-all ${
                         digit
                           ? "bg-orange-50 border-orange-500 text-orange-700 scale-105"
                           : isCurrent
-                          ? "bg-white border-orange-400 ring-4 ring-orange-400/20 animate-pulse"
+                          ? "bg-white border-orange-400 ring-2 ring-orange-400/20 animate-pulse"
                           : "bg-slate-50 border-slate-200 text-slate-400"
                       }`}
                     >
@@ -611,19 +617,15 @@ export default function PaymentGate() {
                 })}
               </div>
 
-              {/* Integrated Touch Keypad */}
-              {/* [ 1 ] [ 2 ] [ 3 ] */}
-              {/* [ 4 ] [ 5 ] [ 6 ] */}
-              {/* [ 7 ] [ 8 ] [ 9 ] */}
-              {/* [ ← ] [ 0 ] [ Clear ] */}
-              <div className="w-full max-w-sm grid grid-cols-3 gap-2.5 pt-1">
+              {/* Integrated Touch Keypad (50-54px buttons, perfect for 720x1280 kiosk) */}
+              <div className="w-full grid grid-cols-3 gap-1.5 pt-0.5">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                   <button
                     key={num}
                     type="button"
                     onClick={() => handleKeypadPress(num)}
                     disabled={uiState === "VERIFYING"}
-                    className="min-h-[58px] sm:min-h-[64px] rounded-2xl bg-orange-50/70 hover:bg-orange-100/80 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-2xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-12 sm:h-13 rounded-xl bg-orange-50/80 hover:bg-orange-100 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {num}
                   </button>
@@ -634,10 +636,10 @@ export default function PaymentGate() {
                   type="button"
                   onClick={() => handleKeypadPress("BACKSPACE")}
                   disabled={uiState === "VERIFYING"}
-                  className="min-h-[58px] sm:min-h-[64px] rounded-2xl bg-slate-100 hover:bg-slate-200/80 active:bg-slate-300 border border-slate-200 text-slate-700 font-bold text-xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-12 sm:h-13 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-200 text-slate-700 font-bold text-lg flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Delete last digit"
                 >
-                  <ArrowLeft size={24} className="stroke-[2.5]" />
+                  <ArrowLeft size={20} className="stroke-[2.5]" />
                 </button>
 
                 {/* Center: [ 0 ] */}
@@ -645,7 +647,7 @@ export default function PaymentGate() {
                   type="button"
                   onClick={() => handleKeypadPress(0)}
                   disabled={uiState === "VERIFYING"}
-                  className="min-h-[58px] sm:min-h-[64px] rounded-2xl bg-orange-50/70 hover:bg-orange-100/80 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-2xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-12 sm:h-13 rounded-xl bg-orange-50/80 hover:bg-orange-100 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   0
                 </button>
@@ -655,7 +657,7 @@ export default function PaymentGate() {
                   type="button"
                   onClick={() => handleKeypadPress("CLEAR")}
                   disabled={uiState === "VERIFYING"}
-                  className="min-h-[58px] sm:min-h-[64px] rounded-2xl bg-slate-100 hover:bg-slate-200/80 active:bg-slate-300 border border-slate-200 text-slate-600 font-bold text-sm sm:text-base flex items-center justify-center uppercase tracking-wide shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-12 sm:h-13 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-200 text-slate-600 font-bold text-xs sm:text-sm flex items-center justify-center uppercase tracking-wide shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Clear
                 </button>
@@ -666,7 +668,7 @@ export default function PaymentGate() {
                 type="button"
                 onClick={() => handleConfirmCode()}
                 disabled={!isCodeComplete || uiState === "VERIFYING"}
-                className={`w-full max-w-sm py-4 rounded-2xl font-bold text-lg transition-all shadow-md flex items-center justify-center gap-2 ${
+                className={`w-full py-3 rounded-xl font-bold text-base transition-all shadow-md flex items-center justify-center gap-2 ${
                   isCodeComplete && uiState !== "VERIFYING"
                     ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98 shadow-orange-500/25 cursor-pointer"
                     : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
@@ -674,7 +676,7 @@ export default function PaymentGate() {
               >
                 {uiState === "VERIFYING" ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Verifying Code...</span>
                   </>
                 ) : (
@@ -687,7 +689,7 @@ export default function PaymentGate() {
       </div>
 
       {/* Minimal Footer */}
-      <div className="relative z-10 w-full text-center text-[11px] text-slate-400 py-1">
+      <div className="relative z-10 w-full text-center text-[10px] text-slate-400 py-0.5">
         Reliv Health System • Secure Offline Payment Gateway
       </div>
     </div>
