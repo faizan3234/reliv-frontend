@@ -7,7 +7,7 @@ import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
-import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Delete, Home } from "lucide-react";
+import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home } from "lucide-react";
 
 const INACTIVITY_TIMEOUT = 120000; // 2 minutes inactivity timeout
 
@@ -266,7 +266,7 @@ export default function PaymentGate() {
   }, [uiState]);
 
   // ── 5. Verify 4-Digit Confirmation Code with Pi ──────────────────────────
-  const handleConfirmCode = async (codeToVerify) => {
+  const handleConfirmCode = useCallback(async (codeToVerify) => {
     if (!isValidSession) {
       setErrorMessage("Payment session unavailable. Please restart this session.");
       setUiState("SESSION_INVALID");
@@ -330,10 +330,10 @@ export default function PaymentGate() {
       setErrorMessage("Could not verify code with kiosk system. Please try again.");
       setUiState("WRONG_CODE");
     }
-  };
+  }, [isValidSession, activeSessionId, codeDigits, requestId, attemptsRemaining, needsReport, hasKits, navigate, updateHealth]);
 
   // ── 6. On-Screen Touch Keypad Handlers ────────────────────────────────────
-  const handleKeypadPress = (key) => {
+  const handleKeypadPress = useCallback((key) => {
     resetInactivityTimer();
     if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED" || uiState === "SESSION_INVALID") return;
 
@@ -344,33 +344,59 @@ export default function PaymentGate() {
     }
 
     if (key === "BACKSPACE") {
-      const next = [...codeDigits];
-      for (let i = 3; i >= 0; i--) {
-        if (next[i] !== "") {
-          next[i] = "";
-          break;
+      setCodeDigits((prev) => {
+        const next = [...prev];
+        for (let i = 3; i >= 0; i--) {
+          if (next[i] !== "") {
+            next[i] = "";
+            break;
+          }
         }
-      }
-      setCodeDigits(next);
+        return next;
+      });
       if (uiState === "WRONG_CODE") setUiState("QR_READY");
       return;
     }
 
-    // Append digit (0-9)
-    const next = [...codeDigits];
-    const emptyIndex = next.findIndex((d) => d === "");
-    if (emptyIndex !== -1) {
-      next[emptyIndex] = String(key);
-      setCodeDigits(next);
-      if (uiState === "WRONG_CODE") setUiState("QR_READY");
+    // Append digit (0-9) - preserves leading zero, e.g. 0042
+    setCodeDigits((prev) => {
+      const next = [...prev];
+      const emptyIndex = next.findIndex((d) => d === "");
+      if (emptyIndex !== -1) {
+        next[emptyIndex] = String(key);
+        if (uiState === "WRONG_CODE") setUiState("QR_READY");
 
-      // Auto-submit when 4th digit is entered
-      if (emptyIndex === 3) {
-        const fullCode = next.join("");
-        handleConfirmCode(fullCode);
+        // Auto-submit when 4th digit is entered
+        if (emptyIndex === 3) {
+          const fullCode = next.join("");
+          setTimeout(() => handleConfirmCode(fullCode), 50);
+        }
       }
-    }
-  };
+      return next;
+    });
+  }, [uiState, resetInactivityTimer, handleConfirmCode]);
+
+  // ── 7. Physical Keyboard Support (Dev & Accessibility) ────────────────────
+  const isCodeComplete = codeDigits.every((d) => d !== "");
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (uiState === "VERIFYING" || uiState === "SUCCESS" || uiState === "LOCKED" || uiState === "SESSION_INVALID") return;
+
+      if (e.key >= "0" && e.key <= "9") {
+        handleKeypadPress(parseInt(e.key, 10));
+      } else if (e.key === "Backspace") {
+        handleKeypadPress("BACKSPACE");
+      } else if (e.key === "Escape" || e.key === "Delete") {
+        handleKeypadPress("CLEAR");
+      } else if (e.key === "Enter" && isCodeComplete) {
+        handleConfirmCode();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [uiState, isCodeComplete, handleKeypadPress, handleConfirmCode]);
 
   // Format time mm:ss
   const formatTime = (seconds) => {
@@ -379,13 +405,11 @@ export default function PaymentGate() {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  // Format rupees display without losing paise precision (e.g. 27 -> "27", 170.5 -> "170.50", 170.05 -> "170.05")
+  // Format rupees display without losing paise precision
   const formatRupees = (amount) => {
     if (typeof amount !== "number" || isNaN(amount)) return "";
     return Number.isInteger(amount) ? amount.toString() : amount.toFixed(2);
   };
-
-  const isCodeComplete = codeDigits.every((d) => d !== "");
 
   return (
     <div className="relative min-h-screen bg-white flex flex-col items-center justify-between px-4 py-4 overflow-y-auto font-sans select-none">
@@ -519,14 +543,14 @@ export default function PaymentGate() {
             {/* Top Title & Price Pill */}
             <div className="text-center space-y-1">
               {authoritativeAmount !== null && (
-                <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
+                <div className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-orange-500 text-white font-extrabold text-2xl shadow-sm">
                   <span>₹{formatRupees(authoritativeAmount)}</span>
                 </div>
               )}
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Secure Payment</h1>
             </div>
 
-            {/* Large High-Scannability Universal QR Card (approx 320px QR with 4-module quiet zone + white padding) */}
+            {/* Large High-Scannability Universal QR Card (320px QR with 4-module quiet zone + white padding) */}
             <div className="relative p-4 rounded-3xl bg-white border-2 border-orange-200 shadow-xl flex flex-col items-center">
               {paymentUrl ? (
                 <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100">
@@ -558,11 +582,11 @@ export default function PaymentGate() {
               </div>
             </div>
 
-            {/* 4-Digit Code Entry Section */}
-            <div className="w-full bg-white rounded-3xl p-4 border border-orange-100 shadow-md flex flex-col items-center space-y-3">
+            {/* 4-Digit Code Entry & Integrated Keypad Card */}
+            <div className="w-full bg-white rounded-3xl p-5 border border-orange-100 shadow-md flex flex-col items-center space-y-4">
               <div className="text-center space-y-0.5">
-                <p className="text-xs font-bold text-slate-800">
-                  Complete payment and enter the 4-digit code below:
+                <p className="text-sm font-bold text-slate-800">
+                  Complete payment on phone &amp; enter 4-digit code:
                 </p>
                 {uiState === "WRONG_CODE" && (
                   <p className="text-xs font-bold text-red-600 animate-shake">
@@ -571,18 +595,18 @@ export default function PaymentGate() {
                 )}
               </div>
 
-              {/* 4 Large Digit Boxes */}
-              <div className="flex justify-center items-center gap-3">
+              {/* 4 Large Digit Display Boxes */}
+              <div className="flex justify-center items-center gap-3 py-1">
                 {codeDigits.map((digit, idx) => {
                   const isCurrent = codeDigits.findIndex((d) => d === "") === idx;
                   return (
                     <div
                       key={idx}
-                      className={`w-12 h-14 sm:w-14 sm:h-16 rounded-2xl border-2 flex items-center justify-center font-mono text-2xl sm:text-3xl font-extrabold shadow-inner transition-all ${
+                      className={`w-14 h-16 sm:w-16 sm:h-18 rounded-2xl border-2 flex items-center justify-center font-mono text-3xl sm:text-4xl font-extrabold shadow-inner transition-all ${
                         digit
                           ? "bg-orange-50 border-orange-500 text-orange-700 scale-105"
                           : isCurrent
-                          ? "bg-white border-orange-400 animate-pulse"
+                          ? "bg-white border-orange-400 ring-4 ring-orange-400/20 animate-pulse"
                           : "bg-slate-50 border-slate-200 text-slate-400"
                       }`}
                     >
@@ -592,14 +616,65 @@ export default function PaymentGate() {
                 })}
               </div>
 
-              {/* Confirm Button */}
+              {/* Integrated Touch Keypad */}
+              {/* [ 1 ] [ 2 ] [ 3 ] */}
+              {/* [ 4 ] [ 5 ] [ 6 ] */}
+              {/* [ 7 ] [ 8 ] [ 9 ] */}
+              {/* [ ← ] [ 0 ] [ Clear ] */}
+              <div className="w-full max-w-sm grid grid-cols-3 gap-2.5 pt-1">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => handleKeypadPress(num)}
+                    disabled={uiState === "VERIFYING"}
+                    className="min-h-[58px] sm:min-h-[64px] rounded-2xl bg-orange-50/70 hover:bg-orange-100/80 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-2xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {num}
+                  </button>
+                ))}
+
+                {/* Left: [ ← ] (Backspace) */}
+                <button
+                  type="button"
+                  onClick={() => handleKeypadPress("BACKSPACE")}
+                  disabled={uiState === "VERIFYING"}
+                  className="min-h-[58px] sm:min-h-[64px] rounded-2xl bg-slate-100 hover:bg-slate-200/80 active:bg-slate-300 border border-slate-200 text-slate-700 font-bold text-xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Delete last digit"
+                >
+                  <ArrowLeft size={24} className="stroke-[2.5]" />
+                </button>
+
+                {/* Center: [ 0 ] */}
+                <button
+                  type="button"
+                  onClick={() => handleKeypadPress(0)}
+                  disabled={uiState === "VERIFYING"}
+                  className="min-h-[58px] sm:min-h-[64px] rounded-2xl bg-orange-50/70 hover:bg-orange-100/80 active:bg-orange-200 border border-orange-200/80 text-slate-900 font-bold font-mono text-2xl flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  0
+                </button>
+
+                {/* Right: [ Clear ] */}
+                <button
+                  type="button"
+                  onClick={() => handleKeypadPress("CLEAR")}
+                  disabled={uiState === "VERIFYING"}
+                  className="min-h-[58px] sm:min-h-[64px] rounded-2xl bg-slate-100 hover:bg-slate-200/80 active:bg-slate-300 border border-slate-200 text-slate-600 font-bold text-sm sm:text-base flex items-center justify-center uppercase tracking-wide shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Clear
+                </button>
+              </div>
+
+              {/* Verify Payment Button (Directly below Keypad) */}
               <button
+                type="button"
                 onClick={() => handleConfirmCode()}
                 disabled={!isCodeComplete || uiState === "VERIFYING"}
-                className={`w-full py-3 rounded-2xl font-bold text-base transition-all shadow-md flex items-center justify-center gap-2 ${
+                className={`w-full max-w-sm py-4 rounded-2xl font-bold text-lg transition-all shadow-md flex items-center justify-center gap-2 ${
                   isCodeComplete && uiState !== "VERIFYING"
-                    ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98 shadow-orange-500/25 cursor-pointer"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
                 }`}
               >
                 {uiState === "VERIFYING" ? (
@@ -608,44 +683,9 @@ export default function PaymentGate() {
                     <span>Verifying Code...</span>
                   </>
                 ) : (
-                  <span>Confirm Code</span>
+                  <span>Verify Payment</span>
                 )}
               </button>
-
-              {/* On-Screen Touch Numeric Keypad */}
-              <div className="w-full grid grid-cols-3 gap-2 pt-1">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => handleKeypadPress(num)}
-                    disabled={uiState === "VERIFYING"}
-                    className="h-11 rounded-xl bg-orange-50/70 active:bg-orange-200 border border-orange-100 text-slate-900 font-bold text-xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"
-                  >
-                    {num}
-                  </button>
-                ))}
-                <button
-                  onClick={() => handleKeypadPress("CLEAR")}
-                  disabled={uiState === "VERIFYING"}
-                  className="h-11 rounded-xl bg-slate-100 active:bg-slate-200 border border-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center uppercase shadow-sm active:scale-95"
-                >
-                  Clear
-                </button>
-                <button
-                  onClick={() => handleKeypadPress(0)}
-                  disabled={uiState === "VERIFYING"}
-                  className="h-11 rounded-xl bg-orange-50/70 active:bg-orange-200 border border-orange-100 text-slate-900 font-bold text-xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"
-                >
-                  0
-                </button>
-                <button
-                  onClick={() => handleKeypadPress("BACKSPACE")}
-                  disabled={uiState === "VERIFYING"}
-                  className="h-11 rounded-xl bg-slate-100 active:bg-slate-200 border border-slate-200 text-slate-700 flex items-center justify-center shadow-sm active:scale-95"
-                >
-                  <Delete size={20} />
-                </button>
-              </div>
             </div>
           </div>
         )}

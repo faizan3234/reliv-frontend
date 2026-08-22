@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
+import { useHealth } from "../context/HealthContext";
 import CampusLeaderboard from "../components/CampusLeaderboard";
 import { AnimatePresence } from "framer-motion";
 
@@ -10,6 +11,7 @@ import { AnimatePresence } from "framer-motion";
 const Splash = () => {
   const navigate = useNavigate();
   const { speak, stop } = useSpeech();
+  const { resetHealth } = useHealth();
   const idleInterval = useRef(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const lbCycleRef = useRef(null);
@@ -31,6 +33,11 @@ const Splash = () => {
   const handleLeaderboardVisible = useCallback(() => {
     speak("leaderboard");
   }, [speak]);
+
+  // Reset any stale customer session on home/splash mount
+  useEffect(() => {
+    resetHealth();
+  }, [resetHealth]);
 
   // Speak welcome on mount
   useEffect(() => {
@@ -104,6 +111,7 @@ const Splash = () => {
       setErrorMessage("Please agree to the Terms & Conditions to proceed.");
       return;
     }
+    resetHealth();
     navigate("/choose-language");
   };
 
