@@ -95,22 +95,42 @@ export async function createPaymentV2Order({ encryptedPackage }) {
  */
 export async function verifyPaymentV2({
   requestId,
-  razorpay_payment_id,
+  orderId,
+  paymentId,
+  signature,
   razorpay_order_id,
+  razorpay_payment_id,
   razorpay_signature,
 }) {
+  const finalOrderId = orderId || razorpay_order_id;
+  const finalPaymentId = paymentId || razorpay_payment_id;
+  const finalSignature = signature || razorpay_signature;
+
+  if (
+    typeof finalOrderId !== 'string' || !finalOrderId.trim() ||
+    typeof finalPaymentId !== 'string' || !finalPaymentId.trim() ||
+    typeof finalSignature !== 'string' || !finalSignature.trim()
+  ) {
+    throw new Error('orderId, paymentId, and signature are required');
+  }
+
+  const payload = {
+    orderId: finalOrderId.trim(),
+    paymentId: finalPaymentId.trim(),
+    signature: finalSignature.trim(),
+  };
+
+  if (requestId) {
+    payload.requestId = requestId;
+  }
+
   try {
     const response = await fetch(`${PAYMENT_API_BASE}/api/v2/verify-payment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        requestId,
-        razorpay_payment_id,
-        razorpay_order_id,
-        razorpay_signature,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -119,18 +139,21 @@ export async function verifyPaymentV2({
     }
 
     const data = await response.json();
-    if (!data.ok && data.success !== true && !data.confirmationCode && !data.confirmation_code && !data.code) {
-      throw new Error(data.message || 'Payment verification failed');
+    if (!data.ok && data.success !== true && !data.confirmationCode && !data.confirmation_code && !data.code && data.paid !== true) {
+      throw new Error(data.error || data.message || 'Payment verification failed');
     }
+
+    const confirmationCode = data.confirmationCode || data.confirmation_code || data.code;
 
     return {
       ok: true,
-      confirmationCode: data.confirmationCode || data.confirmation_code || data.code,
+      paid: data.paid ?? true,
+      confirmationCode: confirmationCode ? String(confirmationCode).trim() : '',
       requestId: data.requestId || requestId,
       raw: data,
     };
   } catch (err) {
-    console.error('Error calling Payment V2 verify-payment:', err);
+    console.error('Error calling Payment V2 verify-payment:', err.message || err);
     throw err;
   }
 }

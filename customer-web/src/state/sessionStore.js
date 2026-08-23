@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { extractPaymentPackage } from '../services/session';
+import { extractPaymentPackage, getPendingVerification, clearPendingVerification } from '../services/session';
 
 const STORAGE_KEY = 'reliv_customer_session_v2';
 
@@ -30,10 +30,11 @@ export function useSessionStore() {
       console.warn('Failed to parse sessionStorage:', e);
     }
 
-    // Check for Payment V2 encrypted package in window.location.hash (#p=...)
+    // Check for Payment V2 encrypted package in window.location.hash (#p=...) or active pending verification
     const pkg = extractPaymentPackage();
-    if (pkg) {
-      initial.encryptedPackage = pkg;
+    const pending = getPendingVerification();
+    if (pkg || pending) {
+      if (pkg) initial.encryptedPackage = pkg;
       initial.paymentState = 'PAYMENT_V2_FLOW';
     } else if (!initial.encryptedPackage) {
       initial.paymentState = 'IDLE';
@@ -87,6 +88,7 @@ export function useSessionStore() {
     } catch (e) {
       // ignore
     }
+    clearPendingVerification();
     setState({ ...INITIAL_STATE, isLoaded: true });
   }, []);
 

@@ -62,11 +62,37 @@ export async function openRazorpayCheckout({
       color: '#f97316', // Reliv Orange
     },
     handler: function (response) {
+      if (!response) {
+        if (onError) {
+          onError(new Error('Invalid Razorpay callback: empty response received.'));
+        }
+        return;
+      }
+
+      const orderId = response.razorpay_order_id;
+      const paymentId = response.razorpay_payment_id;
+      const signature = response.razorpay_signature;
+
+      const isValid =
+        typeof orderId === 'string' && orderId.trim().length > 0 &&
+        typeof paymentId === 'string' && paymentId.trim().length > 0 &&
+        typeof signature === 'string' && signature.trim().length > 0;
+
+      if (!isValid) {
+        if (onError) {
+          onError(new Error('Invalid Razorpay callback: orderId, paymentId, and signature are required.'));
+        }
+        return;
+      }
+
       if (onSuccess) {
         onSuccess({
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_signature: response.razorpay_signature,
+          orderId: orderId.trim(),
+          paymentId: paymentId.trim(),
+          signature: signature.trim(),
+          razorpay_order_id: orderId.trim(),
+          razorpay_payment_id: paymentId.trim(),
+          razorpay_signature: signature.trim(),
         });
       }
     },

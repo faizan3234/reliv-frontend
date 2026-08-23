@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPaymentV2Order, verifyPaymentV2 } from '../../services/bridgeApi';
 import { openRazorpayCheckout } from '../../services/razorpay';
-import { extractPaymentPackage } from '../../services/session';
+import {
+  extractPaymentPackage,
+  savePendingVerification,
+  getPendingVerification,
+  clearPendingVerification,
+} from '../../services/session';
 import { Button } from '../../components/Button';
 import { Logo } from '../../components/Logo';
-import { CheckCircle2, Lock, AlertCircle, RefreshCw, Smartphone, KeyRound } from 'lucide-react';
+import { CheckCircle2, Lock, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
 
 export function PaymentV2Page({ sessionStore }) {
   const { state, updateState, resetSession } = sessionStore;
-  
+
   // Extract encrypted package from state or directly from window.location.hash
   const encryptedPackage = state.encryptedPackage || extractPaymentPackage();
 
@@ -17,18 +22,69 @@ export function PaymentV2Page({ sessionStore }) {
   const [confirmationCode, setConfirmationCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // 1. When encryptedPackage is present, automatically create Razorpay Order on Oracle Payment Bridge
+  // Core verification execution function that uses a normalized payload
+  const runVerification = useCallback(
+    async (payload) => {
+      setLoadingState('VERIFYING');
+      setErrorMessage('');
+
+      try {
+        const verifyRes = await verifyPaymentV2({
+          requestId: payload.requestId,
+          orderId: payload.orderId,
+          paymentId: payload.paymentId,
+          signature: payload.signature,
+        });
+
+        const code = String(verifyRes.confirmationCode || '').trim();
+        if (code) {
+          // Success: Clear temporary recovery state only AFTER confirmation code is received
+          clearPendingVerification();
+          setConfirmationCode(code);
+          updateState({ confirmationCode: code });
+          setLoadingState('SUCCESS');
+        } else {
+          throw new Error('Confirmation code was not returned by the payment service.');
+        }
+      } catch (verifyErr) {
+        console.error('[PaymentV2] Verification error:', verifyErr.message || verifyErr);
+        // Do NOT clear pending verification here so user can retry without paying again
+        setErrorMessage(verifyErr.message || 'Payment verification could not be completed.');
+        setLoadingState('ERROR');
+      }
+    },
+    [updateState]
+  );
+
+  // 1. Initialize: Check for pending recovery payment first, or create new order from encrypted package
   useEffect(() => {
     let isMounted = true;
 
     async function initPaymentV2() {
-      if (!encryptedPackage) {
-        setLoadingState('IDLE');
+      // Check if there is an unverified payment from a previous attempt/reload
+      const pending = getPendingVerification();
+      if (pending) {
+        if (pending.amount) {
+          setOrderData((prev) => prev || {
+            orderId: pending.orderId,
+            amount: pending.amount,
+            requestId: pending.requestId,
+            serviceType: pending.serviceType,
+          });
+        }
+        await runVerification(pending);
         return;
       }
 
-      setLoadingState('INIT');
-      setErrorMessage('');
+      if (!encryptedPackage) {
+        if (isMounted) setLoadingState('IDLE');
+        return;
+      }
+
+      if (isMounted) {
+        setLoadingState('INIT');
+        setErrorMessage('');
+      }
 
       try {
         const order = await createPaymentV2Order({ encryptedPackage });
@@ -38,7 +94,7 @@ export function PaymentV2Page({ sessionStore }) {
         }
       } catch (err) {
         if (isMounted) {
-          console.error('[PaymentV2] Order creation failed:', err);
+          console.error('[PaymentV2] Order creation failed:', err.message || err);
           setErrorMessage(err.message || 'Unable to prepare payment. The payment QR may be expired or already used.');
           setLoadingState('ERROR');
         }
@@ -50,7 +106,7 @@ export function PaymentV2Page({ sessionStore }) {
     return () => {
       isMounted = false;
     };
-  }, [encryptedPackage]);
+  }, [encryptedPackage, runVerification]);
 
   // 2. Open Razorpay Checkout on explicit button tap
   const handlePayClick = async () => {
@@ -66,72 +122,93 @@ export function PaymentV2Page({ sessionStore }) {
         keyId: orderData.keyId,
         customerDetails: {},
         onSuccess: async (paymentResult) => {
-          setLoadingState('VERIFYING');
-          try {
-            const verifyRes = await verifyPaymentV2({
-              requestId: orderData.requestId,
-              razorpay_payment_id: paymentResult.razorpay_payment_id,
-              razorpay_order_id: paymentResult.razorpay_order_id,
-              razorpay_signature: paymentResult.razorpay_signature,
-            });
+          // Normalize at boundary
+          const orderId = paymentResult?.orderId || paymentResult?.razorpay_order_id;
+          const paymentId = paymentResult?.paymentId || paymentResult?.razorpay_payment_id;
+          const signature = paymentResult?.signature || paymentResult?.razorpay_signature;
 
-            const code = String(verifyRes.confirmationCode || '').trim();
-            if (code) {
-              setConfirmationCode(code);
-              setLoadingState('SUCCESS');
-            } else {
-              throw new Error('Confirmation code was not returned by the payment service.');
-            }
-          } catch (verifyErr) {
-            console.error('[PaymentV2] Verification error:', verifyErr);
-            setErrorMessage(verifyErr.message || 'Payment verification could not be completed.');
+          // Strict validation
+          if (
+            typeof orderId !== 'string' || !orderId.trim() ||
+            typeof paymentId !== 'string' || !paymentId.trim() ||
+            typeof signature !== 'string' || !signature.trim()
+          ) {
+            console.error('[PaymentV2] Missing required callback fields');
+            setErrorMessage('Payment callback data is incomplete. Missing orderId, paymentId, or signature.');
             setLoadingState('ERROR');
+            return;
           }
+
+          const normalizedPayload = {
+            requestId: orderData.requestId || '',
+            orderId: orderId.trim(),
+            paymentId: paymentId.trim(),
+            signature: signature.trim(),
+            amount: orderData.amount,
+            serviceType: orderData.serviceType,
+          };
+
+          // CRITICAL: Persist to sessionStorage BEFORE making Oracle verify HTTP request
+          savePendingVerification(normalizedPayload);
+
+          // Execute verification
+          await runVerification(normalizedPayload);
         },
         onDismiss: () => {
           setLoadingState('ORDER_READY');
         },
         onError: (err) => {
-          console.error('[PaymentV2] Razorpay error:', err);
+          console.error('[PaymentV2] Razorpay error:', err.message || err.description || err);
           setErrorMessage(err.description || err.message || 'Payment was declined or cancelled.');
           setLoadingState('ERROR');
         },
       });
     } catch (checkoutErr) {
-      console.error('[PaymentV2] Checkout modal error:', checkoutErr);
+      console.error('[PaymentV2] Checkout modal error:', checkoutErr.message || checkoutErr);
       setErrorMessage(checkoutErr.message || 'Could not open payment checkout modal.');
       setLoadingState('ERROR');
     }
   };
 
-  const handleRetry = () => {
+  // 3. Try Again Handler: NEVER creates a duplicate payment if payment was already made
+  const handleRetry = async () => {
+    const pending = getPendingVerification();
+
+    // If payment already succeeded at Razorpay, retry ONLY Oracle verification
+    if (pending) {
+      await runVerification(pending);
+      return;
+    }
+
+    // Otherwise, retry order initialization from QR package
     if (encryptedPackage) {
       setLoadingState('INIT');
-      createPaymentV2Order({ encryptedPackage })
-        .then((order) => {
-          setOrderData(order);
-          setLoadingState('ORDER_READY');
-        })
-        .catch((err) => {
-          setErrorMessage(err.message || 'Payment creation failed.');
-          setLoadingState('ERROR');
-        });
+      setErrorMessage('');
+      try {
+        const order = await createPaymentV2Order({ encryptedPackage });
+        setOrderData(order);
+        setLoadingState('ORDER_READY');
+      } catch (err) {
+        setErrorMessage(err.message || 'Payment creation failed.');
+        setLoadingState('ERROR');
+      }
     } else {
       window.location.reload();
     }
   };
 
   const handleDone = () => {
+    clearPendingVerification();
     resetSession();
     window.location.href = window.location.origin + window.location.pathname;
   };
 
   // Helper for human-readable amount in Rupees
-  const displayRupees = orderData ? (orderData.amount / 100).toFixed(0) : '0';
+  const displayRupees = orderData?.amount ? (orderData.amount / 100).toFixed(0) : '0';
   const displayService = orderData?.serviceType === 'MEDICINE' ? 'Medicine Kit Purchase' : 'Health Checkup';
 
   // IDLE STATE (Direct open without #p)
-  if (!encryptedPackage || loadingState === 'IDLE') {
+  if (!encryptedPackage && loadingState === 'IDLE' && !getPendingVerification()) {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="text-center space-y-2">
@@ -201,6 +278,8 @@ export function PaymentV2Page({ sessionStore }) {
 
   // ERROR STATE
   if (loadingState === 'ERROR') {
+    const hasPendingPayment = Boolean(getPendingVerification());
+
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="text-center space-y-2">
@@ -212,8 +291,13 @@ export function PaymentV2Page({ sessionStore }) {
 
         <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm space-y-4">
           <p className="text-sm text-slate-600 leading-relaxed text-center">
-            {errorMessage || 'Unable to complete payment request. Please return to the kiosk and scan a new QR code.'}
+            {errorMessage || 'Unable to complete payment verification. Please try again.'}
           </p>
+          {hasPendingPayment && (
+            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 text-center">
+              Your payment was received. Tap <strong>Try Again</strong> to re-verify without paying again.
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -238,8 +322,8 @@ export function PaymentV2Page({ sessionStore }) {
           <h2 className="text-2xl font-bold text-slate-900 font-outfit">
             Payment Successful
           </h2>
-          <p className="text-sm text-slate-600">
-            Enter this 4-digit code on the kiosk screen:
+          <p className="text-sm font-semibold text-slate-700">
+            Your Kiosk Code
           </p>
         </div>
 
@@ -258,17 +342,19 @@ export function PaymentV2Page({ sessionStore }) {
 
           <div className="p-3.5 rounded-2xl bg-orange-50 border border-orange-100 text-xs text-orange-950 space-y-1">
             <p className="font-semibold text-slate-900">
-              Type these 4 digits on the kiosk touch screen.
+              Enter this 4-digit code on the Reliv kiosk.
             </p>
             <p className="text-slate-600">
               Your service will begin immediately upon verification.
             </p>
           </div>
 
-          <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs text-slate-500">
-            <span>Amount Paid</span>
-            <span className="font-bold text-slate-900 text-sm">₹{displayRupees}</span>
-          </div>
+          {displayRupees !== '0' && (
+            <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs text-slate-500">
+              <span>Amount Paid</span>
+              <span className="font-bold text-slate-900 text-sm">₹{displayRupees}</span>
+            </div>
+          )}
         </div>
 
         <Button onClick={handleDone} variant="primary">
