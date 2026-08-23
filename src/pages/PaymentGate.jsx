@@ -7,7 +7,7 @@ import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
-import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home } from "lucide-react";
+import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode } from "lucide-react";
 
 const INACTIVITY_TIMEOUT = 120000; // 2 minutes inactivity timeout
 
@@ -766,19 +766,24 @@ export default function PaymentGate() {
               )}
             </button>
 
-            {/* Back to QR Button */}
-            <button
-              type="button"
-              onClick={() => {
-                resetInactivityTimer();
-                setStep("WAITING_PAYMENT");
-              }}
-              disabled={uiState === "VERIFYING"}
-              className="w-full py-2.5 rounded-xl bg-white hover:bg-slate-50 active:scale-98 border border-slate-200 text-slate-600 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-            >
-              <ArrowLeft size={16} />
-              <span>← Back to QR</span>
-            </button>
+            {/* Paid but didn't get the code? Show payment QR again */}
+            <div className="w-full pt-1.5 flex flex-col items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-slate-500">
+                Paid but didn't get the code?
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  resetInactivityTimer();
+                  setStep("WAITING_PAYMENT");
+                }}
+                disabled={uiState === "VERIFYING"}
+                className="w-full py-3 rounded-2xl bg-orange-50 hover:bg-orange-100 active:bg-orange-200 border border-orange-200 text-orange-700 font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+              >
+                <QrCode size={18} className="text-orange-600" />
+                <span>Show payment QR again</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

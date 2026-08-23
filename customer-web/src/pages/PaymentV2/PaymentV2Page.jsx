@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { createPaymentV2Order, verifyPaymentV2, emailPaymentReceipt } from '../../services/bridgeApi';
+import { createPaymentV2Order, verifyPaymentV2, emailPaymentReceipt, recoverPaymentV2 } from '../../services/bridgeApi';
 import { openRazorpayCheckout } from '../../services/razorpay';
 import {
   extractPaymentPackage,
@@ -85,7 +85,7 @@ export function PaymentV2Page({ sessionStore }) {
     isSyncingRef.current = true;
 
     try {
-      // 1. Check if there is an unverified callback from Razorpay in localStorage/sessionStorage
+      // 1. Check if there is an unverified callback from Razorpay in localStorage
       const pending = getPendingVerification();
       if (pending) {
         if (pending.requestId) {
@@ -103,7 +103,26 @@ export function PaymentV2Page({ sessionStore }) {
         return;
       }
 
-      // 2. Check if we have an encrypted payment package to check / initialize
+      // 2. Check if we have an active requestId to attempt direct Oracle reconciliation
+      const currentReqId = activeRequestId || getPaymentRecovery()?.requestId;
+      if (currentReqId) {
+        try {
+          const recoverRes = await recoverPaymentV2({ requestId: currentReqId });
+          if (recoverRes.paid && recoverRes.confirmationCode) {
+            console.log(`[PaymentV2] Payment recovered and verified via Oracle: ${recoverRes.confirmationCode}`);
+            clearPendingVerification();
+            clearPaymentRecovery();
+            setConfirmationCode(recoverRes.confirmationCode);
+            setLoadingState('SUCCESS');
+            return;
+          }
+        } catch (recoverErr) {
+          // If order not found or pending, proceed with normal package flow
+          console.log('[PaymentV2] Direct recovery check non-fatal:', recoverErr.message);
+        }
+      }
+
+      // 3. Check if we have an encrypted payment package to check / initialize
       const activePackage = encryptedPackage || extractPaymentPackage() || getPaymentRecovery()?.encryptedPackage;
       if (!activePackage) {
         setLoadingState('IDLE');
@@ -121,16 +140,11 @@ export function PaymentV2Page({ sessionStore }) {
       }
       setOrderData(order);
 
-      // 3. If Oracle indicates this request is already PAID, NEVER launch Razorpay!
+      // 4. If Oracle indicates this request is already PAID, NEVER launch Razorpay!
       if (order.paid === true || order.raw?.status === 'PAID') {
         console.log('[PaymentV2] Authoritative Oracle check: Order is already PAID');
-        // If we have pending verification data or confirmation code returned
-        const pendingAgain = getPendingVerification();
-        if (pendingAgain) {
-          await runVerification(pendingAgain);
-          return;
-        }
 
+        // Check if confirmation code is already returned
         const returnedCode = String(order.confirmationCode || order.raw?.confirmationCode || '').trim();
         if (returnedCode) {
           clearPendingVerification();
@@ -139,9 +153,25 @@ export function PaymentV2Page({ sessionStore }) {
           setLoadingState('SUCCESS');
           return;
         }
+
+        // Attempt recover-payment to decrypt code from Oracle
+        if (order.requestId) {
+          try {
+            const recoverRes = await recoverPaymentV2({ requestId: order.requestId });
+            if (recoverRes.confirmationCode) {
+              clearPendingVerification();
+              clearPaymentRecovery();
+              setConfirmationCode(recoverRes.confirmationCode);
+              setLoadingState('SUCCESS');
+              return;
+            }
+          } catch (e) {
+            console.warn('[PaymentV2] Code reveal via recover failed:', e.message);
+          }
+        }
       }
 
-      // 4. Unpaid / Active Order Ready
+      // 5. Unpaid / Active Order Ready
       savePaymentRecovery({
         requestId: order.requestId,
         encryptedPackage: activePackage,
@@ -172,7 +202,7 @@ export function PaymentV2Page({ sessionStore }) {
     } finally {
       isSyncingRef.current = false;
     }
-  }, [encryptedPackage, runVerification]);
+  }, [encryptedPackage, runVerification, activeRequestId]);
 
   // Automatic Resume Triggers: visibilitychange, focus, pageshow, and app mount
   useEffect(() => {

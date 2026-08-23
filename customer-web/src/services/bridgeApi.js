@@ -195,3 +195,50 @@ export async function emailPaymentReceipt({ requestId, email }) {
     throw err;
   }
 }
+
+/**
+ * PAYMENT V2: Calls Oracle POST /api/v2/recover-payment to reconcile payment and reveal confirmation code if paid
+ */
+export async function recoverPaymentV2({ requestId }) {
+  if (!requestId || typeof requestId !== 'string') {
+    throw new Error('requestId is required for payment recovery.');
+  }
+
+  try {
+    const response = await fetch(`${PAYMENT_API_BASE}/api/v2/recover-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requestId: String(requestId).trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const err = new Error(errorData.message || errorData.error || `Payment recovery failed (HTTP ${response.status})`);
+      err.code = errorData.code || `HTTP_${response.status}`;
+      throw err;
+    }
+
+    const data = await response.json();
+    return {
+      ok: Boolean(data.ok),
+      paid: Boolean(data.paid),
+      recovered: Boolean(data.recovered),
+      status: data.status,
+      confirmationCode: data.confirmationCode ? String(data.confirmationCode).trim() : '',
+      requestId: data.requestId || requestId,
+      orderId: data.orderId,
+      paymentId: data.paymentId,
+      amount: data.amount,
+      currency: data.currency || 'INR',
+      serviceType: data.serviceType || 'HEALTH_CHECKUP',
+      raw: data,
+    };
+  } catch (err) {
+    console.error('Error calling Payment V2 recover-payment:', err.message || err);
+    throw err;
+  }
+}
