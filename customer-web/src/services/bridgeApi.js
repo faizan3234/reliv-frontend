@@ -157,3 +157,41 @@ export async function verifyPaymentV2({
     throw err;
   }
 }
+
+/**
+ * PAYMENT V2: Calls Oracle POST /api/v2/email-receipt to send payment receipt to customer
+ */
+export async function emailPaymentReceipt({ requestId, email }) {
+  if (!requestId || !email) {
+    throw new Error('requestId and email are required to send receipt.');
+  }
+
+  try {
+    const response = await fetch(`${PAYMENT_API_BASE}/api/v2/email-receipt`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requestId: String(requestId).trim(),
+        email: String(email).trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `Failed to send email receipt (HTTP ${response.status})`);
+    }
+
+    const data = await response.json();
+    return {
+      ok: true,
+      alreadySent: Boolean(data.alreadySent || data.already_sent),
+      message: data.message || 'Receipt sent successfully',
+      raw: data,
+    };
+  } catch (err) {
+    console.error('Error calling Payment V2 email-receipt:', err.message || err);
+    throw err;
+  }
+}

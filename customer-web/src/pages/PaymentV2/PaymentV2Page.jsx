@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { createPaymentV2Order, verifyPaymentV2 } from '../../services/bridgeApi';
+import { createPaymentV2Order, verifyPaymentV2, emailPaymentReceipt } from '../../services/bridgeApi';
 import { openRazorpayCheckout } from '../../services/razorpay';
 import {
   extractPaymentPackage,
@@ -9,7 +9,7 @@ import {
 } from '../../services/session';
 import { Button } from '../../components/Button';
 import { Logo } from '../../components/Logo';
-import { CheckCircle2, Lock, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
+import { CheckCircle2, Lock, AlertCircle, RefreshCw, Mail } from 'lucide-react';
 
 export function PaymentV2Page({ sessionStore }) {
   const { state, updateState, resetSession } = sessionStore;
@@ -21,6 +21,12 @@ export function PaymentV2Page({ sessionStore }) {
   const [orderData, setOrderData] = useState(null);
   const [confirmationCode, setConfirmationCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [activeRequestId, setActiveRequestId] = useState('');
+
+  // Receipt state: 'idle' | 'sending' | 'sent' | 'already_sent' | 'error'
+  const [receiptEmail, setReceiptEmail] = useState('');
+  const [receiptStatus, setReceiptStatus] = useState('idle');
+  const [receiptError, setReceiptError] = useState('');
 
   // Core verification execution function that uses a normalized payload
   const runVerification = useCallback(
@@ -29,6 +35,10 @@ export function PaymentV2Page({ sessionStore }) {
       setErrorMessage('');
 
       try {
+        if (payload.requestId) {
+          setActiveRequestId(payload.requestId);
+        }
+
         const verifyRes = await verifyPaymentV2({
           requestId: payload.requestId,
           orderId: payload.orderId,
@@ -38,10 +48,16 @@ export function PaymentV2Page({ sessionStore }) {
 
         const code = String(verifyRes.confirmationCode || '').trim();
         if (code) {
+          if (verifyRes.requestId) {
+            setActiveRequestId(verifyRes.requestId);
+          }
           // Success: Clear temporary recovery state only AFTER confirmation code is received
           clearPendingVerification();
           setConfirmationCode(code);
-          updateState({ confirmationCode: code });
+          updateState({
+            confirmationCode: code,
+            requestId: verifyRes.requestId || payload.requestId || '',
+          });
           setLoadingState('SUCCESS');
         } else {
           throw new Error('Confirmation code was not returned by the payment service.');
@@ -64,6 +80,9 @@ export function PaymentV2Page({ sessionStore }) {
       // Check if there is an unverified payment from a previous attempt/reload
       const pending = getPendingVerification();
       if (pending) {
+        if (pending.requestId) {
+          setActiveRequestId(pending.requestId);
+        }
         if (pending.amount) {
           setOrderData((prev) => prev || {
             orderId: pending.orderId,
@@ -90,6 +109,9 @@ export function PaymentV2Page({ sessionStore }) {
         const order = await createPaymentV2Order({ encryptedPackage });
         if (isMounted) {
           setOrderData(order);
+          if (order.requestId) {
+            setActiveRequestId(order.requestId);
+          }
           setLoadingState('ORDER_READY');
         }
       } catch (err) {
@@ -140,7 +162,7 @@ export function PaymentV2Page({ sessionStore }) {
           }
 
           const normalizedPayload = {
-            requestId: orderData.requestId || '',
+            requestId: orderData.requestId || activeRequestId || '',
             orderId: orderId.trim(),
             paymentId: paymentId.trim(),
             signature: signature.trim(),
@@ -187,6 +209,9 @@ export function PaymentV2Page({ sessionStore }) {
       try {
         const order = await createPaymentV2Order({ encryptedPackage });
         setOrderData(order);
+        if (order.requestId) {
+          setActiveRequestId(order.requestId);
+        }
         setLoadingState('ORDER_READY');
       } catch (err) {
         setErrorMessage(err.message || 'Payment creation failed.');
@@ -194,6 +219,35 @@ export function PaymentV2Page({ sessionStore }) {
       }
     } else {
       window.location.reload();
+    }
+  };
+
+  // 4. Receipt Email Handler
+  const handleEmailReceipt = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!receiptEmail || !receiptEmail.trim() || receiptStatus === 'sending') return;
+
+    const emailToSend = receiptEmail.trim();
+    if (!emailToSend.includes('@') || !emailToSend.includes('.')) {
+      setReceiptError('Please enter a valid email address.');
+      return;
+    }
+
+    setReceiptStatus('sending');
+    setReceiptError('');
+
+    try {
+      const currentRequestId = activeRequestId || orderData?.requestId || state.requestId;
+      const result = await emailPaymentReceipt({
+        requestId: currentRequestId,
+        email: emailToSend,
+      });
+
+      setReceiptStatus(result.alreadySent ? 'already_sent' : 'sent');
+    } catch (err) {
+      console.error('[PaymentV2] Receipt email error:', err.message || err);
+      setReceiptError(err.message || "We couldn't send your receipt.");
+      setReceiptStatus('error');
     }
   };
 
@@ -309,12 +363,12 @@ export function PaymentV2Page({ sessionStore }) {
     );
   }
 
-  // SUCCESS STATE — DISPLAY 4-DIGIT CONFIRMATION CODE
+  // SUCCESS STATE — DISPLAY 4-DIGIT CONFIRMATION CODE + RECEIPT EMAIL FORM
   if (loadingState === 'SUCCESS') {
     const digits = confirmationCode.split('');
 
     return (
-      <div className="space-y-6 animate-in fade-in zoom-in-95 duration-400">
+      <div className="space-y-5 animate-in fade-in zoom-in-95 duration-400">
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-600 mb-1 shadow-sm">
             <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
@@ -327,8 +381,8 @@ export function PaymentV2Page({ sessionStore }) {
           </p>
         </div>
 
+        {/* 4-Digit Kiosk Code Card */}
         <div className="rounded-3xl border border-orange-200 bg-white p-6 shadow-md space-y-5 text-center">
-          {/* Large Digit Cards */}
           <div className="flex justify-center items-center gap-3 py-2">
             {digits.map((digit, idx) => (
               <div
@@ -357,9 +411,122 @@ export function PaymentV2Page({ sessionStore }) {
           )}
         </div>
 
-        <Button onClick={handleDone} variant="primary">
-          Done
-        </Button>
+        {/* Directly Underneath: Payment Receipt Section */}
+        <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
+          <div className="text-center space-y-0.5">
+            <h3 className="text-base font-bold text-slate-900 font-outfit">
+              Get your payment receipt
+            </h3>
+            <p className="text-xs text-slate-500">
+              Enter your email to receive a digital receipt.
+            </p>
+          </div>
+
+          {/* Idle / Sending state: Email input form */}
+          {(receiptStatus === 'idle' || receiptStatus === 'sending') && (
+            <form onSubmit={handleEmailReceipt} className="space-y-3 pt-1">
+              <div>
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="Email address"
+                  value={receiptEmail}
+                  onChange={(e) => setReceiptEmail(e.target.value)}
+                  required
+                  disabled={receiptStatus === 'sending'}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 placeholder-slate-400 outline-none transition duration-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-50"
+                />
+              </div>
+
+              {receiptError && (
+                <p className="text-xs text-red-600 font-medium text-center">{receiptError}</p>
+              )}
+
+              <div className="space-y-2">
+                <Button
+                  type="submit"
+                  loading={receiptStatus === 'sending'}
+                  disabled={!receiptEmail.trim() || receiptStatus === 'sending'}
+                  size="md"
+                  icon={Mail}
+                >
+                  Email My Receipt
+                </Button>
+                <button
+                  type="button"
+                  onClick={handleDone}
+                  className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition py-1.5"
+                >
+                  Skip
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Sent successfully */}
+          {receiptStatus === 'sent' && (
+            <div className="space-y-3.5 text-center animate-in fade-in duration-300 pt-1">
+              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
+                <p className="font-semibold text-emerald-800">
+                  Receipt sent successfully!
+                </p>
+                <p className="text-emerald-700">
+                  We've emailed your payment receipt to <strong>{receiptEmail}</strong>.
+                </p>
+              </div>
+
+              <Button onClick={handleDone} variant="primary" size="md">
+                Done
+              </Button>
+            </div>
+          )}
+
+          {/* Already sent */}
+          {receiptStatus === 'already_sent' && (
+            <div className="space-y-3.5 text-center animate-in fade-in duration-300 pt-1">
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+                <p className="font-semibold text-amber-800">
+                  Receipt already sent
+                </p>
+                <p className="text-amber-700">
+                  A receipt for this payment was already sent to <strong>{receiptEmail}</strong>.
+                </p>
+              </div>
+
+              <Button onClick={handleDone} variant="primary" size="md">
+                Done
+              </Button>
+            </div>
+          )}
+
+          {/* Error sending email */}
+          {receiptStatus === 'error' && (
+            <div className="space-y-3.5 text-center animate-in fade-in duration-300 pt-1">
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+                <p className="font-semibold text-slate-900">
+                  We couldn't send your receipt.
+                </p>
+                <p className="text-slate-600">
+                  Your payment is safe.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Button onClick={handleEmailReceipt} variant="primary" size="md" icon={RefreshCw}>
+                  Try Sending Again
+                </Button>
+                <button
+                  type="button"
+                  onClick={handleDone}
+                  className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition py-1.5"
+                >
+                  Skip
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
