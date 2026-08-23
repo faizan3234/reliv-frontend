@@ -4,7 +4,7 @@ import { Header } from './components/Header';
 import { StartPage } from './pages/Start/StartPage';
 import { PaymentV2Page } from './pages/PaymentV2/PaymentV2Page';
 import { ErrorPage } from './pages/Error/ErrorPage';
-import { extractPaymentPackage, getPendingVerification } from './services/session';
+import { extractPaymentPackage, getPendingVerification, getPaymentRecovery } from './services/session';
 
 export function App() {
   const sessionStore = useSessionStore();
@@ -18,14 +18,21 @@ export function App() {
     );
   }
 
-  // Detect Payment V2 URL route /pay, #p=..., or active pending verification
+  // Detect Payment V2 URL route /pay, #p=..., active pending verification, or stored recovery session
   const pendingVerification = getPendingVerification();
-  const hasPackage = Boolean(state.encryptedPackage || extractPaymentPackage() || pendingVerification);
+  const paymentRecovery = getPaymentRecovery();
+  const hasPackage = Boolean(
+    state.encryptedPackage ||
+    extractPaymentPackage() ||
+    pendingVerification ||
+    paymentRecovery?.encryptedPackage
+  );
   const isPayRoute = typeof window !== 'undefined' && (
     window.location.pathname.startsWith('/pay') ||
     hasPackage ||
     state.paymentState === 'PAYMENT_V2_FLOW' ||
-    Boolean(pendingVerification)
+    Boolean(pendingVerification) ||
+    Boolean(paymentRecovery)
   );
 
   const renderActiveScreen = () => {

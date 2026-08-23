@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { extractPaymentPackage, getPendingVerification, clearPendingVerification } from '../services/session';
-
-const STORAGE_KEY = 'reliv_customer_session_v2';
+import {
+  extractPaymentPackage,
+  getPendingVerification,
+  clearPendingVerification,
+  getPaymentRecovery,
+  savePaymentRecovery,
+  clearPaymentRecovery,
+} from '../services/session';
 
 export const INITIAL_STATE = {
   encryptedPackage: '',
   requestId: '',
-  confirmationCode: '',
+  confirmationCode: '', // kept in-memory only; never stored permanently
   amount: 0,
   currency: 'INR',
   paymentState: 'IDLE', // 'IDLE' | 'PAYMENT_V2_FLOW' | 'ERROR'
@@ -15,19 +20,23 @@ export const INITIAL_STATE = {
 };
 
 /**
- * React Hook for Managing Payment V2 Customer Session State backed by sessionStorage & hash (#p=...).
+ * React Hook for Managing Payment V2 Customer Session State backed by persistent localStorage & URL hash (#p=...).
  */
 export function useSessionStore() {
   const [state, setState] = useState(() => {
     let initial = { ...INITIAL_STATE };
-    try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        initial = { ...initial, ...parsed };
-      }
-    } catch (e) {
-      console.warn('Failed to parse sessionStorage:', e);
+
+    // Check persistent recovery storage first
+    const recovery = getPaymentRecovery();
+    if (recovery) {
+      initial = {
+        ...initial,
+        encryptedPackage: recovery.encryptedPackage || '',
+        requestId: recovery.requestId || '',
+        amount: recovery.amount || 0,
+        currency: recovery.currency || 'INR',
+        paymentState: recovery.paymentState || 'PAYMENT_V2_FLOW',
+      };
     }
 
     // Check for Payment V2 encrypted package in window.location.hash (#p=...) or active pending verification
@@ -61,20 +70,17 @@ export function useSessionStore() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Sync state changes to sessionStorage
+  // Sync state changes to recovery storage (without storing confirmationCode)
   useEffect(() => {
     if (!state.isLoaded) return;
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+    if (state.encryptedPackage || state.requestId) {
+      savePaymentRecovery({
         encryptedPackage: state.encryptedPackage,
         requestId: state.requestId,
-        confirmationCode: state.confirmationCode,
         amount: state.amount,
         currency: state.currency,
         paymentState: state.paymentState
-      }));
-    } catch (e) {
-      console.warn('Failed to save to sessionStorage:', e);
+      });
     }
   }, [state]);
 
@@ -83,11 +89,7 @@ export function useSessionStore() {
   }, []);
 
   const resetSession = useCallback(() => {
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
-      // ignore
-    }
+    clearPaymentRecovery();
     clearPendingVerification();
     setState({ ...INITIAL_STATE, isLoaded: true });
   }, []);
@@ -98,3 +100,5 @@ export function useSessionStore() {
     resetSession
   };
 }
+
+export default useSessionStore;

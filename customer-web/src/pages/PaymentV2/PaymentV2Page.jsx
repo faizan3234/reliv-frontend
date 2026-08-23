@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPaymentV2Order, verifyPaymentV2, emailPaymentReceipt } from '../../services/bridgeApi';
 import { openRazorpayCheckout } from '../../services/razorpay';
 import {
@@ -6,20 +6,24 @@ import {
   savePendingVerification,
   getPendingVerification,
   clearPendingVerification,
+  savePaymentRecovery,
+  getPaymentRecovery,
+  clearPaymentRecovery,
 } from '../../services/session';
 import { Button } from '../../components/Button';
 import { Logo } from '../../components/Logo';
-import { CheckCircle2, Lock, AlertCircle, RefreshCw, Mail } from 'lucide-react';
+import { CheckCircle2, Lock, AlertCircle, RefreshCw, Mail, ShieldCheck } from 'lucide-react';
 
 export function PaymentV2Page({ sessionStore }) {
   const { state, updateState, resetSession } = sessionStore;
 
-  // Extract encrypted package from state or directly from window.location.hash
-  const encryptedPackage = state.encryptedPackage || extractPaymentPackage();
+  // Extract encrypted package from state, URL hash, or persistent recovery storage
+  const recoverySession = getPaymentRecovery();
+  const encryptedPackage = state.encryptedPackage || extractPaymentPackage() || recoverySession?.encryptedPackage;
 
-  const [loadingState, setLoadingState] = useState('INIT'); // 'INIT' | 'ORDER_READY' | 'PAYING' | 'VERIFYING' | 'SUCCESS' | 'ERROR'
+  const [loadingState, setLoadingState] = useState('INIT'); // 'INIT' | 'ORDER_READY' | 'PAYING' | 'VERIFYING' | 'SUCCESS' | 'ERROR' | 'IDLE'
   const [orderData, setOrderData] = useState(null);
-  const [confirmationCode, setConfirmationCode] = useState('');
+  const [confirmationCode, setConfirmationCode] = useState(''); // in-memory only; never stored in localStorage
   const [errorMessage, setErrorMessage] = useState('');
   const [activeRequestId, setActiveRequestId] = useState('');
 
@@ -27,6 +31,8 @@ export function PaymentV2Page({ sessionStore }) {
   const [receiptEmail, setReceiptEmail] = useState('');
   const [receiptStatus, setReceiptStatus] = useState('idle');
   const [receiptError, setReceiptError] = useState('');
+
+  const isSyncingRef = useRef(false);
 
   // Core verification execution function that uses a normalized payload
   const runVerification = useCallback(
@@ -53,6 +59,7 @@ export function PaymentV2Page({ sessionStore }) {
           }
           // Success: Clear temporary recovery state only AFTER confirmation code is received
           clearPendingVerification();
+          clearPaymentRecovery();
           setConfirmationCode(code);
           updateState({
             confirmationCode: code,
@@ -72,12 +79,13 @@ export function PaymentV2Page({ sessionStore }) {
     [updateState]
   );
 
-  // 1. Initialize: Check for pending recovery payment first, or create new order from encrypted package
-  useEffect(() => {
-    let isMounted = true;
+  // Authoritative State Sync with Oracle Payment Bridge
+  const syncWithOracle = useCallback(async () => {
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
 
-    async function initPaymentV2() {
-      // Check if there is an unverified payment from a previous attempt/reload
+    try {
+      // 1. Check if there is an unverified callback from Razorpay in localStorage/sessionStorage
       const pending = getPendingVerification();
       if (pending) {
         if (pending.requestId) {
@@ -95,47 +103,128 @@ export function PaymentV2Page({ sessionStore }) {
         return;
       }
 
-      if (!encryptedPackage) {
-        if (isMounted) setLoadingState('IDLE');
+      // 2. Check if we have an encrypted payment package to check / initialize
+      const activePackage = encryptedPackage || extractPaymentPackage() || getPaymentRecovery()?.encryptedPackage;
+      if (!activePackage) {
+        setLoadingState('IDLE');
         return;
       }
 
-      if (isMounted) {
-        setLoadingState('INIT');
-        setErrorMessage('');
+      setLoadingState('INIT');
+      setErrorMessage('');
+
+      // Query Oracle for authoritative state (idempotent order check/creation)
+      const order = await createPaymentV2Order({ encryptedPackage: activePackage });
+
+      if (order.requestId) {
+        setActiveRequestId(order.requestId);
+      }
+      setOrderData(order);
+
+      // 3. If Oracle indicates this request is already PAID, NEVER launch Razorpay!
+      if (order.paid === true || order.raw?.status === 'PAID') {
+        console.log('[PaymentV2] Authoritative Oracle check: Order is already PAID');
+        // If we have pending verification data or confirmation code returned
+        const pendingAgain = getPendingVerification();
+        if (pendingAgain) {
+          await runVerification(pendingAgain);
+          return;
+        }
+
+        const returnedCode = String(order.confirmationCode || order.raw?.confirmationCode || '').trim();
+        if (returnedCode) {
+          clearPendingVerification();
+          clearPaymentRecovery();
+          setConfirmationCode(returnedCode);
+          setLoadingState('SUCCESS');
+          return;
+        }
       }
 
-      try {
-        const order = await createPaymentV2Order({ encryptedPackage });
-        if (isMounted) {
-          setOrderData(order);
-          if (order.requestId) {
-            setActiveRequestId(order.requestId);
-          }
-          setLoadingState('ORDER_READY');
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.error('[PaymentV2] Order creation failed:', err.message || err);
-          setErrorMessage(err.message || 'Unable to prepare payment. The payment QR may be expired or already used.');
-          setLoadingState('ERROR');
-        }
+      // 4. Unpaid / Active Order Ready
+      savePaymentRecovery({
+        requestId: order.requestId,
+        encryptedPackage: activePackage,
+        orderId: order.orderId,
+        amount: order.amount,
+        serviceType: order.serviceType,
+        currency: order.currency,
+        keyId: order.keyId,
+        paymentState: 'ORDER_READY',
+      });
+
+      setLoadingState('ORDER_READY');
+    } catch (err) {
+      console.error('[PaymentV2] Oracle sync error:', err.message || err);
+
+      const isExpired =
+        err.code === 'REQUEST_EXPIRED' ||
+        String(err.message || '').toLowerCase().includes('expired');
+
+      if (isExpired) {
+        clearPaymentRecovery();
+        clearPendingVerification();
+        setErrorMessage('This payment request has expired. Please refresh the QR on the kiosk.');
+      } else {
+        setErrorMessage(err.message || 'Unable to prepare payment. Please check your connection or scan the kiosk QR again.');
       }
+      setLoadingState('ERROR');
+    } finally {
+      isSyncingRef.current = false;
     }
-
-    initPaymentV2();
-
-    return () => {
-      isMounted = false;
-    };
   }, [encryptedPackage, runVerification]);
 
-  // 2. Open Razorpay Checkout on explicit button tap
+  // Automatic Resume Triggers: visibilitychange, focus, pageshow, and app mount
+  useEffect(() => {
+    const handleResume = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      // Do not interrupt active success screen
+      if (confirmationCode) return;
+      syncWithOracle();
+    };
+
+    // Initial mount sync
+    syncWithOracle();
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleResume);
+      window.addEventListener('pageshow', handleResume);
+      document.addEventListener('visibilitychange', handleResume);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleResume);
+        window.removeEventListener('pageshow', handleResume);
+        document.removeEventListener('visibilitychange', handleResume);
+      }
+    };
+  }, [syncWithOracle, confirmationCode]);
+
+  // Open Razorpay Checkout on explicit button tap
   const handlePayClick = async () => {
     if (!orderData || loadingState === 'PAYING' || loadingState === 'VERIFYING') return;
 
+    // Safety: If already marked paid, do not open Razorpay
+    if (orderData.paid === true) {
+      syncWithOracle();
+      return;
+    }
+
     try {
       setLoadingState('PAYING');
+
+      // Update recovery state to PAYING
+      savePaymentRecovery({
+        requestId: orderData.requestId,
+        encryptedPackage,
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        serviceType: orderData.serviceType,
+        currency: orderData.currency,
+        keyId: orderData.keyId,
+        paymentState: 'PAYING',
+      });
 
       await openRazorpayCheckout({
         orderId: orderData.orderId,
@@ -170,7 +259,7 @@ export function PaymentV2Page({ sessionStore }) {
             serviceType: orderData.serviceType,
           };
 
-          // CRITICAL: Persist to sessionStorage BEFORE making Oracle verify HTTP request
+          // CRITICAL: Persist to persistent localStorage BEFORE making Oracle verify HTTP request
           savePendingVerification(normalizedPayload);
 
           // Execute verification
@@ -192,7 +281,7 @@ export function PaymentV2Page({ sessionStore }) {
     }
   };
 
-  // 3. Try Again Handler: NEVER creates a duplicate payment if payment was already made
+  // Try Again Handler: NEVER creates a duplicate payment if payment was already made
   const handleRetry = async () => {
     const pending = getPendingVerification();
 
@@ -202,27 +291,11 @@ export function PaymentV2Page({ sessionStore }) {
       return;
     }
 
-    // Otherwise, retry order initialization from QR package
-    if (encryptedPackage) {
-      setLoadingState('INIT');
-      setErrorMessage('');
-      try {
-        const order = await createPaymentV2Order({ encryptedPackage });
-        setOrderData(order);
-        if (order.requestId) {
-          setActiveRequestId(order.requestId);
-        }
-        setLoadingState('ORDER_READY');
-      } catch (err) {
-        setErrorMessage(err.message || 'Payment creation failed.');
-        setLoadingState('ERROR');
-      }
-    } else {
-      window.location.reload();
-    }
+    // Otherwise, perform full authoritative sync with Oracle
+    await syncWithOracle();
   };
 
-  // 4. Receipt Email Handler
+  // Receipt Email Handler
   const handleEmailReceipt = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!receiptEmail || !receiptEmail.trim() || receiptStatus === 'sending') return;
@@ -253,6 +326,7 @@ export function PaymentV2Page({ sessionStore }) {
 
   const handleDone = () => {
     clearPendingVerification();
+    clearPaymentRecovery();
     resetSession();
     window.location.href = window.location.origin + window.location.pathname;
   };
@@ -261,8 +335,8 @@ export function PaymentV2Page({ sessionStore }) {
   const displayRupees = orderData?.amount ? (orderData.amount / 100).toFixed(0) : '0';
   const displayService = orderData?.serviceType === 'MEDICINE' ? 'Medicine Kit Purchase' : 'Health Checkup';
 
-  // IDLE STATE (Direct open without #p)
-  if (!encryptedPackage && loadingState === 'IDLE' && !getPendingVerification()) {
+  // IDLE STATE (Direct open without #p or saved session)
+  if (!encryptedPackage && loadingState === 'IDLE' && !getPendingVerification() && !getPaymentRecovery()) {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="text-center space-y-2">
@@ -301,8 +375,8 @@ export function PaymentV2Page({ sessionStore }) {
 
         <div className="rounded-3xl border border-orange-100 bg-white p-8 shadow-sm space-y-4 text-center">
           <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto" />
-          <h3 className="text-base font-semibold text-slate-900">Preparing your payment...</h3>
-          <p className="text-xs text-slate-500">Connecting securely with payment gateway</p>
+          <h3 className="text-base font-semibold text-slate-900">Checking payment status...</h3>
+          <p className="text-xs text-slate-500">Connecting securely with Reliv payment bridge</p>
         </div>
       </div>
     );
@@ -572,6 +646,16 @@ export function PaymentV2Page({ sessionStore }) {
         <div className="flex items-center justify-center space-x-1.5 text-xs text-slate-500 pt-1">
           <Lock className="w-3.5 h-3.5 text-emerald-600" />
           <span>Secure 256-bit encrypted payment • UPI, Cards & Netbanking</span>
+        </div>
+
+        {/* Customer Reassurance & Auto-Return / Rescan Recovery Notice */}
+        <div className="rounded-2xl bg-orange-50/80 border border-orange-100 p-3.5 text-center space-y-1 mt-2">
+          <p className="text-xs font-semibold text-slate-800">
+            Complete payment in your UPI app. You'll automatically return here for your confirmation code.
+          </p>
+          <p className="text-[11px] text-slate-500 leading-normal">
+            Didn't return? Reopen this page or scan the kiosk QR again. You won't be charged twice.
+          </p>
         </div>
       </div>
     </div>
