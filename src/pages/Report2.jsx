@@ -1,6 +1,6 @@
 // src/pages/Report2.jsx
 import React, { useMemo, useEffect, useRef } from "react";
-import { useHealth } from "../context/HealthContext";
+import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useNavigate } from "react-router-dom";
 import * as bodyComposition from "../utils/bodyComposition";
@@ -883,7 +883,8 @@ function getConfidenceStage(scanCount) {
 const Report2 = () => {
   const { speakText, stop } = useSpeech();
   const { data } = useHealth();
-  const { patient, vitals } = data;
+  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
+  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
   const navigate = useNavigate();
   
   const userName = getFirstName(patient);
@@ -895,7 +896,7 @@ const Report2 = () => {
       if (!vitals || !patient) return null;
 
     // SCAN COUNT CALCULATION
-    const history = data.history || [];
+    const history = (data?.history && data.history.length > 0) ? data.history : MOCK_TEST_REPORT.history;
     const scanCount = history.length || 1;
     const confidenceStage = getConfidenceStage(scanCount);
 

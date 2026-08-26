@@ -32,6 +32,7 @@ import SpeechAdmin from "./pages/SpeechAdmin.jsx";
 import AdminMedicinePage from "./pages/AdminMedicinePage.jsx";
 import SpeechControl from "./components/SpeechControl.jsx";
 import PhotoUpload from "./pages/PhotoUpload.jsx";
+import ProtectedReportRoute from "./components/ProtectedReportRoute";
 
 export default function App() {
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
@@ -75,11 +76,46 @@ export default function App() {
           <Route path="/eyesight" element={<EyeSight />} />
           <Route path="/body-temperature" element={<BodyTemperature />} />
           <Route path="/body-composition" element={<BodyComposition />} />
-          <Route path="/report-1" element={<Report1 />} />
-          <Route path="/report-2" element={<Report2 />} />
-          <Route path="/report-3" element={<Report3 />} />
-          <Route path="/report-4" element={<Report4 />} />
-          <Route path="/report-5" element={<Report5 />} />
+          <Route
+            path="/report-1"
+            element={
+              <ProtectedReportRoute>
+                <Report1 />
+              </ProtectedReportRoute>
+            }
+          />
+          <Route
+            path="/report-2"
+            element={
+              <ProtectedReportRoute>
+                <Report2 />
+              </ProtectedReportRoute>
+            }
+          />
+          <Route
+            path="/report-3"
+            element={
+              <ProtectedReportRoute>
+                <Report3 />
+              </ProtectedReportRoute>
+            }
+          />
+          <Route
+            path="/report-4"
+            element={
+              <ProtectedReportRoute>
+                <Report4 />
+              </ProtectedReportRoute>
+            }
+          />
+          <Route
+            path="/report-5"
+            element={
+              <ProtectedReportRoute>
+                <Report5 />
+              </ProtectedReportRoute>
+            }
+          />
           <Route path="/wellness-recommendations" element={<WellnessRecommendations />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/order-success" element={<OrderSuccess />} />

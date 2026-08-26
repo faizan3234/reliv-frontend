@@ -1,7 +1,6 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useHealth } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import Confetti from "react-confetti";
@@ -33,13 +32,129 @@ const getGenderCompliment = (gender, tier = 'high') => {
 
 const Report1 = () => {
   const { speakText, stop } = useSpeech();
-  const { data, refreshHistory } = useHealth();
-  const { patient, vitals } = data;
+  const { refreshHistory } = useHealth();
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [showTooltip, setShowTooltip] = useState(false);
 
-  const userName = getFirstName(patient);
-  const scanCount = (data.history?.length || 0) + 1;
+  // ─────────────────────────────────────────────────────────────────────
+  // AUTHORITATIVE PAID REPORT ACCESS
+  // ─────────────────────────────────────────────────────────────────────
+
+  const [reportData, setReportData] = useState(null);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [reportError, setReportError] = useState("");
+
+  const currentSessionId =
+    location.state?.sessionId ||
+    localStorage.getItem("reliv_session_id") ||
+    sessionStorage.getItem("reliv_session_id") ||
+    "";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAuthoritativeReport = async () => {
+      if (!currentSessionId) {
+        if (!cancelled) {
+          setReportError(
+            "No active health report session was found."
+          );
+          setReportLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/sessions/${encodeURIComponent(currentSessionId)}/report/data`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json"
+            },
+            cache: "no-store"
+          }
+        );
+
+        const result =
+          await res.json().catch(() => ({}));
+
+        if (
+          !res.ok ||
+          result.ok !== true ||
+          result.paymentVerified !== true ||
+          result.reportStatus !== "READY" ||
+          !result.healthData
+        ) {
+          throw new Error(
+            result.message ||
+            "Your health report is not available yet."
+          );
+        }
+
+        if (!cancelled) {
+          setReportData({
+            sessionId: result.sessionId,
+            customerData: result.customerData || {},
+            healthData: result.healthData
+          });
+
+          setReportError("");
+        }
+
+      } catch (err) {
+        console.error(
+          "[Report1] Authoritative report access denied:",
+          err
+        );
+
+        if (!cancelled) {
+          setReportData(null);
+          setReportError(
+            err.message ||
+            "This health report cannot be opened."
+          );
+        }
+
+      } finally {
+        if (!cancelled) {
+          setReportLoading(false);
+        }
+      }
+    };
+
+    loadAuthoritativeReport();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSessionId]);
+
+  // The backend snapshot is the ONLY source of report measurements.
+  const healthData = reportData?.healthData || null;
+
+  const patient =
+    healthData?.patient ||
+    (
+      reportData?.customerData
+        ? {
+            ...reportData.customerData
+          }
+        : null
+    );
+
+  const vitals =
+    healthData?.vitals || null;
+
+  const userName =
+    getFirstName(patient);
+
+  const scanCount =
+    (Array.isArray(healthData?.history)
+      ? healthData.history.length
+      : 0) + 1;
 
   // Leaderboard opt-in state
   const [lbPrompt, setLbPrompt] = useState("idle"); // idle | qr | done | skipped | not_qualified
@@ -116,36 +231,6 @@ const Report1 = () => {
       metabolicAge: Math.round(metabolic_age),
     };
   }, [vitals, patient]);
-
-  const hasSavedRef = useRef(false);
-  const scanTimestampRef = useRef(Date.now());
-
-  useEffect(() => {
-    if (!patient?.email || !bodyComposition || hasSavedRef.current) return;
-
-    hasSavedRef.current = true;
-
-    (async () => {
-      try {
-        await fetch(`${API_BASE}/api/save-report`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            healthData: {
-              patient,
-              vitals,
-              bodyComposition,
-            },
-            scanId: `${patient.email}-${scanTimestampRef.current}`,
-          }),
-        });
-
-        await refreshHistory();
-      } catch (err) {
-        if (import.meta.env.DEV) console.error("Failed to save report:", err);
-      }
-    })();
-  }, [bodyComposition, patient?.email, patient, vitals, refreshHistory]);
 
   // ── Dynamic speech: read user's name, score, elite status ──
   const speechFired = useRef(false);
@@ -342,6 +427,54 @@ const Report1 = () => {
   const genderDisplay = patient?.gender
     ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1).toLowerCase()
     : "—";
+
+  if (reportLoading) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center px-6">
+        <div className="text-center">
+          <div className="text-2xl font-semibold text-gray-900">
+            Preparing your health report...
+          </div>
+          <div className="mt-3 text-gray-500">
+            Verifying your completed payment and report.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    reportError ||
+    !reportData ||
+    !healthData ||
+    !patient ||
+    !vitals
+  ) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center px-6">
+        <div className="max-w-xl text-center">
+          <div className="text-3xl font-bold text-gray-900">
+            Report unavailable
+          </div>
+          <div className="mt-4 text-lg text-gray-600">
+            {reportError ||
+              "Your paid health report is not ready."}
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              navigate("/payment", {
+                replace: true
+              })
+            }
+            className="mt-8 bg-[#F28C38] text-white font-semibold text-lg px-10 py-4 rounded-2xl cursor-pointer"
+          >
+            Return to Payment
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-white overflow-y-auto scrollable-container">

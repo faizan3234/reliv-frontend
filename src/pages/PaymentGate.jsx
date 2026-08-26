@@ -5,14 +5,15 @@ import { QRCodeSVG } from "qrcode.react";
 import Logo from "../components/Logo";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
-import { usePageSpeech } from "../context/SpeechContext";
+import { usePageSpeech, useSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
-import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode } from "lucide-react";
+import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode, Sparkles } from "lucide-react";
 
 const INACTIVITY_TIMEOUT = 120000; // 2 minutes inactivity timeout
 
 export default function PaymentGate() {
   usePageSpeech("payment");
+  const { speak } = useSpeech();
   const navigate = useNavigate();
   const location = useLocation();
   const { data: healthData, update: updateHealth } = useHealth();
@@ -354,21 +355,117 @@ export default function PaymentGate() {
         setCodeDigits(["", "", "", ""]);
         setErrorMessage(data.message || "Incorrect confirmation code. Please check your phone.");
         setUiState("WRONG_CODE");
+        speak("code-wrong");
         return;
       }
 
-      // Authoritative verification success from local Pi!
-      setUiState("SUCCESS");
-      updateHealth({ paymentVerified: true });
+      // ── Authoritative verification success from local Pi ──────────────────
+      //
+      // Payment V2 returns:
+      // {
+      //   ok: true,
+      //   status: "VERIFIED",
+      //   completionStatus: "report_ready" | "report_failed" | "dispensing" | ...
+      // }
+      //
+      // For HEALTH_CHECKUP we must NEVER open Report1 unless the backend
+      // has actually generated the paid report successfully.
 
-      // Navigate after brief confirmation message
+      const paymentVerified =
+        data.ok === true &&
+        data.status === "VERIFIED";
+
+      if (!paymentVerified) {
+        console.error(
+          "[KioskPaymentV2] Unexpected verification response:",
+          data
+        );
+
+        setErrorMessage(
+          data.message ||
+          "Payment could not be verified. Please try again."
+        );
+
+        setUiState("ERROR");
+        return;
+      }
+
+      // ── HEALTH CHECKUP ────────────────────────────────────────────────────
+
+      if (needsReport) {
+        // Payment may be verified while PDF generation has failed.
+        // In that case the customer MUST NOT be allowed into Report1.
+        if (data.completionStatus !== "report_ready") {
+          console.error(
+            "[KioskPaymentV2] Payment verified but report is not ready:",
+            data.completionStatus
+          );
+
+          updateHealth({
+            paymentVerified: true
+          });
+
+          if (data.completionStatus === "report_failed") {
+            setErrorMessage(
+              "Payment was verified, but your health report could not be prepared. Please try again."
+            );
+          } else {
+            setErrorMessage(
+              "Payment was verified, but your health report is not ready yet. Please try again."
+            );
+          }
+
+          setUiState("ERROR");
+          return;
+        }
+
+        // Both payment AND report generation are confirmed by the backend.
+        updateHealth({
+          paymentVerified: true,
+          reportReady: true
+        });
+
+        setUiState("SUCCESS");
+        speak("payment-verified");
+
+        setTimeout(() => {
+          navigate("/report-1", {
+            replace: true,
+            state: {
+              sessionId: activeSessionId,
+              fromPayment: true
+            }
+          });
+        }, 1800);
+
+        return;
+      }
+
+      // ── MEDICINE / NON-REPORT PAYMENT ─────────────────────────────────────
+
+      updateHealth({
+        paymentVerified: true
+      });
+
+      setUiState("SUCCESS");
+      speak("payment-verified");
+
       setTimeout(() => {
-        if (needsReport && !hasKits) {
-          navigate("/report-1", { replace: true });
-        } else if (hasKits) {
-          navigate("/order-success", { replace: true, state: { cart } });
+        if (hasKits) {
+          navigate("/order-success", {
+            replace: true,
+            state: {
+              cart,
+              sessionId: activeSessionId
+            }
+          });
         } else {
-          navigate("/order-success", { replace: true });
+          navigate("/order-success", {
+            replace: true,
+            state: {
+              sessionId: activeSessionId
+            }
+          });
         }
       }, 1800);
     } catch (err) {
@@ -582,11 +679,18 @@ export default function PaymentGate() {
         {/* ═════════════════════════════════════════════════════════════════════ */}
         {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && step === "WAITING_PAYMENT" && (
           <div className="w-full flex flex-col items-center gap-3.5 animate-fadeIn">
+            
+            {/* Curiosity Hook */}
+            <div className="w-full max-w-[440px] p-3.5 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-slate-800 text-xs font-semibold flex items-center gap-3 shadow-sm">
+              <Sparkles className="w-5 h-5 text-orange-600 shrink-0" />
+              <span>We found key insights worth knowing about your results. Unlock your full plain-language report below.</span>
+            </div>
+
             {/* Top Title & Price Pill */}
             <div className="flex items-center justify-between w-full max-w-[440px] px-1">
               <div>
                 <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Scan to Pay</h1>
-                <p className="text-xs text-slate-500">Scan with Google Lens / Camera / UPI</p>
+                <p className="text-xs text-slate-500">Scan with Google Lens / Camera / Any UPI App</p>
               </div>
               {authoritativeAmount !== null && (
                 <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-orange-500 text-white font-extrabold text-xl shadow-md shadow-orange-500/20">
@@ -618,12 +722,37 @@ export default function PaymentGate() {
 
               {/* Subtitle & Countdown Badge */}
               <div className="mt-2.5 flex items-center justify-between w-full px-2 text-xs">
-                <span className="font-bold text-slate-600">Scan with Google Lens / UPI app</span>
+                <span className="font-bold text-slate-600">Scan with GPay / PhonePe / Paytm</span>
                 <div className="flex items-center gap-1.5 font-bold text-orange-700 bg-orange-50 px-3 py-1 rounded-full border border-orange-200 shadow-sm">
                   <Clock size={13} className="text-orange-500 animate-pulse" />
                   <span>{formatTime(timeLeft)}</span>
                 </div>
               </div>
+            </div>
+
+            {/* 4-Step Visual Guide */}
+            <div className="w-full max-w-[440px] grid grid-cols-4 gap-2 text-center text-[10px] text-slate-600 font-semibold">
+              <div className="bg-white p-2 rounded-xl border border-slate-200">
+                <span className="block text-orange-500 font-black text-xs">1. Scan</span>
+                QR Code
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-slate-200">
+                <span className="block text-orange-500 font-black text-xs">2. Pay</span>
+                On Phone
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-slate-200">
+                <span className="block text-orange-500 font-black text-xs">3. Get</span>
+                4-Digit Code
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-slate-200">
+                <span className="block text-orange-500 font-black text-xs">4. Enter</span>
+                On Kiosk
+              </div>
+            </div>
+
+            {/* Zero-Anxiety Recovery Banner */}
+            <div className="w-full max-w-[440px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-center text-[11px] text-slate-600 font-medium leading-snug">
+              🛡️ Already paid? Scan the <strong className="text-slate-900 font-bold">SAME QR</strong> again — you will NOT be charged twice.
             </div>
 
             {/* Primary Action: Go to Enter Code Screen */}
@@ -632,6 +761,7 @@ export default function PaymentGate() {
               onClick={() => {
                 resetInactivityTimer();
                 setStep("ENTER_CODE");
+                speak("enter-code");
               }}
               className="w-full max-w-[440px] py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-98 text-white font-extrabold text-lg sm:text-xl shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
@@ -776,6 +906,7 @@ export default function PaymentGate() {
                 onClick={() => {
                   resetInactivityTimer();
                   setStep("WAITING_PAYMENT");
+                  speak("payment-recovery");
                 }}
                 disabled={uiState === "VERIFYING"}
                 className="w-full py-3 rounded-2xl bg-orange-50 hover:bg-orange-100 active:bg-orange-200 border border-orange-200 text-orange-700 font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"

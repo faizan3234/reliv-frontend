@@ -9,6 +9,7 @@ import temperatureImg from "../assets/temperature.png";
 import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
+import { API_BASE } from "../config/api";
 
 /**
  * MQTT TOPICS — Temperature
@@ -339,11 +340,113 @@ const BodyTemperaturePage = () => {
     setTimeout(() => window.location.reload(), 1000);
   };
 
-  // ── Proceed ──────────────────────────────────────────────
-  const handleProceed = () => {
-    update({ vitals: { ...data.vitals, temperature: temperatureF } });
-    navigate("/payment", { state: { fromPaymentGate: true, cart: [], totalPrice: 0 } });
+  const completeMeasurementsAndNavigate = async (tempVal) => {
+    try {
+      setAutoProceeding(true);
+
+      const sessionId =
+        localStorage.getItem("reliv_session_id") ||
+        sessionStorage.getItem("reliv_session_id");
+
+      const pairingToken =
+        localStorage.getItem("reliv_pairing_token");
+
+      if (!sessionId || !pairingToken) {
+        throw new Error("Missing Reliv session or pairing token");
+      }
+
+      // Build the FINAL snapshot explicitly.
+      // Do not read React state again after update(), because it may still be stale.
+      const finalHealthData = {
+        ...data,
+        vitals: {
+          ...(data?.vitals || {}),
+          temperature: tempVal,
+        },
+      };
+
+      // Keep local report UI/context synchronized.
+      update(finalHealthData);
+
+      setStatusMessage("✅ Measurements complete. Securing your results...");
+
+      const response = await fetch(
+        `${API_BASE}/api/sessions/${encodeURIComponent(sessionId)}/measurements-complete`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            pairingToken,
+            healthData: finalHealthData,
+          }),
+        }
+      );
+
+      let result = null;
+
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error("Invalid response from kiosk backend");
+      }
+
+      if (
+        !response.ok ||
+        !result?.ok ||
+        result?.paymentReady !== true
+      ) {
+        throw new Error(
+          result?.message || "Failed to save completed measurements"
+        );
+      }
+
+      console.log(
+        "[Reliv] Measurements completed and frozen:",
+        result
+      );
+
+      setStatusMessage("✅ Results saved. Proceeding to payment...");
+
+      navigate("/payment", {
+        state: {
+          fromPaymentGate: true,
+          cart: [],
+          totalPrice: 0,
+        },
+      });
+
+    } catch (error) {
+      console.error(
+        "[Reliv] Measurements-complete failed:",
+        error
+      );
+
+      setStatusMessage(
+        "Could not save your measurements. Please tap Proceed to retry."
+      );
+
+      setAutoProceeding(false);
+
+      // IMPORTANT:
+      // Allow the user to retry if the backend request failed.
+      autoProceedTriggered.current = false;
+    }
   };
+
+  // ── Proceed ──────────────────────────────────────────────
+  const handleProceed = async () => {
+    if (temperatureF === null || autoProceeding) {
+      return;
+    }
+
+    // Prevent double-click / duplicate POST.
+    autoProceedTriggered.current = true;
+
+    await completeMeasurementsAndNavigate(temperatureF);
+  };
+
   // ── Auto-proceed: save & navigate as soon as data arrives ──
   useEffect(() => {
     if (
@@ -352,12 +455,10 @@ const BodyTemperaturePage = () => {
       !autoProceedTriggered.current
     ) {
       autoProceedTriggered.current = true;
-      setAutoProceeding(true);
-      setStatusMessage("✅ Data Recorded! Moving to next step...");
+
       stopSpeech();
-      update({ vitals: { ...data.vitals, temperature: temperatureF } });
-      const t = setTimeout(() => navigate("/payment", { state: { fromPaymentGate: true, cart: [], totalPrice: 0 } }), 2000);
-      return () => clearTimeout(t);
+
+      completeMeasurementsAndNavigate(temperatureF);
     }
   }, [measurementState, temperatureF]);
   const canProceed =

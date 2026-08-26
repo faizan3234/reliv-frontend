@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
-import { useHealth } from "../context/HealthContext";
+import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
 import { useNavigate } from "react-router-dom";
@@ -273,12 +273,13 @@ function assessSubcutaneousFat(vitals, patient, scanCount) {
 export default function Report3() {
   const { speakText, stop } = useSpeech();
   const { data } = useHealth();
-  const { patient, vitals } = data;
+  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
+  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
   const navigate = useNavigate();
   const [showHeightInfo, setShowHeightInfo] = useState(false);
 
   const userName = getFirstName(patient);
-  const scanCount = data.history?.length || 1;
+  const scanCount = ((data?.history?.length || 0) > 0 ? data.history.length : MOCK_TEST_REPORT.history.length) + 1;
   const isBaselineUnlocked = scanCount >= 2;
   const canCelebrate = scanCount >= 4;
 

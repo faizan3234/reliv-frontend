@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { createPaymentV2Order, verifyPaymentV2, emailPaymentReceipt, recoverPaymentV2 } from '../../services/bridgeApi';
+import {
+  createPaymentV2Order,
+  verifyPaymentV2,
+  emailPaymentReceipt,
+  emailHealthReport,
+  downloadHealthReport,
+  recoverPaymentV2,
+} from '../../services/bridgeApi';
 import { openRazorpayCheckout } from '../../services/razorpay';
 import {
   extractPaymentPackage,
@@ -31,6 +38,10 @@ export function PaymentV2Page({ sessionStore }) {
   const [receiptEmail, setReceiptEmail] = useState('');
   const [receiptStatus, setReceiptStatus] = useState('idle');
   const [receiptError, setReceiptError] = useState('');
+  const [reportDownloadToken, setReportDownloadToken] = useState('');
+  const [reportScanNumber, setReportScanNumber] = useState(1);
+  const [reportTotalScans, setReportTotalScans] = useState(1);
+  const [reportDownloadStatus, setReportDownloadStatus] = useState('idle');
 
   const isSyncingRef = useRef(false);
 
@@ -61,6 +72,11 @@ export function PaymentV2Page({ sessionStore }) {
           clearPendingVerification();
           clearPaymentRecovery();
           setConfirmationCode(code);
+          setOrderData((prev) => ({
+            ...(prev || {}),
+            requestId: verifyRes.requestId || payload.requestId || prev?.requestId || '',
+            serviceType: payload.serviceType || prev?.serviceType || 'HEALTH_CHECKUP',
+          }));
           updateState({
             confirmationCode: code,
             requestId: verifyRes.requestId || payload.requestId || '',
@@ -110,6 +126,15 @@ export function PaymentV2Page({ sessionStore }) {
           const recoverRes = await recoverPaymentV2({ requestId: currentReqId });
           if (recoverRes.paid && recoverRes.confirmationCode) {
             console.log(`[PaymentV2] Payment recovered and verified via Oracle: ${recoverRes.confirmationCode}`);
+            setActiveRequestId(recoverRes.requestId || currentReqId);
+            setOrderData((prev) => ({
+              ...(prev || {}),
+              requestId: recoverRes.requestId || currentReqId,
+              orderId: recoverRes.orderId || prev?.orderId,
+              amount: recoverRes.amount ?? prev?.amount,
+              currency: recoverRes.currency || prev?.currency || 'INR',
+              serviceType: recoverRes.serviceType || prev?.serviceType || 'HEALTH_CHECKUP',
+            }));
             clearPendingVerification();
             clearPaymentRecovery();
             setConfirmationCode(recoverRes.confirmationCode);
@@ -325,8 +350,10 @@ export function PaymentV2Page({ sessionStore }) {
     await syncWithOracle();
   };
 
-  // Receipt Email Handler
-  const handleEmailReceipt = async (e) => {
+  // Service-aware delivery:
+  // HEALTH_CHECKUP -> mandatory health report + receipt email
+  // MEDICINE       -> optional payment receipt email
+  const handleEmailDelivery = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!receiptEmail || !receiptEmail.trim() || receiptStatus === 'sending') return;
 
@@ -336,21 +363,70 @@ export function PaymentV2Page({ sessionStore }) {
       return;
     }
 
+    const currentRequestId = activeRequestId || orderData?.requestId || state.requestId;
+    if (!currentRequestId) {
+      setReceiptError('Payment request ID is missing. Please reopen the payment QR.');
+      return;
+    }
+
     setReceiptStatus('sending');
     setReceiptError('');
 
     try {
-      const currentRequestId = activeRequestId || orderData?.requestId || state.requestId;
-      const result = await emailPaymentReceipt({
-        requestId: currentRequestId,
-        email: emailToSend,
-      });
+      if (isHealthCheckup) {
+        const result = await emailHealthReport({
+          requestId: currentRequestId,
+          email: emailToSend,
+        });
 
-      setReceiptStatus(result.alreadySent ? 'already_sent' : 'sent');
+        setReportDownloadToken(result.downloadToken || '');
+        setReportScanNumber(result.scanNumber || 1);
+        setReportTotalScans(result.totalScans || result.scanNumber || 1);
+        setReceiptStatus(result.alreadySent ? 'already_sent' : 'sent');
+      } else {
+        const result = await emailPaymentReceipt({
+          requestId: currentRequestId,
+          email: emailToSend,
+        });
+
+        setReceiptStatus(result.alreadySent ? 'already_sent' : 'sent');
+      }
     } catch (err) {
-      console.error('[PaymentV2] Receipt email error:', err.message || err);
-      setReceiptError(err.message || "We couldn't send your receipt.");
+      console.error(
+        isHealthCheckup
+          ? '[PaymentV2] Health report email error:'
+          : '[PaymentV2] Receipt email error:',
+        err.message || err
+      );
+      setReceiptError(
+        err.message ||
+        (isHealthCheckup
+          ? "We couldn't send your health report."
+          : "We couldn't send your receipt.")
+      );
       setReceiptStatus('error');
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (!reportDownloadToken || reportDownloadStatus === 'downloading') return;
+
+    const currentRequestId = activeRequestId || orderData?.requestId || state.requestId;
+    if (!currentRequestId) return;
+
+    setReportDownloadStatus('downloading');
+    setReceiptError('');
+
+    try {
+      await downloadHealthReport({
+        requestId: currentRequestId,
+        token: reportDownloadToken,
+        scanNumber: reportScanNumber,
+      });
+      setReportDownloadStatus('done');
+    } catch (err) {
+      setReceiptError(err.message || 'Could not download the health report.');
+      setReportDownloadStatus('error');
     }
   };
 
@@ -363,7 +439,13 @@ export function PaymentV2Page({ sessionStore }) {
 
   // Helper for human-readable amount in Rupees
   const displayRupees = orderData?.amount ? (orderData.amount / 100).toFixed(0) : '0';
-  const displayService = orderData?.serviceType === 'MEDICINE' ? 'Medicine Kit Purchase' : 'Health Checkup';
+  const normalizedServiceType = String(orderData?.serviceType || state.serviceType || 'HEALTH_CHECKUP')
+    .trim()
+    .toUpperCase();
+  const isHealthCheckup =
+    normalizedServiceType === 'HEALTH_CHECKUP' ||
+    normalizedServiceType === 'CHECKUP';
+  const displayService = isHealthCheckup ? 'Health Checkup' : 'Medicine Kit Purchase';
 
   // IDLE STATE (Direct open without #p or saved session)
   if (!encryptedPackage && loadingState === 'IDLE' && !getPendingVerification() && !getPaymentRecovery()) {
@@ -519,16 +601,18 @@ export function PaymentV2Page({ sessionStore }) {
         <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
           <div className="text-center space-y-0.5">
             <h3 className="text-base font-bold text-slate-900 font-outfit">
-              Get your payment receipt
+              {isHealthCheckup ? 'Get your Health Report & Receipt' : 'Get your payment receipt'}
             </h3>
             <p className="text-xs text-slate-500">
-              Enter your email to receive a digital receipt.
+              {isHealthCheckup
+                ? 'Enter your email to receive your detailed health report and payment receipt.'
+                : 'Enter your email to receive a digital receipt.'}
             </p>
           </div>
 
           {/* Idle / Sending state: Email input form */}
           {(receiptStatus === 'idle' || receiptStatus === 'sending') && (
-            <form onSubmit={handleEmailReceipt} className="space-y-3 pt-1">
+            <form onSubmit={handleEmailDelivery} className="space-y-3 pt-1">
               <div>
                 <input
                   type="email"
@@ -555,15 +639,17 @@ export function PaymentV2Page({ sessionStore }) {
                   size="md"
                   icon={Mail}
                 >
-                  Email My Receipt
+                  {isHealthCheckup ? 'Send My Health Report' : 'Email My Receipt'}
                 </Button>
-                <button
-                  type="button"
-                  onClick={handleDone}
-                  className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition py-1.5"
-                >
-                  Skip
-                </button>
+                {!isHealthCheckup && (
+                  <button
+                    type="button"
+                    onClick={handleDone}
+                    className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition py-1.5"
+                  >
+                    Skip
+                  </button>
+                )}
               </div>
             </form>
           )}
@@ -573,16 +659,49 @@ export function PaymentV2Page({ sessionStore }) {
             <div className="space-y-3.5 text-center animate-in fade-in duration-300 pt-1">
               <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
                 <p className="font-semibold text-emerald-800">
-                  Receipt sent successfully!
+                  {isHealthCheckup ? 'Health report sent successfully!' : 'Receipt sent successfully!'}
                 </p>
                 <p className="text-emerald-700">
-                  We've emailed your payment receipt to <strong>{receiptEmail}</strong>.
+                  {isHealthCheckup ? (
+                    <>
+                      We've emailed Scan <strong>{reportScanNumber}</strong> of your health report to <strong>{receiptEmail}</strong>.
+                      {' '}<span className="text-emerald-600">({reportTotalScans} scan{reportTotalScans === 1 ? '' : 's'} linked)</span>
+                    </>
+                  ) : (
+                    <>We've emailed your payment receipt to <strong>{receiptEmail}</strong>.</>
+                  )}
                 </p>
               </div>
 
-              <Button onClick={handleDone} variant="primary" size="md">
-                Done
-              </Button>
+              <div className="space-y-2">
+
+                {isHealthCheckup && reportDownloadToken && (
+
+                  <Button
+
+                    onClick={handleDownloadReport}
+
+                    variant="primary"
+
+                    size="md"
+
+                    loading={reportDownloadStatus === 'downloading'}
+
+                  >
+
+                    Download Health Report
+
+                  </Button>
+
+                )}
+
+                <Button onClick={handleDone} variant="primary" size="md">
+
+                  Done
+
+                </Button>
+
+              </div>
             </div>
           )}
 
@@ -591,16 +710,46 @@ export function PaymentV2Page({ sessionStore }) {
             <div className="space-y-3.5 text-center animate-in fade-in duration-300 pt-1">
               <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
                 <p className="font-semibold text-amber-800">
-                  Receipt already sent
+                  {isHealthCheckup ? 'Health report already sent' : 'Receipt already sent'}
                 </p>
                 <p className="text-amber-700">
-                  A receipt for this payment was already sent to <strong>{receiptEmail}</strong>.
+                  {isHealthCheckup ? (
+                    <>This paid scan is already linked and the report was sent to <strong>{receiptEmail}</strong>.</>
+                  ) : (
+                    <>A receipt for this payment was already sent to <strong>{receiptEmail}</strong>.</>
+                  )}
                 </p>
               </div>
 
-              <Button onClick={handleDone} variant="primary" size="md">
-                Done
-              </Button>
+              <div className="space-y-2">
+
+                {isHealthCheckup && reportDownloadToken && (
+
+                  <Button
+
+                    onClick={handleDownloadReport}
+
+                    variant="primary"
+
+                    size="md"
+
+                    loading={reportDownloadStatus === 'downloading'}
+
+                  >
+
+                    Download Health Report
+
+                  </Button>
+
+                )}
+
+                <Button onClick={handleDone} variant="primary" size="md">
+
+                  Done
+
+                </Button>
+
+              </div>
             </div>
           )}
 
@@ -609,7 +758,7 @@ export function PaymentV2Page({ sessionStore }) {
             <div className="space-y-3.5 text-center animate-in fade-in duration-300 pt-1">
               <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
                 <p className="font-semibold text-slate-900">
-                  We couldn't send your receipt.
+                  {isHealthCheckup ? "We couldn't send your health report." : "We couldn't send your receipt."}
                 </p>
                 <p className="text-slate-600">
                   Your payment is safe.
@@ -617,16 +766,18 @@ export function PaymentV2Page({ sessionStore }) {
               </div>
 
               <div className="space-y-2">
-                <Button onClick={handleEmailReceipt} variant="primary" size="md" icon={RefreshCw}>
+                <Button onClick={handleEmailDelivery} variant="primary" size="md" icon={RefreshCw}>
                   Try Sending Again
                 </Button>
-                <button
-                  type="button"
-                  onClick={handleDone}
-                  className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition py-1.5"
-                >
-                  Skip
-                </button>
+                {!isHealthCheckup && (
+                  <button
+                    type="button"
+                    onClick={handleDone}
+                    className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition py-1.5"
+                  >
+                    Skip
+                  </button>
+                )}
               </div>
             </div>
           )}

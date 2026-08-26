@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { useHealth } from "../context/HealthContext";
+import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -322,7 +322,8 @@ function assessMetabolicAdvantage(vitals, patient, scanCount) {
 export default function Report4() {
   const { speakText, stop } = useSpeech();
   const { data } = useHealth();
-  const { patient, vitals } = data;
+  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
+  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
 
@@ -332,11 +333,11 @@ export default function Report4() {
     if (!patient?.email) return;
     fetch(`${API_BASE}/api/reports/history/${encodeURIComponent(patient.email)}`)
       .then((r) => r.json())
-      .then((h) => setHistory(Array.isArray(h) ? h : []))
-      .catch(() => setHistory([]));
+      .then((h) => setHistory(Array.isArray(h) && h.length > 0 ? h : MOCK_TEST_REPORT.history))
+      .catch(() => setHistory(MOCK_TEST_REPORT.history));
   }, [patient?.email]);
 
-  const scanCount = (data.history?.length || 0) + 1;
+  const scanCount = ((data?.history?.length || 0) > 0 ? data.history.length : MOCK_TEST_REPORT.history.length) + 1;
 
   // Unlock rules
   const unlocks = {

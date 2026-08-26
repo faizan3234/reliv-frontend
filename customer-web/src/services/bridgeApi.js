@@ -197,6 +197,105 @@ export async function emailPaymentReceipt({ requestId, email }) {
 }
 
 /**
+ * PAYMENT V2: Generate and email the paid HEALTH_CHECKUP report.
+ * The email is supplied on the phone after payment; it is not kiosk customer data.
+ */
+export async function emailHealthReport({ requestId, email }) {
+  if (!requestId || !email) {
+    throw new Error('requestId and email are required to send the health report.');
+  }
+
+  try {
+    const response = await fetch(`${PAYMENT_API_BASE}/api/v2/email-health-report`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requestId: String(requestId).trim(),
+        email: String(email).trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const err = new Error(
+        errorData.message ||
+        errorData.error ||
+        `Failed to send health report (HTTP ${response.status})`
+      );
+      err.code = errorData.code || `HTTP_${response.status}`;
+      throw err;
+    }
+
+    const data = await response.json();
+
+    return {
+      ok: Boolean(data.ok),
+      sent: Boolean(data.sent),
+      alreadySent: Boolean(data.alreadySent || data.already_sent),
+      scanNumber: Number(data.scanNumber || data.scan_number || 1),
+      totalScans: Number(data.totalScans || data.total_scans || data.scanNumber || 1),
+      downloadToken: data.downloadToken || data.download_token || '',
+      downloadTokenExpiresAt:
+        data.downloadTokenExpiresAt || data.download_token_expires_at || null,
+      message: data.message || 'Health report sent successfully',
+      raw: data,
+    };
+  } catch (err) {
+    console.error('Error calling Payment V2 email-health-report:', err.message || err);
+    throw err;
+  }
+}
+
+/**
+ * PAYMENT V2: Download a successfully delivered health report with a short-lived token.
+ * No customer email is placed in the URL/query string.
+ */
+export async function downloadHealthReport({ requestId, token, scanNumber = 1 }) {
+  if (!requestId || !token) {
+    throw new Error('requestId and download token are required.');
+  }
+
+  const response = await fetch(`${PAYMENT_API_BASE}/api/v2/health-report/download`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      requestId: String(requestId).trim(),
+      token: String(token).trim(),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const err = new Error(
+      errorData.message ||
+      errorData.error ||
+      `Failed to download health report (HTTP ${response.status})`
+    );
+    err.code = errorData.code || `HTTP_${response.status}`;
+    throw err;
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Reliv-Health-Report-Scan-${Number(scanNumber) || 1}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  return { ok: true };
+}
+/**
  * PAYMENT V2: Calls Oracle POST /api/v2/recover-payment to reconcile payment and reveal confirmation code if paid
  */
 export async function recoverPaymentV2({ requestId }) {

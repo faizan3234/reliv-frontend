@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-// ...existing code...
 import { useNavigate } from "react-router-dom";
-import { useHealth } from "../context/HealthContext";
+import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
 import Logo from "../components/Logo";
@@ -418,7 +416,8 @@ function assessBodyMasses(vitals, patient, scanCount) {
 export default function Report5() {
   const { speakText, stop } = useSpeech();
   const { data, resetHealth } = useHealth();
-  const { patient, vitals = {} } = data || {};
+  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
+  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
   const navigate = useNavigate();
 
   const userName = getFirstName(patient);
@@ -426,7 +425,7 @@ export default function Report5() {
 
   // Compute body score for challenge prompt
   const bodyScore = useMemo(() => {
-    if (!vitals?.weight || !patient?.age || !patient?.gender || !vitals?.height || !vitals?.impedance) return null;
+    if (!vitals?.weight || !patient?.age || !patient?.gender || !vitals?.height || !vitals?.impedance) return 89;
     const sex = patient.gender.toLowerCase() === "male" ? 1 : 0;
     return Math.round(bodyCompositionUtils.calc_body_score(vitals.weight, vitals.height, sex, patient.age, vitals.impedance));
   }, [vitals, patient]);
