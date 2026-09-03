@@ -122,11 +122,6 @@ const BloodPressurePage = () => {
           speakText(t('bpIdle'));
         }
       }
-    },
-    onIdle: (elapsedSeconds) => {
-      if (measurementState !== 'measuring' && elapsedSeconds === 4) {
-         speakText(t('bpIdle'));
-      }
     }
   });
 

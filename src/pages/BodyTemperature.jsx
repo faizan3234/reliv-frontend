@@ -145,11 +145,6 @@ const BodyTemperaturePage = () => {
       if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next') || lowerText.includes('where') || lowerText.includes('how')) {
         speakText(t('tempIdle'));
       }
-    },
-    onIdle: (elapsedSeconds) => {
-      if (measurementState !== 'measuring' && elapsedSeconds === 4) {
-         speakText(t('tempIdle'));
-      }
     }
   });
 

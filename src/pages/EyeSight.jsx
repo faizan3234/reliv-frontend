@@ -28,11 +28,6 @@ export default function EyeSight() {
       if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next') || lowerText.includes('help')) {
         speakText(t('eyeIdle'));
       }
-    },
-    onIdle: (elapsedSeconds) => {
-      if (elapsedSeconds === 4) {
-         speakText(t('eyeIdle'));
-      }
     }
   });
 
