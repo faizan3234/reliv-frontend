@@ -199,10 +199,15 @@ export default function CustomerDetails() {
       if (voiceExpecting === 'name') {
          if (rawText.length > 2) {
              const extractedName = rawText.replace(/(mera naam hai|mera naam|mera nam hai|mera nam|my name is|the name is|is my name|my name|amar naam hoche|amar nam hoche|amar naam holo|amar nam holo|amar naam|amar nam|naam hai|nam hai|naam|nam|মাই নেম ইজ|মাই নেম|আমার নাম হচ্ছে|আমার নাম হলো|আমার নাম|নাম হলো|নাম হচ্ছে|নাম|মেরা নাম|मेरा नाम है|मेरा नाम|नाम है|नाम|माय नेम इज|माय नेम)/gi, '').replace(/(hai|hoche|holo|হচ্ছে|হলো|হয়|है)/gi, '').trim();
-             setPendingField('name');
-             setPendingValue(extractedName);
-             setVoiceExpecting('confirm');
-             speakText(t('confirmName'));
+             
+             const isBadName = /^(ok|okay|yes|yeah|yep|yup|haan|han|naa|naah|nah|no|nope|correct|true|false|thik|theek|sahi|galat|wrong|bhul|nahi|nhi|done|next|proceed|হয়ে গেছে|হ্যাঁ|হ্যা|হা|না|ঠিক|ভুল|रॉन्ग|सही|गलत|हाँ|हां|नहीं|ना|ओके|जी|करेक्ट|अच्छा)$/i.test(extractedName);
+             
+             if (extractedName.length > 1 && !isBadName) {
+                 setPendingField('name');
+                 setPendingValue(extractedName);
+                 setVoiceExpecting('confirm');
+                 speakText(t('confirmName'));
+             }
          }
       } else if (voiceExpecting === 'age') {
          // Convert Bengali and Hindi numerals to Arabic digits
