@@ -28,6 +28,16 @@ export const VoiceAssistantProvider = ({ children }) => {
     currentPathRef.current = location.pathname;
   }, [location.pathname]);
 
+
+  // Listen for AEC signals from SpeechContext
+  useEffect(() => {
+    const handleSpeaking = (e) => {
+      setRelivSpeaking(e.detail);
+    };
+    window.addEventListener('reliv_speaking', handleSpeaking);
+    return () => window.removeEventListener('reliv_speaking', handleSpeaking);
+  }, []);
+
   // Sync language with backend
   useEffect(() => {
     if (isConnected && healthData?.language) {

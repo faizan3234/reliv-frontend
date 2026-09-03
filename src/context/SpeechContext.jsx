@@ -163,6 +163,7 @@ export function SpeechProvider({ children }) {
     }
     window.speechSynthesis?.cancel();
     speakingRef.current = false;
+    window.dispatchEvent(new CustomEvent('reliv_speaking', { detail: false }));
   }, []);
 
   const stop = useCallback(async () => {
@@ -195,6 +196,7 @@ export function SpeechProvider({ children }) {
         const finish = () => {
           if (requestId === playbackRequestRef.current) {
             speakingRef.current = false;
+            window.dispatchEvent(new CustomEvent('reliv_speaking', { detail: false }));
             activeAudioRef.current = null;
             if (callbacks.onEnd) callbacks.onEnd();
           }
@@ -210,6 +212,7 @@ export function SpeechProvider({ children }) {
 
         if (callbacks.onStart) callbacks.onStart();
         speakingRef.current = true;
+        window.dispatchEvent(new CustomEvent('reliv_speaking', { detail: true }));
         activeAudioRef.current = audio;
         
         audio.play().catch(e => {
