@@ -3,12 +3,38 @@ import VirtualKeyboard from "../components/VirtualKeyboard";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useHealth } from "../context/HealthContext";
-import { usePageSpeech } from "../context/SpeechContext";
-
+import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { dict } from "../config/MeasurementsDict";
 export default function EyeSight() {
-  usePageSpeech("eyesight");
   const navigate = useNavigate();
-  const { update } = useHealth();
+  const { data, update } = useHealth();
+  const selectedLang = data?.language || 'en';
+  const { speakText } = useSpeech();
+
+  const t = React.useCallback((key) => {
+    const entry = dict[key];
+    if (!entry) return "";
+    return entry[selectedLang] || entry['en'] || "";
+  }, [selectedLang]);
+
+  useVoicePage({
+    expecting: 'eyesight',
+    vocabularyHints: ['cover', 'ab kya', 'help', 'measure'],
+    onHelp: () => {
+      speakText(t('eyeIdle'));
+    },
+    onTranscript: (lowerText) => {
+      if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next') || lowerText.includes('help')) {
+        speakText(t('eyeIdle'));
+      }
+    },
+    onIdle: (elapsedSeconds) => {
+      if (elapsedSeconds === 4) {
+         speakText(t('eyeIdle'));
+      }
+    }
+  });
 
   useEffect(() => {
     const style = document.createElement("style");

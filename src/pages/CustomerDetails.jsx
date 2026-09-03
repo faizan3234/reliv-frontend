@@ -3,16 +3,21 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import Logo from "../components/Logo";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useHealth } from "../context/HealthContext";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import { ArrowLeft, Plus, Minus, User, Calendar, Users, Check } from "lucide-react";
 import { API_BASE } from "../config/api";
-import { usePageSpeech } from "../context/SpeechContext";
+import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { dict } from "../config/CustomerDetailsDict";
 
 export default function CustomerDetails() {
   const navigate = useNavigate();
+  const { t: translateUI } = useTranslation();
   const { data: healthData, update } = useHealth();
-  usePageSpeech("customer-details");
+  const selectedLang = healthData?.language || 'en';
+    const { speakText, speakingRef } = useSpeech();
 
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [activeInputName, setActiveInputName] = useState("");
@@ -93,6 +98,165 @@ export default function CustomerDetails() {
   const isAgeValid = !isNaN(ageNum) && ageNum >= 1 && ageNum <= 120;
   const isGenderValid = Boolean(form.gender);
   const isFormValid = isNameValid && isAgeValid && isGenderValid;
+
+  // Voice Interaction Logic
+  const [voiceExpecting, setVoiceExpecting] = useState('name');
+  const [pendingField, setPendingField] = useState(null);
+  const [pendingValue, setPendingValue] = useState(null);
+  const [hasSpokenStart, setHasSpokenStart] = useState(false);
+  
+  // Custom helper for translated text
+  const t = useCallback((key, param = null) => {
+    const entry = dict[key];
+    if (!entry) return "";
+    const localized = typeof entry === 'function' ? entry(param) : entry;
+    return localized[selectedLang] || localized['en'] || "";
+  }, [selectedLang]);
+
+  // Speak intro
+  useEffect(() => {
+    if (!hasSpokenStart && !form.name && !form.age) {
+      const timer = setTimeout(() => {
+        speakText(t('start'));
+        setHasSpokenStart(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasSpokenStart, form.name, form.age, speakText, t]);
+
+  useVoicePage({
+    expecting: voiceExpecting,
+    vocabularyHints: ['male', 'female', 'mail', 'haan', 'naa', 'yes', 'no', 'done'],
+    onHelp: () => {
+       if (!isNameValid) {
+          speakText(t('idle12_name'));
+       } else if (!isAgeValid) {
+          speakText(t('typedNameOnly'));
+       } else if (!isGenderValid) {
+          speakText(t('typedNameAndAge'));
+       } else {
+          speakText(t('allComplete'));
+       }
+    },
+    onTranscript: (lowerText, rawText) => {
+      // Handle Confirmations
+      if (voiceExpecting === 'confirm' && pendingField) {
+        const hasPositive = /(haan|yes|yeah|yep|yup|sahi|done|ho gaya|correct|true|confirm|next|proceed|\bha\b|\bhan\b|ok|okay|thik|theek|kore nilam|ইয়েস|কনফার্ম|কনফর্ম|কারেক্ট|হ্যাঁ|হ্যা|হা|হ্যাক|ঠিক|টিকা|ডান|হয়ে গেছে|ওকে|জি|জ্বি|নেক্সট|প্রসিড|করে নিলাম|কোরে নিলাম|করেছি|হয়েছে|আচ্ছা|यस|कन्फर्म|कनफर्म|करेक्ट|हाँ|हां|सही|हो गया|ठीक|ओके|जी|किया|कर लिया)/.test(lowerText);
+        const hasNegative = /(naa|naah|nah|\bna\b|\bno\b|nope|galat|wrong|bhul|nahi|nhi|incorrect|false|wait|না|নাহ|নাহ্|ভুল|গলদ|গলত|গালাজ|গালাত|রং|রঙ|নয়|ইনকারেক্ট|নো|ভুল হয়েছে|नहीं|ना|नाह|गलत|ग़लत|भूल|रॉन्ग|नो|इनकरेक्ट)/.test(lowerText);
+        const hasStrongNegative = /(theek nai|thik nai|theek noy|sahi nahi|sahi nhi|ঠিক নাই|ঠিক নয়|सही नहीं|सही नही|galat|wrong|bhul|incorrect|false|ভুল|গলদ|গলত|গালাজ|গালাত|রং|রঙ|নয়|ইনকারেক্ট|भूल|रॉन्ग|इनकरेक्ट)/.test(lowerText);
+
+        let result = 'unknown';
+        if (hasStrongNegative) {
+            result = 'negative';
+        } else if (hasPositive) {
+            result = 'positive';
+        } else if (hasNegative) {
+            result = 'negative';
+        }
+
+        if (result === 'positive') {
+          handleKeyboardChange(pendingField, pendingValue);
+          
+          if (pendingField === 'name') {
+            setVoiceExpecting('age');
+            speakText(t('nameSaved'));
+          } else if (pendingField === 'age') {
+            setVoiceExpecting('gender');
+            speakText(t('ageSaved'));
+          } else if (pendingField === 'gender') {
+            // Auto-proceed!
+            setVoiceExpecting('done');
+            speakText(t('allComplete'));
+            setTimeout(() => {
+                handleProceed();
+            }, 1000);
+          }
+          setPendingField(null);
+          setPendingValue(null);
+        } else if (result === 'negative') {
+          setVoiceExpecting(pendingField);
+          if (pendingField === 'name') speakText(t('wrongName'));
+          else if (pendingField === 'age') speakText(t('wrongAge'));
+          else if (pendingField === 'gender') speakText(t('wrongGender'));
+          setPendingField(null);
+          setPendingValue(null);
+        } else {
+          speakText(t('notUnderstood'));
+        }
+        return;
+      }
+
+      // Handle Early Completion
+      if (/(done|next|continue|proceed|hoye geche|haan|ডান|নেক্সট|প্রসিড|হয়ে গেছে|হ্যাঁ|হ্যা|হা|চলো|চলুন|आगे|चलो|हो गया|हाँ|हां|नेक्स्ट)/.test(lowerText)) {
+         if (isFormValid && voiceExpecting === 'done') {
+             speakText(t('proceeding'));
+             handleProceed();
+             return;
+         }
+      }
+
+      // Handle Form Fields
+      if (voiceExpecting === 'name') {
+         if (rawText.length > 2) {
+             const extractedName = rawText.replace(/(mera naam hai|mera naam|mera nam hai|mera nam|my name is|the name is|is my name|my name|amar naam hoche|amar nam hoche|amar naam holo|amar nam holo|amar naam|amar nam|naam hai|nam hai|naam|nam|মাই নেম ইজ|মাই নেম|আমার নাম হচ্ছে|আমার নাম হলো|আমার নাম|নাম হলো|নাম হচ্ছে|নাম|মেরা নাম|मेरा नाम है|मेरा नाम|नाम है|नाम|माय नेम इज|माय नेम)/gi, '').replace(/(hai|hoche|holo|হচ্ছে|হলো|হয়|है)/gi, '').trim();
+             setPendingField('name');
+             setPendingValue(extractedName);
+             setVoiceExpecting('confirm');
+             speakText(t('confirmName'));
+         }
+      } else if (voiceExpecting === 'age') {
+         // Convert Bengali and Hindi numerals to Arabic digits
+         const normalizedText = lowerText
+           .replace(/[\u09E6-\u09EF]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x09E6 + 48))
+           .replace(/[\u0966-\u096F]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0966 + 48));
+         if (/\d+/.test(normalizedText)) {
+             const extractedAge = normalizedText.match(/\d+/)[0];
+             setPendingField('age');
+             setPendingValue(extractedAge);
+             setVoiceExpecting('confirm');
+             speakText(t('confirmAge'));
+         }
+      } else if (voiceExpecting === 'gender') {
+         if (/(female|aurat|ladki|mohila|ফিমেল|ফিমেইল|মহিলা|মেয়ে|নারী|फीमेल|औरत|लड़की|महिला)/.test(lowerText)) {
+             setPendingField('gender');
+             setPendingValue('female');
+             setVoiceExpecting('confirm');
+             speakText(t('confirmGender'));
+         } else if (/(mail|male|aadmi|ladka|purush|মেল|মেইল|পুরুষ|পুরুস|ছেলে|আদমি|मेल|आदमी|लड़का|पुरुष)/.test(lowerText)) {
+             setPendingField('gender');
+             setPendingValue('male');
+             setVoiceExpecting('confirm');
+             speakText(t('confirmGender'));
+         } else if (/(other|others|আদার|অন্যান্য|অন্য|अदर|अन्य)/.test(lowerText)) {
+             setPendingField('gender');
+             setPendingValue('other');
+             setVoiceExpecting('confirm');
+             speakText(t('confirmGender'));
+         }
+      }
+    },
+    onIdle: (elapsedSeconds) => {
+      if (elapsedSeconds === 4) {
+         if (voiceExpecting === 'name') speakText(t('idle_name'));
+         else if (voiceExpecting === 'age') speakText(t('idle_age'));
+         else if (voiceExpecting === 'gender') speakText(t('idle_gender'));
+      }
+    }
+  });
+
+  // Automatically skip asking for things the user types manually
+  useEffect(() => {
+     if (voiceExpecting === 'name' && isNameValid && !pendingField) {
+         setVoiceExpecting('age');
+         if (!speakingRef.current) speakText(t('typedNameOnly'));
+     } else if (voiceExpecting === 'age' && isAgeValid && form.age !== "22" && !pendingField) {
+         setVoiceExpecting('gender');
+         if (!speakingRef.current) speakText(t('typedNameAndAge'));
+     } else if (voiceExpecting === 'gender' && isGenderValid && !pendingField) {
+         setVoiceExpecting('done');
+         if (!speakingRef.current && isFormValid) speakText(t('typedAll'));
+     }
+  }, [form.name, form.age, form.gender, isNameValid, isAgeValid, isGenderValid, voiceExpecting, pendingField, speakText, speakingRef, t, isFormValid]);
 
   // Session Helper
   const generateSessionId = () => {
@@ -206,148 +370,146 @@ export default function CustomerDetails() {
 
   return (
     <div
-      className={`relative min-h-screen bg-slate-50 flex flex-col justify-between font-sans select-none overflow-x-hidden ${
-        keyboardVisible ? "pb-80" : "pb-6"
+      className={`relative min-h-screen bg-gradient-to-br from-indigo-50 via-white to-orange-50 flex flex-col justify-between font-sans select-none overflow-x-hidden ${
+        keyboardVisible ? "pb-80" : "pb-0"
       }`}
     >
-      <TopEllipseBackground height="35%" color="#FFF4EC" />
+      <TopEllipseBackground height="40%" color="#FFF4EC" />
 
       {/* Top Header */}
-      <div className="relative z-10 w-full max-w-lg mx-auto px-5 pt-4 flex items-center justify-between">
+      <div className="relative z-10 w-full px-8 pt-8 flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/90 border border-orange-200 text-slate-700 font-semibold text-sm shadow-sm active:scale-95 transition-transform"
+          className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/60 backdrop-blur-md border border-white/50 text-slate-700 font-bold shadow-sm active:scale-95 transition-all"
         >
-          <ArrowLeft size={18} className="text-orange-500" />
-          <span>Back</span>
+          <ArrowLeft size={20} className="text-orange-500" />
+          <span className="text-lg">Back</span>
         </button>
 
-        <Logo size="text-2xl sm:text-3xl" />
+        <Logo size="text-4xl" />
 
-        <div className="w-16" />
+        <div className="w-24" />
       </div>
 
       {/* Main Content Area */}
-      <div className="relative z-10 w-full max-w-lg mx-auto px-5 py-4 flex-1 flex flex-col justify-center">
+      <div className="relative z-10 w-full max-w-lg mx-auto px-6 py-4 flex-1 flex flex-col justify-center">
         {/* Title Card */}
-        <div className="text-center mb-6 space-y-1">
+        <div className="text-center mb-6 space-y-3">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Tell us about you
+            {translateUI('tellUsAboutYou')}
           </h1>
           <p className="text-sm text-slate-500 font-medium">
-            Personalize your health checkup and reports
+            {translateUI('personalizeCheckup')}
           </p>
         </div>
 
-        {/* Form Container Card */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-orange-100/80 shadow-xl space-y-6">
-          {/* 1. Name Field */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-bold text-slate-800">
-              <User size={16} className="text-orange-500" />
-              <span>Full Name</span>
-            </label>
-            <div
-              onClick={() => openKeyboard("name")}
-              className={`w-full rounded-2xl border-2 px-4 py-3.5 flex items-center bg-slate-50/50 cursor-pointer transition-all ${
-                activeInputName === "name" && keyboardVisible
-                  ? "border-orange-500 bg-white ring-4 ring-orange-500/10 shadow-sm"
-                  : form.name.trim()
-                  ? "border-slate-300 bg-white"
-                  : "border-slate-200 hover:border-orange-300"
-              }`}
-            >
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                readOnly
-                placeholder="Enter your full name"
-                className="w-full bg-transparent text-lg font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none cursor-pointer"
-              />
-              {isNameValid && (
-                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                  <Check size={14} className="stroke-[3]" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 2. Age Stepper Field */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-bold text-slate-800">
-              <Calendar size={16} className="text-orange-500" />
-              <span>Age</span>
-            </label>
-
-            <div className="flex items-center justify-between gap-3 bg-slate-50/70 p-2 rounded-2xl border border-slate-200">
-              {/* Decrement Button */}
-              <button
-                type="button"
-                onClick={handleAgeDecrement}
-                className="w-14 h-14 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-orange-600 active:scale-90 active:bg-orange-50 flex items-center justify-center shadow-sm font-bold text-2xl transition-all"
-                aria-label="Decrease age"
-              >
-                <Minus size={22} className="stroke-[2.5]" />
-              </button>
-
-              {/* Central Display / Touch Target */}
+        {/* Form Container Card - Glassmorphism, No borders */}
+        <div className="bg-white/70 backdrop-blur-2xl rounded-[2.5rem] p-10 sm:p-12 shadow-2xl shadow-indigo-100/50 space-y-10 border border-white">
+          <div className="flex flex-col gap-5">
+            {/* 1. Name Field */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 text-sm font-bold text-slate-700 ml-2">
+                <User size={22} className="text-orange-500" />
+                <span>{translateUI('fullName')}</span>
+              </label>
               <div
-                onClick={() => openKeyboard("age")}
-                className="flex-1 flex flex-col items-center justify-center py-1 cursor-pointer"
+                onClick={() => openKeyboard("name")}
+                className={`w-full rounded-2xl px-4 py-3 flex items-center cursor-pointer transition-all ${
+                  activeInputName === "name" && keyboardVisible
+                    ? "bg-white ring-4 ring-orange-500/20 shadow-lg"
+                    : pendingField === 'name' 
+                    ? "bg-blue-50/80 animate-pulse ring-2 ring-blue-300"
+                    : form.name.trim()
+                    ? "bg-white shadow-sm"
+                    : "bg-slate-100/50 hover:bg-white"
+                }`}
               >
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-slate-900 tracking-tight font-mono">
-                    {form.age || "--"}
-                  </span>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    yrs
-                  </span>
-                </div>
-                <span className="text-[11px] font-medium text-slate-400">
-                  Tap to type or use + / -
-                </span>
+                <input
+                  type="text"
+                  name="name"
+                  value={pendingField === 'name' ? pendingValue : form.name}
+                  readOnly
+                  placeholder={translateUI('enterName')}
+                  className={`w-full bg-transparent text-lg font-bold focus:outline-none cursor-pointer ${pendingField === 'name' ? 'text-blue-600' : 'text-slate-900 placeholder:text-slate-400'}`}
+                />
+                {isNameValid && !pendingField && (
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                    <Check size={18} className="stroke-[3]" />
+                  </div>
+                )}
               </div>
+            </div>
 
-              {/* Increment Button */}
-              <button
-                type="button"
-                onClick={handleAgeIncrement}
-                className="w-14 h-14 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-orange-600 active:scale-90 active:bg-orange-50 flex items-center justify-center shadow-sm font-bold text-2xl transition-all"
-                aria-label="Increase age"
-              >
-                <Plus size={22} className="stroke-[2.5]" />
-              </button>
+            {/* 2. Age Stepper Field */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 text-sm font-bold text-slate-700 ml-2">
+                <Calendar size={22} className="text-orange-500" />
+                <span>{translateUI('age')}</span>
+              </label>
+
+              <div className="flex items-center justify-between gap-3 bg-slate-100/40 p-2 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={handleAgeDecrement}
+                  className="w-12 h-12 rounded-xl bg-white text-slate-700 hover:text-orange-600 active:scale-90 flex items-center justify-center shadow-sm font-bold transition-all"
+                >
+                  <Minus size={28} className="stroke-[2.5]" />
+                </button>
+
+                <div
+                  onClick={() => openKeyboard("age")}
+                  className={`flex-1 flex flex-col items-center justify-center cursor-pointer rounded-2xl py-2 ${pendingField === 'age' ? 'bg-blue-50 animate-pulse' : ''}`}
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-3xl font-extrabold tracking-tight font-mono ${pendingField === 'age' ? 'text-blue-600' : 'text-slate-900'}`}>
+                      {pendingField === 'age' ? pendingValue : (form.age || "--")}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {translateUI('years')}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAgeIncrement}
+                  className="w-12 h-12 rounded-xl bg-white text-slate-700 hover:text-orange-600 active:scale-90 flex items-center justify-center shadow-sm font-bold transition-all"
+                >
+                  <Plus size={28} className="stroke-[2.5]" />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* 3. Gender Selection Field */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-bold text-slate-800">
-              <Users size={16} className="text-orange-500" />
-              <span>Gender</span>
+            <label className="flex items-center gap-3 text-sm font-bold text-slate-700 ml-2">
+              <Users size={22} className="text-orange-500" />
+              <span>{translateUI('gender')}</span>
             </label>
 
             <div className="grid grid-cols-3 gap-3">
               {[
-                { id: "male", label: "Male", icon: "👨" },
-                { id: "female", label: "Female", icon: "👩" },
-                { id: "other", label: "Other", icon: "⚧" },
+                { id: "male", label: translateUI('male'), icon: "👨" },
+                { id: "female", label: translateUI('female'), icon: "👩" },
+                { id: "other", label: translateUI('others'), icon: "⚧" },
               ].map((item) => {
-                const isSelected =
-                  form.gender.toLowerCase() === item.id.toLowerCase();
+                const isSelected = form.gender.toLowerCase() === item.id.toLowerCase();
+                const isPending = pendingField === 'gender' && pendingValue?.toLowerCase() === item.id.toLowerCase();
                 return (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => handleGenderSelect(item.id)}
-                    className={`h-16 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 font-bold text-sm transition-all active:scale-95 ${
+                    className={`h-16 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${
                       isSelected
-                        ? "bg-gradient-to-br from-orange-500 to-orange-600 border-orange-500 text-white shadow-md shadow-orange-500/20 scale-[1.02]"
-                        : "bg-slate-50/80 border-slate-200 text-slate-700 hover:border-orange-200 hover:bg-white"
+                        ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-xl shadow-orange-500/30 scale-[1.02]"
+                        : isPending
+                        ? "bg-blue-50 border-2 border-blue-400 text-blue-700 animate-pulse shadow-md scale-[1.02]"
+                        : "bg-slate-100/60 text-slate-700 hover:bg-white shadow-sm"
                     }`}
                   >
-                    <span className="text-lg leading-none">{item.icon}</span>
+                    <span className="text-xl leading-none">{item.icon}</span>
                     <span>{item.label}</span>
                   </button>
                 );
@@ -361,27 +523,21 @@ export default function CustomerDetails() {
               type="button"
               onClick={handleProceed}
               disabled={!isFormValid}
-              className={`w-full py-4 rounded-2xl font-bold text-lg transition-all shadow-md flex items-center justify-center gap-2 ${
+              className={`w-full py-4 rounded-2xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-4 ${
                 isFormValid
-                  ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-98 shadow-orange-500/25"
-                  : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                  ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-95 shadow-orange-500/30"
+                  : "bg-slate-200/50 text-slate-400 cursor-not-allowed shadow-none"
               }`}
             >
-              <span>Continue</span>
-              <span className="text-xl">→</span>
+              <span>{translateUI('proceed')}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Minimal Footer */}
-      <div className="relative z-10 w-full text-center text-xs text-slate-400 py-2">
-        Reliv Health System • Fast & Private
-      </div>
-
-      {/* Virtual Keyboard (On-Screen Touch Keyboard) */}
+      {/* Virtual Keyboard */}
       {keyboardVisible && (
-        <div className="fixed bottom-0 left-0 right-0 z-[10000] bg-white border-t border-slate-200 shadow-2xl animate-slideUp">
+        <div className="fixed bottom-0 left-0 right-0 z-[10000] bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-2xl animate-slideUp">
           <VirtualKeyboard
             inputName={activeInputName}
             inputs={keyboardInputs}

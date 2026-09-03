@@ -12,11 +12,15 @@
   "female": "Female",
   "others": "Others",
   "proceed": "Proceed →",
-
   "great": "Great!",
   "how_can_we_help": "How can we help you today?",
   "please_select_option": "Please select one option below",
   "health_checkup": "Health Checkup",
   "medicine_dispensing": "Medicine Dispensing",
-  "go_back": "Go Back"
+  "go_back": "Go Back",
+  "tellUsAboutYou": "Tell us about you",
+  "personalizeCheckup": "Personalize your health checkup and reports",
+  "fullName": "Full Name",
+  "age": "Age",
+  "gender": "Gender"
 }

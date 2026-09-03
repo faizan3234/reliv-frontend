@@ -12,11 +12,15 @@
   "female": "মহিলা",
   "others": "অন্যান্য",
   "proceed": "চালিয়ে যান →",
-
   "great": "দারুন!",
   "how_can_we_help": "আজ আমরা কীভাবে আপনাকে সাহায্য করতে পারি?",
   "please_select_option": "নীচে থেকে একটি বিকল্প নির্বাচন করুন",
   "health_checkup": "স্বাস্থ্য পরীক্ষা",
   "medicine_dispensing": "ওষুধ বিতরণ",
-  "go_back": "ফিরে যান"
+  "go_back": "ফিরে যান",
+  "tellUsAboutYou": "আপনার সম্পর্কে বলুন",
+  "personalizeCheckup": "আপনার স্বাস্থ্য পরীক্ষা এবং রিপোর্ট পার্সোনালাইজ করুন",
+  "fullName": "পুরো নাম",
+  "age": "বয়স",
+  "gender": "লিঙ্গ"
 }

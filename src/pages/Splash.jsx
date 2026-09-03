@@ -2,17 +2,58 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
 import { useHealth } from "../context/HealthContext";
 import CampusLeaderboard from "../components/CampusLeaderboard";
 import { AnimatePresence } from "framer-motion";
 import { API_BASE } from "../config/api";
-
-
+import i18n from "i18next";
 
 const Splash = () => {
   const navigate = useNavigate();
-  const { speak, stop } = useSpeech();
-  const { resetHealth } = useHealth();
+  const { speak, stop, speakChained } = useSpeech();
+  const { resetHealth, update } = useHealth();
+  
+  const handleLanguageSelect = (langCode) => {
+    i18n.changeLanguage(langCode);
+    localStorage.setItem("appLanguage", langCode);
+    update({ language: langCode });
+    navigate("/customer-details");
+  };
+
+  // Voice Interaction Logic
+  useVoicePage({
+    expecting: 'language',
+    vocabularyHints: ['english', 'hindi', 'bengali', 'bangla', 'shuru', 'start'],
+    onTranscript: (lowerText) => {
+      // Detect Hindi — Latin + Devanagari + Bengali script forms
+      if (/hindi|हिंदी|हिन्दी|হিন্দি/.test(lowerText)) {
+        handleLanguageSelect('hi');
+        speakChained([{ text: "Hindi select ho gayi hai. Ab main aapko Hindi mein guide karungi. Chaliye shuru karte hain.", langHint: "hi" }]);
+      // Detect Bengali — Latin + Bengali script forms
+      } else if (/bengali|bangla|বেঙ্গলি|বাঙালি|বাংলা|বাঙ্গালি/.test(lowerText)) {
+        handleLanguageSelect('bn');
+        speakChained([{ text: "বাংলা সিলেক্ট হয়েছে। এখন থেকে আমি আপনাকে বাংলায় গাইড করব। চলুন শুরু করি।", langHint: "bn" }]);
+      // Detect English — Latin + Devanagari + Bengali script forms
+      } else if (/english|ইংলিশ|ইংরেজি|अंग्रेज़ी|अंग्रेजी|इंग्लिश/.test(lowerText)) {
+        handleLanguageSelect('en');
+        speakChained([{ text: "English selected. I'll guide you in English from here. Let's begin.", langHint: "en" }]);
+      }
+    },
+    onHelp: () => {
+      speakChained([
+        { text: "Welcome to Reliv. Check your key health measurements in just a few minutes. Touch Start whenever you're ready — or simply talk to me and I'll guide you.", langHint: "en" }
+      ]);
+    },
+    onIdle: (elapsedSeconds) => {
+      if (elapsedSeconds === 4) {
+        speakChained([
+          { text: "Welcome to Reliv. Check your key health measurements in just a few minutes. Touch Start whenever you're ready — or simply talk to me and I'll guide you.", langHint: "en" }
+        ]);
+      }
+    }
+  });
+
   // Best-effort cancel of prior unpaid payment request when customer starts new journey
   const cancelStalePaymentSession = useCallback(() => {
     try {
@@ -23,7 +64,9 @@ const Splash = () => {
           headers: { "Content-Type": "application/json" },
         }).catch(() => {});
       }
-    } catch {}
+    } catch (e) {
+      // Ignore errors silently
+    }
   }, []);
 
   const idleInterval = useRef(null);
@@ -49,43 +92,82 @@ const Splash = () => {
   }, [speak]);
 
   // Reset any stale customer session on home/splash mount
+  // But preserve the selected language so going back doesn't force re-selection
   useEffect(() => {
     cancelStalePaymentSession();
+    const savedLang = localStorage.getItem("appLanguage");
     resetHealth();
-  }, [resetHealth, cancelStalePaymentSession]);
+    // Restore language after reset
+    if (savedLang) {
+      update({ language: savedLang });
+      i18n.changeLanguage(savedLang);
+    }
+  }, []);
 
-  // Speak welcome on mount
+  const isMounted = useRef(true);
   useEffect(() => {
-    const initialTimer = setTimeout(() => speak("splash"), 400);
-    return () => { clearTimeout(initialTimer); stop(); };
-  }, [speak, stop]);
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
 
-  // Idle speech loop — only when leaderboard is NOT showing
+  const welcomeTimerRef = useRef(null);
+  const promoTimerRef = useRef(null);
+
+  const playWelcomeLoop = useCallback(() => {
+    if (showLeaderboard) return;
+    speakChained([
+      { text: "Hello, welcome to Reliv.", langHint: "en" },
+      { text: "Reliv mein aapka swagat hai.", langHint: "hi" },
+      { text: "Main aapko English, Hindi ya Bengali mein guide kar sakti hoon. Apni language choose kijiye, ya seedha mujhe boliye — main aapke saath step by step rahungi.", langHint: "hi" }
+    ], {
+      onEnd: () => {
+        if (!isMounted.current) return;
+        welcomeTimerRef.current = setTimeout(playWelcomeLoop, 7000); // Repeat 7 seconds after completion
+      }
+    });
+  }, [speakChained, showLeaderboard]);
+
+  const playPromo = useCallback(() => {
+    if (showLeaderboard) return;
+    speakChained([
+      { text: "Free BP. Free Weight. Free Oxygen. Check your key health measurements in just a few minutes.", langHint: "en" }
+    ], {
+      onEnd: () => {
+        if (!isMounted.current) return;
+        // After promo finishes, immediately restart the welcome loop 7 seconds later to avoid clashing
+        welcomeTimerRef.current = setTimeout(playWelcomeLoop, 7000);
+      }
+    });
+  }, [speakChained, showLeaderboard, playWelcomeLoop]);
+
+  // Orchestrator
   useEffect(() => {
-    if (showLeaderboard) {
-      // Leaderboard is up — stop idle speech. Its mounted overlay starts narration.
-      clearInterval(idleInterval.current);
-      stop();
-      return () => stop();
-    } else {
-      // Give the welcome prompt time to finish before beginning the idle loop.
-      const startDelay = setTimeout(() => speak("idle-loop"), 30000);
+    clearTimeout(welcomeTimerRef.current);
+    clearInterval(promoTimerRef.current);
+    stop();
 
-      idleInterval.current = setInterval(() => {
-        speak("idle-loop");
-      }, 30000);
+    if (!showLeaderboard) {
+      // Start welcome loop
+      const initialDelay = setTimeout(playWelcomeLoop, 400);
+      
+      // Start 80s absolute timer (1 minute 20 seconds) for promo
+      promoTimerRef.current = setInterval(() => {
+        clearTimeout(welcomeTimerRef.current); // Pause welcome loop
+        playPromo();
+      }, 80000);
 
       return () => {
-        clearTimeout(startDelay);
-        clearInterval(idleInterval.current);
+        clearTimeout(initialDelay);
+        clearTimeout(welcomeTimerRef.current);
+        clearInterval(promoTimerRef.current);
+        stop();
       };
     }
-  }, [showLeaderboard, speak, stop]);
+  }, [showLeaderboard, playWelcomeLoop, playPromo, stop]);
 
   // Leaderboard rotation: show after 45s, then every 45s for 20s
   useEffect(() => {
     const firstShow = setTimeout(showLeaderboardOverlay, 45000);
-
     lbCycleRef.current = setInterval(showLeaderboardOverlay, 65000); // 45s wait + 20s show = 65s cycle
 
     return () => {
@@ -98,9 +180,6 @@ const Splash = () => {
   const [sliding, setSliding] = useState(false);
   const [textVisible, setTextVisible] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [agreed, setAgreed] = useState(false);
-  const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
   // Phase: 0=hidden, 1="Relief & Relive" fading in, 2=fading out, 3="Health Checkup & Medicine Dispenser" fading in
   const [phase, setPhase] = useState(0);
 
@@ -121,28 +200,13 @@ const Splash = () => {
     };
   }, []);
 
-  const handleProceed = () => {
-    if (hasOpenedTerms && !agreed) {
-      setErrorMessage("Please agree to the Terms & Conditions to proceed.");
-      return;
-    }
-    cancelStalePaymentSession();
-    resetHealth();
-    navigate("/choose-language");
-  };
+  // Buttons are now handleLanguageSelect
 
   const handleOpenTerms = () => {
     setShowTerms(true);
-    setHasOpenedTerms(true); // Once opened, agreement becomes mandatory
   };
 
-  const handleDisagree = () => {
-    setAgreed(false);
-    setShowTerms(false);
-  };
-
-  const handleAgree = () => {
-    setAgreed(true);
+  const handleCloseTerms = () => {
     setShowTerms(false);
   };
 
@@ -225,12 +289,6 @@ const Splash = () => {
               </p>
             </div>
 
-            {/* Error Message */}
-            {errorMessage && (
-              <div className="mt-4 px-6 py-3 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-md animate-pulse">
-                {errorMessage}
-              </div>
-            )}
           </div>
 
           {/* BOTTOM WAVE & FOOTER */}
@@ -297,16 +355,10 @@ const Splash = () => {
 
                     <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
                       <button
-                        onClick={handleDisagree}
-                        className="bg-gray-400 hover:bg-gray-500 text-white font-medium py-3 px-8 rounded-xl transition"
-                      >
-                        Disagree
-                      </button>
-                      <button
-                        onClick={handleAgree}
+                        onClick={handleCloseTerms}
                         className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-8 rounded-xl transition shadow-lg"
                       >
-                        I Agree & Continue
+                        Close
                       </button>
                     </div>
                   </div>
@@ -324,12 +376,26 @@ const Splash = () => {
                     .
                   </p>
 
-                  <button
-                    onClick={handleProceed}
-                    className="cta-pop-button bg-white text-orange-600 font-semibold text-base md:text-lg py-3 px-8 md:py-4 md:px-10 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105"
-                  >
-                    Let's find your best option →
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+                    <button
+                      onClick={() => handleLanguageSelect('en')}
+                      className="bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200"
+                    >
+                      English
+                    </button>
+                    <button
+                      onClick={() => handleLanguageSelect('hi')}
+                      className="bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200"
+                    >
+                      हिन्दी
+                    </button>
+                    <button
+                      onClick={() => handleLanguageSelect('bn')}
+                      className="bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200"
+                    >
+                      বাংলা
+                    </button>
+                  </div>
 
                   {/* Optional Team Link */}
                   <p className="text-white text-center text-sm mt-6 opacity-75">

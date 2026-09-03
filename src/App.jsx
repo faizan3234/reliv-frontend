@@ -33,6 +33,8 @@ import AdminMedicinePage from "./pages/AdminMedicinePage.jsx";
 import SpeechControl from "./components/SpeechControl.jsx";
 import PhotoUpload from "./pages/PhotoUpload.jsx";
 import ProtectedReportRoute from "./components/ProtectedReportRoute";
+import { VoiceAssistantProvider } from "./context/VoiceAssistantContext";
+import VoiceAssistantOverlay from "./components/VoiceAssistantOverlay";
 
 export default function App() {
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
@@ -58,11 +60,13 @@ export default function App() {
 
     // Normal kiosk app (reliv-frontend-henna.vercel.app)
     return (
-      <div className="app-screen">
-        <KioskGuardian />
-        <KioskSafetyManager />
-        <SpeechControl />
-        <Routes>
+      <VoiceAssistantProvider>
+        <div className="app-screen">
+          <KioskGuardian />
+          <KioskSafetyManager />
+          <SpeechControl />
+          <VoiceAssistantOverlay />
+          <Routes>
           <Route path="/" element={<Splash />} />
           <Route path="/choose-language" element={<ChooseLanguage />} />
           <Route path="/customer-details" element={<CustomerDetailsWrapper />} />
@@ -128,5 +132,6 @@ export default function App() {
           <Route path="/admin-x7k9/speech" element={<SpeechAdmin />} />
         </Routes>
       </div>
+      </VoiceAssistantProvider>
     );
 }

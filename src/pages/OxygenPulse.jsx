@@ -10,6 +10,8 @@ import oxygenImg from "../assets/oxygen.png";
 import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { dict } from "../config/MeasurementsDict";
 
 /**
  * Splash screen before Oxygen page
@@ -91,6 +93,33 @@ const OxygenPulsePage = () => {
   const wifiCheckInterval = useRef(null);
   const fallbackTimeout = useRef(null);
   const autoProceedTriggered = useRef(false);
+
+  const selectedLang = data?.language || 'en';
+  const { speakText } = useSpeech();
+
+  const t = React.useCallback((key) => {
+    const entry = dict[key];
+    if (!entry) return "";
+    return entry[selectedLang] || entry['en'] || "";
+  }, [selectedLang]);
+
+  useVoicePage({
+    expecting: 'oxygen',
+    vocabularyHints: ['finger', 'kaha', 'sensor', 'measure', 'ab', 'kya'],
+    onHelp: () => {
+      speakText(t('oxIdle'));
+    },
+    onTranscript: (lowerText) => {
+      if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next') || lowerText.includes('where') || lowerText.includes('how')) {
+        speakText(t('oxIdle'));
+      }
+    },
+    onIdle: (elapsedSeconds) => {
+      if (measurementState !== 'measuring' && elapsedSeconds === 4) {
+         speakText(t('oxIdle'));
+      }
+    }
+  });
 
   // Derived state: both must be connected
   const isFullyConnected = isMqttConnected && isWifiConnected;

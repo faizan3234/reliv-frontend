@@ -10,6 +10,8 @@ import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
 import { API_BASE } from "../config/api";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { dict } from "../config/MeasurementsDict";
 
 /**
  * MQTT TOPICS — Temperature
@@ -123,6 +125,33 @@ const BodyTemperaturePage = () => {
   const autoProceedTriggered = useRef(false);
 
   const isFullyConnected = isMqttConnected && isWifiConnected;
+
+  const selectedLang = data?.language || 'en';
+  const { speakText } = useSpeech();
+
+  const t = React.useCallback((key) => {
+    const entry = dict[key];
+    if (!entry) return "";
+    return entry[selectedLang] || entry['en'] || "";
+  }, [selectedLang]);
+
+  useVoicePage({
+    expecting: 'temperature',
+    vocabularyHints: ['sensor', 'kaha', 'measure', 'ab', 'kya'],
+    onHelp: () => {
+      speakText(t('tempIdle'));
+    },
+    onTranscript: (lowerText) => {
+      if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next') || lowerText.includes('where') || lowerText.includes('how')) {
+        speakText(t('tempIdle'));
+      }
+    },
+    onIdle: (elapsedSeconds) => {
+      if (measurementState !== 'measuring' && elapsedSeconds === 4) {
+         speakText(t('tempIdle'));
+      }
+    }
+  });
 
   // ── WiFi connectivity check ──────────────────────────────
   useEffect(() => {

@@ -5,15 +5,16 @@ import { QRCodeSVG } from "qrcode.react";
 import Logo from "../components/Logo";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
-import { usePageSpeech, useSpeech } from "../context/SpeechContext";
+import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { dict } from "../config/PaymentDict";
 import { API_BASE } from "../config/api";
 import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode, Sparkles } from "lucide-react";
 
 const INACTIVITY_TIMEOUT = 120000; // 2 minutes inactivity timeout
 
 export default function PaymentGate() {
-  usePageSpeech("payment");
-  const { speak } = useSpeech();
+  const { speak, speakText } = useSpeech();
   const navigate = useNavigate();
   const location = useLocation();
   const { data: healthData, update: updateHealth } = useHealth();
@@ -22,6 +23,16 @@ export default function PaymentGate() {
   const hasKits = cart.length > 0;
   const needsReport = fromPaymentGate || !hasKits;
   const serviceType = hasKits ? "MEDICINE" : "HEALTH_CHECKUP";
+
+  const selectedLang = healthData?.language || 'en';
+  
+  const t = React.useCallback((key) => {
+    const entry = dict[key];
+    if (!entry) return "";
+    return entry[selectedLang] || entry['en'] || "";
+  }, [selectedLang]);
+
+
 
   // Resolve authoritative sessionId strictly from context or storage (NEVER fallback to "current" or "default")
   const rawSessionId =
@@ -44,6 +55,30 @@ export default function PaymentGate() {
 
   // Two UI Modes: 'WAITING_PAYMENT' (Mode 1: 400px QR) | 'ENTER_CODE' (Mode 2: Large Keypad)
   const [step, setStep] = useState("WAITING_PAYMENT");
+
+  useVoicePage({
+    expecting: 'payment',
+    vocabularyHints: ['scan', 'nahi', 'ho raha', 'ho gaya', 'done', 'payment', 'ab kya', 'help'],
+    onHelp: () => {
+      speakText(step === "WAITING_PAYMENT" ? t('qr_mentor') : t('idle12_code'));
+    },
+    onTranscript: (lowerText) => {
+      if (lowerText.includes('nahi') || lowerText.includes('not') || lowerText.includes('problem')) {
+        speakText(t('scan_issue'));
+      } else if (lowerText.includes('scan') && (lowerText.includes('gaya') || lowerText.includes('done') || lowerText.includes('yes'))) {
+        speakText(t('scanned'));
+      } else if (lowerText.includes('payment') || lowerText.includes('ho gaya') || lowerText.includes('done')) {
+        speakText(t('payment_done'));
+      } else if (lowerText.includes('ab kya') || lowerText.includes('help')) {
+        speakText(step === "WAITING_PAYMENT" ? t('qr_mentor') : t('idle12_code'));
+      }
+    },
+    onIdle: (elapsedSeconds) => {
+      if (elapsedSeconds === 4) {
+         speakText(step === "WAITING_PAYMENT" ? t('idle12_qr') : t('idle12_code'));
+      }
+    }
+  });
 
   // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR' | 'SESSION_INVALID'
   const [uiState, setUiState] = useState("PREPARING");

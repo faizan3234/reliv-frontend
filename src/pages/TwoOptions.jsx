@@ -1,24 +1,39 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
-import { usePageSpeech } from "../context/SpeechContext";
+import { usePageSpeech, useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
 import { Activity, Pill, ArrowLeft } from "lucide-react";
 import { API_BASE } from "../config/api";
+import { useHealth } from "../context/HealthContext";
+import { dict } from "../config/TwoOptionsDict";
 
 export default function TwoOptions() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t: trans } = useTranslation();
+  const { data: healthData } = useHealth();
+  const selectedLang = healthData?.language || 'en';
+  
   usePageSpeech("two-options");
+  const { speak, speakText } = useSpeech();
+  
   const [slideUp, setSlideUp] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [voiceExpecting, setVoiceExpecting] = useState('selection'); // 'selection' or 'confirm'
 
   useEffect(() => {
     const timer = setTimeout(() => setSlideUp(true), 20);
     return () => clearTimeout(timer);
   }, []);
+
+  const t = useCallback((key) => {
+    const entry = dict[key];
+    if (!entry) return "";
+    return entry[selectedLang] || entry['en'] || "";
+  }, [selectedLang]);
 
   const selectServiceAndContinue = async (serviceType, destination) => {
     try {
@@ -56,23 +71,9 @@ export default function TwoOptions() {
           result?.message || "Unable to select service"
         );
       }
-
-      console.log(
-        `[Reliv] Service selected: ${serviceType}`,
-        result
-      );
-
       navigate(destination);
-
     } catch (error) {
-      console.error(
-        "[Reliv] Service selection failed:",
-        error
-      );
-
-      // IMPORTANT:
-      // Do not continue to measurements/payment if backend
-      // did not persist the service selection.
+      console.error("[Reliv] Service selection failed:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -92,6 +93,36 @@ export default function TwoOptions() {
     }
   };
 
+  useVoicePage({
+    expecting: voiceExpecting,
+    vocabularyHints: ['health', 'checkup', 'medicine', 'dispensing', 'dawai', 'check', 'haan', 'yes', 'no', 'nahi'],
+    onHelp: () => {
+       speakText(t('idle12'));
+    },
+    onTranscript: (lowerText) => {
+        if (/(health|checkup|body|হেলথ|চেকআপ|স্বাস্থ্য|শরীর|हेल्थ|चेकअप|स्वास्थ्य|शरीर)/.test(lowerText)) {
+          setSelectedOption('health-checkup');
+          speakText(t("proceedHealth"));
+          setTimeout(() => {
+            selectServiceAndContinue("HEALTH_CHECKUP", "/body-composition");
+          }, 800);
+        } else if (/(medicine|dispenser|dawai|মেডিসিন|ওষুধ|দাওয়াই|ডিস্পেন্সার|मेडिसिन|दवाई|दवा|डिस्पेंसर)/.test(lowerText)) {
+          setSelectedOption('medicine-dispensing');
+          speakText(t("proceedMedicine"));
+          setTimeout(() => {
+            selectServiceAndContinue("MEDICINE", "/medicine-dispensing");
+          }, 800);
+        }
+    },
+    onIdle: (elapsedSeconds) => {
+      if (elapsedSeconds === 4) {
+         if (voiceExpecting === 'selection') {
+             speakText(t('idle12'));
+         }
+      }
+    }
+  });
+
   return (
     <div className="h-screen bg-slate-50 flex flex-col justify-between font-sans overflow-y-auto scrollable-container select-none">
       {/* Header */}
@@ -99,10 +130,10 @@ export default function TwoOptions() {
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold shadow-sm active:scale-95 transition cursor-pointer"
-          aria-label={t("go_back") || "Back"}
+          aria-label={trans("go_back") || "Back"}
         >
           <ArrowLeft size={16} className="text-orange-500" />
-          <span>{t("back") || "Back"}</span>
+          <span>{trans("back") || "Back"}</span>
         </button>
         <Logo size="text-3xl" />
         <div className="w-16" />
@@ -116,11 +147,11 @@ export default function TwoOptions() {
       >
         <div className="text-center mb-6">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            <span className="text-orange-500">{t("great")}</span>{" "}
-            {t("how_can_we_help")}
+            <span className="text-orange-500">{trans("great")}</span>{" "}
+            {trans("how_can_we_help")}
           </h2>
           <p className="text-sm text-slate-500 mt-1 font-medium">
-            {t("please_select_option")}
+            {trans("please_select_option")}
           </p>
         </div>
 
@@ -128,7 +159,11 @@ export default function TwoOptions() {
         <div className="space-y-4 mb-8">
           {/* Option 1: Health Checkup */}
           <div
-            onClick={() => setSelectedOption("health-checkup")}
+            onClick={() => {
+                setSelectedOption("health-checkup");
+                speakText(t("proceedHealth"));
+                selectServiceAndContinue("HEALTH_CHECKUP", "/body-composition");
+            }}
             className={`p-5 rounded-2xl border-2 flex items-center gap-4 cursor-pointer transition-all active:scale-98 ${
               selectedOption === "health-checkup"
                 ? "border-orange-500 bg-orange-50/80 shadow-md ring-4 ring-orange-500/10"
@@ -146,7 +181,7 @@ export default function TwoOptions() {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-bold text-slate-900">
-                {t("health_checkup")}
+                {trans("health_checkup")}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 BP • SpO2 • Weight • Temp • Vision
@@ -167,7 +202,11 @@ export default function TwoOptions() {
 
           {/* Option 2: Medicine Dispensing */}
           <div
-            onClick={() => setSelectedOption("medicine-dispensing")}
+            onClick={() => {
+                setSelectedOption("medicine-dispensing");
+                speakText(t("proceedMedicine"));
+                selectServiceAndContinue("MEDICINE", "/medicine-dispensing");
+            }}
             className={`p-5 rounded-2xl border-2 flex items-center gap-4 cursor-pointer transition-all active:scale-98 ${
               selectedOption === "medicine-dispensing"
                 ? "border-orange-500 bg-orange-50/80 shadow-md ring-4 ring-orange-500/10"
@@ -185,7 +224,7 @@ export default function TwoOptions() {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-bold text-slate-900">
-                {t("medicine_dispensing")}
+                {trans("medicine_dispensing")}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Instant campus first-aid &amp; wellness kits
@@ -211,7 +250,7 @@ export default function TwoOptions() {
           onClick={handleProceed}
           disabled={!selectedOption || isSubmitting}
         >
-          {isSubmitting ? "..." : t("proceed")}
+          {isSubmitting ? "..." : trans("proceed")}
         </PrimaryButton>
       </div>
     </div>
