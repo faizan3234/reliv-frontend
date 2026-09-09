@@ -31,9 +31,18 @@ export const VoiceAssistantProvider = ({ children }) => {
 
   const isRelivSpeakingRef = useRef(false);
 
+  // crypto.randomUUID() is undefined on non-HTTPS network IPs, so we must provide a fallback
+  const generateId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return 'KSK-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  };
+
   const voiceClientIdRef = useRef(
-    localStorage.getItem('relivVoiceClientId') || crypto.randomUUID()
+    localStorage.getItem('relivVoiceClientId') || generateId()
   );
+  
   const reconnectGenerationRef = useRef(0);
   const manualCloseRef = useRef(false);
 
