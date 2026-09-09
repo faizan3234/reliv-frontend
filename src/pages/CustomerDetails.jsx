@@ -124,18 +124,25 @@ export default function CustomerDetails() {
     }
   }, [hasSpokenStart, form.name, form.age, speakText, t]);
 
+  const getHints = () => {
+    if (voiceExpecting === 'confirm') return ['yes', 'no', 'correct', 'wrong', 'galat', 'nahi', 'sahi'];
+    if (voiceExpecting === 'gender') return ['male', 'female', 'man', 'woman', 'other'];
+    if (voiceExpecting === 'age') return ['age', 'years', 'number'];
+    return [];
+  };
+
   useVoicePage({
     expecting: voiceExpecting,
-    vocabularyHints: ['male', 'female', 'mail', 'haan', 'naa', 'yes', 'no', 'done'],
+    vocabularyHints: getHints(),
     onHelp: () => {
        if (!isNameValid) {
-          speakText(t('idle12_name'));
+          speakText("Tell me your name.");
        } else if (!isAgeValid) {
-          speakText(t('typedNameOnly'));
+          speakText("Tell me your age.");
        } else if (!isGenderValid) {
-          speakText(t('typedNameAndAge'));
+          speakText("Tell me your gender.");
        } else {
-          speakText(t('allComplete'));
+          speakText("Say yes if it's correct, or no if you'd like to change it.");
        }
     },
     onTranscript: (lowerText, rawText) => {
@@ -188,17 +195,14 @@ export default function CustomerDetails() {
 
       // Handle Confirmations
       if (voiceExpecting === 'confirm' && pendingField) {
-        const hasPositive = /(haan|yes|yeah|yep|yup|sahi|done|ho gaya|correct|true|confirm|next|proceed|\bha\b|\bhan\b|ok|okay|thik|theek|kore nilam|ইয়েস|কনফার্ম|কনফর্ম|কারেক্ট|হ্যাঁ|হ্যা|হা|হ্যাক|ঠিক|টিকা|ডান|হয়ে গেছে|ওকে|জি|জ্বি|নেক্সট|প্রসিড|করে নিলাম|কোরে নিলাম|করেছি|হয়েছে|আচ্ছা|यस|कन्फर्म|कनफर्म|करेक्ट|हाँ|हां|सही|हो गया|ठीक|ओके|जी|किया|कर लिया)/.test(lowerText);
-        const hasNegative = /(naa|naah|nah|\bna\b|\bno\b|nope|galat|wrong|bhul|nahi|nhi|incorrect|false|wait|না|নাহ|নাহ্|ভুল|গলদ|গলত|গালাজ|গালাত|রং|রঙ|নয়|ইনকারেক্ট|নো|ভুল হয়েছে|नहीं|ना|नाह|गलत|ग़लत|भूल|रॉन्ग|नो|इनकरेक्ट)/.test(lowerText);
-        const hasStrongNegative = /(theek nai|thik nai|theek noy|sahi nahi|sahi nhi|ঠিক নাই|ঠিক নয়|सही नहीं|सही नही|galat|wrong|bhul|incorrect|false|ভুল|গলদ|গলত|গালাজ|গালাত|রং|রঙ|নয়|ইনকারেক্ট|भूल|रॉन्ग|इनकरेक्ट)/.test(lowerText);
+        const hasPositive = /\b(yes|yeah|yep|correct|right|that's right|haan|han|ha|haan ji|sahi|sahi hai|theek|thik|hmm yes|হ্যাঁ|ঠিক|ঠিক আছে)\b/.test(lowerText);
+        const hasNegative = /\b(no|nope|wrong|incorrect|not correct|that's wrong|it is wrong|change|change it|edit|edit it|nahi|nahin|na|galat|galat hai|ye galat hai|sahi nahi|sahi nahin|theek nahi|thik nahi|wrong hai|change karo|dobara|नहीं|गलत|गलत है|सही नहीं|ठीक नहीं|naa|bhul|bhool|vul|vul ache|thik na|sothik na|না|ভুল|ভুল আছে|ঠিক না|সঠিক না)\b/.test(lowerText);
 
         let result = 'unknown';
-        if (hasStrongNegative) {
+        if (hasNegative) {
             result = 'negative';
         } else if (hasPositive) {
             result = 'positive';
-        } else if (hasNegative) {
-            result = 'negative';
         }
 
         if (result === 'positive') {
@@ -221,14 +225,16 @@ export default function CustomerDetails() {
           setPendingField(null);
           setPendingValue(null);
         } else if (result === 'negative') {
+          // Reject provisional value, restore mode, and ask for it again without apology
           setVoiceExpecting(pendingField);
-          if (pendingField === 'name') speakText(t('wrongName'));
-          else if (pendingField === 'age') speakText(t('wrongAge'));
-          else if (pendingField === 'gender') speakText(t('wrongGender'));
+          if (pendingField === 'name') speakText("Okay, tell me the correct name.");
+          else if (pendingField === 'age') speakText("Okay, tell me the correct age.");
+          else if (pendingField === 'gender') speakText("Okay, tell me the correct gender.");
           setPendingField(null);
           setPendingValue(null);
         } else {
-          speakText(t('notUnderstood'));
+          // Contextual retry instead of generic fallback
+          speakText("Say yes if it's correct, or no if you'd like to change it.");
         }
         return;
       }

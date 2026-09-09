@@ -131,14 +131,15 @@ const Splash = () => {
   }, [speak]);
 
   // Reset any stale customer session on home/splash mount
-  // But preserve the selected language so going back doesn't force re-selection
+  // But preserve the selected UI language so going back doesn't look weird
   useEffect(() => {
     cancelStalePaymentSession();
     const savedLang = localStorage.getItem("appLanguage");
     resetHealth();
-    // Restore language after reset
+    // Force backend ASR to Auto for new session
+    update({ language: 'auto' });
+    // Restore UI language
     if (savedLang) {
-      update({ language: savedLang });
       i18n.changeLanguage(savedLang);
     }
   }, []);

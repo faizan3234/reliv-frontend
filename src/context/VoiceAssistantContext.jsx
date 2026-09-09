@@ -29,17 +29,16 @@ export const VoiceAssistantProvider = ({ children }) => {
   }, [location.pathname]);
 
 
-  const speakingTimeoutRef = useRef(null);
   const isRelivSpeakingRef = useRef(false);
 
   const voiceClientIdRef = useRef(
-    sessionStorage.getItem('relivVoiceClientId') || crypto.randomUUID()
+    localStorage.getItem('relivVoiceClientId') || crypto.randomUUID()
   );
   const reconnectGenerationRef = useRef(0);
   const manualCloseRef = useRef(false);
 
   useEffect(() => {
-    sessionStorage.setItem('relivVoiceClientId', voiceClientIdRef.current);
+    localStorage.setItem('relivVoiceClientId', voiceClientIdRef.current);
   }, []);
 
   // Listen for AEC signals from SpeechContext
@@ -47,36 +46,15 @@ export const VoiceAssistantProvider = ({ children }) => {
     const handleSpeaking = (e) => {
       const active = e.detail;
       setIsSpeaking(active); // UI requirement from user
-      
-      if (active) {
-        if (speakingTimeoutRef.current) {
-          clearTimeout(speakingTimeoutRef.current);
-          speakingTimeoutRef.current = null;
-        }
-        isRelivSpeakingRef.current = true;
-        setRelivSpeaking(true);
-      } else {
-        // 350 ms acoustic tail
-        // The timer starts ONLY AFTER real speaker playback has ended.
-        speakingTimeoutRef.current = setTimeout(() => {
-          isRelivSpeakingRef.current = false;
-          setRelivSpeaking(false);
-        }, 350);
-      }
+      isRelivSpeakingRef.current = active;
+      setRelivSpeaking(active);
+      // Removed frontend acoustic tail. Backend fully owns speaker suppression.
     };
     window.addEventListener('reliv_speaking', handleSpeaking);
     return () => {
       window.removeEventListener('reliv_speaking', handleSpeaking);
-      if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
     };
   }, []);
-
-  // Sync language with backend
-  useEffect(() => {
-    if (isConnected && healthData?.language) {
-      sendToBackend({ type: 'SET_LANGUAGE', language: healthData.language });
-    }
-  }, [healthData?.language, isConnected]);
 
   // Connect to the Python Voice Backend
   const connectWebSocket = useCallback(() => {
@@ -112,28 +90,33 @@ export const VoiceAssistantProvider = ({ children }) => {
       // Explicit client identity
       socket.send(JSON.stringify({
         type: 'CLIENT_HELLO',
-        clientId: voiceClientIdRef.current
+        clientId: voiceClientIdRef.current,
+        role: "kiosk-controller"
       }));
 
-      // AUTOMATIC RECOVERY
-      // Guarantees an old PAUSE_LISTENING state can never survive reconnect
+      // Only send RESUME_LISTENING for startup/recovery
       setListeningPaused(false);
       socket.send(JSON.stringify({ type: 'RESUME_LISTENING' }));
       
-      if (healthData?.language) {
-        socket.send(JSON.stringify({ type: 'SET_LANGUAGE', language: healthData.language }));
-      }
-      socket.send(JSON.stringify({ type: 'SET_CONTEXT', page: currentPathRef.current }));
-      
-      // Send current SET_RELIV_SPEAKING state
-      socket.send(JSON.stringify({ type: 'SET_RELIV_SPEAKING', active: isRelivSpeakingRef.current }));
+      // Resend the complete context (page, expecting, vocabulary_hints)
+      socket.send(JSON.stringify(lastContextPayloadRef.current));
     };
 
     socket.onmessage = (event) => {
       if (currentGeneration !== reconnectGenerationRef.current) return;
       try {
         const msg = JSON.parse(event.data);
-        handleBackendMessage(msg);
+        if (msg.type === 'CONTROLLER_ACTIVE') {
+           // Backend acknowledged we are the active controller
+           // Now we can safely send context
+           if (healthData?.language) {
+             socket.send(JSON.stringify({ type: 'SET_LANGUAGE', language: healthData.language }));
+           }
+           socket.send(JSON.stringify({ type: 'SET_CONTEXT', page: currentPathRef.current }));
+           socket.send(JSON.stringify({ type: 'SET_RELIV_SPEAKING', active: isRelivSpeakingRef.current }));
+        } else {
+           handleBackendMessage(msg);
+        }
       } catch (e) {
         console.error('[VoiceAssistant] Failed to parse message', e);
       }
@@ -157,9 +140,33 @@ export const VoiceAssistantProvider = ({ children }) => {
     };
   }, [healthData?.language]);
 
+  // Exclusive Browser Controller Lock
   useEffect(() => {
-    connectWebSocket();
+    let active = true;
+    let lockResolver = null;
+
+    const startController = async () => {
+      if (navigator.locks) {
+        navigator.locks.request('reliv-kiosk-voice-controller', { mode: 'exclusive' }, (lock) => {
+          return new Promise((resolve) => {
+            if (!active) {
+              resolve();
+              return;
+            }
+            lockResolver = resolve;
+            connectWebSocket();
+          });
+        });
+      } else {
+        // Fallback for extremely old Chromium, but we will still run
+        connectWebSocket();
+      }
+    };
+
+    startController();
+
     return () => {
+      active = false;
       manualCloseRef.current = true;
       if (ws.current) {
         ws.current.close();
@@ -167,6 +174,7 @@ export const VoiceAssistantProvider = ({ children }) => {
       if (reconnectTimeout.current) {
         clearTimeout(reconnectTimeout.current);
       }
+      if (lockResolver) lockResolver();
     };
   }, [connectWebSocket]);
 
@@ -276,11 +284,17 @@ export const VoiceAssistantProvider = ({ children }) => {
     };
   }, [location.pathname, resetIdleTimer]);
 
-  const sendToBackend = (payload) => {
+  const lastContextPayloadRef = useRef({ type: 'SET_CONTEXT', page: '/' });
+
+  // Send a message to the backend
+  const sendToBackend = useCallback((payload) => {
+    if (payload.type === 'SET_CONTEXT') {
+      lastContextPayloadRef.current = payload;
+    }
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify(payload));
     }
-  };
+  }, []);
 
   const setRelivSpeaking = (active) => {
     sendToBackend({ type: 'SET_RELIV_SPEAKING', active });
