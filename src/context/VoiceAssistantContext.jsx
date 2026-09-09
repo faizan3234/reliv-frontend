@@ -30,24 +30,28 @@ export const VoiceAssistantProvider = ({ children }) => {
 
 
   const speakingTimeoutRef = useRef(null);
+  const isRelivSpeakingRef = useRef(false);
 
   // Listen for AEC signals from SpeechContext
   useEffect(() => {
     const handleSpeaking = (e) => {
-      const isSpeaking = e.detail;
-      if (isSpeaking) {
+      const active = e.detail;
+      setIsSpeaking(active); // UI requirement from user
+      
+      if (active) {
         if (speakingTimeoutRef.current) {
           clearTimeout(speakingTimeoutRef.current);
           speakingTimeoutRef.current = null;
         }
+        isRelivSpeakingRef.current = true;
         setRelivSpeaking(true);
       } else {
-        // Delay releasing the "speaking" lock by 800ms.
-        // This prevents the microphone from catching the lingering audio reverberation 
-        // immediately after playback ends (which causes a feedback loop).
+        // 350 ms acoustic tail
+        // The timer starts ONLY AFTER real speaker playback has ended.
         speakingTimeoutRef.current = setTimeout(() => {
+          isRelivSpeakingRef.current = false;
           setRelivSpeaking(false);
-        }, 800);
+        }, 350);
       }
     };
     window.addEventListener('reliv_speaking', handleSpeaking);
@@ -67,6 +71,7 @@ export const VoiceAssistantProvider = ({ children }) => {
   // Connect to the Python Voice Backend
   const connectWebSocket = useCallback(() => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) return;
+    if (ws.current && ws.current.readyState === WebSocket.CONNECTING) return;
 
     ws.current = new WebSocket('ws://127.0.0.1:5100');
 
@@ -74,6 +79,19 @@ export const VoiceAssistantProvider = ({ children }) => {
       console.log('[VoiceAssistant] Connected to backend');
       setIsConnected(true);
       if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
+
+      // AUTOMATIC RECOVERY
+      // Guarantees an old PAUSE_LISTENING state can never survive reconnect
+      setListeningPaused(false);
+      ws.current.send(JSON.stringify({ type: 'RESUME_LISTENING' }));
+      
+      if (healthData?.language) {
+        ws.current.send(JSON.stringify({ type: 'SET_LANGUAGE', language: healthData.language }));
+      }
+      ws.current.send(JSON.stringify({ type: 'SET_CONTEXT', page: currentPathRef.current }));
+      
+      // Send current SET_RELIV_SPEAKING state
+      ws.current.send(JSON.stringify({ type: 'SET_RELIV_SPEAKING', active: isRelivSpeakingRef.current }));
     };
 
     ws.current.onmessage = (event) => {
@@ -89,15 +107,15 @@ export const VoiceAssistantProvider = ({ children }) => {
       console.log('[VoiceAssistant] Disconnected from backend');
       setIsConnected(false);
       setMicDevice(null);
-      // Try to reconnect every 3 seconds
-      reconnectTimeout.current = setTimeout(connectWebSocket, 3000);
+      // Fast reconnect delay
+      reconnectTimeout.current = setTimeout(connectWebSocket, 500);
     };
 
     ws.current.onerror = (err) => {
       console.error('[VoiceAssistant] WebSocket error', err);
-      ws.current.close();
+      ws.current.close(); // Force close to trigger clean reconnect
     };
-  }, []);
+  }, [healthData?.language]);
 
   useEffect(() => {
     connectWebSocket();
@@ -111,6 +129,12 @@ export const VoiceAssistantProvider = ({ children }) => {
 
   // Handle incoming messages from the backend
   const handleBackendMessage = (msg) => {
+    // NO SELF-TRANSCRIPTION
+    // If RELIV is speaking (or in the 350ms acoustic tail), entirely ignore VAD and transcript events
+    if (isRelivSpeakingRef.current && (msg.type === 'vad' || msg.type === 'transcript')) {
+       return; 
+    }
+
     switch (msg.type) {
       case 'connected':
         setMicDevice(msg.device_name);
@@ -127,8 +151,8 @@ export const VoiceAssistantProvider = ({ children }) => {
         setIsSpeaking(msg.speaking);
         if (msg.speaking) {
           resetIdleTimer();
-          // Barge-in: if RELIV is currently speaking, immediately stop so it can listen
-          if (speakingRef && speakingRef.current) {
+          // Barge-in temporarily disabled while testing 350ms tail, but keep logic
+          if (speakingRef && speakingRef.current && !isRelivSpeakingRef.current) {
             console.log('[VoiceAssistant] Barge-in detected! Stopping RELIV speech.');
             stop();
           }
