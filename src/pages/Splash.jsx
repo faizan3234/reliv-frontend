@@ -44,13 +44,6 @@ const Splash = () => {
       speakChained([
         { text: "Welcome to Reliv. Check your key health measurements in just a few minutes. Touch Start whenever you're ready — or simply talk to me and I'll guide you.", langHint: "en" }
       ]);
-    },
-    onIdle: (elapsedSeconds) => {
-      if (elapsedSeconds === 4) {
-        speakChained([
-          { text: "Welcome to Reliv. Check your key health measurements in just a few minutes. Touch Start whenever you're ready — or simply talk to me and I'll guide you.", langHint: "en" }
-        ]);
-      }
     }
   });
 
@@ -112,58 +105,82 @@ const Splash = () => {
 
   const welcomeTimerRef = useRef(null);
   const promoTimerRef = useRef(null);
+  const showLeaderboardRef = useRef(false);
+  const audioSessionRef = useRef(0);
+
+  // Keep ref in sync with state (avoids stale closures in callbacks)
+  useEffect(() => {
+    showLeaderboardRef.current = showLeaderboard;
+  }, [showLeaderboard]);
 
   const playWelcomeLoop = useCallback(() => {
-    if (showLeaderboard) return;
+    if (showLeaderboardRef.current) return;
+    const session = audioSessionRef.current;
     speakChained([
       { text: "Hello, welcome to Reliv.", langHint: "en" },
       { text: "Reliv mein aapka swagat hai.", langHint: "hi" },
       { text: "Main aapko English, Hindi ya Bengali mein guide kar sakti hoon. Apni language choose kijiye, ya seedha mujhe boliye — main aapke saath step by step rahungi.", langHint: "hi" }
     ], {
       onEnd: () => {
-        if (!isMounted.current) return;
+        if (!isMounted.current || session !== audioSessionRef.current) return;
         welcomeTimerRef.current = setTimeout(playWelcomeLoop, 7000); // Repeat 7 seconds after completion
       }
     });
-  }, [speakChained, showLeaderboard]);
+  }, [speakChained]); // NO showLeaderboard dependency — uses ref instead
 
   const playPromo = useCallback(() => {
-    if (showLeaderboard) return;
+    if (showLeaderboardRef.current) return;
+    const session = audioSessionRef.current;
+    clearTimeout(welcomeTimerRef.current);
     speakChained([
-      { text: "Free BP. Free Weight. Free Oxygen. Check your key health measurements in just a few minutes.", langHint: "en" }
+      { text: "Welcome to Reliv. Check your key health measurements in just a few minutes. Touch Start whenever you're ready — or simply talk to me and I'll guide you.", langHint: "en" }
     ], {
       onEnd: () => {
-        if (!isMounted.current) return;
-        // After promo finishes, immediately restart the welcome loop 7 seconds later to avoid clashing
+        if (!isMounted.current || session !== audioSessionRef.current) return;
+        // After promo finishes, restart the welcome loop 7 seconds later to avoid clashing
         welcomeTimerRef.current = setTimeout(playWelcomeLoop, 7000);
       }
     });
-  }, [speakChained, showLeaderboard, playWelcomeLoop]);
+  }, [speakChained, playWelcomeLoop]); // NO showLeaderboard dependency
 
-  // Orchestrator
+  // Orchestrator: manages the welcome loop + promo cycle
+  // Only re-runs when showLeaderboard actually changes
   useEffect(() => {
+    // Invalidate all pending audio callbacks from previous session
+    audioSessionRef.current += 1;
     clearTimeout(welcomeTimerRef.current);
-    clearInterval(promoTimerRef.current);
+    clearTimeout(promoTimerRef.current);
     stop();
 
     if (!showLeaderboard) {
-      // Start welcome loop
-      const initialDelay = setTimeout(playWelcomeLoop, 400);
-      
-      // Start 80s absolute timer (1 minute 20 seconds) for promo
-      promoTimerRef.current = setInterval(() => {
-        clearTimeout(welcomeTimerRef.current); // Pause welcome loop
-        playPromo();
-      }, 80000);
+      const session = audioSessionRef.current;
+
+      // Small delay to ensure stop() has fully torn down previous audio
+      const initialDelay = setTimeout(() => {
+        if (session !== audioSessionRef.current) return;
+        playWelcomeLoop();
+
+        // Schedule promo 60s from now (setTimeout, not setInterval — no stale closures)
+        const schedulePromo = () => {
+          promoTimerRef.current = setTimeout(() => {
+            if (session !== audioSessionRef.current) return;
+            playPromo();
+            // After promo plays, schedule the next one 60s later
+            schedulePromo();
+          }, 60000);
+        };
+        schedulePromo();
+      }, 500);
 
       return () => {
         clearTimeout(initialDelay);
         clearTimeout(welcomeTimerRef.current);
-        clearInterval(promoTimerRef.current);
+        clearTimeout(promoTimerRef.current);
         stop();
       };
     }
-  }, [showLeaderboard, playWelcomeLoop, playPromo, stop]);
+  }, [showLeaderboard]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ^ Deliberately minimal deps: playWelcomeLoop/playPromo/stop are stable refs
 
   // Leaderboard rotation: show after 45s, then every 45s for 20s
   useEffect(() => {

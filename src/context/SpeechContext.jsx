@@ -157,6 +157,10 @@ export function SpeechProvider({ children }) {
 
   const stopActivePlayback = useCallback(async () => {
     if (activeAudioRef.current) {
+        // Remove event listeners BEFORE pausing to prevent stale callbacks
+        // from racing with new playback after stop() returns
+        activeAudioRef.current.onended = null;
+        activeAudioRef.current.onerror = null;
         activeAudioRef.current.pause();
         activeAudioRef.current.currentTime = 0;
         activeAudioRef.current = null;
@@ -193,7 +197,11 @@ export function SpeechProvider({ children }) {
         const audioUrl = `/assets/audio/${targetLang}/${manifest[text]}`;
         const audio = new Audio(audioUrl);
         
+        // Guard against double-finish (onended + onerror can both fire)
+        let finished = false;
         const finish = () => {
+          if (finished) return;
+          finished = true;
           if (requestId === playbackRequestRef.current) {
             speakingRef.current = false;
             window.dispatchEvent(new CustomEvent('reliv_speaking', { detail: false }));
