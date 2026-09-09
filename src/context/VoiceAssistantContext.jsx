@@ -65,6 +65,21 @@ export const VoiceAssistantProvider = ({ children }) => {
     };
   }, []);
 
+  const reconnectAttemptRef = useRef(0);
+
+  const heartbeatRef = useRef(null);
+
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+    }
+    heartbeatRef.current = setInterval(() => {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({ type: "PING", ts: Date.now() }));
+      }
+    }, 10000);
+  }, []);
+
   // Connect to the Python Voice Backend
   const connectWebSocket = useCallback(() => {
     if (
@@ -93,6 +108,9 @@ export const VoiceAssistantProvider = ({ children }) => {
         socket.close();
         return;
       }
+      
+      reconnectAttemptRef.current = 0; // Reset exponential backoff on success
+      
       console.log(`[VoiceAssistant] Connected to backend as ${voiceClientIdRef.current}`);
       setIsConnected(true);
 
@@ -118,9 +136,7 @@ export const VoiceAssistantProvider = ({ children }) => {
         if (msg.type === 'CONTROLLER_ACTIVE') {
            // Backend acknowledged we are the active controller
            // Now we can safely send context
-           if (healthData?.language) {
-             socket.send(JSON.stringify({ type: 'SET_LANGUAGE', language: healthData.language }));
-           }
+           startHeartbeat();
            socket.send(JSON.stringify({ type: 'SET_CONTEXT', page: currentPathRef.current }));
            socket.send(JSON.stringify({ type: 'SET_RELIV_SPEAKING', active: isRelivSpeakingRef.current }));
         } else {
@@ -137,9 +153,19 @@ export const VoiceAssistantProvider = ({ children }) => {
       setIsConnected(false);
       setMicDevice(null);
       
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+
       if (!manualCloseRef.current) {
-        // Fast reconnect delay
-        reconnectTimeout.current = setTimeout(connectWebSocket, 500);
+        // Fast exponential recovery
+        const delays = [100, 250, 500, 1000, 2000];
+        const index = Math.min(reconnectAttemptRef.current, delays.length - 1);
+        const delay = delays[index];
+        reconnectAttemptRef.current += 1;
+        
+        reconnectTimeout.current = setTimeout(connectWebSocket, delay);
       }
     };
 
@@ -147,7 +173,7 @@ export const VoiceAssistantProvider = ({ children }) => {
       console.error('[VoiceAssistant] WebSocket error', err);
       // Let onclose handle the reconnect
     };
-  }, [healthData?.language]);
+  }, [startHeartbeat]);
 
   // Exclusive Browser Controller Lock
   useEffect(() => {
