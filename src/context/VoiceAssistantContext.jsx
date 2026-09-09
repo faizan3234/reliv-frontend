@@ -29,13 +29,32 @@ export const VoiceAssistantProvider = ({ children }) => {
   }, [location.pathname]);
 
 
+  const speakingTimeoutRef = useRef(null);
+
   // Listen for AEC signals from SpeechContext
   useEffect(() => {
     const handleSpeaking = (e) => {
-      setRelivSpeaking(e.detail);
+      const isSpeaking = e.detail;
+      if (isSpeaking) {
+        if (speakingTimeoutRef.current) {
+          clearTimeout(speakingTimeoutRef.current);
+          speakingTimeoutRef.current = null;
+        }
+        setRelivSpeaking(true);
+      } else {
+        // Delay releasing the "speaking" lock by 800ms.
+        // This prevents the microphone from catching the lingering audio reverberation 
+        // immediately after playback ends (which causes a feedback loop).
+        speakingTimeoutRef.current = setTimeout(() => {
+          setRelivSpeaking(false);
+        }, 800);
+      }
     };
     window.addEventListener('reliv_speaking', handleSpeaking);
-    return () => window.removeEventListener('reliv_speaking', handleSpeaking);
+    return () => {
+      window.removeEventListener('reliv_speaking', handleSpeaking);
+      if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
+    };
   }, []);
 
   // Sync language with backend
@@ -141,8 +160,10 @@ export const VoiceAssistantProvider = ({ children }) => {
     resetIdleTimer();
     const lowerText = text.toLowerCase().trim();
     
-    // 1. Check Global Intents
-    if (/(ab kya|what to do|what do|how to|help|samajh nahi|kya karu|kya karna|ki korbo|ki kor|sahajyo|কি করবো|কি করব|সাহায্য|কি করতে|क्या करूं|क्या करें|क्या करना|अब क्या|व्हाट टू|व्हाट तो|मदद|সাহায্য করুন)/.test(lowerText)) {
+    // 1. Check Global Intents (expanded to catch 150+ variations of help requests)
+    const helpRegex = /(ab kya|what to do|what do|how to|help|samajh nahi|kya karu|kya karna|ki korbo|ki kor|sahajyo|কি করবো|কি করব|সাহায্য|কি করতে|क्या करूं|क्या करें|क्या करना|अब क्या|व्हाट टू|व्हाट तो|मदद|সাহায্য করুন|what now|what next|what should i do|guide me|next step|kya kare|kya karun|kya karoon|kaise karu|kaise karna hai|aage kya|age kya|batao|bataiye|ki korte hobe|ki korob|bujhte parchi na|bujhchi na|ebar ki korbo|help me|tell me|samjh nahi|pata nahi|pata nhi|kya krna|kya kru|kaise kru|ki korbo ebar|কি হবে|কী করব|কী করবো|কি করতে হবে|मुझे समझ नहीं|समझ नहीं आ रहा|क्या करना है|आगे क्या|what i need to do|what do i do|next process)/;
+    
+    if (helpRegex.test(lowerText)) {
       const hook = pageHooks.current.get(currentPathRef.current);
       if (hook && hook.onHelp) {
         hook.onHelp();
