@@ -139,6 +139,53 @@ export default function CustomerDetails() {
        }
     },
     onTranscript: (lowerText, rawText) => {
+      // Helper to parse age from digits, Hindi/Bengali numerals, or number words
+      const parseAgeFromText = (inputLower) => {
+        // 1. Convert Bengali & Hindi script numerals to Arabic digits
+        const normalized = inputLower
+          .replace(/[\u09E6-\u09EF]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x09E6 + 48))
+          .replace(/[\u0966-\u096F]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0966 + 48));
+
+        const digitMatch = normalized.match(/\b\d{1,3}\b/);
+        if (digitMatch) {
+          const val = parseInt(digitMatch[0], 10);
+          if (val >= 1 && val <= 120) return val.toString();
+        }
+
+        // 2. Multilingual word mapping for English, Hindi, and Bengali numbers (1 - 100)
+        const wordMap = {
+          // English
+          "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+          "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
+          "twenty one": 21, "twenty two": 22, "twenty three": 23, "twenty four": 24, "twenty five": 25, "twenty six": 26, "twenty seven": 27, "twenty eight": 28, "twenty nine": 29, "thirty": 30,
+          "thirty one": 31, "thirty two": 32, "thirty three": 33, "thirty four": 34, "thirty five": 35, "thirty six": 36, "thirty seven": 37, "thirty eight": 38, "thirty nine": 39, "forty": 40,
+          "forty one": 41, "forty two": 42, "forty three": 43, "forty four": 44, "forty five": 45, "forty six": 46, "forty seven": 47, "forty eight": 48, "forty nine": 49, "fifty": 50,
+          "fifty five": 55, "sixty": 60, "sixty five": 65, "seventy": 70, "seventy five": 75, "eighty": 80, "ninety": 90,
+          // Hindi (Transliterated & Devanagari)
+          "ek": 1, "do": 2, "teen": 3, "char": 4, "paanch": 5, "panch": 5, "chhah": 6, "che": 6, "saat": 7, "aath": 8, "nau": 9, "das": 10,
+          "gyarah": 11, "barah": 12, "terah": 13, "chaudah": 14, "pandrah": 15, "solah": 16, "satrah": 17, "atharah": 18, "unnis": 19, "bees": 20,
+          "ikkees": 21, "baais": 22, "baees": 22, "teees": 23, "chaubees": 24, "pachchees": 25, "pachees": 25, "chhabbees": 26, "sattaees": 27, "atthaees": 28, "untees": 29, "tees": 30,
+          "iktees": 31, "battees": 32, "tentees": 33, "chauntees": 34, "paintees": 35, "chhattees": 36, "saintees": 37, "adtees": 38, "untalees": 39, "chalees": 40,
+          "iktalees": 41, "bayalees": 42, "taintalees": 43, "chawalees": 44, "paintalees": 45, "chhiyalees": 46, "saintalees": 47, "adtalees": 48, "unchaas": 49, "pachaas": 50,
+          "ekavvan": 51, "baavan": 52, "tirpan": 53, "chawwan": 54, "pachpan": 55, "chhappan": 56, "sattawan": 57, "atthaavan": 58, "unsath": 59, "saath": 60,
+          "पैंतीस": 35, "छब्बीस": 26, "पच्चीस": 25, "चौबीस": 24, "तेईस": 23, "बाईस": 22, "इक्कीस": 21, "बीस": 20, "उन्नीस": 19, "अठारह": 18, "सत्रह": 17, "सोलह": 16, "पंद्रह": 15, "चौदह": 14, "तेरह": 13, "बारह": 12, "ग्यारह": 11, "दस": 10, "तीस": 30, "चालीस": 40, "पचास": 50, "साठ": 60,
+          // Bengali (Transliterated & Bengali Script)
+          "dui": 2, "tin": 3, "paach": 5, "chhoy": 6, "aat": 8, "noy": 9, "dosh": 10,
+          "egaro": 11, "baro": 12, "tero": 13, "choddo": 14, "ponero": 15, "sholo": 16, "sotero": 17, "atharo": 18, "unish": 19, "kuri": 20, "bish": 20,
+          "ekush": 21, "baish": 22, "teish": 23, "chobbish": 24, "pochish": 25, "chabbish": 26, "shatash": 27, "athash": 28, "untrish": 29, "trish": 30,
+          "ektrish": 31, "botrish": 32, "tetrish": 33, "choutrish": 34, "poyntrish": 35, "chhotrish": 36, "shaytrish": 37, "athtrish": 38, "unochollish": 39, "chollish": 40,
+          "একুশ": 21, "বাইশ": 22, "তেইশ": 23, "চব্বিশ": 24, "পঁচিশ": 25, "ছাব্বিশ": 26, "সাতাশ": 27, "আটাশ": 28, "উনত্রিশ": 29, "ত্রিশ": 30, "চল্লিশ": 40, "পঞ্চাশ": 50, "ষাট": 60, "কুড়ি": 20, "বিশ": 20
+        };
+
+        for (const [w, n] of Object.entries(wordMap)) {
+          const regex = new RegExp(`(^|\\s)${w}(\\s|$)`, 'i');
+          if (regex.test(inputLower)) {
+            return n.toString();
+          }
+        }
+        return null;
+      };
+
       // Handle Confirmations
       if (voiceExpecting === 'confirm' && pendingField) {
         const hasPositive = /(haan|yes|yeah|yep|yup|sahi|done|ho gaya|correct|true|confirm|next|proceed|\bha\b|\bhan\b|ok|okay|thik|theek|kore nilam|ইয়েস|কনফার্ম|কনফর্ম|কারেক্ট|হ্যাঁ|হ্যা|হা|হ্যাক|ঠিক|টিকা|ডান|হয়ে গেছে|ওকে|জি|জ্বি|নেক্সট|প্রসিড|করে নিলাম|কোরে নিলাম|করেছি|হয়েছে|আচ্ছা|यस|कन्फर्म|कनफर्म|करेक्ट|हाँ|हां|सही|हो गया|ठीक|ओके|जी|किया|कर लिया)/.test(lowerText);
@@ -197,37 +244,46 @@ export default function CustomerDetails() {
 
       // Handle Form Fields
       if (voiceExpecting === 'name') {
-         if (rawText.length > 2) {
-             const extractedName = rawText.replace(/(mera naam hai|mera naam|mera nam hai|mera nam|my name is|the name is|is my name|my name|amar naam hoche|amar nam hoche|amar naam holo|amar nam holo|amar naam|amar nam|naam hai|nam hai|naam|nam|মাই নেম ইজ|মাই নেম|আমার নাম হচ্ছে|আমার নাম হলো|আমার নাম|নাম হলো|নাম হচ্ছে|নাম|মেরা নাম|मेरा नाम है|मेरा नाम|नाम है|नाम|माय नेम इज|माय नेम)/gi, '').replace(/(hai|hoche|holo|হচ্ছে|হলো|হয়|है)/gi, '').trim();
-             
-             const isBadName = /^(ok|okay|yes|yeah|yep|yup|haan|han|naa|naah|nah|no|nope|correct|true|false|thik|theek|sahi|galat|wrong|bhul|nahi|nhi|done|next|proceed|হয়ে গেছে|হ্যাঁ|হ্যা|হা|না|ঠিক|ভুল|रॉन्ग|सही|गलत|हाँ|हां|नहीं|ना|ओके|जी|करेक्ट|अच्छा)$/i.test(extractedName);
-             
-             if (extractedName.length > 1 && !isBadName) {
+         if (rawText.length > 1) {
+             // Clean away all introductory prefixes and filler phrases
+             let cleaned = rawText
+               .replace(/(mera naam hai|mera naam|mera nam hai|mera nam|my name is|the name is|is my name|my name|amar naam hoche|amar nam hoche|amar naam holo|amar nam holo|amar naam|amar nam|naam hai|nam hai|naam|nam|মাই নেম ইজ|মাই নেম|আমার নাম হচ্ছে|আমার নাম হলো|আমার নাম|নাম হলো|নাম হচ্ছে|নাম|মেরা নাম|मेरा नाम है|मेरा नाम|नाम है|नाम|माय नेम इज|माय नेम)/gi, ' ')
+               .replace(/(friend|again|try again|repeat|once more|bolo|please|friend again|try|suno)/gi, ' ')
+               .replace(/(hai|hoche|holo|হচ্ছে|হলো|হয়|है)/gi, ' ')
+               // Clean out affirmative/negative repetitive utterances (e.g. "sahi sahi", "sahi hai", "galat", "wrong", "no", "yes")
+               .replace(/\b(sahi|galat|wrong|right|haan|han|nahi|nhi|yes|yeah|no|nope|ok|okay|thik|theek|thek|naa|nah|bhul|ঠিক|ভুল|রং|না|হ্যাঁ|হ্যা|হা|सही|गलत|हाँ|हां|नहीं|ना|ओके|जी|अच्छा)\b/gi, ' ')
+               .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, ' ')
+               .trim();
+
+             // Compress multiple whitespace
+             cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+             const isBadName = /^(ok|okay|yes|yeah|yep|yup|haan|han|naa|naah|nah|no|nope|correct|true|false|thik|theek|sahi|galat|wrong|bhul|nahi|nhi|done|next|proceed|friend|again|try|হয়ে গেছে|হ্যাঁ|হ্যা|হা|না|ঠিক|ভুল|রং|রঙ|রক|রঅং|रॉन्ग|सही|गलत|हाँ|हां|नहीं|ना|ओके|जी|करेक्ट|अच्छा)$/i.test(cleaned);
+
+             if (cleaned.length >= 2 && !isBadName && !/^\d+$/.test(cleaned)) {
+                 // Format name to Title Case
+                 const formattedName = cleaned.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
                  setPendingField('name');
-                 setPendingValue(extractedName);
+                 setPendingValue(formattedName);
                  setVoiceExpecting('confirm');
                  speakText(t('confirmName'));
              }
          }
       } else if (voiceExpecting === 'age') {
-         // Convert Bengali and Hindi numerals to Arabic digits
-         const normalizedText = lowerText
-           .replace(/[\u09E6-\u09EF]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x09E6 + 48))
-           .replace(/[\u0966-\u096F]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0966 + 48));
-         if (/\d+/.test(normalizedText)) {
-             const extractedAge = normalizedText.match(/\d+/)[0];
+         const parsedAge = parseAgeFromText(lowerText);
+         if (parsedAge) {
              setPendingField('age');
-             setPendingValue(extractedAge);
+             setPendingValue(parsedAge);
              setVoiceExpecting('confirm');
              speakText(t('confirmAge'));
          }
       } else if (voiceExpecting === 'gender') {
-         if (/(female|aurat|ladki|mohila|ফিমেল|ফিমেইল|মহিলা|মেয়ে|নারী|फीमेल|औरत|लड़की|महिला)/.test(lowerText)) {
+         if (/(female|aurat|ladki|mohila|woman|girl|ফিমেল|ফিমেইল|মহিলা|মেয়ে|নারী|फीमेल|औरत|लड़की|महिला)/.test(lowerText)) {
              setPendingField('gender');
              setPendingValue('female');
              setVoiceExpecting('confirm');
              speakText(t('confirmGender'));
-         } else if (/(mail|male|aadmi|ladka|purush|মেল|মেইল|পুরুষ|পুরুস|ছেলে|আদমি|मेल|आदमी|लड़का|पुरुष)/.test(lowerText)) {
+         } else if (/(mail|male|aadmi|ladka|purush|man|boy|মেল|মেইল|পুরুষ|পুরুস|ছেলে|আদমি|मेल|आदमी|लड़का|पुरुष)/.test(lowerText)) {
              setPendingField('gender');
              setPendingValue('male');
              setVoiceExpecting('confirm');

@@ -4,8 +4,9 @@ import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function VoiceAssistantOverlay() {
-  const { isConnected, micDevice, isSpeaking, listeningPaused } = useVoiceAssistant();
+  const { isConnected, micDevice, isSpeaking, listeningPaused, lastTranscript } = useVoiceAssistant();
   const [show, setShow] = useState(false);
+  const [recentText, setRecentText] = useState("");
 
   // Show a small overlay indicator when listening is active
   useEffect(() => {
@@ -16,16 +17,38 @@ export default function VoiceAssistantOverlay() {
     }
   }, [isConnected, listeningPaused]);
 
+  // Flash recognized transcript instantly
+  useEffect(() => {
+    if (lastTranscript?.text) {
+      setRecentText(lastTranscript.text);
+      const timer = setTimeout(() => setRecentText(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastTranscript]);
+
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
+    <div className="fixed bottom-6 right-6 z-50 pointer-events-none flex flex-col items-end gap-2">
+      <AnimatePresence>
+        {recentText && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 5, scale: 0.95 }}
+            className="bg-slate-900/90 backdrop-blur-md text-white text-xs font-semibold px-4 py-2 rounded-2xl shadow-xl border border-slate-700 max-w-xs text-right truncate"
+          >
+            Heard: "{recentText}"
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className="flex items-center gap-3 bg-white/90 backdrop-blur-md shadow-2xl rounded-full px-5 py-3 border border-slate-200"
+          className="flex items-center gap-3 bg-white/95 backdrop-blur-md shadow-2xl rounded-full px-5 py-3 border border-slate-200"
         >
           {/* Avatar/Mic Icon */}
           <div className="relative">

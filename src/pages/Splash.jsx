@@ -14,30 +14,76 @@ const Splash = () => {
   const { speak, stop, speakChained } = useSpeech();
   const { resetHealth, update } = useHealth();
   
-  const handleLanguageSelect = (langCode) => {
+  const [showTerms, setShowTerms] = useState(false);
+  const [disagreed, setDisagreed] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const disagreedRef = useRef(false);
+
+  const handleOpenTerms = useCallback(() => {
+    setShowTerms(true);
+  }, []);
+
+  const handleCloseTerms = useCallback(() => {
+    setShowTerms(false);
+  }, []);
+
+  const handleDisagree = useCallback(() => {
+    setDisagreed(true);
+    disagreedRef.current = true;
+    setErrorMessage("You must agree to the Terms & Conditions to proceed.");
+    setShowTerms(false);
+  }, []);
+
+  const handleAgree = useCallback(() => {
+    setDisagreed(false);
+    disagreedRef.current = false;
+    setErrorMessage("");
+    setShowTerms(false);
+  }, []);
+
+  const handleLanguageSelect = useCallback((langCode) => {
+    if (disagreedRef.current) {
+      setErrorMessage("You must agree to the Terms & Conditions to proceed.");
+      return false;
+    }
+    setErrorMessage("");
     i18n.changeLanguage(langCode);
     localStorage.setItem("appLanguage", langCode);
     update({ language: langCode });
     navigate("/customer-details");
-  };
+    return true;
+  }, [navigate, update]);
 
   // Voice Interaction Logic
   useVoicePage({
     expecting: 'language',
-    vocabularyHints: ['english', 'hindi', 'bengali', 'bangla', 'shuru', 'start'],
+    vocabularyHints: ['english', 'hindi', 'bengali', 'bangla', 'shuru', 'start', 'agree', 'disagree'],
     onTranscript: (lowerText) => {
+      // Allow voice agreement/disagreement if spoken
+      if (/disagree|अस्वीकार|অসম্মত|not agree|don't agree/.test(lowerText)) {
+        handleDisagree();
+        return;
+      }
+      if (/agree|स्वीकार|सहमति|সম্মত/.test(lowerText)) {
+        handleAgree();
+        return;
+      }
+
       // Detect Hindi — Latin + Devanagari + Bengali script forms
       if (/hindi|हिंदी|हिन्दी|হিন্দি/.test(lowerText)) {
-        handleLanguageSelect('hi');
-        speakChained([{ text: "Hindi select ho gayi hai. Ab main aapko Hindi mein guide karungi. Chaliye shuru karte hain.", langHint: "hi" }]);
+        if (handleLanguageSelect('hi')) {
+          speakChained([{ text: "Hindi select ho gayi hai. Ab main aapko Hindi mein guide karungi. Chaliye shuru karte hain.", langHint: "hi" }]);
+        }
       // Detect Bengali — Latin + Bengali script forms
       } else if (/bengali|bangla|বেঙ্গলি|বাঙালি|বাংলা|বাঙ্গালি/.test(lowerText)) {
-        handleLanguageSelect('bn');
-        speakChained([{ text: "বাংলা সিলেক্ট হয়েছে। এখন থেকে আমি আপনাকে বাংলায় গাইড করব। চলুন শুরু করি।", langHint: "bn" }]);
+        if (handleLanguageSelect('bn')) {
+          speakChained([{ text: "বাংলা সিলেক্ট হয়েছে। এখন থেকে আমি আপনাকে বাংলায় গাইড করব। চলুন শুরু করি।", langHint: "bn" }]);
+        }
       // Detect English — Latin + Devanagari + Bengali script forms
       } else if (/english|ইংলিশ|ইংরেজি|अंग्रेज़ी|अंग्रेजी|इंग्लिश/.test(lowerText)) {
-        handleLanguageSelect('en');
-        speakChained([{ text: "English selected. I'll guide you in English from here. Let's begin.", langHint: "en" }]);
+        if (handleLanguageSelect('en')) {
+          speakChained([{ text: "English selected. I'll guide you in English from here. Let's begin.", langHint: "en" }]);
+        }
       }
     },
     onHelp: () => {
@@ -196,7 +242,6 @@ const Splash = () => {
 
   const [sliding, setSliding] = useState(false);
   const [textVisible, setTextVisible] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
   // Phase: 0=hidden, 1="Relief & Relive" fading in, 2=fading out, 3="Health Checkup & Medicine Dispenser" fading in
   const [phase, setPhase] = useState(0);
 
@@ -216,16 +261,6 @@ const Splash = () => {
       clearTimeout(t2);
     };
   }, []);
-
-  // Buttons are now handleLanguageSelect
-
-  const handleOpenTerms = () => {
-    setShowTerms(true);
-  };
-
-  const handleCloseTerms = () => {
-    setShowTerms(false);
-  };
 
   return (
     <>
@@ -322,11 +357,21 @@ const Splash = () => {
 
             <div className="bg-orange-500 pt-4 pb-8 flex flex-col items-center px-4 -mt-1">
               {showTerms ? (
-                <div className="bg-white rounded-2xl shadow-2xl max-h-[75vh] overflow-y-auto w-11/12 md:w-3/4 lg:w-1/2">
+                <div className="bg-white rounded-2xl shadow-2xl max-h-[75vh] overflow-y-auto w-11/12 md:w-3/4 lg:w-1/2 relative">
                   <div className="p-8">
-                    <h2 className="text-3xl font-bold text-center text-orange-600 mb-8">
-                      Reliv – Terms & Conditions
-                    </h2>
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl md:text-3xl font-bold text-orange-600">
+                        Reliv – Terms & Conditions
+                      </h2>
+                      <button
+                        onClick={handleCloseTerms}
+                        className="text-gray-400 hover:text-gray-600 text-2xl font-bold p-1.5 rounded-full hover:bg-gray-100 transition leading-none cursor-pointer"
+                        title="Close (Skip)"
+                        aria-label="Close"
+                      >
+                        ✕
+                      </button>
+                    </div>
 
                     <div className="text-gray-700 text-sm md:text-base space-y-5 leading-relaxed">
                       <p>
@@ -372,16 +417,29 @@ const Splash = () => {
 
                     <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
                       <button
-                        onClick={handleCloseTerms}
-                        className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-8 rounded-xl transition shadow-lg"
+                        onClick={handleDisagree}
+                        className="bg-gray-400 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-xl transition shadow-md cursor-pointer"
                       >
-                        Close
+                        Disagree
+                      </button>
+                      <button
+                        onClick={handleAgree}
+                        className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-xl transition shadow-lg cursor-pointer"
+                      >
+                        I Agree & Continue
                       </button>
                     </div>
                   </div>
                 </div>
               ) : (
                 <>
+                  {errorMessage && (
+                    <div className="mb-4 px-6 py-2.5 bg-red-100 border border-red-500 text-red-700 font-semibold rounded-xl shadow-md text-center text-sm md:text-base animate-pulse flex items-center gap-2 justify-center">
+                      <span>⚠️</span>
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
+
                   <p className="text-white text-center text-sm md:text-base mb-4 max-w-xl leading-relaxed">
                     By continuing, you agree to Reliv's{" "}
                     <span
@@ -396,19 +454,25 @@ const Splash = () => {
                   <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
                     <button
                       onClick={() => handleLanguageSelect('en')}
-                      className="bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200"
+                      className={`bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200 ${
+                        disagreed ? "opacity-75" : ""
+                      }`}
                     >
                       English
                     </button>
                     <button
                       onClick={() => handleLanguageSelect('hi')}
-                      className="bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200"
+                      className={`bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200 ${
+                        disagreed ? "opacity-75" : ""
+                      }`}
                     >
                       हिन्दी
                     </button>
                     <button
                       onClick={() => handleLanguageSelect('bn')}
-                      className="bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200"
+                      className={`bg-white text-orange-600 font-bold text-lg py-3 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:bg-gray-50 transition transform hover:scale-105 border-2 border-orange-200 ${
+                        disagreed ? "opacity-75" : ""
+                      }`}
                     >
                       বাংলা
                     </button>
