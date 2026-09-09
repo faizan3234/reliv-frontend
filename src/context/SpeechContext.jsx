@@ -128,6 +128,23 @@ export function SpeechProvider({ children }) {
   const voiceSettingsRef = useRef(voiceSettings);
   const audioManifestRef = useRef(null);
   const activeAudioRef = useRef(null);
+  
+  const speakerGateRef = useRef(false);
+
+  const setSpeakerGate = useCallback((active) => {
+    const next = Boolean(active);
+
+    if (speakerGateRef.current === next) return;
+
+    speakerGateRef.current = next;
+    speakingRef.current = next;
+
+    window.dispatchEvent(
+      new CustomEvent("reliv_speaking", {
+        detail: next,
+      })
+    );
+  }, []);
 
   configRef.current = config;
   voiceSettingsRef.current = voiceSettings;
@@ -139,8 +156,6 @@ export function SpeechProvider({ children }) {
         if (res.ok) {
           const data = await res.json();
           if (data._voiceSettings) setVoiceSettings((prev) => ({ ...prev, ...data._voiceSettings }));
-          // We no longer overwrite DEFAULT_CONFIG with API unless it matches nested structure,
-          // assuming API doesn't have the nested strings yet.
         }
       } catch {}
 
@@ -156,19 +171,21 @@ export function SpeechProvider({ children }) {
   }, []);
 
   const stopActivePlayback = useCallback(async () => {
-    if (activeAudioRef.current) {
-        // Remove event listeners BEFORE pausing to prevent stale callbacks
-        // from racing with new playback after stop() returns
-        activeAudioRef.current.onended = null;
-        activeAudioRef.current.onerror = null;
-        activeAudioRef.current.pause();
-        activeAudioRef.current.currentTime = 0;
-        activeAudioRef.current = null;
+    try {
+      if (activeAudioRef.current) {
+          activeAudioRef.current.onended = null;
+          activeAudioRef.current.onerror = null;
+          activeAudioRef.current.pause();
+          activeAudioRef.current.currentTime = 0;
+          activeAudioRef.current = null;
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    } finally {
+      setSpeakerGate(false);
     }
-    window.speechSynthesis?.cancel();
-    speakingRef.current = false;
-    window.dispatchEvent(new CustomEvent('reliv_speaking', { detail: false }));
-  }, []);
+  }, [setSpeakerGate]);
 
   const stop = useCallback(async () => {
     playbackRequestRef.current += 1;
@@ -203,8 +220,7 @@ export function SpeechProvider({ children }) {
           if (finished) return;
           finished = true;
           if (requestId === playbackRequestRef.current) {
-            speakingRef.current = false;
-            window.dispatchEvent(new CustomEvent('reliv_speaking', { detail: false }));
+            setSpeakerGate(false);
             activeAudioRef.current = null;
             if (callbacks.onEnd) callbacks.onEnd();
           }
@@ -219,8 +235,9 @@ export function SpeechProvider({ children }) {
         };
 
         if (callbacks.onStart) callbacks.onStart();
-        speakingRef.current = true;
-        window.dispatchEvent(new CustomEvent('reliv_speaking', { detail: true }));
+        
+        // IMPORTANT: gate BEFORE actual playback.
+        setSpeakerGate(true);
         activeAudioRef.current = audio;
         
         audio.play().catch(e => {
@@ -229,7 +246,7 @@ export function SpeechProvider({ children }) {
         });
       });
     },
-    []
+    [setSpeakerGate]
   );
 
   const speakText = useCallback(
