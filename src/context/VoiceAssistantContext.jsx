@@ -32,6 +32,16 @@ export const VoiceAssistantProvider = ({ children }) => {
   const speakingTimeoutRef = useRef(null);
   const isRelivSpeakingRef = useRef(false);
 
+  const voiceClientIdRef = useRef(
+    sessionStorage.getItem('relivVoiceClientId') || crypto.randomUUID()
+  );
+  const reconnectGenerationRef = useRef(0);
+  const manualCloseRef = useRef(false);
+
+  useEffect(() => {
+    sessionStorage.setItem('relivVoiceClientId', voiceClientIdRef.current);
+  }, []);
+
   // Listen for AEC signals from SpeechContext
   useEffect(() => {
     const handleSpeaking = (e) => {
@@ -70,31 +80,57 @@ export const VoiceAssistantProvider = ({ children }) => {
 
   // Connect to the Python Voice Backend
   const connectWebSocket = useCallback(() => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) return;
-    if (ws.current && ws.current.readyState === WebSocket.CONNECTING) return;
+    if (
+      ws.current &&
+      (
+        ws.current.readyState === WebSocket.OPEN ||
+        ws.current.readyState === WebSocket.CONNECTING
+      )
+    ) {
+      return;
+    }
 
-    ws.current = new WebSocket('ws://127.0.0.1:5100');
+    if (reconnectTimeout.current) {
+      clearTimeout(reconnectTimeout.current);
+      reconnectTimeout.current = null;
+    }
 
-    ws.current.onopen = () => {
-      console.log('[VoiceAssistant] Connected to backend');
+    const currentGeneration = ++reconnectGenerationRef.current;
+    manualCloseRef.current = false;
+
+    const socket = new WebSocket('ws://127.0.0.1:5100');
+    ws.current = socket;
+
+    socket.onopen = () => {
+      if (currentGeneration !== reconnectGenerationRef.current) {
+        socket.close();
+        return;
+      }
+      console.log(`[VoiceAssistant] Connected to backend as ${voiceClientIdRef.current}`);
       setIsConnected(true);
-      if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
+
+      // Explicit client identity
+      socket.send(JSON.stringify({
+        type: 'CLIENT_HELLO',
+        clientId: voiceClientIdRef.current
+      }));
 
       // AUTOMATIC RECOVERY
       // Guarantees an old PAUSE_LISTENING state can never survive reconnect
       setListeningPaused(false);
-      ws.current.send(JSON.stringify({ type: 'RESUME_LISTENING' }));
+      socket.send(JSON.stringify({ type: 'RESUME_LISTENING' }));
       
       if (healthData?.language) {
-        ws.current.send(JSON.stringify({ type: 'SET_LANGUAGE', language: healthData.language }));
+        socket.send(JSON.stringify({ type: 'SET_LANGUAGE', language: healthData.language }));
       }
-      ws.current.send(JSON.stringify({ type: 'SET_CONTEXT', page: currentPathRef.current }));
+      socket.send(JSON.stringify({ type: 'SET_CONTEXT', page: currentPathRef.current }));
       
       // Send current SET_RELIV_SPEAKING state
-      ws.current.send(JSON.stringify({ type: 'SET_RELIV_SPEAKING', active: isRelivSpeakingRef.current }));
+      socket.send(JSON.stringify({ type: 'SET_RELIV_SPEAKING', active: isRelivSpeakingRef.current }));
     };
 
-    ws.current.onmessage = (event) => {
+    socket.onmessage = (event) => {
+      if (currentGeneration !== reconnectGenerationRef.current) return;
       try {
         const msg = JSON.parse(event.data);
         handleBackendMessage(msg);
@@ -103,27 +139,34 @@ export const VoiceAssistantProvider = ({ children }) => {
       }
     };
 
-    ws.current.onclose = () => {
+    socket.onclose = () => {
+      if (currentGeneration !== reconnectGenerationRef.current) return;
       console.log('[VoiceAssistant] Disconnected from backend');
       setIsConnected(false);
       setMicDevice(null);
-      // Fast reconnect delay
-      reconnectTimeout.current = setTimeout(connectWebSocket, 500);
+      
+      if (!manualCloseRef.current) {
+        // Fast reconnect delay
+        reconnectTimeout.current = setTimeout(connectWebSocket, 500);
+      }
     };
 
-    ws.current.onerror = (err) => {
+    socket.onerror = (err) => {
       console.error('[VoiceAssistant] WebSocket error', err);
-      ws.current.close(); // Force close to trigger clean reconnect
+      // Let onclose handle the reconnect
     };
   }, [healthData?.language]);
 
   useEffect(() => {
     connectWebSocket();
     return () => {
+      manualCloseRef.current = true;
       if (ws.current) {
         ws.current.close();
       }
-      if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+      }
     };
   }, [connectWebSocket]);
 
