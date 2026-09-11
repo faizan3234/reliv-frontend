@@ -81,7 +81,7 @@ export default function TwoOptions() {
       const result = await response.json();
       if (!mountedRef.current || !isCurrentKioskSession(session)) return;
 
-      if ([403, 404, 410].includes(response.status)) {
+      if ([403, 404, 409, 410].includes(response.status)) {
         clearKioskSession();
         navigate("/customer-details", { replace: true });
         return;

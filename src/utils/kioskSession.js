@@ -93,7 +93,7 @@ export async function saveKioskCustomer(base, patient) {
     if (!isCurrentKioskSession(session)) throw new Error("The kiosk session was reset. Please retry.");
     return session;
   } catch (error) {
-    if ([403, 404, 410].includes(error.status) && isCurrentKioskSession(session)) clearKioskSession();
+    if ([403, 404, 409, 410].includes(error.status) && isCurrentKioskSession(session)) clearKioskSession();
     throw error;
   }
 }
