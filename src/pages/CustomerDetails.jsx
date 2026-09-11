@@ -11,7 +11,7 @@ import { API_BASE } from "../config/api";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { dict } from "../config/CustomerDetailsDict";
-import { parseConfirmation, parseSpokenAge, parseSpokenGender } from "../voice/voicePageProfiles";
+import { parseConfirmation, parseSpokenAge, parseSpokenGender, parseSpokenName, parseServiceChoice } from "../voice/voicePageProfiles";
 import { ensureKioskSession, saveKioskCustomer } from "../utils/kioskSession";
 
 export default function CustomerDetails() {
@@ -205,28 +205,19 @@ export default function CustomerDetails() {
 
       // Handle Form Fields
       if (voiceExpecting === 'name') {
-         if (rawText.length > 1) {
-             // Clean away all introductory prefixes and filler phrases
-             let cleaned = rawText
-               .replace(/^(?:mera naam hai|mera naam|mera nam hai|mera nam|my name is|the name is|my name|amar naam hoche|amar nam hoche|amar naam holo|amar nam holo|amar naam|amar nam|আমার নাম হচ্ছে|আমার নাম হলো|আমার নাম|মাই নেম ইজ|मेरा नाम है|मेरा नाम|माय नेम इज)\s+/i, "")
-               .replace(/\s+(?:hai|hoche|holo|হচ্ছে|হলো|হয়|है)$/i, "")
-               .replace(/[.,/#!$%^&*;:{}=_`~()?"']/g, " ")
-               .trim();
-
-             // Compress multiple whitespace
-             cleaned = cleaned.replace(/\s+/g, ' ').trim();
-
-             const isBadName = /^(ok|okay|yes|yeah|yep|yup|haan|han|naa|naah|nah|no|nope|correct|true|false|thik|theek|sahi|galat|wrong|bhul|nahi|nhi|done|next|proceed|friend|again|try|হয়ে গেছে|হ্যাঁ|হ্যা|হা|না|ঠিক|ভুল|রং|রঙ|রক|রঅং|रॉन्ग|सही|गलत|हाँ|हां|नहीं|ना|ओके|जी|करेक्ट|अच्छा)$/i.test(cleaned);
-
-             if (cleaned.length >= 2 && !isBadName && !/^\d+$/.test(cleaned)) {
-                 // Format name to Title Case
-                 const formattedName = cleaned.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-                 setPendingField('name');
-                 setPendingValue(formattedName);
-                 setVoiceExpecting('confirm');
-                 speakText(t('confirmName'));
-             }
-         }
+        const parsedName = parseSpokenName(rawText);
+        if (parsedName) {
+          setPendingField('name');
+          setPendingValue(parsedName);
+          setVoiceExpecting('confirm');
+          speakText(t('confirmName'));
+        } else {
+          // If the user spoke a service choice instead of their name, gently guide them
+          const service = parseServiceChoice(lowerText);
+          if (service) {
+            speakText("Please tell me your name first.");
+          }
+        }
       } else if (voiceExpecting === 'age') {
          const parsedAge = parseSpokenAge(lowerText);
          if (parsedAge) {
@@ -307,8 +298,8 @@ export default function CustomerDetails() {
 
   return (
     <div
-      className={`relative min-h-screen bg-gradient-to-br from-indigo-50 via-white to-orange-50 flex flex-col justify-between font-sans select-none overflow-x-hidden ${
-        keyboardVisible ? "pb-80" : "pb-0"
+      className={`relative min-h-screen h-full bg-gradient-to-br from-indigo-50 via-white to-orange-50 flex flex-col justify-between font-sans select-none overflow-x-hidden overflow-y-auto scrollable-container touch-pan-y overscroll-contain ${
+        keyboardVisible ? "pb-96" : "pb-12"
       }`}
     >
       <TopEllipseBackground height="40%" color="#FFF4EC" />

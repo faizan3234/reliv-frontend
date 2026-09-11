@@ -610,8 +610,8 @@ export function PaymentV2Page({ sessionStore }) {
             </p>
           </div>
 
-          {/* Idle / Sending state: Email input form */}
-          {(receiptStatus === 'idle' || receiptStatus === 'sending') && (
+          {/* Idle / Sending / Error state: Email input form */}
+          {(receiptStatus === 'idle' || receiptStatus === 'sending' || receiptStatus === 'error') && (
             <form onSubmit={handleEmailDelivery} className="space-y-3 pt-1">
               <div>
                 <input
@@ -628,7 +628,10 @@ export function PaymentV2Page({ sessionStore }) {
               </div>
 
               {receiptError && (
-                <p className="text-xs text-red-600 font-medium text-center">{receiptError}</p>
+                <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-0.5">
+                  <p className="text-xs text-red-600 font-semibold">{receiptError}</p>
+                  <p className="text-[11px] text-slate-500">Your payment is safe. Check your email and tap Retry.</p>
+                </div>
               )}
 
               <div className="space-y-2">
@@ -637,9 +640,13 @@ export function PaymentV2Page({ sessionStore }) {
                   loading={receiptStatus === 'sending'}
                   disabled={!receiptEmail.trim() || receiptStatus === 'sending'}
                   size="md"
-                  icon={Mail}
+                  icon={receiptStatus === 'error' ? RefreshCw : Mail}
                 >
-                  {isHealthCheckup ? 'Send My Health Report' : 'Email My Receipt'}
+                  {receiptStatus === 'error'
+                    ? 'Retry Sending'
+                    : isHealthCheckup
+                    ? 'Send My Health Report'
+                    : 'Email My Receipt'}
                 </Button>
                 {!isHealthCheckup && (
                   <button
@@ -744,40 +751,8 @@ export function PaymentV2Page({ sessionStore }) {
                 )}
 
                 <Button onClick={handleDone} variant="primary" size="md">
-
                   Done
-
                 </Button>
-
-              </div>
-            </div>
-          )}
-
-          {/* Error sending email */}
-          {receiptStatus === 'error' && (
-            <div className="space-y-3.5 text-center animate-in fade-in duration-300 pt-1">
-              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
-                <p className="font-semibold text-slate-900">
-                  {isHealthCheckup ? "We couldn't send your health report." : "We couldn't send your receipt."}
-                </p>
-                <p className="text-slate-600">
-                  Your payment is safe.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Button onClick={handleEmailDelivery} variant="primary" size="md" icon={RefreshCw}>
-                  Try Sending Again
-                </Button>
-                {!isHealthCheckup && (
-                  <button
-                    type="button"
-                    onClick={handleDone}
-                    className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition py-1.5"
-                  >
-                    Skip
-                  </button>
-                )}
               </div>
             </div>
           )}

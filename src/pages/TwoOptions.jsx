@@ -9,7 +9,7 @@ import { Activity, Pill, ArrowLeft } from "lucide-react";
 import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { dict } from "../config/TwoOptionsDict";
-import { parseServiceChoice } from "../voice/voicePageProfiles";
+import { parseServiceChoice, containsPhrase } from "../voice/voicePageProfiles";
 import { readKioskSession, clearKioskSession, isCurrentKioskSession } from "../utils/kioskSession";
 
 export default function TwoOptions() {
@@ -81,9 +81,15 @@ export default function TwoOptions() {
       const result = await response.json();
       if (!mountedRef.current || !isCurrentKioskSession(session)) return;
 
-      if ([403, 404, 409, 410].includes(response.status)) {
+      if ([403, 404, 410].includes(response.status)) {
         clearKioskSession();
         navigate("/customer-details", { replace: true });
+        return;
+      }
+      if (response.status === 409 || result?.alreadySelected) {
+        // Safe transition or already selected service; proceed to destination without wiping session
+        speakText(t(serviceType === 'MEDICINE' ? 'proceedMedicine' : 'proceedHealth'));
+        navigate(destination);
         return;
       }
       if (!response.ok || !result?.ok) {
@@ -119,12 +125,29 @@ export default function TwoOptions() {
 
   useVoicePage({
     expecting: "service",
-    vocabularyHints: ['health', 'checkup', 'medicine', 'dispensing', 'dawai', 'check', 'haan', 'yes', 'no', 'nahi'],
+    vocabularyHints: ['health', 'checkup', 'medicine', 'dispensing', 'dawai', 'check', 'haan', 'yes', 'no', 'nahi', 'switch', 'change', 'dusra', 'pehla', 'option 1', 'option 2'],
     onHelp: () => {
        speakText(t('idle12'));
     },
     onTranscript: (lowerText) => {
       if (submittingRef.current) return;
+
+      // Spoken confirmation to proceed with currently highlighted option
+      if (containsPhrase(lowerText, ['proceed', 'continue', 'next', 'aage', 'chalo', 'theek hai', 'haan', 'yes', 'done'])) {
+        if (selectedOption) {
+          handleProceed();
+          return;
+        }
+      }
+
+      // Spoken shifting / switching between the two options
+      if (containsPhrase(lowerText, ['switch', 'change', 'shift', 'dusra', 'other', 'badlo', 'dusra option'])) {
+        const nextOption = selectedOption === 'health-checkup' ? 'medicine-dispensing' : 'health-checkup';
+        setSelectedOption(nextOption);
+        speakText(t(nextOption === 'health-checkup' ? 'health_checkup' : 'medicine_dispensing'));
+        return;
+      }
+
       const service = parseServiceChoice(lowerText);
       if (service === "HEALTH_CHECKUP") {
         setSelectedOption("health-checkup");
@@ -144,7 +167,7 @@ export default function TwoOptions() {
   });
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col justify-between font-sans overflow-y-auto scrollable-container select-none">
+    <div className="min-h-screen h-full bg-slate-50 flex flex-col justify-between font-sans overflow-y-auto scrollable-container touch-pan-y overscroll-contain select-none pb-8">
       {/* Header */}
       <div className="bg-gradient-to-b from-orange-50 to-slate-50 pt-8 pb-4 flex items-center justify-between px-6 relative">
         <button

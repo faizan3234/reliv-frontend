@@ -239,7 +239,7 @@ export default function Checkout() {
 
   // ...existing UI/UX code remains unchanged...
   return (
-    <div className="relative h-screen bg-gradient-to-b from-gray-50 to-white font-serif overflow-y-auto scrollable-container">
+    <div className="relative min-h-screen h-full bg-gradient-to-b from-gray-50 to-white font-serif overflow-y-auto scrollable-container touch-pan-y overscroll-contain pb-24">
       {/* BACK BUTTON */}
       <button
         onClick={() => navigate(-1)}

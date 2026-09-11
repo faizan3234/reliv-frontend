@@ -32,15 +32,19 @@ export function parseServiceChoice(raw) {
   const health = containsPhrase(raw, [
     "health", "health checkup", "health check", "healthcheck", "checkup", "check up",
     "body", "jaanch", "jaancha", "जांच", "जाँच", "हेल्थ", "चेकअप", "स्वास्थ्य",
-    "शरीर", "হেলথ", "চেকআপ", "স্বাস্থ্য", "শরীর", "স্বাস্থ্য পরীক্ষা",
+    "\u0936\u0930\u0940\u0930", "\u09b9\u09c7\u09b2\u09a5", "\u099a\u09c7\u0995\u0986\u09aa", "\u09b8\u09cd\u09ac\u09be\u09b8\u09cd\u09a5\u09cd\u09af", "\u09b6\u09b0\u09c0\u09b0", "\u09b8\u09cd\u09ac\u09be\u09b8\u09cd\u09a5\u09cd\u09af \u09aa\u09b0\u09c0\u0995\u09cd\u09b7\u09be",
+    "option 1", "option one", "first option", "first", "pehla", "pahla", "pehla option",
+    "ek number", "number 1", "number ek", "\u092a\u0939\u0932\u093e", "\u092a\u0939\u0932\u093e \u0911\u092a\u094d\u0936\u0928", "\u09aa\u09cd\u09b0\u09a5\u09ae", "\u09aa\u09cd\u09b0\u09a5\u09ae \u0985\u09aa\u09b6\u09a8"
   ]);
   const medicine = containsPhrase(raw, [
     "medicine", "medicines", "medicine dispensing", "medicine kit", "meds", "dispenser",
-    "dawa", "dawai", "दवा", "दवाई", "मेडिसिन", "डिस्पेंसर", "oshudh", "osudh",
-    "ওষুধ", "ঔষধ", "মেডিসিন", "দাওয়াই", "ডিস্পেন্সার",
+    "dawa", "dawai", "\u0926\u0935\u093e", "\u0926\u0935\u093e\u0908", "\u092e\u0947\u0921\u093f\u0938\u093f\u0928", "\u0921\u093f\u0938\u094d\u092a\u0947\u0902\u0938\u0930", "oshudh", "osudh",
+    "\u0993\u09b7\u09c1\u09a7", "\u0994\u09b7\u09a7", "\u09ae\u09c7\u09a1\u09bf\u09b8\u09bf\u09a8", "\u09a6\u09be\u0993\u09af\u09bc\u09be\u0987", "\u09a1\u09bf\u09b8\u09cd\u09aa\u09c7\u09a8\u09cd\u09b8\u09be\u09b0",
+    "option 2", "option two", "second option", "second", "dusra", "doosra", "dusra option",
+    "doosra option", "do number", "number 2", "number do", "\u0926\u0942\u0938\u0930\u093e", "\u0926\u0942\u0938\u0930\u093e \u0911\u092a\u094d\u0936\u0928", "\u09a6\u09cd\u09ac\u09bf\u09a4\u09c0\u09af\u09bc", "\u09a6\u09cd\u09ac\u09bf\u09a4\u09c0\u09af\u09bc \u0985\u09aa\u09b6\u09a8"
   ]);
   // A prompt naming both choices, or a negated choice, is not a selection.
-  if (health === medicine || containsPhrase(raw, ["no", "not", "don't", "nahi", "nahin", "না", "নয়", "नहीं"])) return null;
+  if (health === medicine || containsPhrase(raw, ["no", "not", "don't", "nahi", "nahin", "\u09a8\u09be", "\u09a8\u09af\u09bc", "\u0928\u0939\u0940\u0902"])) return null;
   return health ? "HEALTH_CHECKUP" : "MEDICINE";
 }
 
@@ -142,15 +146,223 @@ export function parseSpokenAge(raw) {
 export function looksLikeRelivEcho(raw, recent, now = Date.now()) {
   const text = normalizeVoiceText(raw);
   const words = text.split(" ").filter(Boolean);
-  // Short legitimate replies often repeat words from a prompt ("female", "yes").
+  // Short legitimate replies often repeat words from a prompt ("female", "yes", "medicine dispensing").
   if (words.length < 4) return false;
   return recent.some(({ text: spoken, at }) => {
     if (now - at > 15000 || now < at) return false;
     const normalized = normalizeVoiceText(spoken);
     if (text === normalized) return true;
+    // If the 4+ word utterance is a direct contiguous substring of the spoken prompt
+    if (normalized.includes(text)) return true;
     const a = new Set(words);
     const b = new Set(normalized.split(" "));
     const common = [...a].filter((word) => b.has(word)).length;
-    return common / Math.max(a.size, b.size) >= 0.85;
+    // Overlap relative to the captured utterance
+    return common / a.size >= 0.85;
   });
 }
+
+const NAME_PREFIX_REGEXES = [
+  // English introductory prefixes
+  /^(?:my name is|the name is|my name's|my name|name is|name's|name|myself|i am|i'm|im|this is|call me|here is|it is|it's)\s+/i,
+  // Hindi / Hinglish / Urdu introductory prefixes
+  /^(?:mera naam hai|mera naam|mera nam hai|mera nam|mera name hai|mera name|mera|hamara naam hai|hamara naam|humara naam hai|humara naam|humara nam|humara|main hoon|main hu|mai hoon|mai hu|main|mai|hum|apna naam hai|apna naam|naam hai|naam)\s+/i,
+  // Bengali introductory prefixes
+  /^(?:amar naam hoche|amar nam hoche|amar naam holo|amar nam holo|amar naam|amar nam|amar name|ami|amake|apnar naam|naam holo|naam hoche)\s+/i,
+  // Devanagari script prefixes
+  /^(?:मेरा नाम है|मेरा नाम|मेरा नाम हे|मेरा नाम हु|मेरा नाम हूँ|मेरा नाम हुं|मैं हूँ|मैं हु|मैं|हमारा नाम है|हमारा नाम|हम|माय नेम इज|माय नेम)\s+/u,
+  // Bengali script prefixes
+  /^(?:আমার নাম হচ্ছে|আমার নাম হলো|আমার নাম|আমি|আমার|মাই নেম ইজ|মাই নেম)\s+/u,
+  // Common titles to strip so name is preserved
+  /^(?:mr|mrs|ms|miss|dr|doctor|shri|shree|smt|shrimati|janab|md|mohd|mohammad|md\.)\s+/i,
+];
+
+const NAME_SUFFIX_REGEXES = [
+  /\s+(?:bol raha hu|bol raha hoon|bol rahi hu|bol rahi hoon|bol rahe hai|bol rahe hain|bolte hai|bolte hain|bolta hai|bolti hai|bolchi|shuncho|bolun)$/i,
+  /\s+(?:naam hai|nam hai|name hai|naam|nam)$/i,
+  /\s+(?:hai|hain|hoche|holo|hobe|hona|haye|bolte|bolta|bolti|है|हैं|हूँ|हुँ|हूं|हो|হচ্ছে|হলো|হয়|হবে)$/i,
+  /\s+(?:ji|babu|da|dada|bhai|bhaiya|sir|madam|here|speaking|this side)$/i,
+  /\s+(?:জি|বাবু|দা|দাদা|ভাই|স্যার|ম্যাডাম)$/u,
+  /\s+(?:जी|बाबू|सर|मैडम)$/u,
+];
+
+export const INVALID_NAME_WORDS = new Set([
+  // Kiosk UI & System keywords
+  "reliv", "kiosk", "screen", "machine", "device", "detail", "details", "touch", "touchscreen", "phone", "camera",
+  "qr", "scan", "code", "payment", "rupee", "rupees", "start", "stop", "cancel", "submit",
+  "save", "saved", "proceed", "proceeding", "next", "back", "done", "complete", "completed",
+  "all", "exit", "finish", "home", "menu", "option", "options",
+
+  // Prompt / Form instruction words
+  "name", "names", "fullname", "full", "first", "last", "naam", "nam", "apna", "apana", "amar",
+  "apnar", "tell", "enter", "type", "speak", "batao", "bataiye", "bataye", "batai", "batana", "bolo", "boliye", "bolun",
+  "bolen", "bolna", "shuno", "shunun", "dikhao", "dekhun", "please", "kripya", "doya",
+
+  // Services & Medical keywords
+  "health", "checkup", "check", "body", "composition", "weight", "height", "bp", "blood",
+  "pressure", "pulse", "oxygen", "spo2", "temperature", "temp", "eyesight", "eye",
+  "medicine", "medicines", "dispensing", "dispenser", "kit", "dawa", "dawai", "oshudh",
+  "osudh", "doctor", "hospital", "clinic", "patient", "customer", "user", "test", "testing",
+  "report", "reports", "result", "results", "summary",
+
+  // Gender keywords
+  "male", "female", "femile", "man", "woman", "boy", "girl", "lady", "gentleman", "aadmi", "admi",
+  "mahila", "purush", "aurat", "mard", "ladka", "ladki", "chele", "chhele", "meye",
+  "other", "others", "nonbinary", "non-binary", "transgender", "gender",
+
+  // Age & Numbers
+  "age", "year", "years", "old", "saal", "sal", "umar", "umr", "bochor", "bocchor",
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
+  "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred",
+  "ek", "do", "teen", "char", "paanch", "panch", "chhah", "che", "saat", "aath", "nau", "das",
+  "gyarah", "barah", "terah", "chaudah", "pandrah", "solah", "satrah", "atharah", "unnis", "bees",
+  "challis", "chalees", "paitalish", "paintalees", "pachaas", "saath", "sattar", "assi", "nabbe", "sau",
+  "dui", "tin", "paach", "chhoy", "dosh", "kuri", "bish", "chollish", "ponchash", "eksho",
+
+  // Confirmation & Negation keywords
+  "yes", "yeah", "yep", "yup", "haan", "han", "ha", "ji", "haanji", "haji", "sahi", "theek",
+  "thik", "correct", "right", "true", "ok", "okay", "accha", "achha", "sure", "fine",
+  "no", "nope", "nah", "naah", "naa", "na", "nahi", "nahin", "nhi", "wrong", "incorrect",
+  "galat", "bhul", "bhool", "vul", "false", "change", "edit", "wait", "ruko", "ruk",
+  "darao", "thamo", "hold",
+
+  // Greetings & Courtesy
+  "hello", "hi", "hey", "namaste", "namaskar", "pranam", "salam", "adaab", "alvida",
+  "good", "morning", "afternoon", "evening", "night", "day",
+  "bye", "goodbye", "tata", "sir", "madam", "maam", "bhai", "bhaiya", "didi", "dada",
+  "babu", "friend", "uncle", "aunty", "listen", "excuse", "thank", "thanks", "dhanyawad",
+  "shukriya", "dhonnobad", "welcome", "sorry", "maaf", "dukkho",
+
+  // Questions / Doubts / Help
+  "what", "who", "where", "when", "why", "how", "which", "kya", "kaun", "kahan", "kab",
+  "kyun", "kaise", "kisko", "kisne", "ki", "ke", "kothay", "keno", "kibhabe", "kake",
+  "ab", "kare", "karein", "karna", "karu", "karo", "korbo", "korte", "hobe", "aage",
+  "help", "madad", "sahajyo", "sahayata", "samajh", "samjh", "pata", "malum", "bujhte",
+  "nothing", "kuch", "kichu", "none", "nobody",
+
+  // Whisper noise / hallucinations
+  "music", "silence", "applause", "laugh", "laughter", "cough", "throat", "sigh", "sighs",
+  "bell", "birds", "chirping", "mimics", "sound", "noise", "audio", "mic", "microphone",
+  "subscribe", "channel", "amaraorg", "watching", "video", "subtitle", "subtitles",
+  "caption", "captions", "transcribed", "translated", "copyright",
+
+  // Common stop words / Pronouns
+  "i", "me", "my", "mine", "myself", "you", "your", "yours", "yourself", "he", "him", "his", "himself", "she", "her", "hers", "herself",
+  "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "we", "us", "our", "ours",
+  "this", "that", "these", "those", "here", "there", "where",
+  "am", "is", "are", "was", "were", "be", "been", "being",
+  "have", "has", "had", "do", "does", "did", "doing",
+  "would", "should", "could", "will", "shall", "can", "may", "might", "must",
+  "about", "above", "across", "after", "again", "against", "along", "already",
+  "and", "but", "or", "because", "as", "until", "while", "of", "at", "by", "for",
+  "with", "without", "into", "through", "during", "before", "under", "between",
+
+  // Hindi / Bengali Script equivalents
+  "हाँ", "हां", "नहीं", "ना", "सही", "गलत", "ठीक", "ভুল", "হ্যাঁ", "না", "ঠিক",
+  "ओके", "अच्छा", "हेलो", "नमस्ते", "नमस्कार", "धन्यवाद", "शुक्रिया", "ধন্যবাদ",
+  "হেলো", "নমস্কার", "মদদ", "সাহায্য", "সাহায্য করুন", "কি করবো", "কী করব",
+  "क्या करें", "क्या करूं", "समझ नहीं", "पता नहीं", "पुरुष", "महिला", "लड़का", "लड़की",
+  "पुरुष", "মহিলা", "ছেলে", "মেয়ে", "বয়স", "उम्र", "साल", "বছর", "হেalth", "চেকআপ",
+  "মেডিসিন", "ওষুধ", "ঔষধ", "दवाई", "दवा"
+]);
+
+export function parseSpokenName(raw, recentPrompts = []) {
+  if (!raw || typeof raw !== "string") return null;
+
+  // 1. Expand contractions before stripping punctuation, then strip Whisper artifacts
+  let text = raw
+    .replace(/\b(name|it|here|what|that)'s\b/gi, "$1 is")
+    .replace(/\bi'm\b/gi, "i am")
+    .replace(/\[.*?\]/g, " ")
+    .replace(/\(.*?\)/g, " ")
+    .replace(/\*.*?\*/g, " ")
+    .replace(/<.*?>/g, " ")
+    .replace(/[.,/#!$%^&*;:{}=_`~()?"'<>।॥]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (text.length < 2 || /^\d+$/.test(text)) return null;
+
+  // 2. Check against recent spoken prompt echo
+  if (Array.isArray(recentPrompts) && recentPrompts.length > 0) {
+    const norm = normalizeVoiceText(text);
+    const isEcho = recentPrompts.some(({ text: spoken, at }) => {
+      if (Date.now() - at > 15000) return false;
+      const normSpoken = normalizeVoiceText(spoken);
+      return normSpoken.includes(norm);
+    });
+    if (isEcho) return null;
+  }
+
+  // 3. Strip introductory prefixes in a loop (e.g. "My name is Mr Rahul" -> "Mr Rahul" -> "Rahul")
+  let stripped = text;
+  let changed = true;
+  let passes = 0;
+  while (changed && passes < 3) {
+    changed = false;
+    passes += 1;
+    for (const rx of NAME_PREFIX_REGEXES) {
+      if (rx.test(stripped)) {
+        stripped = stripped.replace(rx, "").trim();
+        changed = true;
+      }
+    }
+  }
+
+  // 4. Strip conversational suffixes in a loop
+  changed = true;
+  passes = 0;
+  while (changed && passes < 3) {
+    changed = false;
+    passes += 1;
+    for (const rx of NAME_SUFFIX_REGEXES) {
+      if (rx.test(stripped)) {
+        stripped = stripped.replace(rx, "").trim();
+        changed = true;
+      }
+    }
+  }
+
+  // 5. Retain only Unicode letters, mark/vowel characters (matras), hyphens, and whitespace
+  stripped = stripped.replace(/[^\p{L}\p{M}\s-]/gu, " ").replace(/\s+/g, " ").trim();
+
+  // Length boundary for realistic human names
+  if (stripped.length < 2 || stripped.length > 40) return null;
+
+  // 6. Split into words and evaluate for invalid/stop/garbage tokens
+  const words = stripped.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return null;
+
+  // Entire phrase matches an invalid token
+  const lowerPhrase = stripped.toLowerCase();
+  if (INVALID_NAME_WORDS.has(lowerPhrase)) return null;
+
+  // If single word: must not be in invalid list and must not be a repetitive noise string
+  if (words.length === 1) {
+    const word = words[0];
+    if (INVALID_NAME_WORDS.has(word)) return null;
+    if (word.length < 2) return null;
+    // Reject repeated character noise (e.g. "aaaa", "zzzz")
+    if (/^(.)\1+$/.test(word)) return null;
+  } else {
+    // Multi-word phrase: if EVERY word is in INVALID_NAME_WORDS, reject
+    // e.g. "health checkup", "thank you", "hello sir", "twenty five", "tell me"
+    const invalidCount = words.filter((w) => INVALID_NAME_WORDS.has(w)).length;
+    if (invalidCount === words.length) return null;
+    // If more than half of the words are invalid words, reject
+    if (invalidCount >= Math.ceil(words.length * 0.6)) return null;
+  }
+
+  // 7. Format clean Title Case for each word (preserves non-Latin scripts cleanly)
+  const formatted = stripped
+    .split(/\s+/)
+    .map((w) => {
+      if (w.length === 1) return w.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
+    .join(" ");
+
+  return formatted;
+}
+

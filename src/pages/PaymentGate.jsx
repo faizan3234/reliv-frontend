@@ -58,17 +58,30 @@ export default function PaymentGate() {
 
   useVoicePage({
     expecting: 'payment',
-    vocabularyHints: ['scan', 'nahi', 'ho raha', 'ho gaya', 'done', 'payment', 'ab kya', 'help'],
+    vocabularyHints: ['scan', 'nahi', 'ho raha', 'ho gaya', 'done', 'payment', 'ab kya', 'help', 'code', 'enter code', 'paid', 'keypad'],
     onHelp: () => {
       speakText(step === "WAITING_PAYMENT" ? t('qr_mentor') : t('idle12_code'));
     },
     onTranscript: (lowerText) => {
+      if (
+        lowerText.includes('code') ||
+        lowerText.includes('enter code') ||
+        lowerText.includes('keypad') ||
+        lowerText.includes('paid') ||
+        (lowerText.includes('payment') && (lowerText.includes('done') || lowerText.includes('gaya') || lowerText.includes('ho gaya'))) ||
+        lowerText.includes('ho gaya') ||
+        lowerText.includes('done')
+      ) {
+        resetInactivityTimer();
+        setStep("ENTER_CODE");
+        speakText(t('payment_done') || "Please enter the 4-digit code shown on your phone");
+        return;
+      }
+
       if (lowerText.includes('nahi') || lowerText.includes('not') || lowerText.includes('problem')) {
         speakText(t('scan_issue'));
       } else if (lowerText.includes('scan') && (lowerText.includes('gaya') || lowerText.includes('done') || lowerText.includes('yes'))) {
         speakText(t('scanned'));
-      } else if (lowerText.includes('payment') || lowerText.includes('ho gaya') || lowerText.includes('done')) {
-        speakText(t('payment_done'));
       } else if (lowerText.includes('ab kya') || lowerText.includes('help')) {
         speakText(step === "WAITING_PAYMENT" ? t('qr_mentor') : t('idle12_code'));
       }
@@ -586,7 +599,7 @@ export default function PaymentGate() {
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-50 flex flex-col items-center justify-between px-4 py-3 font-sans select-none overflow-x-hidden">
+    <div className="relative min-h-screen h-full bg-slate-50 flex flex-col items-center justify-between px-4 py-3 font-sans select-none overflow-y-auto scrollable-container touch-pan-y overscroll-contain pb-24">
       <TopEllipseBackground height="25%" color="#FFF4EC" />
 
       {/* Top Header */}
@@ -607,6 +620,48 @@ export default function PaymentGate() {
           <span>Offline Secure</span>
         </div>
       </div>
+
+      {/* High-Visibility Top Tab Switcher: Always visible right below header */}
+      {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && (
+        <div className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-orange-200 shadow-sm flex items-center gap-2 mt-2 mb-1">
+          <button
+            type="button"
+            onClick={() => {
+              resetInactivityTimer();
+              setStep("WAITING_PAYMENT");
+            }}
+            className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              step === "WAITING_PAYMENT"
+                ? "bg-orange-500 text-white shadow-md shadow-orange-500/20"
+                : "text-slate-600 hover:text-slate-900 hover:bg-orange-50/60"
+            }`}
+          >
+            <QrCode size={15} className={step === "WAITING_PAYMENT" ? "text-white" : "text-orange-500"} />
+            <span>1. Scan QR Code</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              resetInactivityTimer();
+              setStep("ENTER_CODE");
+              speak("enter-code");
+            }}
+            className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              step === "ENTER_CODE"
+                ? "bg-orange-500 text-white shadow-md shadow-orange-500/20"
+                : "text-slate-800 bg-orange-100/90 hover:bg-orange-200/90 border border-orange-200"
+            }`}
+          >
+            <span>2. Enter 4-Digit Code</span>
+            {step !== "ENTER_CODE" && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-orange-500 text-white shadow-sm animate-pulse">
+                HERE
+              </span>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="relative z-10 w-full max-w-md flex flex-col items-center justify-center flex-grow py-2">
@@ -713,102 +768,104 @@ export default function PaymentGate() {
         {/* MODE 1 — WAITING FOR PAYMENT (LARGE ~400px QR CODE VIEW)           */}
         {/* ═════════════════════════════════════════════════════════════════════ */}
         {(uiState === "QR_READY" || uiState === "VERIFYING" || uiState === "WRONG_CODE") && step === "WAITING_PAYMENT" && (
-          <div className="w-full flex flex-col items-center gap-3.5 animate-fadeIn">
+          <div className="w-full flex flex-col items-center gap-3 animate-fadeIn">
             
             {/* Curiosity Hook */}
-            <div className="w-full max-w-[440px] p-3.5 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-slate-800 text-xs font-semibold flex items-center gap-3 shadow-sm">
-              <Sparkles className="w-5 h-5 text-orange-600 shrink-0" />
+            <div className="w-full max-w-[440px] p-2.5 sm:p-3 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-slate-800 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
+              <Sparkles className="w-4 h-4 text-orange-600 shrink-0" />
               <span>We found key insights worth knowing about your results. Unlock your full plain-language report below.</span>
             </div>
 
             {/* Top Title & Price Pill */}
             <div className="flex items-center justify-between w-full max-w-[440px] px-1">
               <div>
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Scan to Pay</h1>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Scan to Pay</h1>
                 <p className="text-xs text-slate-500">Scan with Google Lens / Camera / Any UPI App</p>
               </div>
               {authoritativeAmount !== null && (
-                <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-orange-500 text-white font-extrabold text-xl shadow-md shadow-orange-500/20">
+                <div className="inline-flex items-center px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-orange-500 text-white font-extrabold text-lg sm:text-xl shadow-md shadow-orange-500/20">
                   <span>₹{formatRupees(authoritativeAmount)}</span>
                 </div>
               )}
             </div>
 
-            {/* Large ~400px QR Code Card (Pure Black Modules, Crisp Edges, Dedicated Quiet Zone) */}
-            <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-orange-200/90 shadow-xl flex flex-col items-center w-full max-w-[440px]">
+            {/* Large QR Code Card (Pure Black Modules, Crisp Edges, Dedicated Quiet Zone, Kiosk Scaled) */}
+            <div className="bg-white p-3 sm:p-3.5 rounded-3xl border border-orange-200/90 shadow-lg flex flex-col items-center w-full max-w-[440px]">
               {paymentUrl ? (
                 <div className="bg-white p-2 rounded-2xl flex items-center justify-center">
                   <QRCodeSVG
                     value={paymentUrl}
-                    size={400}
+                    size={300}
                     level="L"
                     marginSize={4}
                     fgColor="#000000"
                     bgColor="#FFFFFF"
                     shapeRendering="crispEdges"
-                    className="w-[360px] h-[360px] sm:w-[400px] sm:h-[400px] block"
+                    className="w-[260px] h-[260px] sm:w-[300px] sm:h-[300px] block"
                   />
                 </div>
               ) : (
-                <div className="w-[360px] h-[360px] sm:w-[400px] sm:h-[400px] bg-slate-100 rounded-2xl flex items-center justify-center text-sm text-slate-400 font-medium">
+                <div className="w-[260px] h-[260px] sm:w-[300px] sm:h-[300px] bg-slate-100 rounded-2xl flex items-center justify-center text-sm text-slate-400 font-medium">
                   Generating Secure QR...
                 </div>
               )}
 
               {/* Subtitle & Countdown Badge */}
-              <div className="mt-2.5 flex items-center justify-between w-full px-2 text-xs">
+              <div className="mt-2 flex items-center justify-between w-full px-2 text-xs">
                 <span className="font-bold text-slate-600">Scan with GPay / PhonePe / Paytm</span>
-                <div className="flex items-center gap-1.5 font-bold text-orange-700 bg-orange-50 px-3 py-1 rounded-full border border-orange-200 shadow-sm">
-                  <Clock size={13} className="text-orange-500 animate-pulse" />
+                <div className="flex items-center gap-1.5 font-bold text-orange-700 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200 shadow-sm">
+                  <Clock size={12} className="text-orange-500 animate-pulse" />
                   <span>{formatTime(timeLeft)}</span>
                 </div>
               </div>
             </div>
 
             {/* 4-Step Visual Guide */}
-            <div className="w-full max-w-[440px] grid grid-cols-4 gap-2 text-center text-[10px] text-slate-600 font-semibold">
-              <div className="bg-white p-2 rounded-xl border border-slate-200">
+            <div className="w-full max-w-[440px] grid grid-cols-4 gap-1.5 text-center text-[10px] text-slate-600 font-semibold">
+              <div className="bg-white p-1.5 rounded-xl border border-slate-200">
                 <span className="block text-orange-500 font-black text-xs">1. Scan</span>
                 QR Code
               </div>
-              <div className="bg-white p-2 rounded-xl border border-slate-200">
+              <div className="bg-white p-1.5 rounded-xl border border-slate-200">
                 <span className="block text-orange-500 font-black text-xs">2. Pay</span>
                 On Phone
               </div>
-              <div className="bg-white p-2 rounded-xl border border-slate-200">
+              <div className="bg-white p-1.5 rounded-xl border border-slate-200">
                 <span className="block text-orange-500 font-black text-xs">3. Get</span>
                 4-Digit Code
               </div>
-              <div className="bg-white p-2 rounded-xl border border-slate-200">
+              <div className="bg-white p-1.5 rounded-xl border border-slate-200">
                 <span className="block text-orange-500 font-black text-xs">4. Enter</span>
                 On Kiosk
               </div>
             </div>
 
             {/* Zero-Anxiety Recovery Banner */}
-            <div className="w-full max-w-[440px] px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-center text-[11px] text-slate-600 font-medium leading-snug">
+            <div className="w-full max-w-[440px] px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-center text-[11px] text-slate-600 font-medium leading-snug">
               🛡️ Already paid? Scan the <strong className="text-slate-900 font-bold">SAME QR</strong> again — you will NOT be charged twice.
             </div>
 
-            {/* Primary Action: Go to Enter Code Screen */}
-            <button
-              type="button"
-              onClick={() => {
-                resetInactivityTimer();
-                setStep("ENTER_CODE");
-                speak("enter-code");
-              }}
-              className="w-full max-w-[440px] py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-98 text-white font-extrabold text-lg sm:text-xl shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>I've Paid — Enter Code →</span>
-            </button>
+            {/* Persistent Sticky / Floating Bottom Action: Always visible on all kiosk displays */}
+            <div className="sticky bottom-2 z-20 w-full max-w-[440px] pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  resetInactivityTimer();
+                  setStep("ENTER_CODE");
+                  speak("enter-code");
+                }}
+                className="w-full py-3.5 sm:py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-98 text-white font-extrabold text-base sm:text-lg shadow-xl shadow-orange-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer border-2 border-white/90"
+              >
+                <span>I've Paid — Enter Code →</span>
+              </button>
+            </div>
 
             {/* Secondary Action: Cancel / Back to Cart */}
             <button
               type="button"
               onClick={handleCancelAndBack}
               disabled={isCancelling}
-              className="w-full max-w-[440px] py-2.5 rounded-xl bg-white hover:bg-slate-50 active:scale-98 border border-slate-200 text-slate-700 font-bold text-sm shadow-sm transition-all disabled:opacity-50"
+              className="w-full max-w-[440px] py-2 rounded-xl bg-white hover:bg-slate-50 active:scale-98 border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm shadow-sm transition-all disabled:opacity-50"
             >
               {isCancelling ? "Cancelling payment..." : "← Back / Change Order"}
             </button>
