@@ -60,6 +60,7 @@ export function calc_fat_mass(weight, fat_percent) {
 }
 
 export function calc_bone_mass(weight, height, sex, age, impedance) {
+  void impedance;
   // Estimated bone mineral content based on weight, height, and sex
   // Average adult bone mineral content: males ~2.5-3.5kg, females ~1.8-2.5kg
   let bone_mass;
@@ -116,6 +117,7 @@ export function calc_skeletal_muscle_percent(muscle_percent) {
 }
 
 export function calc_water_percent(weight, height, sex, age, impedance) {
+  void impedance;
   if (weight <= 0 || height <= 0) return 0;
   // Watson (1980) Total Body Water equations
   let tbw; // in liters
@@ -401,7 +403,6 @@ export function computeAdvancedBodyMetrics(input) {
 
   const fatMass = calc_fat_mass(weight, fatPercent);
   const muscleMass = calc_muscle_mass(weight, musclePercent);
-  const proteinMass = calc_protein_mass(weight, proteinPercent);
   const ffm = calc_ffm(weight, height, age, impedance, sex);
   const waterMass = calc_water_mass(weight, waterPercent);
   const bmr = calc_bmr(weight, height, sex, age);

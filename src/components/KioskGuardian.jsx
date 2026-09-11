@@ -44,17 +44,9 @@ export default function KioskGuardian() {
     
     console.log('[KioskGuardian] 🔒 KIOSK MODE ACTIVE on:', currentPath);
 
-    // ========== FORCE RETURN TO HOME ==========
-    const forceReturnHome = (reason) => {
-      console.log(`[KioskGuardian] ⛔ BLOCKED: ${reason} - returning to home`);
-      // Clear patient data to prevent data leaking to the next user
-      try { localStorage.removeItem('healthData'); } catch (e) {}
-      window.location.href = HOME_PATH;
-    };
-
     // ========== 1. BLOCK window.open GLOBALLY ==========
     originalWindowOpen.current = window.open;
-    window.open = function(url, ...args) {
+    window.open = function(url) {
       console.log('[KioskGuardian] ⛔ window.open BLOCKED:', url);
       return null; // Block silently
     };
@@ -294,7 +286,7 @@ export default function KioskGuardian() {
         inactivityTimer.current = setTimeout(() => {
           console.log('[KioskGuardian] ⏰ Inactivity timeout - returning home');
           // Clear patient data to prevent leaking to the next kiosk user
-          try { localStorage.removeItem('healthData'); } catch (e) {}
+          try { localStorage.removeItem('healthData'); } catch { /* Storage may be unavailable. */ }
           window.location.href = HOME_PATH;
         }, INACTIVITY_TIMEOUT);
       }

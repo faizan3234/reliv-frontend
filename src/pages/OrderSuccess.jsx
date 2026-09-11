@@ -1,7 +1,7 @@
 // src/pages/OrderSuccess.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used by JSX member tags
 import Logo from '../components/Logo';
 import TopEllipseBackground from '../components/TopEllipseBackground';
 import UVCleansingAnimation from '../components/UVCleansingAnimation';

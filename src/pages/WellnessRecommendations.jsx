@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useHealth } from '../context/HealthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used by JSX member tags
 import Logo from '../components/Logo';
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
@@ -17,7 +17,7 @@ import kit6 from '../assets/6.png';
 import kit8 from '../assets/8.png';
 
 // Map kit IDs to images
-const kitImages = {
+const kitImages = { // eslint-disable-line no-unused-vars -- retained for asset-ID documentation
   1: kit1,
   3: kit3,
   4: kit4,
@@ -224,7 +224,7 @@ function WellnessRecommendations() {
   };
 
   // Filter out women's kit if gender is not female
-  const recommendedKits = getRecommendations().filter(kit => {
+  const recommendedKits = getRecommendations().filter(kit => { // eslint-disable-line no-unused-vars -- retained recommendation model
     const isWomensKit = kit.name.toLowerCase().includes('women') || 
                         kit.name.toLowerCase().includes('female') ||
                         kit.name.toLowerCase().includes('ladies');
@@ -328,6 +328,7 @@ function WellnessRecommendations() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars -- retained for cart UI variants
   const isInCart = (kitId) => selectedItems.find(item => getKitId(item) === String(kitId));
 
   const getQuantityInCart = (kitId) => {
@@ -378,6 +379,7 @@ function WellnessRecommendations() {
     navigate('/checkout', { state: { cart: cartForCheckout, totalPrice: totalAmount } });
   };
 
+  // eslint-disable-next-line no-unused-vars -- retained for the optional full-catalog CTA
   const handleExploreFull = () => {
     navigate('/medicine-dispensing');
   };
@@ -636,7 +638,7 @@ function WellnessRecommendations() {
       {/* Kits Grid */}
       <div className="max-w-6xl mx-auto px-12 pb-48">
         <div className="grid grid-cols-3 gap-8">
-          {displayKits.map((kit, index) => {
+          {displayKits.map((kit) => {
             const quantity = getQuantityInCart(kit.id);
             const inStock = isInStock(kit);
             return (

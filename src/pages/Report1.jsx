@@ -1,4 +1,4 @@
-import { useHealth } from "../context/HealthContext";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useLocation, useNavigate } from "react-router-dom";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
@@ -32,7 +32,6 @@ const getGenderCompliment = (gender, tier = 'high') => {
 
 const Report1 = () => {
   const { speakText, stop } = useSpeech();
-  const { refreshHistory } = useHealth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -197,37 +196,6 @@ const Report1 = () => {
 
     return {
       score: Math.round(body_score),
-      metabolicAge: Math.round(metabolic_age),
-    };
-  }, [vitals, patient]);
-
-  const bodyComposition = useMemo(() => {
-    if (
-      !vitals?.weight ||
-      !patient?.age ||
-      !patient?.gender ||
-      !vitals?.height ||
-      !vitals?.impedance
-    ) {
-      return null;
-    }
-
-    const sex = patient.gender.toLowerCase() === "male" ? 1 : 0;
-    const { weight, height, impedance } = vitals;
-    const { age } = patient;
-
-    const bmr = bodyCompositionUtils.calc_bmr(weight, height, sex, age);
-    const body_score = bodyCompositionUtils.calc_body_score(weight, height, sex, age, impedance);
-    const metabolic_age = bodyCompositionUtils.calc_metabolic_age(bmr, age, sex);
-
-    return {
-      weight,
-      height,
-      impedance,
-      sex,
-      age,
-      bmr: Math.round(bmr),
-      bodyScore: Math.round(body_score),
       metabolicAge: Math.round(metabolic_age),
     };
   }, [vitals, patient]);

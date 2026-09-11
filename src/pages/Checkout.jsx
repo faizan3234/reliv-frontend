@@ -31,7 +31,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   // Always get cart and state from navigation (from MedicineDispensing or PaymentGate)
-  const { cart: initialCart = [], totalPrice: initialTotal = 0, fromPaymentGate = false } = location.state || {};
+  const { cart: initialCart = [], fromPaymentGate = false } = location.state || {};
 
   // Cart state is always initialized from backend-driven data
   const [cart, setCart] = useState(initialCart);
@@ -58,7 +58,7 @@ export default function Checkout() {
   }, [cart]);
   const [kitsError, setKitsError] = useState(null);
   const [kitsLoading, setKitsLoading] = useState(false);
-  const [kitMargins, setKitMargins] = useState(() => {
+  const [kitMargins] = useState(() => {
     try {
       const saved = localStorage.getItem('reliv_kit_margins');
       return saved ? JSON.parse(saved) : {};

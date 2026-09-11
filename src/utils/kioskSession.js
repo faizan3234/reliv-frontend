@@ -2,6 +2,7 @@ const SESSION_KEY = "reliv_session_id";
 const TOKEN_KEY = "reliv_pairing_token";
 const INVALID_IDS = new Set(["current", "default", "RELIV-001"]);
 let pendingCreation = null;
+let sessionGeneration = 0;
 
 function stores() {
   return [localStorage, sessionStorage];
@@ -20,6 +21,8 @@ export function readKioskSession() {
 }
 
 export function clearKioskSession() {
+  sessionGeneration += 1;
+  pendingCreation = null;
   for (const storage of stores()) {
     storage.removeItem(SESSION_KEY);
     storage.removeItem(TOKEN_KEY);
@@ -69,8 +72,13 @@ export async function ensureKioskSession(base) {
   if (existing) return storeKioskSession(existing);
   if (!pendingCreation) {
     clearKioskSession();
-    pendingCreation = post(base, "/api/create-qr-session", {})
-      .then(storeKioskSession).finally(() => { pendingCreation = null; });
+    const generation = sessionGeneration;
+    const creation = post(base, "/api/create-qr-session", {})
+      .then((data) => {
+        if (generation !== sessionGeneration) throw new Error("The kiosk session was reset. Please retry.");
+        return storeKioskSession(data);
+      }).finally(() => { if (pendingCreation === creation) pendingCreation = null; });
+    pendingCreation = creation;
   }
   return pendingCreation;
 }
@@ -82,10 +90,15 @@ export async function saveKioskCustomer(base, patient) {
       pairingToken: session.pairingToken,
       customerData: patient,
     });
+    if (!isCurrentKioskSession(session)) throw new Error("The kiosk session was reset. Please retry.");
     return session;
   } catch (error) {
-    if ([403, 404, 410].includes(error.status)) clearKioskSession();
+    if ([403, 404, 410].includes(error.status) && isCurrentKioskSession(session)) clearKioskSession();
     throw error;
   }
 }
 
+export function isCurrentKioskSession(session) {
+  const current = readKioskSession();
+  return current?.sessionId === session.sessionId && current?.pairingToken === session.pairingToken;
+}

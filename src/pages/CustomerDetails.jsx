@@ -36,6 +36,11 @@ export default function CustomerDetails() {
   });
 
   const submittingRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -289,13 +294,14 @@ export default function CustomerDetails() {
     closeKeyboard();
     try {
       const { sessionId } = await saveKioskCustomer(API_BASE, patient);
+      if (!mountedRef.current) return;
       update({ sessionId, patient });
       navigate("/two-options", { state: { sessionId } });
     } catch (error) {
-      setSubmitError(error.message || "Could not save your details. Please retry.");
+      if (mountedRef.current) setSubmitError(error.message || "Could not save your details. Please retry.");
     } finally {
       submittingRef.current = false;
-      setIsSubmitting(false);
+      if (mountedRef.current) setIsSubmitting(false);
     }
   };
 

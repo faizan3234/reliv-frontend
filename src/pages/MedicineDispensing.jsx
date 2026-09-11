@@ -1,9 +1,8 @@
 // src/pages/MedicineDispensing.jsx
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars -- used by JSX member tags
 import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft, Heart, ShieldCheck, Trash2 } from "lucide-react";
-import { sanitizeError } from "../utils/errorSanitizer";
 import Logo from "../components/Logo";
 import PrimaryButton from "../components/PrimaryButton";
 import AuraBackground from "../components/AuraBackground";
@@ -13,11 +12,13 @@ import { formatINR } from "../utils/currency";
 
 // Helper to resolve canonical medicine image URL (local Pi file or external URL)
 // Universal kit ID resolver (ensures matching across SQLite kit_id and MongoDB id)
+// eslint-disable-next-line react-refresh/only-export-components
 export const getKitId = (kit) => {
   if (!kit) return "";
   return String(kit.kit_id ?? kit.id ?? kit._id ?? "");
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const getMedicineImageUrl = (kit) => {
   const imagePath = kit?.image_path || kit?.imageUrl || "";
 
@@ -38,6 +39,7 @@ export const getMedicineImageUrl = (kit) => {
 };
 
 // --- Quantity & Stock Helpers ---
+// eslint-disable-next-line react-refresh/only-export-components
 export const getAvailableQuantity = (kit) => {
   if (!kit) return 0;
   return Number(
@@ -224,10 +226,6 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMost
 // MAIN CUSTOMER DISPENSING COMPONENT
 // ═════════════════════════════════════════════════════════════════════════
 export default function MedicineDispensing() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { fromPaymentGate, cart: cartFromPrevPage } = location.state || {};
-
   const isMedicineDispensingEnabled =
     localStorage.getItem("reliv_medicine_dispensing_enabled") !== "false";
 
@@ -245,10 +243,16 @@ export default function MedicineDispensing() {
     );
   }
 
+  return <EnabledMedicineDispensing />;
+}
+
+function EnabledMedicineDispensing() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { fromPaymentGate, cart: cartFromPrevPage } = location.state || {};
   const [medicalKits, setMedicalKits] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState(cartFromPrevPage || []);
-  const [activeCategory, setActiveCategory] = useState("all");
 
   // Fetch Inventory from Kiosk Backend
   const fetchKits = useCallback(async () => {
@@ -277,7 +281,7 @@ export default function MedicineDispensing() {
       try {
         const saved = sessionStorage.getItem("reliv_cart");
         if (saved) setCart(JSON.parse(saved));
-      } catch {}
+      } catch { /* Ignore malformed stale cart data. */ }
     }
   }, [cartFromPrevPage]);
 

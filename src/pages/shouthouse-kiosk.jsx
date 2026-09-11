@@ -988,7 +988,7 @@ function BdayCard({ d }) {
 
 /* ─── STAR CARD ──────────────────────────────────────────── */
 function StarCard({ d }) {
-  const { h, m, s } = useTimer(d.days * 86400);
+  const { h, m } = useTimer(d.days * 86400);
   const handle = d.handle || d.name.toLowerCase().replace(/\s+/g,"_");
   return (
     <div className="star-card">

@@ -103,12 +103,11 @@ const Splash = () => {
           headers: { "Content-Type": "application/json" },
         }).catch(() => {});
       }
-    } catch (e) {
+    } catch {
       // Ignore errors silently
     }
   }, []);
 
-  const idleInterval = useRef(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const lbCycleRef = useRef(null);
   const lbHideTimer = useRef(null);

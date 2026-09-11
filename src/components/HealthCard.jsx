@@ -3,7 +3,7 @@
 import React, { forwardRef } from "react";
 
 const HealthCard = forwardRef(function HealthCard(
-  { name, score, metabolicAge, age, gender, date },
+  { name, score, metabolicAge, age, date },
   ref
 ) {
   const firstName = name ? name.split(" ")[0] : "Champion";
@@ -18,8 +18,6 @@ const HealthCard = forwardRef(function HealthCard(
       : score >= 45
       ? "Building"
       : "Rising";
-  const isMale = gender?.toLowerCase() === "male";
-
   // Circumference for the score ring (radius 90, so C = 2πr ≈ 565.49)
   const C = 2 * Math.PI * 90;
   const offset = C * (1 - (score ?? 0) / 100);

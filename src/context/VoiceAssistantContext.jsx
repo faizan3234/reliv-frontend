@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSpeech } from './SpeechContext';
 import { useHealth } from './HealthContext';
@@ -6,17 +6,21 @@ import { looksLikeRelivEcho, normalizeVoiceText } from '../voice/voicePageProfil
 
 const VoiceAssistantContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useVoiceAssistant = () => useContext(VoiceAssistantContext);
 
 export const VoiceAssistantProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [micDevice, setMicDevice] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false);
   const [lastTranscript, setLastTranscript] = useState(null);
   const [listeningPaused, setListeningPaused] = useState(false);
 
   const ws = useRef(null);
   const reconnectTimeout = useRef(null);
+  const connectionTimeout = useRef(null);
   const idleTimer = useRef(null);
   const idleSecondsRef = useRef(0);
   const location = useLocation();
@@ -36,7 +40,29 @@ export const VoiceAssistantProvider = ({ children }) => {
   }, [location.pathname]);
 
 
-  const isRelivSpeakingRef = useRef(false);
+  const isRelivSpeakingRef = useRef(speakingRef.current);
+  const lastContextPayloadRef = useRef({ type: 'SET_CONTEXT', page: '/' });
+
+  const sendToBackend = useCallback((payload) => {
+    if (payload.type === 'SET_CONTEXT') {
+      const previous = lastContextPayloadRef.current;
+      lastContextPayloadRef.current = {
+        type: 'SET_CONTEXT', expecting: '', vocabulary_hints: [],
+        ...(previous.page === payload.page ? previous : {}), ...payload,
+      };
+      payload = lastContextPayloadRef.current;
+    }
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify(payload));
+    }
+  }, []);
+
+  const setRelivSpeaking = useCallback((active) => {
+    sendToBackend({ type: 'SET_RELIV_SPEAKING', active });
+  }, [sendToBackend]);
+
+  // Cancel the departed page's prompt before the next page's effects run.
+  useLayoutEffect(() => () => { stop(); }, [location.pathname, stop]);
   useEffect(() => {
     const rememberSpeech = (event) => {
       const text = normalizeVoiceText(event.detail);
@@ -78,7 +104,7 @@ export const VoiceAssistantProvider = ({ children }) => {
     return () => {
       window.removeEventListener('reliv_speaking', handleSpeaking);
     };
-  }, []);
+  }, [setRelivSpeaking]);
 
   const reconnectAttemptRef = useRef(0);
 
@@ -120,7 +146,21 @@ export const VoiceAssistantProvider = ({ children }) => {
     const currentGeneration = ++reconnectGenerationRef.current;
     manualCloseRef.current = false;
 
-    const socket = new WebSocket(import.meta.env.VITE_VOICE_WS_URL || 'ws://127.0.0.1:5100');
+    let socket;
+    const scheduleReconnect = (busy = false) => {
+      if (manualCloseRef.current) return;
+      const delays = [100, 250, 500, 1000, 2000];
+      const delay = busy ? 2000 : delays[Math.min(reconnectAttemptRef.current++, delays.length - 1)];
+      reconnectTimeout.current = setTimeout(connectWebSocket, delay);
+    };
+    try {
+      socket = new WebSocket(import.meta.env.VITE_VOICE_WS_URL || 'ws://127.0.0.1:5100');
+    } catch (error) {
+      console.warn('[VoiceAssistant] Unable to connect:', error.message);
+      scheduleReconnect();
+      return;
+    }
+    let controllerBusy = false;
     ws.current = socket;
 
     socket.onopen = () => {
@@ -129,10 +169,7 @@ export const VoiceAssistantProvider = ({ children }) => {
         return;
       }
       
-      reconnectAttemptRef.current = 0; // Reset exponential backoff on success
-      
       console.log(`[VoiceAssistant] Connected to backend as ${voiceClientIdRef.current}`);
-      setIsConnected(true);
 
       // Explicit client identity
       socket.send(JSON.stringify({
@@ -148,7 +185,11 @@ export const VoiceAssistantProvider = ({ children }) => {
       if (currentGeneration !== reconnectGenerationRef.current) return;
       try {
         const msg = JSON.parse(event.data);
+        if (!msg || typeof msg !== 'object') return;
         if (msg.type === 'CONTROLLER_ACTIVE') {
+           clearTimeout(connectionTimeout.current);
+           reconnectAttemptRef.current = 0;
+           setIsConnected(true);
            // Backend acknowledged we are the active controller
            // Now we can safely send context
            startHeartbeat();
@@ -156,6 +197,9 @@ export const VoiceAssistantProvider = ({ children }) => {
            socket.send(JSON.stringify({ type: 'SET_LANGUAGE', language: languageRef.current }));
            socket.send(JSON.stringify(lastContextPayloadRef.current));
            socket.send(JSON.stringify({ type: listeningPausedRef.current ? 'PAUSE_LISTENING' : 'RESUME_LISTENING' }));
+        } else if (msg.type === 'CONTROLLER_BUSY') {
+           controllerBusy = true;
+           socket.close();
         } else {
            backendMessageHandlerRef.current?.(msg);
         }
@@ -169,6 +213,11 @@ export const VoiceAssistantProvider = ({ children }) => {
       console.log('[VoiceAssistant] Disconnected from backend');
       setIsConnected(false);
       setMicDevice(null);
+      processingRef.current = false;
+      setIsProcessing(false);
+      setIsSpeaking(isRelivSpeakingRef.current);
+      clearTimeout(connectionTimeout.current);
+      socket.onopen = socket.onmessage = socket.onclose = socket.onerror = null;
       ws.current = null;
       
       if (heartbeatRef.current) {
@@ -176,16 +225,15 @@ export const VoiceAssistantProvider = ({ children }) => {
         heartbeatRef.current = null;
       }
 
-      if (!manualCloseRef.current) {
-        // Fast exponential recovery
-        const delays = [100, 250, 500, 1000, 2000];
-        const index = Math.min(reconnectAttemptRef.current, delays.length - 1);
-        const delay = delays[index];
-        reconnectAttemptRef.current += 1;
-        
-        reconnectTimeout.current = setTimeout(connectWebSocket, delay);
-      }
+      scheduleReconnect(controllerBusy);
     };
+
+    // An open TCP connection without a controller acknowledgement is unusable.
+    connectionTimeout.current = setTimeout(() => {
+      if (currentGeneration !== reconnectGenerationRef.current) return;
+      socket.onclose?.();
+      socket.close();
+    }, 5000);
 
     socket.onerror = (err) => {
       console.error('[VoiceAssistant] WebSocket error', err);
@@ -200,7 +248,7 @@ export const VoiceAssistantProvider = ({ children }) => {
 
     const startController = async () => {
       if (navigator.locks) {
-        navigator.locks.request('reliv-kiosk-voice-controller', { mode: 'exclusive' }, (lock) => {
+        navigator.locks.request('reliv-kiosk-voice-controller', { mode: 'exclusive' }, () => {
           return new Promise((resolve) => {
             if (!active) {
               resolve();
@@ -209,6 +257,9 @@ export const VoiceAssistantProvider = ({ children }) => {
             lockResolver = resolve;
             connectWebSocket();
           });
+        }).catch((error) => {
+          console.warn('[VoiceAssistant] Browser lock unavailable:', error.message);
+          if (active) connectWebSocket();
         });
       } else {
         // Fallback for extremely old Chromium, but we will still run
@@ -229,6 +280,7 @@ export const VoiceAssistantProvider = ({ children }) => {
         socket.close();
       }
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      clearTimeout(connectionTimeout.current);
       if (reconnectTimeout.current) {
         clearTimeout(reconnectTimeout.current);
       }
@@ -250,6 +302,13 @@ export const VoiceAssistantProvider = ({ children }) => {
         break;
       case 'connected':
         setMicDevice(msg.device_name);
+        processingRef.current = msg.processing === true;
+        setIsProcessing(processingRef.current);
+        break;
+      case 'processing':
+        processingRef.current = msg.active === true;
+        setIsProcessing(processingRef.current);
+        idleSecondsRef.current = 0;
         break;
       case 'mic_status':
         if (!msg.connected) {
@@ -271,7 +330,7 @@ export const VoiceAssistantProvider = ({ children }) => {
         }
         break;
       case 'transcript':
-        if (msg.is_final !== false && msg.text && msg.text.trim().length > 0 &&
+        if (msg.is_final !== false && typeof msg.text === 'string' && msg.text.trim().length > 0 &&
             !looksLikeRelivEcho(msg.text, recentRelivSpeechRef.current)) {
           setLastTranscript({
             text: msg.text,
@@ -327,7 +386,7 @@ export const VoiceAssistantProvider = ({ children }) => {
     if (listeningPausedRef.current) return;
 
     idleTimer.current = setInterval(() => {
-      if (isRelivSpeakingRef.current || listeningPausedRef.current) return;
+      if (isRelivSpeakingRef.current || listeningPausedRef.current || processingRef.current) return;
       idleSecondsRef.current += 1;
       const activeHook = pageHooks.current.get(currentPathRef.current);
       if (activeHook && activeHook.onIdle) {
@@ -347,36 +406,16 @@ export const VoiceAssistantProvider = ({ children }) => {
     return () => {
       if (idleTimer.current) clearInterval(idleTimer.current);
     };
-  }, [location.pathname, resetIdleTimer]);
-
-  const lastContextPayloadRef = useRef({ type: 'SET_CONTEXT', page: '/' });
-
-  // Send a message to the backend
-  const sendToBackend = useCallback((payload) => {
-    if (payload.type === 'SET_CONTEXT') {
-      const previous = lastContextPayloadRef.current;
-      lastContextPayloadRef.current = {
-        type: 'SET_CONTEXT', expecting: '', vocabulary_hints: [],
-        ...(previous.page === payload.page ? previous : {}), ...payload,
-      };
-      payload = lastContextPayloadRef.current;
-    }
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify(payload));
-    }
-  }, []);
+  }, [location.pathname, resetIdleTimer, sendToBackend]);
 
   useEffect(() => {
     sendToBackend({ type: 'SET_LANGUAGE', language: languageRef.current });
   }, [healthData?.language, sendToBackend]);
 
-  const setRelivSpeaking = (active) => {
-    sendToBackend({ type: 'SET_RELIV_SPEAKING', active });
-  };
-
   const pauseListening = () => {
     listeningPausedRef.current = true;
     setListeningPaused(true);
+    setIsSpeaking(isRelivSpeakingRef.current);
     sendToBackend({ type: 'PAUSE_LISTENING' });
     if (idleTimer.current) clearInterval(idleTimer.current);
   };
@@ -401,6 +440,7 @@ export const VoiceAssistantProvider = ({ children }) => {
     isConnected,
     micDevice,
     isSpeaking,
+    isProcessing,
     lastTranscript,
     listeningPaused,
     setRelivSpeaking,

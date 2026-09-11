@@ -41,6 +41,7 @@ if (typeof window !== "undefined") {
 }
 
 // Kiosk Touch Scroll Helper - prevents text selection on touch drag
+// eslint-disable-next-line react-refresh/only-export-components
 function KioskTouchHelper() {
   const { pathname, key } = useLocation();
   const { stop } = useSpeech();
@@ -64,19 +65,6 @@ function KioskTouchHelper() {
     const preventContextMenu = (e) => {
       e.preventDefault();
       return false;
-    };
-
-    // Prevent text selection on touch start
-    const preventTextSelection = (e) => {
-      // Allow touch on inputs, textareas, and buttons
-      const tag = e.target.tagName.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'button' || tag === 'select') {
-        return;
-      }
-      // Prevent default only if it's causing selection issues
-      if (window.getSelection) {
-        window.getSelection().removeAllRanges();
-      }
     };
 
     // Prevent keyboard shortcuts (Ctrl+C, Ctrl+A, etc.)
@@ -126,7 +114,6 @@ function KioskTouchHelper() {
     };
 
     // Prevent long-press context menu on touch
-    let longPressTimer;
     const handleTouchStart = (e) => {
       const tag = e.target.tagName.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'button' || tag === 'select') {

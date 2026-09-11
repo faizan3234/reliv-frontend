@@ -1,3 +1,4 @@
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
@@ -807,7 +808,7 @@ export default function Report5() {
             history 
           }),
         });
-      } catch (e) {
+      } catch {
         // Non-blocking local compile check
       }
 
@@ -839,6 +840,7 @@ export default function Report5() {
       Blood Pressure: ${getBPStatus().status}. ${getBPStatus().text}
       Oxygen Level: ${getOxygenStatus().status}. ${getOxygenStatus().text}
       Pulse: ${getPulseStatus().status}. ${getPulseStatus().text}
+      Temperature: ${getTemperatureStatus().status}. ${getTemperatureStatus().text}
       Body Weight: ${vitals.weight || "Not recorded"} kilograms.
       Insights: ${insights.join(". ")}
     `;
@@ -854,11 +856,6 @@ export default function Report5() {
       confettiRef.current = true;
     }
   }, [scanCount]);
-
-  const bpStatus = getBPStatus();
-  const oxygenStatus = getOxygenStatus();
-  const pulseStatus = getPulseStatus();
-  const temperatureStatus = getTemperatureStatus();
 
   // Check for missing health data after refresh
   const healthDataMissing = !data || !data.patient?.email || !data.vitals?.systolic;
