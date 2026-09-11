@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Logo from "../components/Logo";
@@ -9,6 +9,8 @@ import { Activity, Pill, ArrowLeft } from "lucide-react";
 import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { dict } from "../config/TwoOptionsDict";
+import { parseServiceChoice } from "../voice/voicePageProfiles";
+import { readKioskSession, clearKioskSession } from "../utils/kioskSession";
 
 export default function TwoOptions() {
   const navigate = useNavigate();
@@ -17,12 +19,13 @@ export default function TwoOptions() {
   const selectedLang = healthData?.language || 'en';
   
   usePageSpeech("two-options");
-  const { speak, speakText } = useSpeech();
+  const { speakText } = useSpeech();
   
   const [slideUp, setSlideUp] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [voiceExpecting, setVoiceExpecting] = useState('selection'); // 'selection' or 'confirm'
+  const submittingRef = useRef(false);
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => setSlideUp(true), 20);
@@ -36,24 +39,25 @@ export default function TwoOptions() {
   }, [selectedLang]);
 
   const selectServiceAndContinue = async (serviceType, destination) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    setSubmitError("");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     try {
-      setIsSubmitting(true);
-      const sessionId =
-        localStorage.getItem("reliv_session_id") ||
-        sessionStorage.getItem("reliv_session_id");
-
-      const pairingToken =
-        localStorage.getItem("reliv_pairing_token");
-
-      if (!sessionId || !pairingToken) {
-        console.error("Missing Reliv session or pairing token");
+      const session = readKioskSession();
+      if (!session) {
+        navigate("/customer-details", { replace: true });
         return;
       }
+      const { sessionId, pairingToken } = session;
 
       const response = await fetch(
         `${API_BASE}/api/sessions/${encodeURIComponent(sessionId)}/service`,
         {
           method: "POST",
+          signal: controller.signal,
           headers: {
             "Content-Type": "application/json",
           },
@@ -66,15 +70,23 @@ export default function TwoOptions() {
 
       const result = await response.json();
 
+      if ([403, 404, 410].includes(response.status)) {
+        clearKioskSession();
+        navigate("/customer-details", { replace: true });
+        return;
+      }
       if (!response.ok || !result?.ok) {
         throw new Error(
-          result?.message || "Unable to select service"
+          result?.error || result?.message || "Unable to select service"
         );
       }
+      speakText(t(serviceType === 'MEDICINE' ? 'proceedMedicine' : 'proceedHealth'));
       navigate(destination);
     } catch (error) {
-      console.error("[Reliv] Service selection failed:", error);
+      setSubmitError(error.name === "AbortError" ? "The kiosk is not responding. Please retry." : error.message);
     } finally {
+      clearTimeout(timeout);
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -94,29 +106,25 @@ export default function TwoOptions() {
   };
 
   useVoicePage({
-    expecting: voiceExpecting,
+    expecting: "service",
     vocabularyHints: ['health', 'checkup', 'medicine', 'dispensing', 'dawai', 'check', 'haan', 'yes', 'no', 'nahi'],
     onHelp: () => {
        speakText(t('idle12'));
     },
     onTranscript: (lowerText) => {
-        if (/(health|checkup|body|হেলথ|চেকআপ|স্বাস্থ্য|শরীর|हेल्थ|चेकअप|स्वास्थ्य|शरीर)/.test(lowerText)) {
-          setSelectedOption('health-checkup');
-          speakText(t("proceedHealth"));
-          setTimeout(() => {
-            selectServiceAndContinue("HEALTH_CHECKUP", "/body-composition");
-          }, 800);
-        } else if (/(medicine|dispenser|dawai|মেডিসিন|ওষুধ|দাওয়াই|ডিস্পেন্সার|मेडिसिन|दवाई|दवा|डिस्पेंसर)/.test(lowerText)) {
-          setSelectedOption('medicine-dispensing');
-          speakText(t("proceedMedicine"));
-          setTimeout(() => {
-            selectServiceAndContinue("MEDICINE", "/medicine-dispensing");
-          }, 800);
-        }
+      if (submittingRef.current) return;
+      const service = parseServiceChoice(lowerText);
+      if (service === "HEALTH_CHECKUP") {
+        setSelectedOption("health-checkup");
+        selectServiceAndContinue(service, "/body-composition");
+      } else if (service === "MEDICINE") {
+        setSelectedOption("medicine-dispensing");
+        selectServiceAndContinue(service, "/medicine-dispensing");
+      }
     },
     onIdle: (elapsedSeconds) => {
       if (elapsedSeconds === 4) {
-         if (voiceExpecting === 'selection') {
+         if (!submittingRef.current) {
              speakText(t('idle12'));
          }
       }
@@ -160,8 +168,8 @@ export default function TwoOptions() {
           {/* Option 1: Health Checkup */}
           <div
             onClick={() => {
+                if (submittingRef.current) return;
                 setSelectedOption("health-checkup");
-                speakText(t("proceedHealth"));
                 selectServiceAndContinue("HEALTH_CHECKUP", "/body-composition");
             }}
             className={`p-5 rounded-2xl border-2 flex items-center gap-4 cursor-pointer transition-all active:scale-98 ${
@@ -204,7 +212,6 @@ export default function TwoOptions() {
           <div
             onClick={() => {
                 setSelectedOption("medicine-dispensing");
-                speakText(t("proceedMedicine"));
                 selectServiceAndContinue("MEDICINE", "/medicine-dispensing");
             }}
             className={`p-5 rounded-2xl border-2 flex items-center gap-4 cursor-pointer transition-all active:scale-98 ${
@@ -244,6 +251,7 @@ export default function TwoOptions() {
           </div>
         </div>
 
+        {submitError && <p role="alert" className="mb-4 text-sm text-red-700">{submitError}</p>}
         {/* Proceed button */}
         <PrimaryButton
           className="w-full justify-center py-4 text-lg font-bold rounded-2xl"

@@ -1,84 +1,56 @@
-const normalizeVoiceText = (value = '') =>
-  value
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/[.,!?;:"'()[\]{}]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+import assert from "node:assert/strict";
+import {
+  parseConfirmation, parseServiceChoice, parseSpokenAge, parseSpokenGender, looksLikeRelivEcho,
+} from "./src/voice/voicePageProfiles.js";
 
-const positiveConfirmations = new Set([
-  'yes', 'yeah', 'yep', 'correct', 'right', "that's right", 'haan', 'han', 'ha', 'haan ji', 'sahi', 'sahi hai', 'theek', 'thik', 'hmm yes', 'हां', 'हाँ', 'सही', 'सही है', 'ठीक', 'হ্যাঁ', 'ঠিক', 'ঠিক আছে'
-]);
-
-const negativeConfirmations = new Set([
-  'no', 'nope', 'wrong', 'incorrect', 'not correct', "that's wrong", 'it is wrong', 'change', 'change it', 'edit', 'edit it', 'nahi', 'nahin', 'na', 'galat', 'galat hai', 'ye galat hai', 'sahi nahi', 'sahi nahin', 'theek nahi', 'thik nahi', 'wrong hai', 'change karo', 'dobara', 'नहीं', 'गलत', 'गलत है', 'सही नहीं', 'ठीक नहीं', 'না', 'ভুল', 'ভুল আছে', 'ঠিক না', 'সঠিক না', 'naa', 'bhul', 'bhool', 'vul', 'vul ache', 'thik na', 'sothik na'
-]);
-
-const containsPhrase = (text, phrases) => {
-  const arr = Array.from(phrases);
-  return arr.some(p =>
-    text === p ||
-    text.startsWith(`${p} `) ||
-    text.endsWith(` ${p}`) ||
-    text.includes(` ${p} `) ||
-    (/[\u0900-\u097F\u0980-\u09FF]/.test(p) && text.includes(p))
-  );
-};
-
-const checkIntent = (transcript) => {
-  const normalizedText = normalizeVoiceText(transcript);
-  
-  if (negativeConfirmations.has(normalizedText) || containsPhrase(normalizedText, negativeConfirmations)) {
-      return 'NEGATIVE';
-  } else if (positiveConfirmations.has(normalizedText) || containsPhrase(normalizedText, positiveConfirmations)) {
-      return 'POSITIVE';
+let passed = 0;
+function check(parser, cases) {
+  for (const [input, expected] of cases) {
+    assert.equal(parser(input), expected, `${parser.name}(${JSON.stringify(input)})`);
+    passed += 1;
   }
-  return 'UNKNOWN';
-};
-
-const tests = [
-  // Negative
-  "galat",
-  "galat hai",
-  "ye galat hai",
-  "wrong",
-  "no",
-  "nahi",
-  "गलत",
-  "गलत है",
-  "नहीं",
-  "ভুল",
-  "না",
-  "ঠিক না",
-  // Positive
-  "yes",
-  "haan",
-  "sahi hai",
-  "हाँ",
-  "হ্যাঁ",
-  "ঠিক আছে",
-  // Edge cases
-  "No, that's wrong",
-  "Naam galat hai",
-  "Ye naam galat hai",
-  "না এটা ভুল",
-  "এটা ঠিক না"
-];
-
-console.log("=== RUNNING UNICODE INTENT TESTS ===");
-let allPassed = true;
-tests.forEach(t => {
-  const intent = checkIntent(t);
-  console.log(`"${t}" -> ${intent}`);
-  if (intent === 'UNKNOWN') {
-    allPassed = false;
-    console.error(`FAILED: ${t} should not be UNKNOWN`);
-  }
-});
-
-if (allPassed) {
-  console.log("\n✅ ALL TESTS PASSED");
-} else {
-  console.log("\n❌ SOME TESTS FAILED");
-  process.exit(1);
 }
+check(parseConfirmation, [
+  ...["galat", "galat hai", "ye galat hai", "wrong", "no", "nahi", "गलत", "गलत है",
+    "नहीं", "ভুল", "না", "ঠিক না", "No, that's wrong", "Naam galat hai", "Ye naam galat hai",
+    "না এটা ভুল", "এটা ঠিক না", "not correct", "sahi nahi"].map((s) => [s, "negative"]),
+  ...["yes", "haan", "sahi hai", "हाँ", "হ্যাঁ", "ঠিক আছে"].map((s) => [s, "positive"]),
+  ...["Faizan", "Naina", "normal", "yesterday", ""].map((s) => [s, "unknown"]),
+]);
+check(parseSpokenGender, [
+  ...["female", "femile", "Femile !", "femail", "woman", "girl", "mahila", "mohila",
+    "মহিলা", "মেয়ে", "महिला", "I am a woman"].map((s) => [s, "female"]),
+  ...["male", "mail", "man", "boy", "ladka", "chele", "purush", "পুরুষ", "लड़का"].map((s) => [s, "male"]),
+  ...["other", "non-binary", "অন্যান্য", "अन्य"].map((s) => [s, "other"]),
+  ...["male or female", "female or other", "email", "human", ""].map((s) => [s, null]),
+]);
+check(parseSpokenAge, [
+  ...["40", "40 years", "umar 40 saal", "umr challis saal", "Challicell", "चालीस साल",
+    "চল্লিশ বছর", "৪০", "४०"].map((s) => [s, 40]),
+  ...["paitalish saal", "forty five", "forty-five", "পঁয়তাল্লিশ বছর", "पैंतालीस"].map((s) => [s, 45]),
+  ["pandrah", 15], ["18 years", 18], ["eighteen years", 18],
+  ["biranobboi", 92], ["বিরানব্বই বছর", 92], ["ninety two", 92],
+  ["twenty one", 21], ["fifty nine", 59], ["sixty seven", 67],
+  ["one hundred", 100], ["one hundred and twenty", 120], ["একশো", 100],
+  ...["0", "121", "-5", "18.5", "18,5", "one hundred twenty one", "40 or 45",
+    "forty or fifty", "nothing", "someone", ""].map((s) => [s, null]),
+]);
+check(parseServiceChoice, [
+  ...["health checkup", "checkup karna hai", "checkup korbo", "স্বাস্থ্য পরীক্ষা",
+    "हेल्थ चेकअप", "जाँच"].map((s) => [s, "HEALTH_CHECKUP"]),
+  ...["medicine dispensing", "dawai chahiye", "oshudh nebo", "ওষুধ", "दवा"].map((s) => [s, "MEDICINE"]),
+  ...["health checkup or medicine dispensing", "What would you like, health checkup or medicine?",
+    "not medicine", "medicine nahi", "healthcare", "", "unknown"].map((s) => [s, null]),
+]);
+const recent = [
+  { text: "Proceeding to medicine dispensing.", at: 1000 },
+  { text: "Is the selected gender female or male?", at: 1000 },
+  { text: "Health checkup or medicine dispensing?", at: 1000 },
+];
+assert.equal(looksLikeRelivEcho("Proceeding to medicine dispensing", recent, 2000), true);
+assert.equal(looksLikeRelivEcho("female", recent, 2000), false);
+assert.equal(looksLikeRelivEcho("medicine dispensing", recent, 2000), false);
+assert.equal(looksLikeRelivEcho("health checkup", recent, 2000), false);
+assert.equal(looksLikeRelivEcho("yes", recent, 2000), false);
+assert.equal(looksLikeRelivEcho("Proceeding to medicine dispensing", recent, 17000), false);
+console.log(`${passed + 6} intent and echo assertions passed.`);

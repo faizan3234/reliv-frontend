@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { API_BASE } from "../config/api";
 
 export const MOCK_TEST_REPORT = {
@@ -109,9 +109,6 @@ export function HealthProvider({ children }) {
   useEffect(() => {
     try {
       localStorage.setItem("healthData", JSON.stringify(data));
-      if (data.sessionId) {
-        localStorage.setItem("reliv_session_id", data.sessionId);
-      }
     } catch (e) {}
   }, [data]);
 
@@ -135,7 +132,7 @@ export function HealthProvider({ children }) {
       .catch(() => {});
   }, [data.patient?.email]);
 
-  const update = (partial) => {
+  const update = useCallback((partial) => {
     setData((prev) => {
       const next = {
         ...prev,
@@ -146,13 +143,13 @@ export function HealthProvider({ children }) {
       };
       try {
         localStorage.setItem("healthData", JSON.stringify(next));
-        if (next.sessionId) {
+        if (partial?.sessionId) {
           localStorage.setItem("reliv_session_id", next.sessionId);
         }
       } catch (e) {}
       return next;
     });
-  };
+  }, []);
 
   const loadMockReportData = () => {
     setData(MOCK_TEST_REPORT);
@@ -168,6 +165,8 @@ export function HealthProvider({ children }) {
       localStorage.removeItem("healthData");
       localStorage.removeItem("reliv_session_id");
       sessionStorage.removeItem("reliv_session_id");
+      localStorage.removeItem("reliv_pairing_token");
+      sessionStorage.removeItem("reliv_pairing_token");
     } catch (e) {}
     setData(defaultData);
   };

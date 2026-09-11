@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useRef, useCallb
 import { useLocation } from 'react-router-dom';
 import { useSpeech } from './SpeechContext';
 import { useHealth } from './HealthContext';
+import { looksLikeRelivEcho, normalizeVoiceText } from '../voice/voicePageProfiles';
 
 const VoiceAssistantContext = createContext(null);
 
@@ -23,6 +24,12 @@ export const VoiceAssistantProvider = ({ children }) => {
   const pageHooks = useRef(new Map());
   const { stop, speakingRef } = useSpeech();
   const { data: healthData } = useHealth();
+  const languageRef = useRef(healthData?.language || 'en');
+  languageRef.current = healthData?.language || 'en';
+  const listeningPausedRef = useRef(false);
+  const backendMessageHandlerRef = useRef(null);
+  const recentRelivSpeechRef = useRef([]);
+  const lastPongRef = useRef(Date.now());
 
   useEffect(() => {
     currentPathRef.current = location.pathname;
@@ -30,6 +37,14 @@ export const VoiceAssistantProvider = ({ children }) => {
 
 
   const isRelivSpeakingRef = useRef(false);
+  useEffect(() => {
+    const rememberSpeech = (event) => {
+      const text = normalizeVoiceText(event.detail);
+      if (text) recentRelivSpeechRef.current = [{ text, at: Date.now() }, ...recentRelivSpeechRef.current].slice(0, 4);
+    };
+    window.addEventListener('reliv_spoken_text', rememberSpeech);
+    return () => window.removeEventListener('reliv_spoken_text', rememberSpeech);
+  }, []);
 
   // crypto.randomUUID() is undefined on non-HTTPS network IPs, so we must provide a fallback
   const generateId = () => {
@@ -53,11 +68,11 @@ export const VoiceAssistantProvider = ({ children }) => {
   // Listen for AEC signals from SpeechContext
   useEffect(() => {
     const handleSpeaking = (e) => {
-      const active = e.detail;
+      const active = Boolean(e.detail);
       setIsSpeaking(active); // UI requirement from user
       isRelivSpeakingRef.current = active;
       setRelivSpeaking(active);
-      // Removed frontend acoustic tail. Backend fully owns speaker suppression.
+      idleSecondsRef.current = 0;
     };
     window.addEventListener('reliv_speaking', handleSpeaking);
     return () => {
@@ -73,8 +88,13 @@ export const VoiceAssistantProvider = ({ children }) => {
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);
     }
+    lastPongRef.current = Date.now();
     heartbeatRef.current = setInterval(() => {
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        if (Date.now() - lastPongRef.current > 25000) {
+          ws.current.close();
+          return;
+        }
         ws.current.send(JSON.stringify({ type: "PING", ts: Date.now() }));
       }
     }, 10000);
@@ -100,7 +120,7 @@ export const VoiceAssistantProvider = ({ children }) => {
     const currentGeneration = ++reconnectGenerationRef.current;
     manualCloseRef.current = false;
 
-    const socket = new WebSocket('ws://127.0.0.1:5100');
+    const socket = new WebSocket(import.meta.env.VITE_VOICE_WS_URL || 'ws://127.0.0.1:5100');
     ws.current = socket;
 
     socket.onopen = () => {
@@ -121,12 +141,7 @@ export const VoiceAssistantProvider = ({ children }) => {
         role: "kiosk-controller"
       }));
 
-      // Only send RESUME_LISTENING for startup/recovery
-      setListeningPaused(false);
-      socket.send(JSON.stringify({ type: 'RESUME_LISTENING' }));
-      
-      // Resend the complete context (page, expecting, vocabulary_hints)
-      socket.send(JSON.stringify(lastContextPayloadRef.current));
+
     };
 
     socket.onmessage = (event) => {
@@ -137,10 +152,12 @@ export const VoiceAssistantProvider = ({ children }) => {
            // Backend acknowledged we are the active controller
            // Now we can safely send context
            startHeartbeat();
-           socket.send(JSON.stringify({ type: 'SET_CONTEXT', page: currentPathRef.current }));
            socket.send(JSON.stringify({ type: 'SET_RELIV_SPEAKING', active: isRelivSpeakingRef.current }));
+           socket.send(JSON.stringify({ type: 'SET_LANGUAGE', language: languageRef.current }));
+           socket.send(JSON.stringify(lastContextPayloadRef.current));
+           socket.send(JSON.stringify({ type: listeningPausedRef.current ? 'PAUSE_LISTENING' : 'RESUME_LISTENING' }));
         } else {
-           handleBackendMessage(msg);
+           backendMessageHandlerRef.current?.(msg);
         }
       } catch (e) {
         console.error('[VoiceAssistant] Failed to parse message', e);
@@ -152,6 +169,7 @@ export const VoiceAssistantProvider = ({ children }) => {
       console.log('[VoiceAssistant] Disconnected from backend');
       setIsConnected(false);
       setMicDevice(null);
+      ws.current = null;
       
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
@@ -203,9 +221,14 @@ export const VoiceAssistantProvider = ({ children }) => {
     return () => {
       active = false;
       manualCloseRef.current = true;
+      reconnectGenerationRef.current += 1;
       if (ws.current) {
-        ws.current.close();
+        const socket = ws.current;
+        ws.current = null;
+        socket.onopen = socket.onmessage = socket.onclose = socket.onerror = null;
+        socket.close();
       }
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (reconnectTimeout.current) {
         clearTimeout(reconnectTimeout.current);
       }
@@ -217,11 +240,14 @@ export const VoiceAssistantProvider = ({ children }) => {
   const handleBackendMessage = (msg) => {
     // NO SELF-TRANSCRIPTION
     // If RELIV is speaking (or in the 350ms acoustic tail), entirely ignore VAD and transcript events
-    if (isRelivSpeakingRef.current && (msg.type === 'vad' || msg.type === 'transcript')) {
+    if ((isRelivSpeakingRef.current || listeningPausedRef.current) && (msg.type === 'vad' || msg.type === 'transcript')) {
        return; 
     }
 
     switch (msg.type) {
+      case 'pong':
+        lastPongRef.current = Date.now();
+        break;
       case 'connected':
         setMicDevice(msg.device_name);
         break;
@@ -245,7 +271,8 @@ export const VoiceAssistantProvider = ({ children }) => {
         }
         break;
       case 'transcript':
-        if (msg.text && msg.text.trim().length > 0) {
+        if (msg.is_final !== false && msg.text && msg.text.trim().length > 0 &&
+            !looksLikeRelivEcho(msg.text, recentRelivSpeechRef.current)) {
           setLastTranscript({
             text: msg.text,
             language: msg.language,
@@ -265,6 +292,8 @@ export const VoiceAssistantProvider = ({ children }) => {
         break;
     }
   };
+
+  backendMessageHandlerRef.current = handleBackendMessage;
 
   const processTranscript = (text) => {
     resetIdleTimer();
@@ -295,16 +324,17 @@ export const VoiceAssistantProvider = ({ children }) => {
     if (idleTimer.current) clearInterval(idleTimer.current);
     idleSecondsRef.current = 0;
 
-    if (listeningPaused) return;
+    if (listeningPausedRef.current) return;
 
     idleTimer.current = setInterval(() => {
+      if (isRelivSpeakingRef.current || listeningPausedRef.current) return;
       idleSecondsRef.current += 1;
       const activeHook = pageHooks.current.get(currentPathRef.current);
       if (activeHook && activeHook.onIdle) {
         activeHook.onIdle(idleSecondsRef.current);
       }
     }, 1000); // Check every second
-  }, [listeningPaused]);
+  }, []);
 
   // Reset timer on page change
   useEffect(() => {
@@ -324,37 +354,48 @@ export const VoiceAssistantProvider = ({ children }) => {
   // Send a message to the backend
   const sendToBackend = useCallback((payload) => {
     if (payload.type === 'SET_CONTEXT') {
-      lastContextPayloadRef.current = payload;
+      const previous = lastContextPayloadRef.current;
+      lastContextPayloadRef.current = {
+        type: 'SET_CONTEXT', expecting: '', vocabulary_hints: [],
+        ...(previous.page === payload.page ? previous : {}), ...payload,
+      };
+      payload = lastContextPayloadRef.current;
     }
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify(payload));
     }
   }, []);
 
+  useEffect(() => {
+    sendToBackend({ type: 'SET_LANGUAGE', language: languageRef.current });
+  }, [healthData?.language, sendToBackend]);
+
   const setRelivSpeaking = (active) => {
     sendToBackend({ type: 'SET_RELIV_SPEAKING', active });
   };
 
   const pauseListening = () => {
+    listeningPausedRef.current = true;
     setListeningPaused(true);
     sendToBackend({ type: 'PAUSE_LISTENING' });
     if (idleTimer.current) clearInterval(idleTimer.current);
   };
 
   const resumeListening = () => {
+    listeningPausedRef.current = false;
     setListeningPaused(false);
     sendToBackend({ type: 'RESUME_LISTENING' });
     resetIdleTimer();
   };
 
   // Allow pages to register themselves
-  const registerPageHook = (path, hook) => {
+  const registerPageHook = useCallback((path, hook) => {
     pageHooks.current.set(path, hook);
-  };
+  }, []);
 
-  const unregisterPageHook = (path) => {
+  const unregisterPageHook = useCallback((path) => {
     pageHooks.current.delete(path);
-  };
+  }, []);
 
   const value = {
     isConnected,
