@@ -11,6 +11,8 @@ import { API_BASE } from "../config/api";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { dict } from "../config/CustomerDetailsDict";
+import { parseConfirmation, parseSpokenAge, parseSpokenGender } from "../voice/voicePageProfiles";
+import { ensureKioskSession, saveKioskCustomer } from "../utils/kioskSession";
 
 export default function CustomerDetails() {
   const navigate = useNavigate();
@@ -33,7 +35,9 @@ export default function CustomerDetails() {
     age: "22",
   });
 
-  const isCreatingSessionRef = useRef(false);
+  const submittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   // Sync keyboard inputs with form
   useEffect(() => {
@@ -115,7 +119,7 @@ export default function CustomerDetails() {
 
   // Speak intro
   useEffect(() => {
-    if (!hasSpokenStart && !form.name && !form.age) {
+    if (!hasSpokenStart && !form.name) {
       const timer = setTimeout(() => {
         speakText(t('start'));
         setHasSpokenStart(true);
@@ -126,8 +130,8 @@ export default function CustomerDetails() {
 
   const getHints = () => {
     if (voiceExpecting === 'confirm') return ['yes', 'no', 'correct', 'wrong', 'galat', 'nahi', 'sahi'];
-    if (voiceExpecting === 'gender') return ['male', 'female', 'man', 'woman', 'other'];
-    if (voiceExpecting === 'age') return ['age', 'years', 'number'];
+    if (voiceExpecting === 'gender') return ['male', 'female', 'man', 'woman', 'girl', 'boy', 'mahila', 'mohila', 'ladka', 'chele', 'purush', 'other'];
+    if (voiceExpecting === 'age') return ['age', 'years', 'umar', 'saal', 'challis', 'paitalish', 'pandrah', 'biranobboi'];
     return [];
   };
 
@@ -146,93 +150,14 @@ export default function CustomerDetails() {
        }
     },
     onTranscript: (lowerText, rawText) => {
-      // Helper to parse age from digits, Hindi/Bengali numerals, or number words
-      const parseAgeFromText = (inputLower) => {
-        // 1. Convert Bengali & Hindi script numerals to Arabic digits
-        const normalized = inputLower
-          .replace(/[\u09E6-\u09EF]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x09E6 + 48))
-          .replace(/[\u0966-\u096F]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0966 + 48));
-
-        const digitMatch = normalized.match(/\b\d{1,3}\b/);
-        if (digitMatch) {
-          const val = parseInt(digitMatch[0], 10);
-          if (val >= 1 && val <= 120) return val.toString();
-        }
-
-        // 2. Multilingual word mapping for English, Hindi, and Bengali numbers (1 - 100)
-        const wordMap = {
-          // English
-          "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
-          "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
-          "twenty one": 21, "twenty two": 22, "twenty three": 23, "twenty four": 24, "twenty five": 25, "twenty six": 26, "twenty seven": 27, "twenty eight": 28, "twenty nine": 29, "thirty": 30,
-          "thirty one": 31, "thirty two": 32, "thirty three": 33, "thirty four": 34, "thirty five": 35, "thirty six": 36, "thirty seven": 37, "thirty eight": 38, "thirty nine": 39, "forty": 40,
-          "forty one": 41, "forty two": 42, "forty three": 43, "forty four": 44, "forty five": 45, "forty six": 46, "forty seven": 47, "forty eight": 48, "forty nine": 49, "fifty": 50,
-          "fifty five": 55, "sixty": 60, "sixty five": 65, "seventy": 70, "seventy five": 75, "eighty": 80, "ninety": 90,
-          // Hindi (Transliterated & Devanagari)
-          "ek": 1, "do": 2, "teen": 3, "char": 4, "paanch": 5, "panch": 5, "chhah": 6, "che": 6, "saat": 7, "aath": 8, "nau": 9, "das": 10,
-          "gyarah": 11, "barah": 12, "terah": 13, "chaudah": 14, "pandrah": 15, "solah": 16, "satrah": 17, "atharah": 18, "unnis": 19, "bees": 20,
-          "ikkees": 21, "baais": 22, "baees": 22, "teees": 23, "chaubees": 24, "pachchees": 25, "pachees": 25, "chhabbees": 26, "sattaees": 27, "atthaees": 28, "untees": 29, "tees": 30,
-          "iktees": 31, "battees": 32, "tentees": 33, "chauntees": 34, "paintees": 35, "chhattees": 36, "saintees": 37, "adtees": 38, "untalees": 39, "chalees": 40,
-          "iktalees": 41, "bayalees": 42, "taintalees": 43, "chawalees": 44, "paintalees": 45, "chhiyalees": 46, "saintalees": 47, "adtalees": 48, "unchaas": 49, "pachaas": 50,
-          "ekavvan": 51, "baavan": 52, "tirpan": 53, "chawwan": 54, "pachpan": 55, "chhappan": 56, "sattawan": 57, "atthaavan": 58, "unsath": 59, "saath": 60,
-          "पैंतीस": 35, "छब्बीस": 26, "पच्चीस": 25, "चौबीस": 24, "तेईस": 23, "बाईस": 22, "इक्कीस": 21, "बीस": 20, "उन्नीस": 19, "अठारह": 18, "सत्रह": 17, "सोलह": 16, "पंद्रह": 15, "चौदह": 14, "तेरह": 13, "बारह": 12, "ग्यारह": 11, "दस": 10, "तीस": 30, "चालीस": 40, "पचास": 50, "साठ": 60,
-          // Bengali (Transliterated & Bengali Script)
-          "dui": 2, "tin": 3, "paach": 5, "chhoy": 6, "aat": 8, "noy": 9, "dosh": 10,
-          "egaro": 11, "baro": 12, "tero": 13, "choddo": 14, "ponero": 15, "sholo": 16, "sotero": 17, "atharo": 18, "unish": 19, "kuri": 20, "bish": 20,
-          "ekush": 21, "baish": 22, "teish": 23, "chobbish": 24, "pochish": 25, "chabbish": 26, "shatash": 27, "athash": 28, "untrish": 29, "trish": 30,
-          "ektrish": 31, "botrish": 32, "tetrish": 33, "choutrish": 34, "poyntrish": 35, "chhotrish": 36, "shaytrish": 37, "athtrish": 38, "unochollish": 39, "chollish": 40,
-          "একুশ": 21, "বাইশ": 22, "তেইশ": 23, "চব্বিশ": 24, "পঁচিশ": 25, "ছাব্বিশ": 26, "সাতাশ": 27, "আটাশ": 28, "উনত্রিশ": 29, "ত্রিশ": 30, "চল্লিশ": 40, "পঞ্চাশ": 50, "ষাট": 60, "কুড়ি": 20, "বিশ": 20
-        };
-
-        for (const [w, n] of Object.entries(wordMap)) {
-          const regex = new RegExp(`(^|\\s)${w}(\\s|$)`, 'i');
-          if (regex.test(inputLower)) {
-            return n.toString();
-          }
-        }
-        return null;
-      };
+      if (submittingRef.current) return;
 
       // Handle Confirmations
       if (voiceExpecting === 'confirm' && pendingField) {
-        const normalizeVoiceText = (value = '') =>
-          value
-            .normalize('NFKC')
-            .toLowerCase()
-            .replace(/[.,!?;:"'()[\]{}]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-        const positiveConfirmations = new Set([
-          'yes', 'yeah', 'yep', 'correct', 'right', "that's right", 'haan', 'han', 'ha', 'haan ji', 'sahi', 'sahi hai', 'theek', 'thik', 'hmm yes', 'हां', 'हाँ', 'सही', 'सही है', 'ठीक', 'হ্যাঁ', 'ঠিক', 'ঠিক আছে'
-        ]);
-
-        const negativeConfirmations = new Set([
-          'no', 'nope', 'wrong', 'incorrect', 'not correct', "that's wrong", 'it is wrong', 'change', 'change it', 'edit', 'edit it', 'nahi', 'nahin', 'na', 'galat', 'galat hai', 'ye galat hai', 'sahi nahi', 'sahi nahin', 'theek nahi', 'thik nahi', 'wrong hai', 'change karo', 'dobara', 'नहीं', 'गलत', 'गलत है', 'सही नहीं', 'ठीक नहीं', 'না', 'ভুল', 'ভুল আছে', 'ঠিক না', 'সঠিক না', 'naa', 'bhul', 'bhool', 'vul', 'vul ache', 'thik na', 'sothik na'
-        ]);
-
-        const containsPhrase = (text, phrases) => {
-          const arr = Array.from(phrases);
-          return arr.some(p =>
-            text === p ||
-            text.startsWith(`${p} `) ||
-            text.endsWith(` ${p}`) ||
-            text.includes(` ${p} `) ||
-            // Fallback direct includes for scripts where spaces might be inconsistent
-            (/[\u0900-\u097F\u0980-\u09FF]/.test(p) && text.includes(p))
-          );
-        };
-
-        const normalizedText = normalizeVoiceText(lowerText);
-        
-        let result = 'unknown';
-        if (negativeConfirmations.has(normalizedText) || containsPhrase(normalizedText, negativeConfirmations)) {
-            result = 'negative';
-        } else if (positiveConfirmations.has(normalizedText) || containsPhrase(normalizedText, positiveConfirmations)) {
-            result = 'positive';
-        }
+        const result = parseConfirmation(lowerText);
 
         if (result === 'positive') {
+          const confirmedForm = { ...form, [pendingField]: pendingValue };
           handleKeyboardChange(pendingField, pendingValue);
           
           if (pendingField === 'name') {
@@ -245,9 +170,7 @@ export default function CustomerDetails() {
             // Auto-proceed!
             setVoiceExpecting('done');
             speakText(t('allComplete'));
-            setTimeout(() => {
-                handleProceed();
-            }, 1000);
+            handleProceed(confirmedForm);
           }
           setPendingField(null);
           setPendingValue(null);
@@ -280,12 +203,9 @@ export default function CustomerDetails() {
          if (rawText.length > 1) {
              // Clean away all introductory prefixes and filler phrases
              let cleaned = rawText
-               .replace(/(mera naam hai|mera naam|mera nam hai|mera nam|my name is|the name is|is my name|my name|amar naam hoche|amar nam hoche|amar naam holo|amar nam holo|amar naam|amar nam|naam hai|nam hai|naam|nam|মাই নেম ইজ|মাই নেম|আমার নাম হচ্ছে|আমার নাম হলো|আমার নাম|নাম হলো|নাম হচ্ছে|নাম|মেরা নাম|मेरा नाम है|मेरा नाम|नाम है|नाम|माय नेम इज|माय नेम)/gi, ' ')
-               .replace(/(friend|again|try again|repeat|once more|bolo|please|friend again|try|suno)/gi, ' ')
-               .replace(/(hai|hoche|holo|হচ্ছে|হলো|হয়|है)/gi, ' ')
-               // Clean out affirmative/negative repetitive utterances (e.g. "sahi sahi", "sahi hai", "galat", "wrong", "no", "yes")
-               .replace(/\b(sahi|galat|wrong|right|haan|han|nahi|nhi|yes|yeah|no|nope|ok|okay|thik|theek|thek|naa|nah|bhul|ঠিক|ভুল|রং|না|হ্যাঁ|হ্যা|হা|सही|गलत|हाँ|हां|नहीं|ना|ओके|जी|अच्छा)\b/gi, ' ')
-               .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, ' ')
+               .replace(/^(?:mera naam hai|mera naam|mera nam hai|mera nam|my name is|the name is|my name|amar naam hoche|amar nam hoche|amar naam holo|amar nam holo|amar naam|amar nam|আমার নাম হচ্ছে|আমার নাম হলো|আমার নাম|মাই নেম ইজ|मेरा नाम है|मेरा नाम|माय नेम इज)\s+/i, "")
+               .replace(/\s+(?:hai|hoche|holo|হচ্ছে|হলো|হয়|है)$/i, "")
+               .replace(/[.,/#!$%^&*;:{}=_`~()?"']/g, " ")
                .trim();
 
              // Compress multiple whitespace
@@ -303,27 +223,18 @@ export default function CustomerDetails() {
              }
          }
       } else if (voiceExpecting === 'age') {
-         const parsedAge = parseAgeFromText(lowerText);
+         const parsedAge = parseSpokenAge(lowerText);
          if (parsedAge) {
              setPendingField('age');
-             setPendingValue(parsedAge);
+             setPendingValue(String(parsedAge));
              setVoiceExpecting('confirm');
              speakText(t('confirmAge'));
          }
       } else if (voiceExpecting === 'gender') {
-         if (/(female|aurat|ladki|mohila|woman|girl|ফিমেল|ফিমেইল|মহিলা|মেয়ে|নারী|फीमेल|औरत|लड़की|महिला)/.test(lowerText)) {
+         const gender = parseSpokenGender(lowerText);
+         if (gender) {
              setPendingField('gender');
-             setPendingValue('female');
-             setVoiceExpecting('confirm');
-             speakText(t('confirmGender'));
-         } else if (/(mail|male|aadmi|ladka|purush|man|boy|মেল|মেইল|পুরুষ|পুরুস|ছেলে|আদমি|मेल|आदमी|लड़का|पुरुष)/.test(lowerText)) {
-             setPendingField('gender');
-             setPendingValue('male');
-             setVoiceExpecting('confirm');
-             speakText(t('confirmGender'));
-         } else if (/(other|others|আদার|অন্যান্য|অন্য|अदर|अन्य)/.test(lowerText)) {
-             setPendingField('gender');
-             setPendingValue('other');
+             setPendingValue(gender);
              setVoiceExpecting('confirm');
              speakText(t('confirmGender'));
          }
@@ -352,114 +263,40 @@ export default function CustomerDetails() {
      }
   }, [form.name, form.age, form.gender, isNameValid, isAgeValid, isGenderValid, voiceExpecting, pendingField, speakText, speakingRef, t, isFormValid]);
 
-  // Session Helper
-  const generateSessionId = () => {
-    if (window.crypto?.randomUUID) {
-      return window.crypto.randomUUID();
-    }
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = Math.floor(Math.random() * 16);
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  };
-
-  // Ensure authoritative Pi session exists on mount
   useEffect(() => {
-    const initKioskSession = async () => {
-      if (isCreatingSessionRef.current) return;
-
-      const existingSid =
-        healthData?.sessionId ||
-        localStorage.getItem("reliv_session_id") ||
-        sessionStorage.getItem("reliv_session_id");
-
-      if (
-        existingSid &&
-        existingSid !== "current" &&
-        existingSid !== "default" &&
-        existingSid !== "RELIV-001"
-      ) {
-        return;
-      }
-
-      isCreatingSessionRef.current = true;
-      try {
-        const fallbackSessionId = generateSessionId();
-        const res = await fetch(`${API_BASE}/api/create-qr-session`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: fallbackSessionId }),
-        });
-
-        if (res.ok) {
-          const sessionData = await res.json();
-          const authoritativeId =
-            sessionData.id || sessionData.sessionId || fallbackSessionId;
-          update({ sessionId: authoritativeId });
-          localStorage.setItem("reliv_session_id", authoritativeId);
-        }
-      } catch (err) {
-        console.warn("[CustomerDetails] Session init warning:", err.message);
-      } finally {
-        isCreatingSessionRef.current = false;
-      }
-    };
-
-    initKioskSession();
-  }, [healthData?.sessionId, update]);
-
-  // Proceed handler
-  const handleProceed = async () => {
-    if (!isFormValid) return;
-
-    closeKeyboard();
-
-    let currentSid =
-      healthData?.sessionId ||
-      localStorage.getItem("reliv_session_id") ||
-      sessionStorage.getItem("reliv_session_id");
-
-    if (
-      !currentSid ||
-      currentSid === "current" ||
-      currentSid === "default" ||
-      currentSid === "RELIV-001"
-    ) {
-      try {
-        const fallbackSessionId = generateSessionId();
-        const res = await fetch(`${API_BASE}/api/create-qr-session`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: fallbackSessionId }),
-        });
-        if (res.ok) {
-          const sData = await res.json();
-          currentSid = sData.id || sData.sessionId || fallbackSessionId;
-        } else {
-          currentSid = fallbackSessionId;
-        }
-      } catch (e) {
-        currentSid = generateSessionId();
-      }
-    }
-
-    const patientPayload = {
-      name: form.name.trim(),
-      age: parseInt(form.age, 10),
-      gender: form.gender,
-    };
-
-    update({
-      sessionId: currentSid,
-      patient: patientPayload,
+    let active = true;
+    ensureKioskSession(API_BASE).then(({ sessionId }) => {
+      if (active) update({ sessionId });
+    }).catch((error) => {
+      if (active) setSubmitError(error.message);
     });
+    return () => { active = false; };
+  }, [update]);
 
+  const handleProceed = async (values = form) => {
+    const patient = {
+      name: values.name.trim(),
+      age: Number(values.age),
+      gender: values.gender,
+    };
+    if (submittingRef.current || patient.name.length < 2 ||
+        !Number.isInteger(patient.age) || patient.age < 1 || patient.age > 120 ||
+        !["male", "female", "other"].includes(patient.gender)) return;
+
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    setSubmitError("");
+    closeKeyboard();
     try {
-      localStorage.setItem("reliv_session_id", currentSid);
-    } catch (e) {}
-
-    navigate("/two-options", { state: { sessionId: currentSid } });
+      const { sessionId } = await saveKioskCustomer(API_BASE, patient);
+      update({ sessionId, patient });
+      navigate("/two-options", { state: { sessionId } });
+    } catch (error) {
+      setSubmitError(error.message || "Could not save your details. Please retry.");
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -611,19 +448,20 @@ export default function CustomerDetails() {
             </div>
           </div>
 
+          {submitError && <p role="alert" className="text-sm text-red-700">{submitError}</p>}
           {/* Continue Button */}
           <div className="pt-2">
             <button
               type="button"
-              onClick={handleProceed}
-              disabled={!isFormValid}
+              onClick={() => handleProceed()}
+              disabled={!isFormValid || isSubmitting}
               className={`w-full py-4 rounded-2xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-4 ${
                 isFormValid
                   ? "bg-orange-500 hover:bg-orange-600 text-white active:scale-95 shadow-orange-500/30"
                   : "bg-slate-200/50 text-slate-400 cursor-not-allowed shadow-none"
               }`}
             >
-              <span>{translateUI('proceed')}</span>
+              <span>{isSubmitting ? 'Saving...' : translateUI('proceed')}</span>
             </button>
           </div>
         </div>

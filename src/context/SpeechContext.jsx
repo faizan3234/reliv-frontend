@@ -128,6 +128,10 @@ export function SpeechProvider({ children }) {
   const voiceSettingsRef = useRef(voiceSettings);
   const audioManifestRef = useRef(null);
   const activeAudioRef = useRef(null);
+  const cancelPlaybackRef = useRef(null);
+  const retryPlaybackRef = useRef(null);
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
   
   const speakerGateRef = useRef(false);
 
@@ -155,6 +159,7 @@ export function SpeechProvider({ children }) {
         const res = await fetch(`${API_BASE}/api/speech-config`);
         if (res.ok) {
           const data = await res.json();
+          setConfig((prev) => ({ ...prev, ...data }));
           if (data._voiceSettings) setVoiceSettings((prev) => ({ ...prev, ...data._voiceSettings }));
         }
       } catch {}
@@ -172,6 +177,9 @@ export function SpeechProvider({ children }) {
 
   const stopActivePlayback = useCallback(async () => {
     try {
+      retryPlaybackRef.current = null;
+      cancelPlaybackRef.current?.();
+      cancelPlaybackRef.current = null;
       if (activeAudioRef.current) {
           activeAudioRef.current.onended = null;
           activeAudioRef.current.onerror = null;
@@ -197,53 +205,102 @@ export function SpeechProvider({ children }) {
       if (requestId !== playbackRequestRef.current) return Promise.resolve();
 
       return new Promise((resolve) => {
+        const safeText = String(text).trim();
         const manifest = audioManifestRef.current;
-        
-        // Fallback gracefully if manifest or audio file is missing
-        if (!manifest || !manifest[text]) {
-            console.warn("No pre-recorded audio found for:", text);
-            if (callbacks.onEnd) callbacks.onEnd();
-            resolve();
-            return;
-        }
-
-        let targetLang = "en";
-        if (langHint === "hi") targetLang = "hi";
-        if (langHint === "bn") targetLang = "bn";
-        
-        const audioUrl = `/assets/audio/${targetLang}/${manifest[text]}`;
-        const audio = new Audio(audioUrl);
-        
-        // Guard against double-finish (onended + onerror can both fire)
+        const language = String(langHint || 'en').split('-')[0];
+        const targetLang = ['en', 'hi', 'bn'].includes(language) ? language : 'en';
         let finished = false;
-        const finish = () => {
+        let utterance = null;
+        let audio = null;
+        const finish = (cancelled = false) => {
           if (finished) return;
           finished = true;
+          retryPlaybackRef.current = null;
+          if (audio) audio.onended = audio.onerror = null;
+          if (utterance) utterance.onend = utterance.onerror = null;
           if (requestId === playbackRequestRef.current) {
             setSpeakerGate(false);
             activeAudioRef.current = null;
-            if (callbacks.onEnd) callbacks.onEnd();
+            cancelPlaybackRef.current = null;
+            if (!cancelled) callbacks.onEnd?.();
           }
           resolve();
         };
-
-        audio.onended = finish;
-        audio.onerror = (e) => {
-          console.error("Audio error", e);
-          if (callbacks.onError) callbacks.onError(e);
+        cancelPlaybackRef.current = () => finish(true);
+        const begin = () => {
+          if (finished || requestId !== playbackRequestRef.current) return false;
+          setSpeakerGate(true);
+          window.dispatchEvent(new CustomEvent('reliv_spoken_text', { detail: safeText }));
+          callbacks.onStart?.();
+          return true;
+        };
+        const fail = (error) => {
+          setSpeakerGate(false);
+          callbacks.onError?.(error);
           finish();
         };
+        const playSynthesis = () => {
+          if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+            fail(new Error('No recording or browser speech voice is available.'));
+            return;
+          }
+          utterance = new window.SpeechSynthesisUtterance(safeText);
+          utterance.lang = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' }[targetLang];
+          utterance.volume = volumeRef.current;
+          const settings = { ...voiceSettingsRef.current, ...callbacks.voiceSettings };
+          utterance.rate = settings.rate;
+          utterance.pitch = settings.pitch;
+          const localVoices = window.speechSynthesis.getVoices().filter((voice) =>
+            voice.localService && voice.lang.toLowerCase().startsWith(targetLang));
+          const preference = settings.voicePreference === 'male' ? /\b(male|david|james)\b/i
+            : settings.voicePreference === 'female' ? /\b(female|samantha|zira)\b/i : null;
+          const localVoice = localVoices.find((voice) => preference?.test(voice.name)) || localVoices[0];
+          if (localVoice) utterance.voice = localVoice;
+          utterance.onend = () => finish();
+          utterance.onerror = (event) => {
+            if (finished || requestId !== playbackRequestRef.current) return;
+            if (event.error === 'not-allowed') {
+              setSpeakerGate(false);
+              retryPlaybackRef.current = playSynthesis;
+            } else {
+              fail(event);
+            }
+          };
+          if (begin()) {
+            try { window.speechSynthesis.speak(utterance); }
+            catch (error) { fail(error); }
+          }
+        };
 
-        if (callbacks.onStart) callbacks.onStart();
-        
-        // IMPORTANT: gate BEFORE actual playback.
-        setSpeakerGate(true);
+        if (callbacks.preferSynthesis || !manifest?.[safeText]) {
+          playSynthesis();
+          return;
+        }
+        audio = new Audio(`/assets/audio/${targetLang}/${manifest[safeText]}`);
+        audio.volume = volumeRef.current;
         activeAudioRef.current = audio;
-        
-        audio.play().catch(e => {
-            console.error("Play blocked", e);
-            finish();
-        });
+        audio.onended = () => finish();
+        audio.onerror = () => {
+          if (!finished && requestId === playbackRequestRef.current) {
+            audio.onended = audio.onerror = null;
+            audio.pause();
+            activeAudioRef.current = null;
+            playSynthesis();
+          }
+        };
+        const playRecording = () => {
+          if (!begin()) return;
+          audio.play().catch((error) => {
+            if (finished || requestId !== playbackRequestRef.current) return;
+            setSpeakerGate(false);
+            if (error.name === 'NotAllowedError') {
+              retryPlaybackRef.current = playRecording;
+            } else {
+              playSynthesis();
+            }
+          });
+        };
+        playRecording();
       });
     },
     [setSpeakerGate]
@@ -255,7 +312,7 @@ export function SpeechProvider({ children }) {
       const requestId = ++playbackRequestRef.current;
       await stopActivePlayback();
       if (requestId !== playbackRequestRef.current) return;
-      speakViaSynthesis(text, requestId, selectedLang, callbacks);
+      return speakViaSynthesis(text, requestId, callbacks?.langHint || selectedLang, callbacks);
     },
     [muted, stopActivePlayback, speakViaSynthesis, selectedLang]
   );
@@ -294,7 +351,7 @@ export function SpeechProvider({ children }) {
         textToSpeak = pageConfig[selectedLang] || pageConfig['en'] || "";
       }
 
-      if (textToSpeak) speakViaSynthesis(textToSpeak, requestId, selectedLang);
+      if (textToSpeak) return speakViaSynthesis(textToSpeak, requestId, selectedLang);
     },
     [muted, stopActivePlayback, speakViaSynthesis, selectedLang]
   );
@@ -314,10 +371,19 @@ export function SpeechProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    return () => {
-      window.speechSynthesis?.cancel();
+    const retry = () => {
+      const play = retryPlaybackRef.current;
+      retryPlaybackRef.current = null;
+      play?.();
     };
-  }, []);
+    window.addEventListener("pointerdown", retry);
+    window.addEventListener("keydown", retry);
+    return () => {
+      window.removeEventListener("pointerdown", retry);
+      window.removeEventListener("keydown", retry);
+      stop();
+    };
+  }, [stop]);
 
   useEffect(() => {
     const loadVoices = () => window.speechSynthesis?.getVoices();

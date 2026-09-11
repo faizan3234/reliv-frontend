@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
+import { useSpeech } from "../context/SpeechContext";
 import { supabase, LEADERBOARD_BUCKET } from "../config/supabase";
 
 /* ─── Page registry ─── */
@@ -354,6 +355,7 @@ function LeaderboardAdminPanel() {
 
 export default function SpeechAdmin() {
   const navigate = useNavigate();
+  const { speakText, stop } = useSpeech();
   const [config, setConfig] = useState({});
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
@@ -403,7 +405,13 @@ export default function SpeechAdmin() {
     })();
   }, []);
 
-  const handleChange = (key, value) => setConfig((prev) => ({ ...prev, [key]: value }));
+  const pageText = (key) => typeof config[key] === "string"
+    ? config[key] : config[key]?.en || "";
+  const handleChange = (key, value) => setConfig((prev) => ({
+    ...prev,
+    [key]: typeof prev[key] === "object" && prev[key] !== null
+      ? { ...prev[key], en: value } : value,
+  }));
 
   /* ─── File Upload Handler ─── */
   const handleFileUpload = (e) => {
@@ -477,29 +485,19 @@ export default function SpeechAdmin() {
 
   // Test speech for a specific page key
   const testSpeak = (key, overrideText) => {
-    const text = overrideText || config[key];
-    if (!text || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.rate = voiceSettings.rate;
-    utt.pitch = voiceSettings.pitch;
-    utt.lang = voiceSettings.lang;
-    const voices = window.speechSynthesis.getVoices();
-    const pref = voiceSettings.voicePreference;
-    let preferred;
-    if (pref === "male")
-      preferred = voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Male") || v.name.includes("David") || v.name.includes("James")));
-    else if (pref === "female")
-      preferred = voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Female") || v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Zira")));
-    if (!preferred) preferred = voices.find((v) => v.lang.startsWith("en"));
-    if (preferred) utt.voice = preferred;
-    utt.onstart = () => setTesting(key);
-    utt.onend = () => setTesting(null);
-    utt.onerror = () => setTesting(null);
-    window.speechSynthesis.speak(utt);
+    const text = overrideText || pageText(key);
+    if (!text) return;
+    speakText(text, {
+      langHint: voiceSettings.lang,
+      voiceSettings,
+      preferSynthesis: true,
+      onStart: () => setTesting(key),
+      onEnd: () => setTesting(null),
+      onError: () => setTesting(null),
+    });
   };
 
-  const stopTest = () => { window.speechSynthesis?.cancel(); setTesting(null); };
+  const stopTest = () => { stop(); setTesting(null); };
 
   if (loading) {
     return (
@@ -641,16 +639,7 @@ export default function SpeechAdmin() {
                 ))}
               </div>
             </div>
-            <button onClick={() => {
-              const utt = new SpeechSynthesisUtterance("Hello! This is how I sound with the current settings.");
-              utt.rate = voiceSettings.rate; utt.pitch = voiceSettings.pitch; utt.lang = voiceSettings.lang;
-              const voices = window.speechSynthesis.getVoices(); const pref = voiceSettings.voicePreference; let preferred;
-              if (pref === "male") preferred = voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Male") || v.name.includes("David")));
-              else if (pref === "female") preferred = voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Female") || v.name.includes("Google") || v.name.includes("Zira")));
-              if (!preferred) preferred = voices.find((v) => v.lang.startsWith("en"));
-              if (preferred) utt.voice = preferred;
-              window.speechSynthesis.cancel(); window.speechSynthesis.speak(utt);
-            }} className="mt-3 w-full py-2 rounded-xl text-xs font-semibold bg-white border border-orange-300 text-orange-600 active:bg-orange-50 transition-all">
+            <button onClick={() => testSpeak("voice-preview", "Hello! This is how I sound with the current settings.")} className="mt-3 w-full py-2 rounded-xl text-xs font-semibold bg-white border border-orange-300 text-orange-600 active:bg-orange-50 transition-all">
               🔊 Preview Voice Settings
             </button>
             {availableVoices.length > 0 && (
@@ -696,10 +685,10 @@ export default function SpeechAdmin() {
                     className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${testing === key ? "bg-red-100 text-red-600 active:bg-red-200" : "bg-orange-100 text-orange-600 active:bg-orange-200"}`}>
                     {testing === key ? "⏹ Stop" : "▶ Test"}
                   </button>
-                  <span className="text-[10px] text-gray-400 w-10 text-right">{(config[key] || "").length}/500</span>
+                  <span className="text-[10px] text-gray-400 w-10 text-right">{pageText(key).length}/500</span>
                 </div>
               </div>
-              <textarea ref={(el) => (textareaRefs.current[key] = el)} value={config[key] || ""}
+              <textarea ref={(el) => (textareaRefs.current[key] = el)} value={pageText(key)}
                 onChange={(e) => handleChange(key, e.target.value)} maxLength={500} rows={2}
                 placeholder={DEFAULT_TEXTS[key] ? `Default: ${DEFAULT_TEXTS[key]}` : "Enter what the speaker should say..."}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 caret-orange-600 cursor-text focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none resize-none transition-all" />

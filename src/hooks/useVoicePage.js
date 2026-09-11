@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useVoiceAssistant } from '../context/VoiceAssistantContext';
-import { useSpeech } from '../context/SpeechContext';
 
 /**
  * useVoicePage hook
@@ -16,7 +15,6 @@ import { useSpeech } from '../context/SpeechContext';
 export const useVoicePage = ({ onTranscript, onIdle, onHelp, vocabularyHints = [], expecting = '' }) => {
   const { registerPageHook, unregisterPageHook, sendToBackend } = useVoiceAssistant();
   const location = useLocation();
-  const { speak } = useSpeech();
 
   useEffect(() => {
     // Register the hooks for this page
@@ -39,5 +37,5 @@ export const useVoicePage = ({ onTranscript, onIdle, onHelp, vocabularyHints = [
     return () => {
       unregisterPageHook(pagePath);
     };
-  }, [location.pathname, onTranscript, onIdle, expecting, JSON.stringify(vocabularyHints), registerPageHook, unregisterPageHook, sendToBackend, speak]);
+  }, [location.pathname, onTranscript, onIdle, onHelp, expecting, JSON.stringify(vocabularyHints), registerPageHook, unregisterPageHook, sendToBackend]);
 };
