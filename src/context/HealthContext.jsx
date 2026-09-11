@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { API_BASE } from "../config/api";
+import { clearKioskSession } from "../utils/kioskSession";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const MOCK_TEST_REPORT = {
   sessionId: "KSK-DEMO-2026",
   patient: {
@@ -109,27 +111,31 @@ export function HealthProvider({ children }) {
   useEffect(() => {
     try {
       localStorage.setItem("healthData", JSON.stringify(data));
-    } catch (e) {}
+    } catch { /* Storage may be unavailable. */ }
   }, [data]);
 
   useEffect(() => {
     if (!data.patient?.email) return;
     const email = data.patient.email;
+    let active = true;
     fetch(`${API_BASE}/api/reports/history/${encodeURIComponent(email)}`)
       .then((res) => {
         if (!res.ok) throw new Error('History fetch failed');
         return res.json();
       })
       .then((history) => {
+        if (!active) return;
         setData((prev) => {
+          if (prev.patient.email !== email) return prev;
           const next = { ...prev, history: Array.isArray(history) ? history : [] };
           try {
             localStorage.setItem("healthData", JSON.stringify(next));
-          } catch (e) {}
+          } catch { /* Storage may be unavailable. */ }
           return next;
         });
       })
       .catch(() => {});
+    return () => { active = false; };
   }, [data.patient?.email]);
 
   const update = useCallback((partial) => {
@@ -146,7 +152,7 @@ export function HealthProvider({ children }) {
         if (partial?.sessionId) {
           localStorage.setItem("reliv_session_id", next.sessionId);
         }
-      } catch (e) {}
+      } catch { /* Storage may be unavailable. */ }
       return next;
     });
   }, []);
@@ -156,18 +162,15 @@ export function HealthProvider({ children }) {
     try {
       localStorage.setItem("healthData", JSON.stringify(MOCK_TEST_REPORT));
       localStorage.setItem("reliv_session_id", MOCK_TEST_REPORT.sessionId);
-    } catch (e) {}
+    } catch { /* Storage may be unavailable. */ }
     return MOCK_TEST_REPORT;
   };
 
   const resetHealth = () => {
     try {
       localStorage.removeItem("healthData");
-      localStorage.removeItem("reliv_session_id");
-      sessionStorage.removeItem("reliv_session_id");
-      localStorage.removeItem("reliv_pairing_token");
-      sessionStorage.removeItem("reliv_pairing_token");
-    } catch (e) {}
+      clearKioskSession();
+    } catch { /* Storage may be unavailable. */ }
     setData(defaultData);
   };
 
@@ -180,13 +183,14 @@ export function HealthProvider({ children }) {
       if (!res.ok) throw new Error('History refresh failed');
       const history = await res.json();
       setData((prev) => {
+        if (prev.patient.email !== data.patient.email) return prev;
         const next = {
           ...prev,
           history: Array.isArray(history) ? history : [],
         };
         try {
           localStorage.setItem("healthData", JSON.stringify(next));
-        } catch (e) {}
+        } catch { /* Storage may be unavailable. */ }
         return next;
       });
     } catch (e) {
@@ -201,6 +205,7 @@ export function HealthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useHealth() {
   const context = useContext(HealthContext);
   if (!context) {

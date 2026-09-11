@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test, beforeEach } from "node:test";
-import { ensureKioskSession, readKioskSession, saveKioskCustomer, storeKioskSession } from "./src/utils/kioskSession.js";
+import { clearKioskSession, ensureKioskSession, readKioskSession, saveKioskCustomer, storeKioskSession } from "./src/utils/kioskSession.js";
 
 class Storage {
   data = new Map();
@@ -71,3 +71,33 @@ test("HTTP success with failed business result is not accepted", async () => {
   await assert.rejects(saveKioskCustomer("", { name: "Test" }), /Customer rejected/);
 });
 
+test("reset during creation cannot resurrect an old session or replace a new pending creation", async () => {
+  const releases = [];
+  globalThis.fetch = () => new Promise(resolve => releases.push(resolve));
+  const old = ensureKioskSession("");
+  const oldRejected = assert.rejects(old, /reset/);
+  clearKioskSession();
+  const next = ensureKioskSession("");
+  releases[0](response({ sessionId: "KSK-OLD", pairingToken: "old" }));
+  await oldRejected;
+  assert.equal(readKioskSession(), null);
+  const concurrent = ensureKioskSession("");
+  assert.equal(releases.length, 2);
+  releases[1](response(session));
+  assert.deepEqual(await next, session);
+  assert.deepEqual(await concurrent, session);
+});
+
+test("an expired old customer request cannot clear a newer session", async () => {
+  storeKioskSession(session);
+  let release;
+  globalThis.fetch = () => new Promise(resolve => { release = resolve; });
+  const old = saveKioskCustomer("", { name: "Old Customer" });
+  await Promise.resolve();
+  const rejected = assert.rejects(old, /expired/);
+  const next = { sessionId: "KSK-NEW", pairingToken: "new" };
+  storeKioskSession(next);
+  release(response({ error: "Session expired" }, 410));
+  await rejected;
+  assert.deepEqual(readKioskSession(), next);
+});

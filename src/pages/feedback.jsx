@@ -1,7 +1,7 @@
 // src/pages/Feedback.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used by JSX member tags
 import VirtualKeyboard from '../components/VirtualKeyboard';
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";

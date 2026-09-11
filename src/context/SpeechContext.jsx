@@ -154,25 +154,30 @@ export function SpeechProvider({ children }) {
   voiceSettingsRef.current = voiceSettings;
 
   useEffect(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/speech-config`);
+        const res = await fetch(`${API_BASE}/api/speech-config`, { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setConfig((prev) => ({ ...prev, ...data }));
           if (data._voiceSettings) setVoiceSettings((prev) => ({ ...prev, ...data._voiceSettings }));
         }
-      } catch {}
-
+      } catch { /* Offline defaults remain available. */ }
+    })();
+    // Recordings must load even if the optional configuration service stalls.
+    (async () => {
       try {
-        const res = await fetch('/assets/audio/manifest.json');
+        const res = await fetch('/assets/audio/manifest.json', { signal: controller.signal });
         if (res.ok) {
           audioManifestRef.current = await res.json();
         }
       } catch (e) {
-        console.error("Failed to load audio manifest", e);
+        if (!controller.signal.aborted) console.warn("Failed to load audio manifest", e);
       }
     })();
+    return () => { clearTimeout(timeout); controller.abort(); };
   }, []);
 
   const stopActivePlayback = useCallback(async () => {
@@ -212,9 +217,12 @@ export function SpeechProvider({ children }) {
         let finished = false;
         let utterance = null;
         let audio = null;
+        let usingSynthesis = false;
+        let playbackTimeout = null;
         const finish = (cancelled = false) => {
           if (finished) return;
           finished = true;
+          clearTimeout(playbackTimeout);
           retryPlaybackRef.current = null;
           if (audio) audio.onended = audio.onerror = null;
           if (utterance) utterance.onend = utterance.onerror = null;
@@ -222,7 +230,10 @@ export function SpeechProvider({ children }) {
             setSpeakerGate(false);
             activeAudioRef.current = null;
             cancelPlaybackRef.current = null;
-            if (!cancelled) callbacks.onEnd?.();
+            if (!cancelled) {
+              try { callbacks.onEnd?.(); }
+              finally { resolve(); }
+            }
           }
           resolve();
         };
@@ -230,16 +241,23 @@ export function SpeechProvider({ children }) {
         const begin = () => {
           if (finished || requestId !== playbackRequestRef.current) return false;
           setSpeakerGate(true);
+          clearTimeout(playbackTimeout);
+          playbackTimeout = setTimeout(() => {
+            fail(new Error('Speech playback timed out.'));
+          }, Math.min(180000, 20000 + safeText.length * 200));
           window.dispatchEvent(new CustomEvent('reliv_spoken_text', { detail: safeText }));
           callbacks.onStart?.();
           return true;
         };
         const fail = (error) => {
-          setSpeakerGate(false);
+          if (finished || requestId !== playbackRequestRef.current) return;
+          finish(true);
+          audio?.pause();
+          if (utterance) window.speechSynthesis?.cancel();
           callbacks.onError?.(error);
-          finish();
         };
         const playSynthesis = () => {
+          if (finished || requestId !== playbackRequestRef.current) return;
           if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
             fail(new Error('No recording or browser speech voice is available.'));
             return;
@@ -260,6 +278,7 @@ export function SpeechProvider({ children }) {
           utterance.onerror = (event) => {
             if (finished || requestId !== playbackRequestRef.current) return;
             if (event.error === 'not-allowed') {
+              clearTimeout(playbackTimeout);
               setSpeakerGate(false);
               retryPlaybackRef.current = playSynthesis;
             } else {
@@ -280,23 +299,25 @@ export function SpeechProvider({ children }) {
         audio.volume = volumeRef.current;
         activeAudioRef.current = audio;
         audio.onended = () => finish();
-        audio.onerror = () => {
-          if (!finished && requestId === playbackRequestRef.current) {
-            audio.onended = audio.onerror = null;
-            audio.pause();
-            activeAudioRef.current = null;
-            playSynthesis();
-          }
+        const fallbackToSynthesis = () => {
+          if (finished || usingSynthesis || requestId !== playbackRequestRef.current) return;
+          usingSynthesis = true;
+          audio.onended = audio.onerror = null;
+          audio.pause();
+          activeAudioRef.current = null;
+          playSynthesis();
         };
+        audio.onerror = fallbackToSynthesis;
         const playRecording = () => {
           if (!begin()) return;
           audio.play().catch((error) => {
-            if (finished || requestId !== playbackRequestRef.current) return;
-            setSpeakerGate(false);
+            if (finished || usingSynthesis || requestId !== playbackRequestRef.current) return;
             if (error.name === 'NotAllowedError') {
+              clearTimeout(playbackTimeout);
+              setSpeakerGate(false);
               retryPlaybackRef.current = playRecording;
             } else {
-              playSynthesis();
+              fallbackToSynthesis();
             }
           });
         };

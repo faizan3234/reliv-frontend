@@ -1,12 +1,16 @@
 import React, { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { HealthProvider, useHealth } from '../src/context/HealthContext';
+import { HealthProvider, useHealth, MOCK_TEST_REPORT } from '../src/context/HealthContext';
 import { SpeechProvider, useSpeech } from '../src/context/SpeechContext';
 import { VoiceAssistantProvider, useVoiceAssistant } from '../src/context/VoiceAssistantContext';
 import { useVoicePage } from '../src/hooks/useVoicePage';
 import CustomerDetails from '../src/pages/CustomerDetails';
 import TwoOptions from '../src/pages/TwoOptions';
+import Report1 from '../src/pages/Report1';
+import Report5 from '../src/pages/Report5';
+import MedicineDispensing from '../src/pages/MedicineDispensing';
+import SpeechControl from '../src/components/SpeechControl';
 import '../src/i18n';
 
 // Test-only browser dependencies; production providers and pages stay unmodified.
@@ -14,9 +18,13 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const events = [];
 const requests = [];
 const transcripts = [];
+const idleEvents = [];
 let autoEnd = true;
 let rejectPlayback = false;
 let rejectCustomer = false;
+let failRecording = false;
+let pendingCustomer = null;
+let pendingService = null;
 let lastUtterance;
 let controls;
 let root;
@@ -42,6 +50,10 @@ class FakeAudio {
   constructor(url) { this.url = url; }
   play() {
     verifyGate('audio');
+    if (failRecording) {
+      queueMicrotask(() => this.onerror?.());
+      return Promise.reject(new DOMException('Missing recording', 'NotSupportedError'));
+    }
     if (rejectPlayback) return Promise.reject(new DOMException('Interaction required', 'NotAllowedError'));
     if (autoEnd) queueMicrotask(() => this.onended?.());
     return Promise.resolve();
@@ -61,6 +73,7 @@ Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
   cancel() { lastUtterance?.onerror?.({ error: 'canceled' }); },
 } });
 class FakeWebSocket {
+  static acknowledge = true;
   static OPEN = 1;
   static CONNECTING = 0;
   static instances = [];
@@ -79,7 +92,7 @@ class FakeWebSocket {
   send(raw) {
     const message = JSON.parse(raw);
     this.sent.push(message);
-    if (message.type === 'CLIENT_HELLO') queueMicrotask(() => this.receive({ type: 'CONTROLLER_ACTIVE' }));
+    if (message.type === 'CLIENT_HELLO' && FakeWebSocket.acknowledge) queueMicrotask(() => this.receive({ type: 'CONTROLLER_ACTIVE' }));
     if (message.type === 'PING') queueMicrotask(() => this.receive({ type: 'pong' }));
   }
   receive(message) { this.onmessage?.({ data: JSON.stringify(message) }); }
@@ -92,18 +105,23 @@ window.WebSocket = FakeWebSocket;
 window.fetch = async (url, options = {}) => {
   if (String(url).endsWith('/assets/audio/manifest.json')) return { ok: true, json: async () => ({ 'Recorded welcome': 'welcome.mp3' }) };
   if (String(url).endsWith('/api/speech-config')) return { ok: true, json: async () => ({}) };
+  if (String(url).endsWith('/report/data')) return { ok: true, json: async () => ({ ok: true, paymentVerified: true, reportStatus: 'READY', sessionId: 'KSK-BROWSER', customerData: MOCK_TEST_REPORT.patient, healthData: MOCK_TEST_REPORT }) };
   const body = options.body ? JSON.parse(options.body) : {};
   requests.push({ url: String(url), body });
   if (String(url).endsWith('/api/create-qr-session')) return { ok: true, status: 200, json: async () => ({ sessionId: 'KSK-BROWSER', pairingToken: 'browser-token' }) };
+  if (pendingCustomer && String(url).endsWith('/customer')) await pendingCustomer;
+  if (pendingService && String(url).endsWith('/service')) await pendingService;
   if (rejectCustomer && String(url).endsWith('/customer')) return { ok: false, status: 500, json: async () => ({ error: 'Test save failed' }) };
   return { ok: true, status: 200, json: async () => ({ success: true, ok: true }) };
 };
+// eslint-disable-next-line react-refresh/only-export-components
 function Probe() {
   controls = { speech: useSpeech(), voice: useVoiceAssistant(), health: useHealth(), navigate: useNavigate(), path: useLocation().pathname };
   return null;
 }
+// eslint-disable-next-line react-refresh/only-export-components
 function VoicePage() {
-  useVoicePage({ expecting: 'gender', vocabularyHints: ['female'], onTranscript: (text) => transcripts.push(text) });
+  useVoicePage({ expecting: 'gender', vocabularyHints: ['female'], onTranscript: (text) => transcripts.push(text), onIdle: (seconds) => idleEvents.push(seconds) });
   return <p>Voice test page</p>;
 }
 async function mount(path, strict = false) {
@@ -111,11 +129,14 @@ async function mount(path, strict = false) {
   localStorage.clear(); sessionStorage.clear();
   root = createRoot(document.querySelector('#app'));
   const app = <HealthProvider><MemoryRouter initialEntries={[path]}><SpeechProvider><VoiceAssistantProvider>
-    <Probe /><Routes>
+    <Probe /><SpeechControl /><Routes>
       <Route path="/customer-details" element={<CustomerDetails />} />
       <Route path="/two-options" element={<TwoOptions />} />
       <Route path="/body-composition" element={<h2>Health destination</h2>} />
       <Route path="/medicine-dispensing" element={<h2>Medicine destination</h2>} />
+      <Route path="/report-1" element={<Report1 />} />
+      <Route path="/report-5" element={<Report5 />} />
+      <Route path="/medicine-audit" element={<MedicineDispensing />} />
       <Route path="*" element={<VoicePage />} />
     </Routes>
   </VoiceAssistantProvider></SpeechProvider></MemoryRouter></HealthProvider>;
@@ -150,6 +171,15 @@ async function run() {
   await act(async () => window.dispatchEvent(new Event('pointerdown')));
   await flush();
   assert(!controls.speech.speakingRef.current, 'blocked recording retries on interaction and completes');
+  autoEnd = false;
+  failRecording = true;
+  const beforeFallback = events.filter(([kind]) => kind === 'synthesis').length;
+  await act(async () => { void controls.speech.speakText('Recorded welcome'); });
+  assert(events.filter(([kind]) => kind === 'synthesis').length === beforeFallback + 1, 'simultaneous recording error and play rejection start synthesis only once');
+  assert(controls.speech.speakingRef.current, 'duplicate recording errors cannot release synthesis gate');
+  failRecording = false;
+  await act(async () => controls.speech.stop());
+  autoEnd = true;
   await act(async () => { await controls.speech.speakText('Proceeding to medicine dispensing'); });
   await say('Proceeding to medicine dispensing');
   assert(transcripts.length === 0, 'recent multiword self-echo is dropped after playback');
@@ -171,6 +201,32 @@ async function run() {
   assert(context.page === '/voice-next' && context.expecting === 'gender' && context.vocabulary_hints[0] === 'female', 'reconnect restores full question and vocabulary context');
   assert(recovered.sent.some((msg) => msg.type === 'PAUSE_LISTENING'), 'reconnect preserves intentional pause');
   await act(async () => controls.voice.resumeListening());
+  const invalidSocket = FakeWebSocket.instances.at(-1);
+  await act(async () => {
+    invalidSocket.receive(null);
+    invalidSocket.receive({ type: 'transcript', text: 40 });
+  });
+  assert(controls.voice.isConnected, 'malformed transcript payloads do not crash the voice controller');
+  autoEnd = false;
+  await act(async () => { void controls.speech.speakText('Departing page speech'); });
+  await act(async () => controls.navigate('/voice-departed'));
+  assert(!controls.speech.speakingRef.current, 'navigation cancels the previous page voice');
+  autoEnd = true;
+  FakeWebSocket.acknowledge = false;
+  await act(async () => FakeWebSocket.instances.at(-1).close());
+  await flush(150);
+  assert(!controls.voice.isConnected, 'socket is not reported connected before controller acknowledgement');
+  const stalled = FakeWebSocket.instances.at(-1);
+  FakeWebSocket.acknowledge = true;
+  await flush(5300);
+  await flush();
+  assert(stalled.readyState === 3 && controls.voice.isConnected, 'missing controller acknowledgement times out and reconnects');
+  await act(async () => FakeWebSocket.instances.at(-1).receive({ type: 'processing', active: true }));
+  const beforeProcessing = idleEvents.length;
+  await flush(4100);
+  assert(controls.voice.isProcessing && idleEvents.length === beforeProcessing, 'idle reminders cannot interrupt a slow Whisper answer');
+  await act(async () => FakeWebSocket.instances.at(-1).receive({ type: 'processing', active: false }));
+  assert(!controls.voice.isProcessing, 'recognition completion clears processing state');
   for (const [service, destination] of [['checkup korbo', '/body-composition'], ['oshudh nebo', '/medicine-dispensing']]) {
     requests.length = 0;
     await mount('/customer-details');
@@ -200,6 +256,50 @@ async function run() {
   rejectCustomer = false;
   await say('proceed');
   assert(controls.path === '/two-options', 'customer save can be retried');
+  let releaseService;
+  pendingService = new Promise((resolve) => { releaseService = resolve; });
+  await say('health checkup');
+  await act(async () => controls.navigate('/voice-test'));
+  await act(async () => releaseService());
+  await flush();
+  assert(controls.path === '/voice-test', 'late service response cannot navigate away from the current screen');
+  pendingService = null;
+  let releaseCustomer;
+  pendingCustomer = new Promise((resolve) => { releaseCustomer = resolve; });
+  await mount('/customer-details');
+  for (const word of ['Test Person', 'yes', 'forty five', 'yes', 'girl', 'yes']) await say(word);
+  await act(async () => { controls.navigate('/voice-test'); controls.health.resetHealth(); });
+  await act(async () => releaseCustomer());
+  await flush();
+  assert(controls.path === '/voice-test' && !controls.health.data.patient.name, 'late customer response cannot restore a patient after leaving and resetting');
+  pendingCustomer = null;
+  await act(async () => controls.navigate('/admin-audit'));
+  assert(!document.querySelector('[aria-label="Mute speaker"]'), 'speech control hides on admin navigation without a hook-order crash');
+  await act(async () => {
+    controls.health.loadMockReportData();
+    controls.navigate('/report-1');
+  });
+  await flush();
+  assert(document.querySelector('#app').textContent.includes('Champion') || document.querySelector('#app').textContent.includes('Rahul'), 'paid Report 1 renders after authoritative data loads');
+  await act(async () => controls.navigate('/report-5'));
+  await flush();
+  assert(document.querySelector('#app').textContent.includes('Rahul'), 'Report 5 renders the patient summary without missing-hook crashes');
+  await act(async () => controls.navigate('/medicine-audit'));
+  await flush();
+  await act(async () => {
+    localStorage.setItem('reliv_medicine_dispensing_enabled', 'false');
+    controls.navigate('/voice-test');
+  });
+  await act(async () => controls.navigate('/medicine-audit'));
+  await flush();
+  assert(document.querySelector('#app').textContent.includes('Medicine Dispensing Disabled'), 'disabling medicine while mounted keeps hook order valid');
+  await act(async () => {
+    localStorage.removeItem('reliv_medicine_dispensing_enabled');
+    controls.navigate('/voice-test');
+  });
+  await act(async () => controls.navigate('/medicine-audit'));
+  await flush();
+  assert(!document.querySelector('#app').textContent.includes('Medicine Dispensing Disabled'), 'medicine screen can be enabled again without crashing');
   await act(async () => root.unmount());
   await flush(200);
   assert(FakeWebSocket.instances.filter((socket) => socket.readyState === 1).length === 0, 'unmount closes socket without reconnecting');

@@ -10,7 +10,7 @@ import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { dict } from "../config/TwoOptionsDict";
 import { parseServiceChoice } from "../voice/voicePageProfiles";
-import { readKioskSession, clearKioskSession } from "../utils/kioskSession";
+import { readKioskSession, clearKioskSession, isCurrentKioskSession } from "../utils/kioskSession";
 
 export default function TwoOptions() {
   const navigate = useNavigate();
@@ -25,6 +25,15 @@ export default function TwoOptions() {
   const [selectedOption, setSelectedOption] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const mountedRef = useRef(false);
+  const requestRef = useRef(null);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestRef.current?.abort();
+    };
+  }, []);
   const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
@@ -44,6 +53,7 @@ export default function TwoOptions() {
     setIsSubmitting(true);
     setSubmitError("");
     const controller = new AbortController();
+    requestRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 10000);
     try {
       const session = readKioskSession();
@@ -69,6 +79,7 @@ export default function TwoOptions() {
       );
 
       const result = await response.json();
+      if (!mountedRef.current || !isCurrentKioskSession(session)) return;
 
       if ([403, 404, 410].includes(response.status)) {
         clearKioskSession();
@@ -83,11 +94,12 @@ export default function TwoOptions() {
       speakText(t(serviceType === 'MEDICINE' ? 'proceedMedicine' : 'proceedHealth'));
       navigate(destination);
     } catch (error) {
-      setSubmitError(error.name === "AbortError" ? "The kiosk is not responding. Please retry." : error.message);
+      if (mountedRef.current) setSubmitError(error.name === "AbortError" ? "The kiosk is not responding. Please retry." : error.message);
     } finally {
       clearTimeout(timeout);
+      requestRef.current = null;
       submittingRef.current = false;
-      setIsSubmitting(false);
+      if (mountedRef.current) setIsSubmitting(false);
     }
   };
 
@@ -211,6 +223,7 @@ export default function TwoOptions() {
           {/* Option 2: Medicine Dispensing */}
           <div
             onClick={() => {
+                if (submittingRef.current) return;
                 setSelectedOption("medicine-dispensing");
                 selectServiceAndContinue("MEDICINE", "/medicine-dispensing");
             }}

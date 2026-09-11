@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars -- used by JSX member tags
 import qrCode from "../assets/qr-code.png";
 
 const Team = () => {

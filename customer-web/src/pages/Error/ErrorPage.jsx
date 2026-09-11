@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '../../components/Button';
 import { AlertCircle, RefreshCw, QrCode, ShieldAlert } from 'lucide-react';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getFriendlyErrorMessage(error) {
   const message = String(
     error?.message || error?.title || error || ''

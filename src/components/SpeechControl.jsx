@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSpeech } from "../context/SpeechContext";
+import { useLocation } from "react-router-dom";
 
 /**
  * SpeechControl — Floating mute/volume button for each page.
@@ -7,13 +8,13 @@ import { useSpeech } from "../context/SpeechContext";
  * tap the expand arrow to reveal a volume slider.
  */
 export default function SpeechControl({ className = "" }) {
-  const { muted, toggleMute, volume, setVolume, speakingRef } = useSpeech();
+  const { muted, toggleMute, volume, setVolume } = useSpeech();
+  const { pathname } = useLocation();
   const [expanded, setExpanded] = useState(false);
   const panelRef = useRef(null);
 
   // Hide on admin pages
-  const isAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
-  if (isAdminPage) return null;
+  const isAdminPage = pathname.startsWith('/admin');
 
   // Close the volume panel when clicking outside
   useEffect(() => {
@@ -26,6 +27,8 @@ export default function SpeechControl({ className = "" }) {
     document.addEventListener("pointerdown", handleClickOutside);
     return () => document.removeEventListener("pointerdown", handleClickOutside);
   }, [expanded]);
+
+  if (isAdminPage) return null;
 
   return (
     <div

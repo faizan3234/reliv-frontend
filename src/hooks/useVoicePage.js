@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useVoiceAssistant } from '../context/VoiceAssistantContext';
 
@@ -15,27 +15,31 @@ import { useVoiceAssistant } from '../context/VoiceAssistantContext';
 export const useVoicePage = ({ onTranscript, onIdle, onHelp, vocabularyHints = [], expecting = '' }) => {
   const { registerPageHook, unregisterPageHook, sendToBackend } = useVoiceAssistant();
   const location = useLocation();
+  const handlersRef = useRef({ onTranscript, onIdle, onHelp });
+  handlersRef.current = { onTranscript, onIdle, onHelp };
+  const vocabularyKey = JSON.stringify(vocabularyHints);
 
   useEffect(() => {
     // Register the hooks for this page
     const pagePath = location.pathname;
     
     registerPageHook(pagePath, {
-      onTranscript,
-      onIdle,
-      onHelp
-    });
-
-    // Send context to backend so Whisper can adapt
-    sendToBackend({
-      type: 'SET_CONTEXT',
-      page: pagePath,
-      expecting,
-      vocabulary_hints: vocabularyHints
+      onTranscript: (...args) => handlersRef.current.onTranscript?.(...args),
+      onIdle: (...args) => handlersRef.current.onIdle?.(...args),
+      onHelp: (...args) => handlersRef.current.onHelp?.(...args),
     });
 
     return () => {
       unregisterPageHook(pagePath);
     };
-  }, [location.pathname, onTranscript, onIdle, onHelp, expecting, JSON.stringify(vocabularyHints), registerPageHook, unregisterPageHook, sendToBackend]);
+  }, [location.pathname, registerPageHook, unregisterPageHook]);
+
+  useEffect(() => {
+    sendToBackend({
+      type: 'SET_CONTEXT',
+      page: location.pathname,
+      expecting,
+      vocabulary_hints: JSON.parse(vocabularyKey),
+    });
+  }, [location.pathname, expecting, vocabularyKey, sendToBackend]);
 };

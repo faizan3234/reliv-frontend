@@ -117,7 +117,7 @@ export default function AdminMedicinePage() {
             isAuthed = true;
           }
         }
-      } catch {}
+      } catch { /* The local fallback remains available offline. */ }
 
       // Default fallback passwords for kiosk offline operation
       const normalized = passwordInput.trim().toLowerCase();
@@ -132,7 +132,7 @@ export default function AdminMedicinePage() {
       } else {
         setLoginError("Invalid password. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setLoginError("Login failed. Please check network connection.");
     } finally {
       setIsLoggingIn(false);

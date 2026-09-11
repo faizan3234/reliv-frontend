@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useVoiceAssistant } from '../context/VoiceAssistantContext';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used by JSX member tags
 
 export default function VoiceAssistantOverlay() {
-  const { isConnected, micDevice, isSpeaking, listeningPaused, lastTranscript } = useVoiceAssistant();
+  const { isConnected, micDevice, isSpeaking, isProcessing, listeningPaused, lastTranscript } = useVoiceAssistant();
   const [show, setShow] = useState(false);
   const [recentText, setRecentText] = useState("");
 
@@ -69,7 +69,7 @@ export default function VoiceAssistantOverlay() {
           {/* Status Text */}
           <div className="flex flex-col">
             <span className="text-sm font-bold text-slate-800">
-              {isSpeaking ? 'Listening...' : 'Reliv Assistant'}
+              {isProcessing ? 'Recognizing...' : isSpeaking ? 'Listening...' : 'Reliv Assistant'}
             </span>
             <span className="text-xs font-medium text-slate-500">
               {micDevice || 'Ready'}
