@@ -11,19 +11,20 @@ import "./i18n.js";
 
 import App from "./App.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { recoverBlankScreen } from './utils/crashRecovery';
 import { SpeechProvider, useSpeech } from "./context/SpeechContext.jsx";
 
 // ── Kiosk Crash Watchdog ──
 // If the screen goes blank (React tree unmounts or white-screens),
-// auto-reload to home after 5 seconds. Prevents stuck kiosk.
+// recover the current screen once, then offer a manual retry.
 if (typeof window !== "undefined") {
   let watchdogInterval = setInterval(() => {
     const root = document.getElementById("root");
     // If root is empty or has no visible content, the app crashed
     if (root && root.children.length === 0) {
-      console.warn("[Watchdog] Blank screen detected — reloading to home");
+      console.warn("[Watchdog] Blank screen detected — recovering current screen");
       clearInterval(watchdogInterval);
-      window.location.href = "/";
+      recoverBlankScreen(root);
     }
   }, 5000);
 
@@ -34,7 +35,7 @@ if (typeof window !== "undefined") {
     setTimeout(() => {
       const root = document.getElementById("root");
       if (root && root.children.length === 0) {
-        window.location.href = "/";
+        recoverBlankScreen(root);
       }
     }, 4000);
   });
@@ -169,7 +170,7 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
     {/* Suspense lets react-i18next wait for resources without showing keys */}
-    <Suspense fallback={null}>
+    <Suspense fallback={<div role="status" className="min-h-screen flex items-center justify-center bg-white text-slate-700">Loading Reliv…</div>}>
       <BrowserRouter>
         <HealthProvider>
           <SpeechProvider>

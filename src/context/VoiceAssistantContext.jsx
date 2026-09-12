@@ -26,7 +26,7 @@ export const VoiceAssistantProvider = ({ children }) => {
   const location = useLocation();
   const currentPathRef = useRef(location.pathname);
   const pageHooks = useRef(new Map());
-  const { stop, speakingRef } = useSpeech();
+  const { stop, speak, speakingRef } = useSpeech();
   const { data: healthData } = useHealth();
   const languageRef = useRef(healthData?.language || 'en');
   languageRef.current = healthData?.language || 'en';
@@ -361,10 +361,12 @@ export const VoiceAssistantProvider = ({ children }) => {
     // 1. Check Global Intents (expanded to catch 150+ variations of help requests)
     const helpRegex = /(ab kya|what to do|what do|how to|help|samajh nahi|kya karu|kya karna|ki korbo|ki kor|sahajyo|কি করবো|কি করব|সাহায্য|কি করতে|क्या करूं|क्या करें|क्या करना|अब क्या|व्हाट टू|व्हाट तो|मदद|সাহায্য করুন|what now|what next|what should i do|guide me|next step|kya kare|kya karun|kya karoon|kaise karu|kaise karna hai|aage kya|age kya|batao|bataiye|ki korte hobe|ki korob|bujhte parchi na|bujhchi na|ebar ki korbo|help me|tell me|samjh nahi|pata nahi|pata nhi|kya krna|kya kru|kaise kru|ki korbo ebar|কি হবে|কী করব|কী করবো|কি করতে হবে|मुझे समझ नहीं|समझ नहीं आ रहा|क्या करना है|आगे क्या|what i need to do|what do i do|next process)/;
     
-    if (helpRegex.test(lowerText)) {
+    if (helpRegex.test(lowerText.replace(/([a-z])\1{2,}/g, '$1')) || /ki korte bobe/.test(lowerText)) {
       const hook = pageHooks.current.get(currentPathRef.current);
       if (hook && hook.onHelp) {
         hook.onHelp();
+      } else {
+        speak(currentPathRef.current.replace(/^\//, '') || 'splash');
       }
       return;
     }

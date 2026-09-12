@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node test-intent.js && node --test test-kiosk-session.js && node tests/run-integration.js",
+    "test": "node test-intent.js && node --test test-kiosk-session.js tests/reliability.test.js && node tests/run-integration.js",
     "test:integration": "node tests/run-integration.js",
     "build": "vite build",
     "lint": "eslint .",

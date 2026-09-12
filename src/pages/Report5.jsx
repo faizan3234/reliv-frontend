@@ -4,9 +4,9 @@ import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
 import Logo from "../components/Logo";
-import EmailSendingAnimation from "../components/EmailSendingAnimation";
+import { QRCodeSVG } from "qrcode.react";
+import { useReportDelivery } from "../hooks/useReportDelivery";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
-import { sanitizeError } from "../utils/errorSanitizer";
 import { useSpeech } from "../context/SpeechContext";
 import ChallengePrompt from "../components/ChallengePrompt";
 import { API_BASE } from "../config/api";
@@ -461,9 +461,9 @@ export default function Report5() {
 
   const [history, setHistory] = useState([]);
   const [ecoStats, setEcoStats] = useState(null);
-  const [qrCode, setQrCode] = useState(null);
-  const [emailSent, setEmailSent] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
+  // Never use another historical report (or a placeholder) as this patient's session.
+  const currentSessionId = data?.sessionId || data?.patient?.sessionId || '';
+  const delivery = useReportDelivery(currentSessionId);
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const [inactivityTimer, setInactivityTimer] = useState(120);
 
@@ -522,37 +522,6 @@ export default function Report5() {
     }, 400);
     return () => { clearTimeout(timer); stop(); };
   }, []);
-
-  // Fetch QR code using session-local report download endpoint
-  useEffect(() => {
-    const currentSessionId =
-      data?.sessionId ||
-      data?.patient?.sessionId ||
-      sessionStorage.getItem('reliv_current_session_id') ||
-      localStorage.getItem('reliv_session_id') ||
-      (history && history.length > 0 ? (history[history.length - 1].sessionId || history[history.length - 1]._id || history[history.length - 1].reportId) : 'current');
-
-    // QR encodes session-local report download URL
-    const downloadUrl = `${API_BASE}/api/sessions/${currentSessionId}/report/download`;
-    
-    fetch(`${API_BASE}/api/qr-code`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: downloadUrl }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('QR generation failed');
-        return res.json();
-      })
-      .then((data) => {
-        // Backend returns { qrCode: "data:image/png;base64,..." }
-        setQrCode(data.qrCode || data.qrCodeUrl || data.url);
-      })
-      .catch((err) => {
-        if (import.meta.env.DEV) console.error('QR Code error:', err);
-        setQrCode(null);
-      });
-  }, [data, history]);
 
   // Inactivity timer - reset on any user interaction
   useEffect(() => {
@@ -771,61 +740,6 @@ export default function Report5() {
     subcutFatMassData
   } = integrationMetrics;
 
-  // Get report on phone - ensures report is compiled locally on session endpoint
-  const handleSendEmail = async () => {
-    setSendingEmail(true);
-    
-    try {
-      const currentSessionId =
-        data?.sessionId ||
-        data?.patient?.sessionId ||
-        sessionStorage.getItem('reliv_current_session_id') ||
-        localStorage.getItem('reliv_session_id') ||
-        (history && history.length > 0 ? (history[history.length - 1].sessionId || history[history.length - 1]._id || history[history.length - 1].reportId) : 'current');
-
-      // Ensure report PDF is generated locally on session endpoint
-      try {
-        await fetch(`${API_BASE}/api/sessions/${currentSessionId}/report`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            patient, 
-            vitals: {
-              systolic: systolic || null,
-              diastolic: diastolic || null,
-              bpm: bpm || null,
-              oxygen: oxygen || null,
-              temperature: temperature || null,
-              weight: vitals.weight || null,
-              height: vitals.height || null,
-              impedance: vitals.impedance || null,
-              leftEye: vitals.leftEye || null,
-              rightEye: vitals.rightEye || null,
-              leftEyeAdvice: vitals.leftEyeAdvice || null,
-              rightEyeAdvice: vitals.rightEyeAdvice || null,
-            },
-            bodyComposition: metrics,
-            history 
-          }),
-        });
-      } catch {
-        // Non-blocking local compile check
-      }
-
-      if (import.meta.env.DEV) console.log('✅ Report ready for session:', currentSessionId);
-      setEmailSent(true);
-      // After animation completes, reset
-      setTimeout(() => {
-        setEmailSent(false);
-      }, 3000);
-    } catch (err) {
-      if (import.meta.env.DEV) console.error('❌ Report error:', err);
-      alert(`Report ready: ${sanitizeError(err)}`);
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
   // Read aloud
   const handleReadAloud = () => {
     if (speechPlaying) {
@@ -890,11 +804,11 @@ export default function Report5() {
         {/* Header with Logo and QR Code */}
         <div style={{ position: "relative", textAlign: "center", marginBottom: "60px", minHeight: "180px" }}>
           <Logo size="text-6xl" />
-          {qrCode && (
+          {delivery.ready && (
             <div style={{ position: "absolute", right: 0, top: 0 }}>
-              <img src={qrCode} alt="QR Code" style={{ width: "140px", height: "140px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
+              <QRCodeSVG value={delivery.downloadUrl} size={140} title="Download this session's report" />
               <div style={{ fontSize: "12px", color: "#666666", marginTop: "8px", textAlign: "center", maxWidth: "140px" }}>
-                Scan to open report on phone
+                Connect to the kiosk Wi-Fi, then scan to open this report.
               </div>
             </div>
           )}
@@ -2402,8 +2316,8 @@ export default function Report5() {
               }}
             >
               <button
-                onClick={handleSendEmail}
-                disabled={sendingEmail}
+                onClick={delivery.prepare}
+                disabled={delivery.busy}
                 style={{
                   background: "#22c55e",
                   color: "white",
@@ -2412,11 +2326,11 @@ export default function Report5() {
                   padding: "14px 32px",
                   borderRadius: "9999px",
                   border: "none",
-                  cursor: sendingEmail ? "not-allowed" : "pointer",
-                  opacity: sendingEmail ? 0.6 : 1,
+                  cursor: delivery.busy ? "not-allowed" : "pointer",
+                  opacity: delivery.busy ? 0.6 : 1,
                 }}
               >
-                {sendingEmail ? "Preparing..." : "📱 Get Report on Phone"}
+                {delivery.busy ? "Preparing..." : "📱 Get Report on Phone"}
               </button>
 
               <button
@@ -2487,14 +2401,8 @@ export default function Report5() {
             </motion.div>
           </>
 
-        {/* Email / Report sent animation */}
-        {emailSent && (
-          <EmailSendingAnimation 
-            onComplete={() => {
-              // Animation handles navigation via timeout in handleSendEmail
-            }} 
-          />
-        )}
+        {delivery.error && <p role="alert" className="text-center text-red-700">{delivery.error}</p>}
+        {delivery.ready && <p role="status" className="text-center text-green-700">Report ready. Scan the QR above on the kiosk Wi-Fi. This does not confirm email delivery.</p>}
 
         {/* Challenge a Friend / Couple modal */}
         <ChallengePrompt

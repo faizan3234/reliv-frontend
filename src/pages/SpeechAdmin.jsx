@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
+import { adminFetch, readAdminSession } from '../utils/adminSession';
 import { useSpeech } from "../context/SpeechContext";
 import { supabase, LEADERBOARD_BUCKET } from "../config/supabase";
 
@@ -357,12 +358,16 @@ export default function SpeechAdmin() {
   const navigate = useNavigate();
   const { speakText, stop } = useSpeech();
   const [config, setConfig] = useState({});
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(() => Boolean(readAdminSession()));
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [testing, setTesting] = useState(null);
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const expire = () => setAuthenticated(false);
+    window.addEventListener('reliv_admin_expired', expire);
+    return () => window.removeEventListener('reliv_admin_expired', expire);
+  }, []);
 
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState({
@@ -459,14 +464,15 @@ export default function SpeechAdmin() {
   };
 
   const handleSave = async () => {
-    if (!password) { setStatus("Enter admin password to save."); return; }
+    if (saving) return;
+    if (!readAdminSession()) { setStatus('Sign in at /admin before saving speech settings.'); setAuthenticated(false); return; }
     setSaving(true);
     setStatus("");
     try {
-      const res = await fetch(`${API_BASE}/api/speech-config`, {
+      const res = await adminFetch(`${API_BASE}/api/speech-config`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config: { ...config, _voiceSettings: voiceSettings }, password }),
+        body: JSON.stringify({ config: { ...config, _voiceSettings: voiceSettings } }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -474,10 +480,10 @@ export default function SpeechAdmin() {
         setStatus("✅ Saved successfully! Changes will apply on next kiosk session.");
         setAuthenticated(true);
       } else if (res.status === 403) {
-        setStatus("❌ Incorrect password.");
+        setStatus("❌ Admin access denied. Please sign in again.");
       } else {
         const err = await res.json().catch(() => ({}));
-        setStatus(`❌ ${err.error || "Failed to save."}`);
+        setStatus(`❌ ${err.message || err.error || "Failed to save."}`);
       }
     } catch { setStatus("❌ Network error — could not reach server."); }
     finally { setSaving(false); }
@@ -531,9 +537,7 @@ export default function SpeechAdmin() {
           {/* Auth + Upload row */}
           <div className="flex items-center gap-2 flex-wrap">
             {!authenticated ? (
-              <input type="password" placeholder="Admin password" value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="flex-1 min-w-[140px] border border-gray-300 rounded-lg px-3 py-1.5 text-sm caret-orange-600 cursor-text focus:border-orange-400 focus:ring-1 focus:ring-orange-200 outline-none" />
+              <button onClick={() => navigate('/admin')} className="text-orange-700 underline">Sign in to admin before saving</button>
             ) : (
               <span className="text-green-600 text-sm font-medium">🔓 Authenticated</span>
             )}

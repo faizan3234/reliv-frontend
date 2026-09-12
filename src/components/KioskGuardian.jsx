@@ -32,7 +32,7 @@ export default function KioskGuardian() {
     const INACTIVITY_TIMEOUT = 120000; // 120 seconds
 
     // Skip ALL kiosk protections on /mobile-entry and /h — those pages run on user phones
-    if (currentPath.startsWith('/mobile-entry') || currentPath === '/h' || currentPath.startsWith('/admin-x7k9')) {
+    if (currentPath.startsWith('/mobile-entry') || currentPath === '/h' || currentPath === '/admin' || currentPath.startsWith('/admin-x7k9')) {
       console.log('[KioskGuardian] 📱 Special page — kiosk protections SKIPPED');
       return;
     }

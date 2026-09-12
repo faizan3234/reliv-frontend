@@ -61,6 +61,7 @@ async function post(base, path, body) {
     return result;
   } catch (error) {
     if (error.name === "AbortError") throw new Error("The kiosk is not responding. Please retry.");
+    if (error instanceof TypeError) throw new Error("Cannot connect to the kiosk. Check its connection and retry; your details are still on this screen.");
     throw error;
   } finally {
     clearTimeout(timeout);

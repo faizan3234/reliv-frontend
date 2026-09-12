@@ -11,6 +11,9 @@ import Report1 from '../src/pages/Report1';
 import Report5 from '../src/pages/Report5';
 import MedicineDispensing from '../src/pages/MedicineDispensing';
 import SpeechControl from '../src/components/SpeechControl';
+import PaymentGate from '../src/pages/PaymentGate';
+import App from '../src/App';
+import { emailHealthReport, emailPaymentReceipt, PAYMENT_API_BASE } from '../customer-web/src/services/bridgeApi';
 import '../src/i18n';
 
 // Test-only browser dependencies; production providers and pages stay unmodified.
@@ -25,6 +28,8 @@ let rejectCustomer = false;
 let failRecording = false;
 let pendingCustomer = null;
 let pendingService = null;
+let rejectService = false;
+let apiOverride = null;
 let lastUtterance;
 let controls;
 let root;
@@ -103,6 +108,7 @@ class FakeWebSocket {
 }
 window.WebSocket = FakeWebSocket;
 window.fetch = async (url, options = {}) => {
+  if (apiOverride) { const response = await apiOverride(String(url), options); if (response) return response; }
   if (String(url).endsWith('/assets/audio/manifest.json')) return { ok: true, json: async () => ({ 'Recorded welcome': 'welcome.mp3' }) };
   if (String(url).endsWith('/api/speech-config')) return { ok: true, json: async () => ({}) };
   if (String(url).endsWith('/report/data')) return { ok: true, json: async () => ({ ok: true, paymentVerified: true, reportStatus: 'READY', sessionId: 'KSK-BROWSER', customerData: MOCK_TEST_REPORT.patient, healthData: MOCK_TEST_REPORT }) };
@@ -112,7 +118,9 @@ window.fetch = async (url, options = {}) => {
   if (pendingCustomer && String(url).endsWith('/customer')) await pendingCustomer;
   if (pendingService && String(url).endsWith('/service')) await pendingService;
   if (rejectCustomer && String(url).endsWith('/customer')) return { ok: false, status: 500, json: async () => ({ error: 'Test save failed' }) };
-  return { ok: true, status: 200, json: async () => ({ success: true, ok: true }) };
+  if (rejectService && String(url).endsWith('/service')) return { ok: false, status: 409, json: async () => ({ error: 'Session cannot change service' }) };
+  if (String(url).endsWith('/api/kits')) return { ok: true, status: 200, json: async () => ({ kits: [] }) };
+  return { ok: true, status: 200, json: async () => ({ success: true, ok: true, reportId: 'RPT-TEST', data: [], history: [] }) };
 };
 // eslint-disable-next-line react-refresh/only-export-components
 function Probe() {
@@ -136,6 +144,7 @@ async function mount(path, strict = false) {
       <Route path="/medicine-dispensing" element={<h2>Medicine destination</h2>} />
       <Route path="/report-1" element={<Report1 />} />
       <Route path="/report-5" element={<Report5 />} />
+      <Route path="/payment" element={<PaymentGate />} />
       <Route path="/medicine-audit" element={<MedicineDispensing />} />
       <Route path="*" element={<VoicePage />} />
     </Routes>
@@ -146,6 +155,86 @@ async function mount(path, strict = false) {
 async function say(text) {
   await act(async () => FakeWebSocket.instances.at(-1).receive({ type: 'transcript', text, is_final: true }));
   await flush();
+}
+const responseJSON = (data, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => data });
+const button = label => [...document.querySelectorAll('#app button')].find(el => el.textContent.trim() === label);
+async function click(label) {
+  const el = button(label); if (!el) throw new Error('Missing button: ' + label);
+  await act(async () => el.click()); await flush();
+}
+async function checkPaymentRecovery() {
+  await mount('/voice-test');
+  let statusCalls = 0, createCalls = 0, confirmCalls = 0;
+  let statusMode = 'active', confirmMode = 'failure', resolveConfirm;
+  apiOverride = async url => {
+    if (url.endsWith('/payment-v2/status')) {
+      statusCalls++;
+      if (statusMode === 'failure') return responseJSON({ ok: false, message: 'Status unavailable' }, 503);
+      if (statusMode === 'verified') return responseJSON({ ok: true, paymentVerified: true, status: 'VERIFIED' });
+      return responseJSON({ ok: true, status: 'ACTIVE', requestId: 'REQ-TEST', amount: 2700, expiresAt: Date.now() + 300000, paymentUrl: 'https://example.invalid/pay' });
+    }
+    if (url.endsWith('/payment-v2/request')) { createCalls++; return responseJSON({ ok: false }, 500); }
+    if (url.endsWith('/confirm-code')) {
+      confirmCalls++;
+      if (confirmMode === 'pending') return new Promise(resolve => { resolveConfirm = resolve; });
+      return responseJSON({ ok: false, message: 'Database unavailable' }, 503);
+    }
+  };
+  await act(async () => { controls.health.update({ sessionId: 'KSK-BROWSER' }); controls.navigate('/payment'); });
+  await flush(80);
+  assert(statusCalls === 1 && createCalls === 0, 'payment render restores one request without empty-cart reinitialization');
+  assert(document.querySelector('#app').textContent.includes('2. Enter 4-Digit Code'), 'payment code entry tab is present above the main content');
+  await say('payment not done');
+  assert(!document.querySelector('#app').textContent.includes('Payment Confirmation'), 'negative payment answer keeps QR instructions');
+  const beforeHelp = events.filter(([type]) => type === 'spoken').length;
+  for (const phrase of ['ab kya karu', 'ki korbo', 'ki korte bobe', 'whattt to do', 'what now']) await say(phrase);
+  assert(events.filter(([type]) => type === 'spoken').length >= beforeHelp + 5, 'Hindi, Bengali and English help variations speak payment guidance');
+  await say('yes');
+  assert(document.querySelector('#app').textContent.includes('Payment Confirmation'), 'spoken yes opens keypad');
+  assert(controls.health.data.paymentVerified !== true, 'voice cannot bypass backend payment verification');
+  for (const digit of ['0', '0', '4', '2']) await click(digit);
+  await click('Verify Payment');
+  assert(document.querySelector('#app').textContent.includes('Database unavailable'), 'server failure is visible and retryable');
+  assert(!document.querySelector('#app').textContent.includes('Incorrect confirmation code'), 'server failure is not misreported as a wrong code');
+  await click('Retry');
+  assert(createCalls === 0 && statusCalls === 2, 'retry checks the existing payment rather than creating another charge');
+  confirmMode = 'pending';
+  await act(async () => { button('Verify Payment').click(); button('Verify Payment').click(); }); await flush();
+  assert(confirmCalls === 2, 'duplicate taps send only one verification request');
+  await act(async () => controls.navigate('/voice-test'));
+  await act(async () => resolveConfirm(responseJSON({ ok: true, status: 'VERIFIED', completionStatus: 'report_ready' })));
+  await flush(1850);
+  assert(controls.path === '/voice-test', 'late payment response cannot navigate after leaving');
+  statusMode = 'failure'; await act(async () => controls.navigate('/payment')); await flush();
+  assert(document.querySelector('#app').textContent.includes('Status unavailable') && createCalls === 0, 'status outage does not start a new payment');
+  statusMode = 'verified'; await click('Retry'); await flush(1300);
+  assert(controls.path === '/report-1', 'verified retry prepares the paid report before navigating');
+  apiOverride = null;
+}
+// Real production routes with synthetic network and hardware responses.
+// eslint-disable-next-line react-refresh/only-export-components
+function ScreenProbe() {
+  controls = { health: useHealth(), navigate: useNavigate(), path: useLocation().pathname }; return null;
+}
+async function checkAllRoutes() {
+  await act(async () => root.unmount()); localStorage.clear(); sessionStorage.clear();
+  root = createRoot(document.querySelector('#app'));
+  await act(async () => root.render(<HealthProvider><MemoryRouter initialEntries={['/team']}><SpeechProvider><ScreenProbe /><App /></SpeechProvider></MemoryRouter></HealthProvider>));
+  await flush(); localStorage.setItem('reliv_session_id', 'KSK-BROWSER'); localStorage.setItem('reliv_pairing_token', 'browser-token');
+  await act(async () => controls.health.update({ ...MOCK_TEST_REPORT, sessionId: 'KSK-BROWSER' }));
+  for (const path of ['/choose-language', '/customer-details', '/two-options', '/health-checkup', '/medicine-dispensing', '/payment', '/oxygen-pulse', '/eyesight', '/body-temperature', '/body-composition', '/report-1', '/report-2', '/report-3', '/report-4', '/report-5', '/wellness-recommendations', '/checkout', '/order-success', '/feedback', '/team', '/mobile-entry', '/photo-upload', '/h', '/admin', '/admin-x7k9/speech', '/']) {
+    await act(async () => controls.navigate(path)); await flush(['/health-checkup', '/oxygen-pulse', '/body-temperature'].includes(path) ? 2200 : 50);
+    assert(document.querySelector('.app-screen')?.textContent.trim().length > 10, 'production route renders with synthetic dependencies: ' + path);
+  }
+}
+async function checkPhoneDelivery() {
+  const calls = [];
+  apiOverride = async (url, options) => { calls.push({ url, data: JSON.parse(options.body) }); return responseJSON({ ok: true, sent: true, downloadToken: 'synthetic-token' }); };
+  await emailHealthReport({ requestId: 'REQ-TEST', email: 'test@example.invalid' });
+  await emailPaymentReceipt({ requestId: 'REQ-TEST', email: 'test@example.invalid' });
+  assert(calls.every(call => call.url.startsWith(PAYMENT_API_BASE + '/api/v2/')), 'phone emails use the HTTPS cloud API instead of the Pi LAN');
+  assert(calls.every(call => call.data.requestId === 'REQ-TEST' && call.data.email === 'test@example.invalid'), 'phone email uses the confirmed request and supplied email');
+  apiOverride = null;
 }
 async function run() {
   await mount('/voice-test', true);
@@ -256,6 +345,9 @@ async function run() {
   rejectCustomer = false;
   await say('proceed');
   assert(controls.path === '/two-options', 'customer save can be retried');
+  rejectService = true; await say('medicine dispensing');
+  assert(controls.path === '/two-options', '409 service rejection cannot navigate to an unselected service');
+  rejectService = false;
   let releaseService;
   pendingService = new Promise((resolve) => { releaseService = resolve; });
   await say('health checkup');
@@ -300,6 +392,9 @@ async function run() {
   await act(async () => controls.navigate('/medicine-audit'));
   await flush();
   assert(!document.querySelector('#app').textContent.includes('Medicine Dispensing Disabled'), 'medicine screen can be enabled again without crashing');
+  await checkPaymentRecovery();
+  await checkPhoneDelivery();
+  await checkAllRoutes();
   await act(async () => root.unmount());
   await flush(200);
   assert(FakeWebSocket.instances.filter((socket) => socket.readyState === 1).length === 0, 'unmount closes socket without reconnecting');

@@ -20,18 +20,18 @@ export const dict = {
     bn: "Perfect. এবার phone-এ payment complete করুন।"
   },
   payment_done: {
-    en: "Great. After a successful payment, you will see a 4-digit verification code on the Reliv page. Press the 'I've Paid — Enter Code' button below and enter the code.",
-    hi: "Great. Successful payment के बाद Reliv page पर 4-digit verification code दिखेगा। नीचे 'I've Paid — Enter Code' button दबाइए और code enter कीजिए।",
-    bn: "Great. Successful payment-এর পর Reliv page-এ 4-digit verification code দেখা যাবে। নিচে 'I've Paid — Enter Code' button চাপুন এবং code enter করুন।"
+    en: "The keypad is open. Enter the four-digit code shown on your phone, then tap Verify Payment. Scroll down if you cannot see the button.",
+    hi: "Keypad खुल गया है। Phone पर दिख रहा चार अंकों का code यहाँ डालिए, फिर Verify Payment दबाइए। नीचे देखने के लिए screen scroll कीजिए।",
+    bn: "Keypad খুলে গেছে। Phone-এ দেখানো চার সংখ্যার code এখানে লিখুন, তারপর Verify Payment চাপুন। নিচে দেখতে screen scroll করুন।"
   },
   idle12_qr: {
-    en: "Has the QR scanned? Tell me if you are facing any problem.",
-    hi: "QR scan हो गया? अगर problem आ रही है तो मुझे बोलिए।",
-    bn: "QR scan হয়েছে? Problem হলে আমাকে বলুন।"
+    en: "Have you completed payment on your phone? Say yes to enter your code, or ask me for help.",
+    hi: "क्या आपने phone पर payment कर दिया? हाँ बोलिए, मैं code डालने का keypad खोल दूँगी। कोई problem हो तो मुझे बताइए।",
+    bn: "Phone-এ payment করেছেন? হ্যাঁ বলুন, আমি code লেখার keypad খুলে দেব। সাহায্য লাগলে আমাকে বলুন।"
   },
   idle12_code: {
-    en: "Do you see the 4-digit code on your phone? You can enter the code on the screen or tell me.",
-    hi: "Phone पर 4-digit code दिख रहा है? आप code screen पर enter कर सकते हैं, या मुझे बोल सकते हैं।",
-    bn: "Phone-এ 4-digit code দেখা যাচ্ছে? আপনি code screen-এ enter করতে পারেন, বা আমাকে বলতে পারেন।"
+    en: "Enter the four-digit code from your phone using this keypad, then tap Verify Payment. Scroll down if you cannot see the button.",
+    hi: "Phone का चार अंकों का code इस keypad से डालिए, फिर Verify Payment दबाइए। Button नहीं दिखे तो नीचे scroll कीजिए।",
+    bn: "Phone-এর চার সংখ্যার code এই keypad দিয়ে লিখুন, তারপর Verify Payment চাপুন। Button না দেখলে নিচে scroll করুন।"
   }
 };

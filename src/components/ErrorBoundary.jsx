@@ -15,10 +15,8 @@ export default class ErrorBoundary extends React.Component {
     if (import.meta.env.DEV) {
       console.error("ErrorBoundary caught:", error, errorInfo);
     }
-    // Auto-recover to home after 3 seconds (kiosk can't have dead screens)
-    this._autoRecoverTimer = setTimeout(() => {
-      window.location.href = "/";
-    }, 3000);
+    // Never send an active/paid customer home automatically or claim their
+    // data was saved. Keep an explicit recovery screen with the current URL.
   }
 
   componentWillUnmount() {
@@ -27,7 +25,7 @@ export default class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     clearTimeout(this._autoRecoverTimer);
-    this.setState({ hasError: false });
+    window.location.reload();
   };
 
   handleGoHome = () => {
@@ -47,13 +45,13 @@ export default class ErrorBoundary extends React.Component {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Something went wrong</h1>
-            <p className="text-gray-500 mb-8">Don't worry — no data was lost. Please try again.</p>
+            <p className="text-gray-500 mb-8">Please reload this screen to try again. If you already paid, do not pay again; ask the kiosk administrator for help.</p>
             <div className="space-y-3">
               <button
                 onClick={this.handleReset}
                 className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3.5 font-semibold text-white shadow-md hover:shadow-lg transition-all"
               >
-                Try Again
+                Reload This Screen
               </button>
               <button
                 onClick={this.handleGoHome}

@@ -60,15 +60,18 @@ html, body {
 }
 
 .vital-screen {
-  height: 100vh;
-  height: 100dvh;
-  min-height: 0;
+  height: auto;
+  min-height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior-y: contain;
 }
+
+/* Grow page content so centered controls never start above scroll zero. */
+.app-screen > .scrollable-container { height: auto !important; min-height: 100dvh; }
+.payment-screen > * { flex-shrink: 0; }
 
 /* Scrollable containers - enable touch scrolling */
 .overflow-y-auto,
@@ -131,6 +134,10 @@ button, a, [role="button"], .cursor-pointer {
 html, body, * {
   touch-action: pan-y pan-x;
 }
+
+/* Grow page content so centered controls never start above scroll zero. */
+.app-screen > .scrollable-container { height: auto !important; min-height: 100dvh; }
+.payment-screen > * { flex-shrink: 0; }
 
 /* Scrollable containers need full touch support */
 .overflow-y-auto,
