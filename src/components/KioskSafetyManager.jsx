@@ -21,7 +21,7 @@ export default function KioskSafetyManager() {
     if (
       pathname.startsWith('/mobile-entry') ||
       pathname === '/h' ||
-      pathname.startsWith('/admin-x7k9')
+      pathname === '/admin' || pathname.startsWith('/admin-x7k9')
     ) {
       return;
     }

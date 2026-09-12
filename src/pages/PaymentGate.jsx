@@ -9,9 +9,12 @@ import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { dict } from "../config/PaymentDict";
 import { API_BASE } from "../config/api";
+import { requestJSON } from "../utils/request";
+import { parsePaymentVoice } from "../voice/paymentVoice";
 import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode, Sparkles } from "lucide-react";
 
-const INACTIVITY_TIMEOUT = 120000; // 2 minutes inactivity timeout
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // Allow the full phone-payment window.
+const EMPTY_CART = Object.freeze([]);
 
 export default function PaymentGate() {
   const { speak, speakText } = useSpeech();
@@ -19,7 +22,8 @@ export default function PaymentGate() {
   const location = useLocation();
   const { data: healthData, update: updateHealth } = useHealth();
 
-  const { cart = [], fromPaymentGate = false } = location.state || {};
+  const cart = Array.isArray(location.state?.cart) ? location.state.cart : EMPTY_CART;
+  const fromPaymentGate = location.state?.fromPaymentGate === true;
   const hasKits = cart.length > 0;
   const needsReport = fromPaymentGate || !hasKits;
   const serviceType = hasKits ? "MEDICINE" : "HEALTH_CHECKUP";
@@ -63,28 +67,16 @@ export default function PaymentGate() {
       speakText(step === "WAITING_PAYMENT" ? t('qr_mentor') : t('idle12_code'));
     },
     onTranscript: (lowerText) => {
-      if (
-        lowerText.includes('code') ||
-        lowerText.includes('enter code') ||
-        lowerText.includes('keypad') ||
-        lowerText.includes('paid') ||
-        (lowerText.includes('payment') && (lowerText.includes('done') || lowerText.includes('gaya') || lowerText.includes('ho gaya'))) ||
-        lowerText.includes('ho gaya') ||
-        lowerText.includes('done')
-      ) {
+      const intent = parsePaymentVoice(lowerText);
+      if (intent === 'problem') { speakText(t('scan_issue')); return; }
+      if (intent === 'scanned') { speakText(t('scanned')); return; }
+      if (intent === 'code') {
         resetInactivityTimer();
         setStep("ENTER_CODE");
         speakText(t('payment_done') || "Please enter the 4-digit code shown on your phone");
         return;
       }
 
-      if (lowerText.includes('nahi') || lowerText.includes('not') || lowerText.includes('problem')) {
-        speakText(t('scan_issue'));
-      } else if (lowerText.includes('scan') && (lowerText.includes('gaya') || lowerText.includes('done') || lowerText.includes('yes'))) {
-        speakText(t('scanned'));
-      } else if (lowerText.includes('ab kya') || lowerText.includes('help')) {
-        speakText(step === "WAITING_PAYMENT" ? t('qr_mentor') : t('idle12_code'));
-      }
     },
     onIdle: (elapsedSeconds) => {
       if (elapsedSeconds === 4) {
@@ -105,8 +97,33 @@ export default function PaymentGate() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   const isRequestingRef = useRef(false);
+  const verifyingRef = useRef(false);
+  const cancellingRef = useRef(false);
+  const lifecycleRef = useRef(null);
+  const navigationTimerRef = useRef(null);
+  const deadlineRef = useRef(0);
   const expiryTimerRef = useRef(null);
   const inactivityTimerRef = useRef(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    lifecycleRef.current = controller;
+    return () => {
+      controller.abort();
+      clearTimeout(navigationTimerRef.current);
+      isRequestingRef.current = false;
+      verifyingRef.current = false;
+      cancellingRef.current = false;
+    };
+  }, [activeSessionId]);
+
+  const scheduleNavigation = useCallback((path, options, delay = 1800) => {
+    const lifecycle = lifecycleRef.current;
+    clearTimeout(navigationTimerRef.current);
+    navigationTimerRef.current = setTimeout(() => {
+      if (!lifecycle.signal.aborted && lifecycleRef.current === lifecycle) navigate(path, options);
+    }, delay);
+  }, [navigate]);
 
   // ── 1. Inactivity Timer ──────────────────────────────────────────────────
   const resetInactivityTimer = useCallback(() => {
@@ -131,6 +148,8 @@ export default function PaymentGate() {
 
   // ── 2. Create Fresh Payment Request on Local Pi ───────────────────────────
   const createNewPaymentRequest = useCallback(async () => {
+    const lifecycle = lifecycleRef.current;
+    if (!lifecycle || lifecycle.signal.aborted || verifyingRef.current) return;
     if (!isValidSession) {
       setErrorMessage("Payment session unavailable. Please restart this session.");
       setUiState("SESSION_INVALID");
@@ -161,8 +180,9 @@ export default function PaymentGate() {
         };
       });
 
-      const reqRes = await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/request`, {
+      const reqData = await requestJSON(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/request`, {
         method: "POST",
+        signal: lifecycle.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           serviceType,
@@ -170,12 +190,7 @@ export default function PaymentGate() {
         }),
       });
 
-      if (!reqRes.ok) {
-        const errData = await reqRes.json().catch(() => ({}));
-        throw new Error(errData.message || `Payment request failed (HTTP ${reqRes.status})`);
-      }
-
-      const reqData = await reqRes.json();
+      if (lifecycle.signal.aborted) return;
       if (!reqData.ok || !reqData.paymentUrl) {
         throw new Error(reqData.message || "Invalid payment request response from kiosk backend");
       }
@@ -192,22 +207,25 @@ export default function PaymentGate() {
       setPaymentUrl(reqData.paymentUrl);
 
       const expiresAt = Number(reqData.expiresAt) || (Date.now() + 300000);
+      deadlineRef.current = expiresAt;
       const remainingSeconds = Math.max(10, Math.floor((expiresAt - Date.now()) / 1000));
       setTimeLeft(remainingSeconds);
       setAttemptsRemaining(5);
 
       setUiState("QR_READY");
     } catch (err) {
-      console.error("[KioskPaymentV2] Failed to create payment request:", err);
+      if (lifecycle.signal.aborted) return;
       setErrorMessage(err.message || "Payment service unavailable. Please try again.");
       setUiState("ERROR");
     } finally {
-      isRequestingRef.current = false;
+      if (lifecycleRef.current === lifecycle) isRequestingRef.current = false;
     }
   }, [isValidSession, activeSessionId, serviceType, cart]);
 
   // ── 3. Initialize / Restore Payment State using Pi Status Endpoint ───────
   const initPaymentFlow = useCallback(async () => {
+    const lifecycle = lifecycleRef.current;
+    if (!lifecycle || lifecycle.signal.aborted) return;
     if (!isValidSession) {
       setErrorMessage("Payment session unavailable. Please restart this session.");
       setUiState("SESSION_INVALID");
@@ -222,28 +240,22 @@ export default function PaymentGate() {
 
     try {
       // Query local Pi payment status first
-      let statusData = null;
-      try {
-        const statusRes = await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/status`);
-        if (statusRes.ok) {
-          statusData = await statusRes.json();
-        }
-      } catch (statusErr) {
-        console.warn("[KioskPaymentV2] Could not check initial status:", statusErr.message);
-      }
+      const statusData = await requestJSON(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/status`, { signal: lifecycle.signal });
+      if (lifecycle.signal.aborted) return;
 
       // Check 1: If Pi backend already verified payment for this session
       if (statusData && (statusData.paymentVerified || statusData.status === "VERIFIED")) {
+        if (needsReport && !hasKits) {
+          const report = await requestJSON(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/report`, {
+            method: 'POST', signal: lifecycle.signal, timeoutMs: 30000,
+          });
+          if (lifecycle.signal.aborted) return;
+          if (!report.reportId || report.ok !== true) throw new Error('Payment is verified, but the report is not ready. Retry here; do not pay again.');
+        }
         setUiState("SUCCESS");
         updateHealth({ paymentVerified: true });
-        setTimeout(() => {
-          if (needsReport && !hasKits) {
-            navigate("/report-1", { replace: true });
-          } else if (hasKits) {
-            navigate("/order-success", { replace: true, state: { cart } });
-          } else {
-            navigate("/order-success", { replace: true });
-          }
+        scheduleNavigation(needsReport && !hasKits ? '/report-1' : '/order-success', {
+          replace: true, state: { cart, sessionId: activeSessionId },
         }, 1200);
         return;
       }
@@ -268,6 +280,7 @@ export default function PaymentGate() {
         setPaymentUrl(statusData.paymentUrl);
 
         const remainingSeconds = Math.max(10, Math.floor((statusData.expiresAt - now) / 1000));
+        deadlineRef.current = Number(statusData.expiresAt);
         setTimeLeft(remainingSeconds);
         if (typeof statusData.attemptsRemaining === "number") {
           setAttemptsRemaining(statusData.attemptsRemaining);
@@ -292,13 +305,13 @@ export default function PaymentGate() {
       isRequestingRef.current = false;
       await createNewPaymentRequest();
     } catch (err) {
-      console.error("[KioskPaymentV2] Payment flow initialization error:", err);
+      if (lifecycle.signal.aborted) return;
       setErrorMessage(err.message || "Payment service unavailable. Please try again.");
       setUiState("ERROR");
     } finally {
-      isRequestingRef.current = false;
+      if (lifecycleRef.current === lifecycle) isRequestingRef.current = false;
     }
-  }, [isValidSession, activeSessionId, needsReport, hasKits, navigate, updateHealth, createNewPaymentRequest]);
+  }, [isValidSession, activeSessionId, needsReport, hasKits, cart, scheduleNavigation, updateHealth, createNewPaymentRequest]);
 
   // Initial load: Query status then restore or create
   useEffect(() => {
@@ -313,14 +326,9 @@ export default function PaymentGate() {
     }
 
     expiryTimerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(expiryTimerRef.current);
-          setUiState("EXPIRED");
-          return 0;
-        }
-        return prev - 1;
-      });
+      const remaining = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining === 0 && !verifyingRef.current) setUiState('EXPIRED');
     }, 1000);
 
     return () => {
@@ -330,32 +338,44 @@ export default function PaymentGate() {
 
   // ── 5. Explicit Cancel and Back Action ────────────────────────────────────
   const handleCancelAndBack = useCallback(async () => {
-    if (isCancelling) return;
+    if (cancellingRef.current || verifyingRef.current || isRequestingRef.current) return;
+    cancellingRef.current = true;
+    const lifecycle = lifecycleRef.current;
     setIsCancelling(true);
 
     try {
       if (isValidSession) {
-        await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/cancel`, {
+        await requestJSON(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/cancel`, {
           method: "POST",
+          signal: lifecycle.signal,
           headers: { "Content-Type": "application/json" },
-        }).catch((err) => {
-          console.warn("[PaymentGate] Cancel notification error:", err.message);
         });
       }
-    } catch (err) {
-      console.warn("[PaymentGate] Cancel request failed:", err);
-    } finally {
+      if (lifecycle.signal.aborted) return;
+      clearTimeout(navigationTimerRef.current);
       setPaymentUrl("");
       setRequestId("");
       setAuthoritativeAmount(null);
       setCodeDigits(["", "", "", ""]);
-      setIsCancelling(false);
       navigate(-1);
+    } catch (err) {
+      if (!lifecycle.signal.aborted) {
+        setErrorMessage(err.message || 'Could not cancel payment. Retry to check its status.');
+        setUiState('ERROR');
+      }
+    } finally {
+      if (lifecycleRef.current === lifecycle) {
+        cancellingRef.current = false;
+        setIsCancelling(false);
+      }
     }
-  }, [isCancelling, isValidSession, activeSessionId, navigate]);
+  }, [isValidSession, activeSessionId, navigate]);
 
   // ── 6. Verify 4-Digit Confirmation Code with Pi ──────────────────────────
   const handleConfirmCode = useCallback(async (codeToVerify) => {
+    if (verifyingRef.current || cancellingRef.current || isRequestingRef.current) return;
+    const lifecycle = lifecycleRef.current;
+    if (!lifecycle || lifecycle.signal.aborted) return;
     if (!isValidSession) {
       setErrorMessage("Payment session unavailable. Please restart this session.");
       setUiState("SESSION_INVALID");
@@ -363,14 +383,16 @@ export default function PaymentGate() {
     }
 
     const code = codeToVerify || codeDigits.join("");
-    if (code.length !== 4) return;
+    if (!/^\d{4}$/.test(code)) return;
+    verifyingRef.current = true;
 
     setUiState("VERIFYING");
     setErrorMessage("");
 
     try {
-      const res = await fetch(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/confirm-code`, {
+      const res = await requestJSON(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/payment-v2/confirm-code`, {
         method: "POST",
+        signal: lifecycle.signal, timeoutMs: 30000, returnResponse: true,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           requestId,
@@ -378,7 +400,8 @@ export default function PaymentGate() {
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      if (lifecycle.signal.aborted) return;
+      const data = res.data;
 
       if (res.status === 423 || data.code === "LOCKED") {
         setUiState("LOCKED");
@@ -397,8 +420,13 @@ export default function PaymentGate() {
       }
 
       if (!res.ok || !data.ok) {
-        // Wrong code: Decrement attempts and let customer re-type and verify explicitly
-        const remaining = typeof data.attemptsRemaining === "number" ? data.attemptsRemaining : attemptsRemaining - 1;
+        // Infrastructure failures never consume a locally invented attempt.
+        if (data.code !== 'INVALID_CODE') {
+          setErrorMessage(data.message || 'Verification is unavailable. Retry here; if you paid, do not pay again.');
+          setUiState('ERROR');
+          return;
+        }
+        const remaining = typeof data.attemptsRemaining === "number" ? data.attemptsRemaining : attemptsRemaining;
         setAttemptsRemaining(Math.max(0, remaining));
         setCodeDigits(["", "", "", ""]);
         setErrorMessage(data.message || "Incorrect confirmation code. Please check your phone.");
@@ -476,15 +504,13 @@ export default function PaymentGate() {
         setUiState("SUCCESS");
         speak("payment-verified");
 
-        setTimeout(() => {
-          navigate("/report-1", {
+        scheduleNavigation("/report-1", {
             replace: true,
             state: {
               sessionId: activeSessionId,
               fromPayment: true
             }
           });
-        }, 1800);
 
         return;
       }
@@ -498,30 +524,15 @@ export default function PaymentGate() {
       setUiState("SUCCESS");
       speak("payment-verified");
 
-      setTimeout(() => {
-        if (hasKits) {
-          navigate("/order-success", {
-            replace: true,
-            state: {
-              cart,
-              sessionId: activeSessionId
-            }
-          });
-        } else {
-          navigate("/order-success", {
-            replace: true,
-            state: {
-              sessionId: activeSessionId
-            }
-          });
-        }
-      }, 1800);
-    } catch (err) {
-      console.error("[KioskPaymentV2] Code verification error:", err);
-      setErrorMessage("Could not verify code with kiosk system. Please try again.");
-      setUiState("WRONG_CODE");
+      scheduleNavigation('/order-success', { replace: true, state: { cart, sessionId: activeSessionId } });
+    } catch {
+      if (lifecycle.signal.aborted) return;
+      setErrorMessage('Could not confirm the result. Retry here to check payment status; do not pay again.');
+      setUiState("ERROR");
+    } finally {
+      if (lifecycleRef.current === lifecycle) verifyingRef.current = false;
     }
-  }, [isValidSession, activeSessionId, codeDigits, requestId, attemptsRemaining, needsReport, hasKits, navigate, updateHealth]);
+  }, [isValidSession, activeSessionId, codeDigits, requestId, attemptsRemaining, needsReport, cart, scheduleNavigation, updateHealth, speak]);
 
   // ── 7. On-Screen Touch Keypad Handlers (NO AUTO-SUBMIT) ───────────────────
   const handleKeypadPress = useCallback((key) => {
@@ -599,7 +610,7 @@ export default function PaymentGate() {
   };
 
   return (
-    <div className="relative min-h-screen h-full bg-slate-50 flex flex-col items-center justify-between px-4 py-3 font-sans select-none overflow-y-auto scrollable-container touch-pan-y overscroll-contain pb-24">
+    <div className="payment-screen relative min-h-screen bg-slate-50 flex flex-col items-center justify-between px-4 py-3 font-sans select-none overflow-y-auto scrollable-container touch-pan-y overscroll-contain pb-24">
       <TopEllipseBackground height="25%" color="#FFF4EC" />
 
       {/* Top Header */}
@@ -704,7 +715,7 @@ export default function PaymentGate() {
             <h2 className="text-lg font-bold text-slate-800">Payment Service Unavailable</h2>
             <p className="text-xs text-slate-600">{errorMessage || "Unable to initiate payment on the kiosk."}</p>
             <button
-              onClick={createNewPaymentRequest}
+              onClick={initPaymentFlow}
               className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-base shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
             >
               <RefreshCw size={18} />

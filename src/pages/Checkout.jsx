@@ -10,6 +10,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import { sanitizeError } from "../utils/errorSanitizer";
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
+import { requestJSON } from "../utils/request";
 import { getMedicineImageUrl, getKitId } from "./MedicineDispensing";
 
 // Department list for random social proof
@@ -34,7 +35,7 @@ export default function Checkout() {
   const { cart: initialCart = [], fromPaymentGate = false } = location.state || {};
 
   // Cart state is always initialized from backend-driven data
-  const [cart, setCart] = useState(initialCart);
+  const [cart, setCart] = useState(() => Array.isArray(initialCart) ? initialCart.filter((item) => item && typeof item === 'object') : []);
   
   // Health report cost - shown as ₹24 (psychological anchor)
   // User thinks: "Wow only ₹24 for report, I'm saving ₹3!"
@@ -95,11 +96,8 @@ export default function Checkout() {
     setKitsLoading(true);
     setKitsError(null);
     try {
-      const response = await fetch(`${API_BASE}/api/kits`, { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error('Failed to load products');
-      }
-      const kits = await response.json();
+      const kits = await requestJSON(`${API_BASE}/api/kits`, { cache: 'no-store' });
+      if (!Array.isArray(kits) || kits.some((kit) => !kit || typeof kit !== 'object')) throw new Error('Invalid product response');
       setAllKits(kits);
       setKitsError(null);
     } catch (e) {

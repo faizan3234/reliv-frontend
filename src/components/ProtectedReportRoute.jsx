@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
+import { requestJSON } from "../utils/request";
 
 const ProtectedReportRoute = ({ children }) => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ const ProtectedReportRoute = ({ children }) => {
   // LOADING | AUTHORIZED | DENIED
 
   const [errorMessage, setErrorMessage] = useState("");
+  const [retry, setRetry] = useState(0);
 
   const sessionId =
     location.state?.sessionId ||
@@ -45,7 +47,7 @@ const ProtectedReportRoute = ({ children }) => {
       setErrorMessage("");
 
       try {
-        const response = await fetch(
+        const result = await requestJSON(
           `${API_BASE}/api/sessions/${encodeURIComponent(sessionId)}/report/data`,
           {
             method: "GET",
@@ -57,11 +59,9 @@ const ProtectedReportRoute = ({ children }) => {
           }
         );
 
-        const result =
-          await response.json().catch(() => ({}));
+        if (controller.signal.aborted) return;
 
         if (
-          !response.ok ||
           result.ok !== true ||
           result.paymentVerified !== true ||
           result.reportStatus !== "READY" ||
@@ -95,17 +95,12 @@ const ProtectedReportRoute = ({ children }) => {
 
         setStatus("AUTHORIZED");
       } catch (err) {
-        if (err.name === "AbortError") {
+        if (controller.signal.aborted) {
           return;
         }
 
-        console.error(
-          "[ProtectedReportRoute] Report authorization failed:",
-          err
-        );
-
         setErrorMessage(
-          "Could not verify this health report. Please try again."
+          err.data?.message || "Could not verify this health report. Please retry; you do not need to pay again."
         );
 
         setStatus("DENIED");
@@ -117,7 +112,7 @@ const ProtectedReportRoute = ({ children }) => {
     return () => {
       controller.abort();
     };
-  }, [sessionId]);
+  }, [sessionId, retry]);
 
   if (status === "LOADING") {
     return (
@@ -147,6 +142,11 @@ const ProtectedReportRoute = ({ children }) => {
             {errorMessage}
           </div>
 
+          <button
+            type="button"
+            onClick={() => setRetry((value) => value + 1)}
+            className="mt-6 border border-orange-500 rounded-2xl px-8 py-4"
+          >Retry report</button>
           <button
             type="button"
             onClick={() =>

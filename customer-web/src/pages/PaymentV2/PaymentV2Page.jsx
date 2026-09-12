@@ -44,6 +44,7 @@ export function PaymentV2Page({ sessionStore }) {
   const [reportDownloadStatus, setReportDownloadStatus] = useState('idle');
 
   const isSyncingRef = useRef(false);
+  const emailSendingRef = useRef(false);
 
   // Core verification execution function that uses a normalized payload
   const runVerification = useCallback(
@@ -355,7 +356,7 @@ export function PaymentV2Page({ sessionStore }) {
   // MEDICINE       -> optional payment receipt email
   const handleEmailDelivery = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!receiptEmail || !receiptEmail.trim() || receiptStatus === 'sending') return;
+    if (!receiptEmail || !receiptEmail.trim() || emailSendingRef.current) return;
 
     const emailToSend = receiptEmail.trim();
     if (!emailToSend.includes('@') || !emailToSend.includes('.')) {
@@ -369,6 +370,7 @@ export function PaymentV2Page({ sessionStore }) {
       return;
     }
 
+    emailSendingRef.current = true;
     setReceiptStatus('sending');
     setReceiptError('');
 
@@ -405,6 +407,8 @@ export function PaymentV2Page({ sessionStore }) {
           : "We couldn't send your receipt.")
       );
       setReceiptStatus('error');
+    } finally {
+      emailSendingRef.current = false;
     }
   };
 

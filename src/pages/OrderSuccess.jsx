@@ -111,7 +111,7 @@ function PaymentSuccess({ onComplete }) {
       initial={{ y: 50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: -50, opacity: 0 }}
-      className="relative h-screen bg-gradient-to-br from-orange-50 to-gray-100 flex flex-col items-center justify-center text-center px-6 overflow-y-auto scrollable-container"
+      className="relative min-h-screen bg-gradient-to-br from-orange-50 to-gray-100 flex flex-col items-center justify-center text-center px-6 overflow-y-auto scrollable-container"
     >
       <TopEllipseBackground color="#FFF7ED" height="50%" />
 
@@ -168,7 +168,7 @@ function DispensingAnimation({ cart = [], onComplete }) {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
-      className="relative h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-orange-50 flex flex-col items-center justify-center text-center px-6 overflow-y-auto scrollable-container"
+      className="relative min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-orange-50 flex flex-col items-center justify-center text-center px-6 overflow-y-auto scrollable-container"
     >
       <TopEllipseBackground color="#ECFDF5" height="50%" />
 
@@ -245,7 +245,7 @@ function SystemSanitized({ onComplete }) {
         initial={{ scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 1.08, opacity: 0 }}
-        className="relative h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-orange-100 flex flex-col items-center justify-center text-center px-6 overflow-y-auto scrollable-container"
+        className="relative min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-orange-100 flex flex-col items-center justify-center text-center px-6 overflow-y-auto scrollable-container"
       >
         <TopEllipseBackground color="#FFF7ED" height="50%" />
 
@@ -289,7 +289,7 @@ function RetentionScreen({ onShareFeedback }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="relative h-screen bg-gradient-to-br from-orange-50 to-gray-100 flex flex-col items-center justify-center px-6 overflow-y-auto scrollable-container"
+      className="relative min-h-screen bg-gradient-to-br from-orange-50 to-gray-100 flex flex-col items-center justify-center px-6 overflow-y-auto scrollable-container"
     >
       <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-12 max-w-lg w-full text-center border border-orange-100">
         <Logo />

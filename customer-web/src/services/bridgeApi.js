@@ -1,3 +1,15 @@
+import { requestJSON } from '../../../src/utils/request.js';
+
+async function bridgeFetch(url, options) {
+  try {
+    const result = await requestJSON(url, { ...options, returnResponse: true, timeoutMs: 30000 });
+    return { ok: result.ok, status: result.status, json: async () => result.data };
+  } catch (error) {
+    if (error.name === 'TimeoutError') throw new Error('The payment service is taking too long. Check your phone internet and retry; do not pay again.');
+    throw error;
+  }
+}
+
 export const PAYMENT_API_BASE = (
   import.meta.env.VITE_PAYMENT_API_BASE ||
   import.meta.env.VITE_PAYMENT_BRIDGE_URL ||
@@ -18,7 +30,7 @@ export async function checkBridgeHealth() {
   const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const response = await fetch(`${PAYMENT_API_BASE}/health`, {
+    const response = await bridgeFetch(`${PAYMENT_API_BASE}/health`, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -57,7 +69,7 @@ export async function checkBridgeHealth() {
  */
 export async function createPaymentV2Order({ encryptedPackage }) {
   try {
-    const response = await fetch(`${PAYMENT_API_BASE}/api/v2/create-order`, {
+    const response = await bridgeFetch(`${PAYMENT_API_BASE}/api/v2/create-order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -125,7 +137,7 @@ export async function verifyPaymentV2({
   }
 
   try {
-    const response = await fetch(`${PAYMENT_API_BASE}/api/v2/verify-payment`, {
+    const response = await bridgeFetch(`${PAYMENT_API_BASE}/api/v2/verify-payment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -167,7 +179,7 @@ export async function emailPaymentReceipt({ requestId, email }) {
   }
 
   try {
-    const response = await fetch(`${PAYMENT_API_BASE}/api/v2/email-receipt`, {
+    const response = await bridgeFetch(`${PAYMENT_API_BASE}/api/v2/email-receipt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -184,6 +196,10 @@ export async function emailPaymentReceipt({ requestId, email }) {
     }
 
     const data = await response.json();
+    if (data.ok !== true || !(data.sent === true || data.alreadySent || data.already_sent)) {
+      throw new Error(data.message || 'Email delivery was not confirmed. Please retry from this page.');
+    }
+
     return {
       ok: true,
       alreadySent: Boolean(data.alreadySent || data.already_sent),
@@ -206,7 +222,7 @@ export async function emailHealthReport({ requestId, email }) {
   }
 
   try {
-    const response = await fetch(`${PAYMENT_API_BASE}/api/v2/email-health-report`, {
+    const response = await bridgeFetch(`${PAYMENT_API_BASE}/api/v2/email-health-report`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -229,6 +245,10 @@ export async function emailHealthReport({ requestId, email }) {
     }
 
     const data = await response.json();
+    if (data.ok !== true || !(data.sent === true || data.alreadySent || data.already_sent)) {
+      throw new Error(data.message || 'Email delivery was not confirmed. Please retry from this page.');
+    }
+
 
     return {
       ok: Boolean(data.ok),
@@ -304,7 +324,7 @@ export async function recoverPaymentV2({ requestId }) {
   }
 
   try {
-    const response = await fetch(`${PAYMENT_API_BASE}/api/v2/recover-payment`, {
+    const response = await bridgeFetch(`${PAYMENT_API_BASE}/api/v2/recover-payment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

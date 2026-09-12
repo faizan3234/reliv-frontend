@@ -86,12 +86,6 @@ export default function TwoOptions() {
         navigate("/customer-details", { replace: true });
         return;
       }
-      if (response.status === 409 || result?.alreadySelected) {
-        // Safe transition or already selected service; proceed to destination without wiping session
-        speakText(t(serviceType === 'MEDICINE' ? 'proceedMedicine' : 'proceedHealth'));
-        navigate(destination);
-        return;
-      }
       if (!response.ok || !result?.ok) {
         throw new Error(
           result?.error || result?.message || "Unable to select service"
@@ -142,7 +136,8 @@ export default function TwoOptions() {
 
       // Spoken shifting / switching between the two options
       if (containsPhrase(lowerText, ['switch', 'change', 'shift', 'dusra', 'other', 'badlo', 'dusra option'])) {
-        const nextOption = selectedOption === 'health-checkup' ? 'medicine-dispensing' : 'health-checkup';
+        const requested = parseServiceChoice(lowerText);
+        const nextOption = requested === 'MEDICINE' ? 'medicine-dispensing' : requested === 'HEALTH_CHECKUP' ? 'health-checkup' : selectedOption === 'health-checkup' ? 'medicine-dispensing' : 'health-checkup';
         setSelectedOption(nextOption);
         speakText(t(nextOption === 'health-checkup' ? 'health_checkup' : 'medicine_dispensing'));
         return;
