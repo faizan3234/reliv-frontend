@@ -1,5 +1,5 @@
 // src/pages/AdminMedicinePage.jsx
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Package,
@@ -23,17 +23,27 @@ import {
 import { API_BASE } from "../config/api";
 import { formatINR } from "../utils/currency";
 import { getMedicineImageUrl } from "./MedicineDispensing";
+import { adminFetch, readAdminSession, saveAdminSession, clearAdminSession } from '../utils/adminSession';
 
 export default function AdminMedicinePage() {
   const navigate = useNavigate();
 
   // Authentication State (sessionStorage persistent)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem("reliv_admin_authed") === "true";
+    return Boolean(readAdminSession());
   });
+  const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const submittingRef = useRef(false);
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => {
+    const expire = () => { setIsAuthenticated(false); setLoginError('Please sign in again.'); };
+    window.addEventListener('reliv_admin_expired', expire);
+    return () => { window.removeEventListener('reliv_admin_expired', expire); clearTimeout(toastTimerRef.current); };
+  }, []);
 
   // Inventory State
   const [medicines, setMedicines] = useState([]);
@@ -66,19 +76,21 @@ export default function AdminMedicinePage() {
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 6000);
   };
 
   // ── 1. Fetch Inventory ───────────────────────────────────────────────────
   const fetchMedicines = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/kits?t=${Date.now()}`, {
+      const res = await adminFetch(`${API_BASE}/api/kits?t=${Date.now()}`, {
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`Failed to load medicines (HTTP ${res.status})`);
       const data = await res.json();
-      const list = Array.isArray(data) ? data : data.kits || [];
+      const list = Array.isArray(data) ? data : data.kits;
+      if (!Array.isArray(list)) throw new Error('The inventory response is invalid. Please refresh.');
       setMedicines(list);
     } catch (err) {
       console.error("[AdminMedicinePage] Fetch error:", err);
@@ -97,51 +109,34 @@ export default function AdminMedicinePage() {
   // ── 2. Login Handler ─────────────────────────────────────────────────────
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!passwordInput.trim()) return;
+    if (isLoggingIn || !passwordInput || !emailInput.trim()) return;
 
     setIsLoggingIn(true);
     setLoginError("");
 
     try {
-      // First try standard password check endpoint
-      let isAuthed = false;
-      try {
-        const res = await fetch(`${API_BASE}/api/check-login`, {
+        const res = await adminFetch(`${API_BASE}/api/check-login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: passwordInput }),
+          body: JSON.stringify({ email: emailInput.trim(), password: passwordInput }),
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.ok || data.authenticated) {
-            isAuthed = true;
-          }
-        }
-      } catch { /* The local fallback remains available offline. */ }
-
-      // Default fallback passwords for kiosk offline operation
-      const normalized = passwordInput.trim().toLowerCase();
-      if (!isAuthed && (normalized === "admin123" || normalized === "admin 123" || normalized === "reliv" || normalized === "admin" || normalized === "1234")) {
-        isAuthed = true;
-      }
-
-      if (isAuthed) {
+        const data = await res.json();
+        if (!res.ok || data.ok !== true) throw new Error(data.message || 'Invalid admin email or password.');
+        saveAdminSession(data);
         setIsAuthenticated(true);
-        sessionStorage.setItem("reliv_admin_authed", "true");
         setPasswordInput("");
-      } else {
-        setLoginError("Invalid password. Please try again.");
-      }
-    } catch {
-      setLoginError("Login failed. Please check network connection.");
+    } catch (error) {
+      setLoginError(error.message || "Login failed. Please check the connection to the kiosk.");
     } finally {
       setIsLoggingIn(false);
     }
   };
 
   const handleLogout = () => {
+    void adminFetch(`${API_BASE}/api/admin/logout`, { method: 'POST' }).catch(() => {});
     setIsAuthenticated(false);
-    sessionStorage.removeItem("reliv_admin_authed");
+    clearAdminSession();
+    setLoginError('');
     showToast("Logged out successfully");
   };
 
@@ -227,7 +222,7 @@ export default function AdminMedicinePage() {
     if (editingMedicine) {
       const kitId = editingMedicine.kit_id || editingMedicine.id;
       try {
-        const res = await fetch(`${API_BASE}/api/kits/${encodeURIComponent(kitId)}/image`, {
+        const res = await adminFetch(`${API_BASE}/api/kits/${encodeURIComponent(kitId)}/image`, {
           method: "DELETE",
         });
         const data = await res.json();
@@ -247,6 +242,7 @@ export default function AdminMedicinePage() {
   // ── 5. Form Submit (Save / Create) ───────────────────────────────────────
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setFormError("");
 
     const name = formData.name.trim();
@@ -255,20 +251,25 @@ export default function AdminMedicinePage() {
       return;
     }
 
-    const price = parseFloat(formData.price);
-    if (isNaN(price) || price < 0) {
+    const price = Number(formData.price);
+    if (!formData.price.trim() || !Number.isFinite(price) || price < 0) {
       setFormError("Please enter a valid price (₹0 or greater).");
       return;
     }
 
-    const quantity = parseInt(formData.quantity, 10);
-    if (isNaN(quantity) || quantity < 0) {
+    const quantity = Number(formData.quantity);
+    if (!formData.quantity.trim() || !Number.isSafeInteger(quantity) || quantity < 0) {
       setFormError("Please enter a valid stock quantity (0 or greater).");
       return;
     }
 
-    const motor_id = formData.motor_id.trim() ? parseInt(formData.motor_id, 10) : null;
+    const motor_id = formData.motor_id.trim() ? Number(formData.motor_id) : null;
+    if (motor_id !== null && (!Number.isSafeInteger(motor_id) || motor_id < 0)) {
+      setFormError('Enter a whole, non-negative motor ID or leave it blank.');
+      return;
+    }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -279,7 +280,7 @@ export default function AdminMedicinePage() {
         const targetId = editingMedicine.kit_id || editingMedicine.id;
         savedKitId = targetId;
 
-        const res = await fetch(`${API_BASE}/api/kits/${encodeURIComponent(targetId)}`, {
+        const res = await adminFetch(`${API_BASE}/api/kits/${encodeURIComponent(targetId)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -302,7 +303,7 @@ export default function AdminMedicinePage() {
         const kit_id = formData.kit_id.trim() || `KIT-${Date.now().toString(36).toUpperCase()}`;
         savedKitId = kit_id;
 
-        const res = await fetch(`${API_BASE}/api/kits`, {
+        const res = await adminFetch(`${API_BASE}/api/kits`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -328,6 +329,7 @@ export default function AdminMedicinePage() {
         };
 
         setMedicines((prev) => [createdKit, ...prev]);
+        setEditingMedicine(createdKit); // A failed image upload retries this item, not a duplicate.
       }
 
       // ── UPLOAD IMAGE IF SELECTED (MULTIPART) ──
@@ -336,19 +338,21 @@ export default function AdminMedicinePage() {
           const imgFormData = new FormData();
           imgFormData.append("image", selectedImageFile);
 
-          const imgRes = await fetch(`${API_BASE}/api/kits/${encodeURIComponent(savedKitId)}/image`, {
+          const imgRes = await adminFetch(`${API_BASE}/api/kits/${encodeURIComponent(savedKitId)}/image`, {
             method: "PATCH",
             body: imgFormData,
           });
 
           const imgData = await imgRes.json();
+          if (!imgRes.ok || !imgData.ok) throw new Error(imgData.message || 'Image upload failed');
           if (imgRes.ok && imgData.ok && imgData.kit) {
             setMedicines((prev) =>
               prev.map((k) => ((k.kit_id || k.id) === savedKitId ? { ...k, ...imgData.kit } : k))
             );
           }
         } catch (imgErr) {
-          console.warn("[AdminMedicinePage] Image upload error after save:", imgErr);
+          setFormError(`Medicine details were saved, but its picture was not. ${imgErr.message}. Retry saving to upload the picture.`);
+          return;
         }
       }
 
@@ -358,19 +362,20 @@ export default function AdminMedicinePage() {
       console.error("[AdminMedicinePage] Submit error:", err);
       setFormError(err.message || "Failed to save medicine");
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
   // ── 6. Delete Handler ────────────────────────────────────────────────────
   const handleConfirmDelete = async () => {
-    if (!deletingMedicine) return;
+    if (!deletingMedicine || isDeleting) return;
 
     const kitId = deletingMedicine.kit_id || deletingMedicine.id;
     setIsDeleting(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/kits/${encodeURIComponent(kitId)}`, {
+      const res = await adminFetch(`${API_BASE}/api/kits/${encodeURIComponent(kitId)}`, {
         method: "DELETE",
       });
 
@@ -453,11 +458,18 @@ export default function AdminMedicinePage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
+              <label htmlFor="admin-email" className="block text-xs font-bold text-slate-700 mb-1.5">Admin Email</label>
+              <input id="admin-email" type="email" autoComplete="username" required value={emailInput}
+                onChange={(event) => setEmailInput(event.target.value)} placeholder="Configured admin email"
+                className="w-full px-4 py-3.5 rounded-2xl border border-slate-300 text-slate-900" />
+            </div>
+            <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 Admin Password
               </label>
               <input
                 type="password"
+                autoComplete="current-password"
                 autoFocus
                 placeholder="Enter password"
                 value={passwordInput}
@@ -475,7 +487,7 @@ export default function AdminMedicinePage() {
 
             <button
               type="submit"
-              disabled={isLoggingIn || !passwordInput.trim()}
+              disabled={isLoggingIn || !passwordInput || !emailInput.trim()}
               className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-98 text-white font-bold text-base shadow-lg shadow-orange-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {isLoggingIn ? "Verifying..." : "Access Inventory"}

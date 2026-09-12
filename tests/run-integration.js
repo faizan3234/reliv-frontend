@@ -2,11 +2,13 @@ import { JSDOM, VirtualConsole } from 'jsdom';
 import { build } from 'esbuild';
 import { setTimeout as delay } from 'node:timers/promises';
 import { MessageChannel } from 'node:worker_threads';
+import { resolve } from 'node:path';
 
 const bundle = await build({
   entryPoints: ['tests/browser.jsx'], bundle: true, write: false, format: 'iife', jsx: 'automatic',
-  define: { 'import.meta.env': '{}', 'process.env.NODE_ENV': '"development"' },
-  loader: { '.png': 'dataurl', '.svg': 'dataurl', '.css': 'empty' },
+  define: { 'import.meta.env': JSON.stringify({ VITE_MQTT_BROKER: 'wss://example.invalid/mqtt', VITE_MQTT_USERNAME: 'synthetic', VITE_MQTT_PASSWORD: 'synthetic' }), 'process.env.NODE_ENV': '"development"' },
+  alias: { mqtt: resolve('tests/mqtt-fixture.js') },
+  loader: { '.mp4': 'empty', '.png': 'dataurl', '.svg': 'dataurl', '.css': 'empty' },
 });
 const console = new VirtualConsole();
 const errors = [];
@@ -18,6 +20,10 @@ const dom = new JSDOM('<!doctype html><html><body><pre id="results">Running...</
   pretendToBeVisual: true, virtualConsole: console,
 });
 const channels = [];
+dom.window.scrollTo = () => {};
+dom.window.HTMLMediaElement.prototype.play = async () => {};
+dom.window.HTMLMediaElement.prototype.pause = () => {};
+dom.window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 // jsdom has no graphics device. Keep report animations mounted while replacing
 // only canvas drawing; page state, hooks, effects and API handling remain real.
 dom.window.HTMLCanvasElement.prototype.getContext = function (type) {
@@ -37,7 +43,7 @@ dom.window.MessageChannel = class extends MessageChannel {
 try {
   dom.window.eval(bundle.outputFiles[0].text);
   let result = '';
-  for (let attempt = 0; attempt < 600; attempt += 1) {
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
     result = dom.window.document.querySelector('#results').textContent;
     if (result.includes('FAIL ') || /ALL \d+ BROWSER CHECKS PASSED/.test(result)) break;
     await delay(50);

@@ -147,7 +147,8 @@ export function looksLikeRelivEcho(raw, recent, now = Date.now()) {
   const text = normalizeVoiceText(raw);
   const words = text.split(" ").filter(Boolean);
   // Short legitimate replies often repeat words from a prompt ("female", "yes", "medicine dispensing").
-  if (words.length < 4) return false;
+  const shortRetry = /^(?:sorry(?: try again)?|try again|please try again|sorry please|फिर से बोलिए|আবার বলুন)$/u.test(text);
+  if (words.length < 4 && !shortRetry) return false;
   return recent.some(({ text: spoken, at }) => {
     if (now - at > 15000 || now < at) return false;
     const normalized = normalizeVoiceText(spoken);
