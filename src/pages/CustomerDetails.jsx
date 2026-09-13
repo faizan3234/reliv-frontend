@@ -10,8 +10,7 @@ import { ArrowLeft, Plus, Minus, User, Calendar, Users, Check } from "lucide-rea
 import { API_BASE } from "../config/api";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { dict } from "../config/CustomerDetailsDict";
-import { parseConfirmation, parseSpokenAge, parseSpokenGender, parseSpokenName, parseServiceChoice } from "../voice/voicePageProfiles";
+import { guidanceText } from "../voice/guidanceCopy";
 import { ensureKioskSession, saveKioskCustomer } from "../utils/kioskSession";
 
 export default function CustomerDetails() {
@@ -19,7 +18,7 @@ export default function CustomerDetails() {
   const { t: translateUI } = useTranslation();
   const { data: healthData, update } = useHealth();
   const selectedLang = healthData?.language || 'en';
-    const { speakText, speakingRef } = useSpeech();
+  const { speakText } = useSpeech();
 
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [activeInputName, setActiveInputName] = useState("");
@@ -108,156 +107,23 @@ export default function CustomerDetails() {
   const isGenderValid = Boolean(form.gender);
   const isFormValid = isNameValid && isAgeValid && isGenderValid;
 
-  // Voice Interaction Logic
-  const [voiceExpecting, setVoiceExpecting] = useState('name');
-  const [pendingField, setPendingField] = useState(null);
-  const [pendingValue, setPendingValue] = useState(null);
-  const [hasSpokenStart, setHasSpokenStart] = useState(false);
-  
-  // Custom helper for translated text
-  const t = useCallback((key, param = null) => {
-    const entry = dict[key];
-    if (!entry) return "";
-    const localized = typeof entry === 'function' ? entry(param) : entry;
-    return localized[selectedLang] || localized['en'] || "";
-  }, [selectedLang]);
-
-  // Speak intro
-  useEffect(() => {
-    if (!hasSpokenStart && !form.name) {
-      const timer = setTimeout(() => {
-        speakText(t('start'));
-        setHasSpokenStart(true);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [hasSpokenStart, form.name, form.age, speakText, t]);
-
-  const getHints = () => {
-    if (voiceExpecting === 'confirm') return ['yes', 'no', 'correct', 'wrong', 'galat', 'nahi', 'sahi'];
-    if (voiceExpecting === 'gender') return ['male', 'female', 'man', 'woman', 'girl', 'boy', 'mahila', 'mohila', 'ladka', 'chele', 'purush', 'other'];
-    if (voiceExpecting === 'age') return ['age', 'years', 'umar', 'saal', 'challis', 'paitalish', 'pandrah', 'biranobboi'];
-    return [];
-  };
-
+  // All details are entered by touch. Speech only describes the next step.
+  const guidanceKey = isSubmitting ? 'saving' : submitError ? 'detailsError'
+    : keyboardVisible ? (activeInputName === 'age' ? 'detailsAge' : 'detailsName')
+    : !isNameValid ? 'detailsName' : !isGenderValid ? 'detailsGender'
+    : !isAgeValid ? 'detailsAge' : 'detailsReady';
   useVoicePage({
-    expecting: voiceExpecting,
-    vocabularyHints: getHints(),
-    onHelp: () => {
-       if (!isNameValid) {
-          speakText("Tell me your name.");
-       } else if (!isAgeValid) {
-          speakText("Tell me your age.");
-       } else if (!isGenderValid) {
-          speakText("Tell me your gender.");
-       } else {
-          speakText("Say yes if it's correct, or no if you'd like to change it.");
-       }
-    },
-    onTranscript: (lowerText, rawText) => {
-      if (submittingRef.current) return;
-
-      // Handle Confirmations
-      if (voiceExpecting === 'confirm' && pendingField) {
-        const result = parseConfirmation(lowerText);
-
-        if (result === 'positive') {
-          const confirmedForm = { ...form, [pendingField]: pendingValue };
-          handleKeyboardChange(pendingField, pendingValue);
-          
-          if (pendingField === 'name') {
-            setVoiceExpecting('age');
-            speakText(t('nameSaved'));
-          } else if (pendingField === 'age') {
-            setVoiceExpecting('gender');
-            speakText(t('ageSaved'));
-          } else if (pendingField === 'gender') {
-            // Auto-proceed!
-            setVoiceExpecting('done');
-            speakText(t('allComplete'));
-            handleProceed(confirmedForm);
-          }
-          setPendingField(null);
-          setPendingValue(null);
-        } else if (result === 'negative') {
-          // Reject provisional value, restore mode, and ask for it again without apology
-          setVoiceExpecting(pendingField);
-          if (pendingField === 'name') speakText("Okay, tell me the correct name.");
-          else if (pendingField === 'age') speakText("Okay, tell me the correct age.");
-          else if (pendingField === 'gender') speakText("Okay, tell me the correct gender.");
-          setPendingField(null);
-          setPendingValue(null);
-        } else {
-          // Contextual retry instead of generic fallback
-          speakText("Say yes if it's correct, or no if you'd like to change it.");
-        }
-        return;
-      }
-
-      // Handle Early Completion
-      if (/(done|next|continue|proceed|hoye geche|haan|ডান|নেক্সট|প্রসিড|হয়ে গেছে|হ্যাঁ|হ্যা|হা|চলো|চলুন|आगे|चलो|हो गया|हाँ|हां|नेक्स्ट)/.test(lowerText)) {
-         if (isFormValid && voiceExpecting === 'done') {
-             speakText(t('proceeding'));
-             handleProceed();
-             return;
-         }
-      }
-
-      // Handle Form Fields
-      if (voiceExpecting === 'name') {
-        const parsedName = parseSpokenName(rawText);
-        if (parsedName) {
-          setPendingField('name');
-          setPendingValue(parsedName);
-          setVoiceExpecting('confirm');
-          speakText(t('confirmName'));
-        } else {
-          // If the user spoke a service choice instead of their name, gently guide them
-          const service = parseServiceChoice(lowerText);
-          if (service) {
-            speakText("Please tell me your name first.");
-          }
-        }
-      } else if (voiceExpecting === 'age') {
-         const parsedAge = parseSpokenAge(lowerText);
-         if (parsedAge) {
-             setPendingField('age');
-             setPendingValue(String(parsedAge));
-             setVoiceExpecting('confirm');
-             speakText(t('confirmAge'));
-         }
-      } else if (voiceExpecting === 'gender') {
-         const gender = parseSpokenGender(lowerText);
-         if (gender) {
-             setPendingField('gender');
-             setPendingValue(gender);
-             setVoiceExpecting('confirm');
-             speakText(t('confirmGender'));
-         }
-      }
-    },
-    onIdle: (elapsedSeconds) => {
-      if (elapsedSeconds === 4) {
-         if (voiceExpecting === 'name') speakText(t('idle_name'));
-         else if (voiceExpecting === 'age') speakText(t('idle_age'));
-         else if (voiceExpecting === 'gender') speakText(t('idle_gender'));
-      }
-    }
+    guidanceKey,
+    idleEnabled: !isSubmitting,
+    onHelp: () => speakText(guidanceText(guidanceKey, selectedLang)),
   });
 
-  // Automatically skip asking for things the user types manually
+  // Wait for a field/keyboard transition rather than interrupting each keystroke.
   useEffect(() => {
-     if (voiceExpecting === 'name' && isNameValid && !pendingField) {
-         setVoiceExpecting('age');
-         if (!speakingRef.current) speakText(t('typedNameOnly'));
-     } else if (voiceExpecting === 'age' && isAgeValid && form.age !== "22" && !pendingField) {
-         setVoiceExpecting('gender');
-         if (!speakingRef.current) speakText(t('typedNameAndAge'));
-     } else if (voiceExpecting === 'gender' && isGenderValid && !pendingField) {
-         setVoiceExpecting('done');
-         if (!speakingRef.current && isFormValid) speakText(t('typedAll'));
-     }
-  }, [form.name, form.age, form.gender, isNameValid, isAgeValid, isGenderValid, voiceExpecting, pendingField, speakText, speakingRef, t, isFormValid]);
+    if (isSubmitting) return;
+    const timer = setTimeout(() => speakText(guidanceText(guidanceKey, selectedLang)), 450);
+    return () => clearTimeout(timer);
+  }, [guidanceKey, isSubmitting, selectedLang, speakText]);
 
   useEffect(() => {
     let active = true;
@@ -345,8 +211,6 @@ export default function CustomerDetails() {
                 className={`w-full rounded-2xl px-4 py-3 flex items-center cursor-pointer transition-all ${
                   activeInputName === "name" && keyboardVisible
                     ? "bg-white ring-4 ring-orange-500/20 shadow-lg"
-                    : pendingField === 'name' 
-                    ? "bg-blue-50/80 animate-pulse ring-2 ring-blue-300"
                     : form.name.trim()
                     ? "bg-white shadow-sm"
                     : "bg-slate-100/50 hover:bg-white"
@@ -355,12 +219,12 @@ export default function CustomerDetails() {
                 <input
                   type="text"
                   name="name"
-                  value={pendingField === 'name' ? pendingValue : form.name}
+                  value={form.name}
                   readOnly
                   placeholder={translateUI('enterName')}
-                  className={`w-full bg-transparent text-lg font-bold focus:outline-none cursor-pointer ${pendingField === 'name' ? 'text-blue-600' : 'text-slate-900 placeholder:text-slate-400'}`}
+                  className="w-full bg-transparent text-lg font-bold focus:outline-none cursor-pointer text-slate-900 placeholder:text-slate-400"
                 />
-                {isNameValid && !pendingField && (
+                {isNameValid && (
                   <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
                     <Check size={18} className="stroke-[3]" />
                   </div>
@@ -386,11 +250,11 @@ export default function CustomerDetails() {
 
                 <div
                   onClick={() => openKeyboard("age")}
-                  className={`flex-1 flex flex-col items-center justify-center cursor-pointer rounded-2xl py-2 ${pendingField === 'age' ? 'bg-blue-50 animate-pulse' : ''}`}
+                  className="flex-1 flex flex-col items-center justify-center cursor-pointer rounded-2xl py-2"
                 >
                   <div className="flex items-baseline gap-2">
-                    <span className={`text-3xl font-extrabold tracking-tight font-mono ${pendingField === 'age' ? 'text-blue-600' : 'text-slate-900'}`}>
-                      {pendingField === 'age' ? pendingValue : (form.age || "--")}
+                    <span className="text-3xl font-extrabold tracking-tight font-mono text-slate-900">
+                      {form.age || "--"}
                     </span>
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                       {translateUI('years')}
@@ -423,7 +287,6 @@ export default function CustomerDetails() {
                 { id: "other", label: translateUI('others'), icon: "⚧" },
               ].map((item) => {
                 const isSelected = form.gender.toLowerCase() === item.id.toLowerCase();
-                const isPending = pendingField === 'gender' && pendingValue?.toLowerCase() === item.id.toLowerCase();
                 return (
                   <button
                     key={item.id}
@@ -432,8 +295,6 @@ export default function CustomerDetails() {
                     className={`h-16 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 ${
                       isSelected
                         ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-xl shadow-orange-500/30 scale-[1.02]"
-                        : isPending
-                        ? "bg-blue-50 border-2 border-blue-400 text-blue-700 animate-pulse shadow-md scale-[1.02]"
                         : "bg-slate-100/60 text-slate-700 hover:bg-white shadow-sm"
                     }`}
                   >

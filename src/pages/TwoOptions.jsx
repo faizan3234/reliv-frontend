@@ -9,7 +9,7 @@ import { Activity, Pill, ArrowLeft } from "lucide-react";
 import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { dict } from "../config/TwoOptionsDict";
-import { parseServiceChoice, containsPhrase } from "../voice/voicePageProfiles";
+import { guidanceText } from "../voice/guidanceCopy";
 import { readKioskSession, clearKioskSession, isCurrentKioskSession } from "../utils/kioskSession";
 
 export default function TwoOptions() {
@@ -118,47 +118,9 @@ export default function TwoOptions() {
   };
 
   useVoicePage({
-    expecting: "service",
-    vocabularyHints: ['health', 'checkup', 'medicine', 'dispensing', 'dawai', 'check', 'haan', 'yes', 'no', 'nahi', 'switch', 'change', 'dusra', 'pehla', 'option 1', 'option 2'],
-    onHelp: () => {
-       speakText(t('idle12'));
-    },
-    onTranscript: (lowerText) => {
-      if (submittingRef.current) return;
-
-      // Spoken confirmation to proceed with currently highlighted option
-      if (containsPhrase(lowerText, ['proceed', 'continue', 'next', 'aage', 'chalo', 'theek hai', 'haan', 'yes', 'done'])) {
-        if (selectedOption) {
-          handleProceed();
-          return;
-        }
-      }
-
-      // Spoken shifting / switching between the two options
-      if (containsPhrase(lowerText, ['switch', 'change', 'shift', 'dusra', 'other', 'badlo', 'dusra option'])) {
-        const requested = parseServiceChoice(lowerText);
-        const nextOption = requested === 'MEDICINE' ? 'medicine-dispensing' : requested === 'HEALTH_CHECKUP' ? 'health-checkup' : selectedOption === 'health-checkup' ? 'medicine-dispensing' : 'health-checkup';
-        setSelectedOption(nextOption);
-        speakText(t(nextOption === 'health-checkup' ? 'health_checkup' : 'medicine_dispensing'));
-        return;
-      }
-
-      const service = parseServiceChoice(lowerText);
-      if (service === "HEALTH_CHECKUP") {
-        setSelectedOption("health-checkup");
-        selectServiceAndContinue(service, "/body-composition");
-      } else if (service === "MEDICINE") {
-        setSelectedOption("medicine-dispensing");
-        selectServiceAndContinue(service, "/medicine-dispensing");
-      }
-    },
-    onIdle: (elapsedSeconds) => {
-      if (elapsedSeconds === 4) {
-         if (!submittingRef.current) {
-             speakText(t('idle12'));
-         }
-      }
-    }
+    guidanceKey: isSubmitting ? 'saving' : 'service',
+    idleEnabled: !isSubmitting,
+    onHelp: () => speakText(guidanceText(isSubmitting ? 'saving' : 'service', selectedLang)),
   });
 
   return (

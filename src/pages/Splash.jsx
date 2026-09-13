@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
+import { guidanceText } from "../voice/guidanceCopy";
 import { useHealth } from "../context/HealthContext";
 import CampusLeaderboard from "../components/CampusLeaderboard";
 import { AnimatePresence } from "framer-motion";
@@ -11,8 +12,8 @@ import i18n from "i18next";
 
 const Splash = () => {
   const navigate = useNavigate();
-  const { speak, stop, speakChained } = useSpeech();
-  const { resetHealth, update } = useHealth();
+  const { stop, speakText } = useSpeech();
+  const { resetHealth, update, data: healthData } = useHealth();
   
   const [showTerms, setShowTerms] = useState(false);
   const [disagreed, setDisagreed] = useState(false);
@@ -54,45 +55,6 @@ const Splash = () => {
     return true;
   }, [navigate, update]);
 
-  // Voice Interaction Logic
-  useVoicePage({
-    expecting: 'language',
-    vocabularyHints: ['english', 'hindi', 'bengali', 'bangla', 'shuru', 'start', 'agree', 'disagree'],
-    onTranscript: (lowerText) => {
-      // Allow voice agreement/disagreement if spoken
-      if (/disagree|अस्वीकार|অসম্মত|not agree|don't agree/.test(lowerText)) {
-        handleDisagree();
-        return;
-      }
-      if (/agree|स्वीकार|सहमति|সম্মত/.test(lowerText)) {
-        handleAgree();
-        return;
-      }
-
-      // Detect Hindi — Latin + Devanagari + Bengali script forms
-      if (/hindi|हिंदी|हिन्दी|হিন্দি/.test(lowerText)) {
-        if (handleLanguageSelect('hi')) {
-          speakChained([{ text: "Hindi select ho gayi hai. Ab main aapko Hindi mein guide karungi. Chaliye shuru karte hain.", langHint: "hi" }]);
-        }
-      // Detect Bengali — Latin + Bengali script forms
-      } else if (/bengali|bangla|বেঙ্গলি|বাঙালি|বাংলা|বাঙ্গালি/.test(lowerText)) {
-        if (handleLanguageSelect('bn')) {
-          speakChained([{ text: "বাংলা সিলেক্ট হয়েছে। এখন থেকে আমি আপনাকে বাংলায় গাইড করব। চলুন শুরু করি।", langHint: "bn" }]);
-        }
-      // Detect English — Latin + Devanagari + Bengali script forms
-      } else if (/english|ইংলিশ|ইংরেজি|अंग्रेज़ी|अंग्रेजी|इंग्लिश/.test(lowerText)) {
-        if (handleLanguageSelect('en')) {
-          speakChained([{ text: "English selected. I'll guide you in English from here. Let's begin.", langHint: "en" }]);
-        }
-      }
-    },
-    onHelp: () => {
-      speakChained([
-        { text: "Welcome to Reliv. Check your key health measurements in just a few minutes. Touch Start whenever you're ready — or simply talk to me and I'll guide you.", langHint: "en" }
-      ]);
-    }
-  });
-
   // Best-effort cancel of prior unpaid payment request when customer starts new journey
   const cancelStalePaymentSession = useCallback(() => {
     try {
@@ -126,8 +88,8 @@ const Splash = () => {
   }, [hideLeaderboard, stop]);
 
   const handleLeaderboardVisible = useCallback(() => {
-    speak("leaderboard");
-  }, [speak]);
+    speakText(guidanceText('language', healthData?.language));
+  }, [speakText, healthData?.language]);
 
   // Reset any stale customer session on home/splash mount
   // But preserve the selected UI language so going back doesn't look weird
@@ -143,90 +105,21 @@ const Splash = () => {
     }
   }, []);
 
-  const isMounted = useRef(true);
+  useVoicePage({
+    guidanceKey: showTerms ? 'terms' : 'language',
+    idleEnabled: !showLeaderboard,
+    onHelp: () => {
+      if (showLeaderboard) hideLeaderboard();
+      speakText(guidanceText(showTerms ? 'terms' : 'language', healthData?.language));
+    },
+  });
+
+  // The shared idle coordinator owns repeats; welcome/promotional timers must
+  // not interrupt help requests or instructions while a customer is touching.
   useEffect(() => {
-    isMounted.current = true;
-    return () => { isMounted.current = false; };
-  }, []);
-
-  const welcomeTimerRef = useRef(null);
-  const promoTimerRef = useRef(null);
-  const showLeaderboardRef = useRef(false);
-  const audioSessionRef = useRef(0);
-
-  // Keep ref in sync with state (avoids stale closures in callbacks)
-  useEffect(() => {
-    showLeaderboardRef.current = showLeaderboard;
-  }, [showLeaderboard]);
-
-  const playWelcomeLoop = useCallback(() => {
-    if (showLeaderboardRef.current) return;
-    const session = audioSessionRef.current;
-    speakChained([
-      { text: "Hello, welcome to Reliv.", langHint: "en" },
-      { text: "Reliv mein aapka swagat hai.", langHint: "hi" },
-      { text: "Main aapko English, Hindi ya Bengali mein guide kar sakti hoon. Apni language choose kijiye, ya seedha mujhe boliye — main aapke saath step by step rahungi.", langHint: "hi" }
-    ], {
-      onEnd: () => {
-        if (!isMounted.current || session !== audioSessionRef.current) return;
-        welcomeTimerRef.current = setTimeout(playWelcomeLoop, 7000); // Repeat 7 seconds after completion
-      }
-    });
-  }, [speakChained]); // NO showLeaderboard dependency — uses ref instead
-
-  const playPromo = useCallback(() => {
-    if (showLeaderboardRef.current) return;
-    const session = audioSessionRef.current;
-    clearTimeout(welcomeTimerRef.current);
-    speakChained([
-      { text: "Welcome to Reliv. Check your key health measurements in just a few minutes. Touch Start whenever you're ready — or simply talk to me and I'll guide you.", langHint: "en" }
-    ], {
-      onEnd: () => {
-        if (!isMounted.current || session !== audioSessionRef.current) return;
-        // After promo finishes, restart the welcome loop 7 seconds later to avoid clashing
-        welcomeTimerRef.current = setTimeout(playWelcomeLoop, 7000);
-      }
-    });
-  }, [speakChained, playWelcomeLoop]); // NO showLeaderboard dependency
-
-  // Orchestrator: manages the welcome loop + promo cycle
-  // Only re-runs when showLeaderboard actually changes
-  useEffect(() => {
-    // Invalidate all pending audio callbacks from previous session
-    audioSessionRef.current += 1;
-    clearTimeout(welcomeTimerRef.current);
-    clearTimeout(promoTimerRef.current);
-    stop();
-
-    if (!showLeaderboard) {
-      const session = audioSessionRef.current;
-
-      // Small delay to ensure stop() has fully torn down previous audio
-      const initialDelay = setTimeout(() => {
-        if (session !== audioSessionRef.current) return;
-        playWelcomeLoop();
-
-        // Schedule promo 60s from now (setTimeout, not setInterval — no stale closures)
-        const schedulePromo = () => {
-          promoTimerRef.current = setTimeout(() => {
-            if (session !== audioSessionRef.current) return;
-            playPromo();
-            // After promo plays, schedule the next one 60s later
-            schedulePromo();
-          }, 60000);
-        };
-        schedulePromo();
-      }, 500);
-
-      return () => {
-        clearTimeout(initialDelay);
-        clearTimeout(welcomeTimerRef.current);
-        clearTimeout(promoTimerRef.current);
-        stop();
-      };
-    }
-  }, [showLeaderboard]); // eslint-disable-line react-hooks/exhaustive-deps
-  // ^ Deliberately minimal deps: playWelcomeLoop/playPromo/stop are stable refs
+    const timer = setTimeout(() => speakText(guidanceText('language', healthData?.language)), 500);
+    return () => { clearTimeout(timer); stop(); };
+  }, [speakText, stop, healthData?.language]);
 
   // Leaderboard rotation: show after 45s, then every 45s for 20s
   useEffect(() => {

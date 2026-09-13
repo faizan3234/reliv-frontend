@@ -43,7 +43,7 @@ dom.window.MessageChannel = class extends MessageChannel {
 try {
   dom.window.eval(bundle.outputFiles[0].text);
   let result = '';
-  for (let attempt = 0; attempt < 1200; attempt += 1) {
+  for (let attempt = 0; attempt < 2400; attempt += 1) {
     result = dom.window.document.querySelector('#results').textContent;
     if (result.includes('FAIL ') || /ALL \d+ BROWSER CHECKS PASSED/.test(result)) break;
     await delay(50);

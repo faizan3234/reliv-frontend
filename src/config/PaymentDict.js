@@ -1,37 +1,42 @@
 export const dict = {
-  start: {
-    en: "Your health tests are complete. To unlock your full detailed report and wellness insights, scan the payment QR on screen and complete the payment on your phone. Then enter the four-digit verification code shown on your phone. If you get stuck anywhere, just ask me and I'll guide you.",
-    hi: "आपके health tests complete हो गए हैं। Full detailed report और simple wellness insights unlock करने के लिए screen पर payment QR scan कीजिए। Payment phone पर complete कीजिए। उसके बाद phone पर जो 4-digit verification code मिलेगा, उसे kiosk पर enter कीजिए। अगर कहीं problem हो, सीधा मुझसे पूछिए — मैं guide करूँगी।",
-    bn: "আপনার health tests complete হয়েছে। Full detailed report এবং wellness insights unlock করতে screen-এর payment QR scan করুন এবং phone-এ payment complete করুন। তারপর phone-এ দেখানো 4-digit verification code kiosk-এ enter করুন। কোথাও সমস্যা হলে আমাকে বলুন, আমি guide করব।"
-  },
   qr_mentor: {
-    en: "Open your phone camera, Google Lens, or UPI scanner and scan the QR. Let me know once the payment is complete.",
-    hi: "Phone का camera, Google Lens या UPI scanner खोलिए और QR scan कीजिए। Payment complete होने के बाद मुझे बोल दीजिए।",
-    bn: "Phone-এর camera, Google Lens বা UPI scanner খুলুন আর QR scan করুন। Payment complete হওয়ার পর আমাকে বলে দিন।"
-  },
-  scan_issue: {
-    en: "No problem. Move your phone back a bit so the full QR fits in the camera. Also, keep your mobile internet on.",
-    hi: "No problem. Phone को थोड़ा पीछे कीजिए ताकि पूरा QR camera में आए। Mobile internet भी on रखिए।",
-    bn: "No problem. Phone-টা একটু পিছনে করুন যাতে পুরো QR camera-য় আসে। Mobile internet-ও on রাখুন।"
-  },
-  scanned: {
-    en: "Perfect. Now complete the payment on your phone.",
-    hi: "Perfect. अब phone पर payment complete कीजिए।",
-    bn: "Perfect. এবার phone-এ payment complete করুন।"
+    en: 'Keep mobile internet on. Scan this QR with your phone camera, complete payment on the page that opens, then return here and tap Enter 4-Digit Code. Enter the code shown on your phone and tap Verify Payment.',
+    hi: 'फोन का मोबाइल इंटरनेट चालू रखिए। कैमरे से यह QR स्कैन कीजिए और खुले हुए पेज पर पेमेंट पूरा कीजिए। फिर यहाँ Enter 4-Digit Code दबाइए। फोन का चार अंकों वाला कोड डालकर Verify Payment दबाइए।',
+    bn: 'ফোনের মোবাইল ইন্টারনেট চালু রাখুন। ক্যামেরা দিয়ে এই QR স্ক্যান করে খোলা পেজে পেমেন্ট করুন। তারপর এখানে Enter 4-Digit Code চাপুন। ফোনের চার সংখ্যার কোড লিখে Verify Payment চাপুন।',
   },
   payment_done: {
-    en: "The keypad is open. Enter the four-digit code shown on your phone, then tap Verify Payment. Scroll down if you cannot see the button.",
-    hi: "Keypad खुल गया है। Phone पर दिख रहा चार अंकों का code यहाँ डालिए, फिर Verify Payment दबाइए। नीचे देखने के लिए screen scroll कीजिए।",
-    bn: "Keypad খুলে গেছে। Phone-এ দেখানো চার সংখ্যার code এখানে লিখুন, তারপর Verify Payment চাপুন। নিচে দেখতে screen scroll করুন।"
+    en: 'The keypad is open. Find the four-digit code on your phone. If it is missing, tap Scan QR Code and scan the same QR again to recover it. Scanning alone does not deduct money; do not pay again if already paid. Enter your code here and tap Verify Payment.',
+    hi: 'कीपैड खुल गया है। फोन पर चार अंकों का कोड देखिए। नहीं दिखे तो Scan QR Code दबाकर वही QR दोबारा स्कैन कीजिए। सिर्फ स्कैन करने से पैसे नहीं कटते। पेमेंट हो चुका हो तो दोबारा मत कीजिए। कोड यहाँ डालकर Verify Payment दबाइए।',
+    bn: 'কিপ্যাড খুলেছে। ফোনে চার সংখ্যার কোড দেখুন। না পেলে Scan QR Code চেপে একই QR আবার স্ক্যান করুন। শুধু স্ক্যান করলে টাকা কাটে না। পেমেন্ট হয়ে থাকলে আবার করবেন না। এখানে কোড লিখে Verify Payment চাপুন।',
   },
-  idle12_qr: {
-    en: "Have you completed payment on your phone? Say yes to enter your code, or ask me for help.",
-    hi: "क्या आपने phone पर payment कर दिया? हाँ बोलिए, मैं code डालने का keypad खोल दूँगी। कोई problem हो तो मुझे बताइए।",
-    bn: "Phone-এ payment করেছেন? হ্যাঁ বলুন, আমি code লেখার keypad খুলে দেব। সাহায্য লাগলে আমাকে বলুন।"
+  payment_question: {
+    en: 'Have you completed payment on your phone? You can say yes or no.',
+    hi: 'क्या आपने फोन पर पेमेंट कर दिया है? हाँ या नहीं बोल सकते हैं।',
+    bn: 'ফোনে পেমেন্ট করেছেন? হ্যাঁ বা না বলতে পারেন।',
   },
-  idle12_code: {
-    en: "Enter the four-digit code from your phone using this keypad, then tap Verify Payment. Scroll down if you cannot see the button.",
-    hi: "Phone का चार अंकों का code इस keypad से डालिए, फिर Verify Payment दबाइए। Button नहीं दिखे तो नीचे scroll कीजिए।",
-    bn: "Phone-এর চার সংখ্যার code এই keypad দিয়ে লিখুন, তারপর Verify Payment চাপুন। Button না দেখলে নিচে scroll করুন।"
-  }
+  code_help: {
+    en: 'Use the keypad to enter the four-digit code from your phone, then tap Verify Payment. If you cannot find the code, tap Scan QR Code to reopen the same payment page. Do not pay again if already paid.',
+    hi: 'फोन का चार अंकों वाला कोड कीपैड से डालिए, फिर Verify Payment दबाइए। कोड नहीं मिले तो Scan QR Code से वही पेमेंट पेज दोबारा खोलिए। पेमेंट हो चुका हो तो दोबारा मत कीजिए।',
+    bn: 'ফোনের চার সংখ্যার কোড কিপ্যাডে লিখে Verify Payment চাপুন। কোড না পেলে Scan QR Code দিয়ে একই পেমেন্ট পেজ খুলুন। পেমেন্ট হয়ে থাকলে আবার করবেন না।',
+  },
+  preparing: {
+    en: 'Please wait while the payment QR is prepared. You can scan it when it appears.',
+    hi: 'पेमेंट का QR तैयार हो रहा है। दिखाई देने पर स्कैन कीजिए।',
+    bn: 'পেমেন্টের QR তৈরি হচ্ছে। দেখা গেলে স্ক্যান করুন।',
+  },
+  verifying: {
+    en: 'Your code is being checked. Please wait; you do not need to pay again.',
+    hi: 'आपका कोड जाँचा जा रहा है। इंतज़ार कीजिए, दोबारा पेमेंट करने की ज़रूरत नहीं है।',
+    bn: 'আপনার কোড যাচাই হচ্ছে। অপেক্ষা করুন, আবার পেমেন্ট করতে হবে না।',
+  },
+  recovery: {
+    en: 'Check the message on screen. Use the displayed retry or recovery option. If money was already deducted, recover the same payment instead of paying again.',
+    hi: 'स्क्रीन का संदेश देखिए। दिख रहे Retry या Recovery विकल्प का इस्तेमाल कीजिए। पैसे कट चुके हों तो उसी पेमेंट को रिकवर कीजिए, दोबारा पेमेंट मत कीजिए।',
+    bn: 'স্ক্রিনের বার্তাটি দেখুন। দেখানো Retry বা Recovery ব্যবহার করুন। টাকা কেটে থাকলে একই পেমেন্ট উদ্ধার করুন, আবার পেমেন্ট করবেন না।',
+  },
+  success: {
+    en: 'Payment is verified. Please wait for the next screen.',
+    hi: 'पेमेंट की पुष्टि हो गई है। अगली स्क्रीन का इंतज़ार कीजिए।',
+    bn: 'পেমেন্ট যাচাই হয়েছে। পরের স্ক্রিনের জন্য অপেক্ষা করুন।',
+  },
 };

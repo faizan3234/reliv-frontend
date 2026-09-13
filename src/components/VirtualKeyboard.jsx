@@ -1,6 +1,9 @@
 import React, { useRef, useState, useMemo } from 'react';
-import Keyboard from 'react-simple-keyboard';
+import KeyboardModule from 'react-simple-keyboard';
 import 'react-simple-keyboard/build/css/index.css';
+
+// The package publishes CommonJS; Vite and browser test bundles unwrap it differently.
+const Keyboard = KeyboardModule.default || KeyboardModule;
 
 /**
  * VirtualKeyboard — pure "button grid" wrapper around react-simple-keyboard.

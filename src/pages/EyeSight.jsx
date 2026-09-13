@@ -5,30 +5,15 @@ import Logo from "../components/Logo";
 import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { dict } from "../config/MeasurementsDict";
+import { guidanceText } from "../voice/guidanceCopy";
 export default function EyeSight() {
   const navigate = useNavigate();
   const { data, update } = useHealth();
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
 
-  const t = React.useCallback((key) => {
-    const entry = dict[key];
-    if (!entry) return "";
-    return entry[selectedLang] || entry['en'] || "";
-  }, [selectedLang]);
-
   useVoicePage({
-    expecting: 'eyesight',
-    vocabularyHints: ['cover', 'ab kya', 'help', 'measure'],
-    onHelp: () => {
-      speakText(t('eyeIdle'));
-    },
-    onTranscript: (lowerText) => {
-      if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next') || lowerText.includes('help')) {
-        speakText(t('eyeIdle'));
-      }
-    }
+    onHelp: () => speakText(guidanceText('eyesight', selectedLang)),
   });
 
   useEffect(() => {

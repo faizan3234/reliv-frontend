@@ -10,7 +10,6 @@ import { useVoicePage } from "../hooks/useVoicePage";
 import { dict } from "../config/PaymentDict";
 import { API_BASE } from "../config/api";
 import { requestJSON } from "../utils/request";
-import { parsePaymentVoice } from "../voice/paymentVoice";
 import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode, Sparkles } from "lucide-react";
 
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // Allow the full phone-payment window.
@@ -59,31 +58,6 @@ export default function PaymentGate() {
 
   // Two UI Modes: 'WAITING_PAYMENT' (Mode 1: 400px QR) | 'ENTER_CODE' (Mode 2: Large Keypad)
   const [step, setStep] = useState("WAITING_PAYMENT");
-
-  useVoicePage({
-    expecting: 'payment',
-    vocabularyHints: ['scan', 'nahi', 'ho raha', 'ho gaya', 'done', 'payment', 'ab kya', 'help', 'code', 'enter code', 'paid', 'keypad'],
-    onHelp: () => {
-      speakText(step === "WAITING_PAYMENT" ? t('qr_mentor') : t('idle12_code'));
-    },
-    onTranscript: (lowerText) => {
-      const intent = parsePaymentVoice(lowerText);
-      if (intent === 'problem') { speakText(t('scan_issue')); return; }
-      if (intent === 'scanned') { speakText(t('scanned')); return; }
-      if (intent === 'code') {
-        resetInactivityTimer();
-        setStep("ENTER_CODE");
-        speakText(t('payment_done') || "Please enter the 4-digit code shown on your phone");
-        return;
-      }
-
-    },
-    onIdle: (elapsedSeconds) => {
-      if (elapsedSeconds === 4) {
-         speakText(step === "WAITING_PAYMENT" ? t('idle12_qr') : t('idle12_code'));
-      }
-    }
-  });
 
   // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR' | 'SESSION_INVALID'
   const [uiState, setUiState] = useState("PREPARING");
@@ -145,6 +119,47 @@ export default function PaymentGate() {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
   }, [resetInactivityTimer]);
+
+  const paymentCanInteract = ['QR_READY', 'WRONG_CODE'].includes(uiState) &&
+    Boolean(requestId && paymentUrl) && !isCancelling;
+  const paymentGuideKey = uiState === 'PREPARING' ? 'preparing'
+    : uiState === 'VERIFYING' ? 'verifying'
+    : uiState === 'SUCCESS' ? 'success'
+    : !paymentCanInteract ? 'recovery'
+    : step === 'WAITING_PAYMENT' ? 'qr_mentor' : 'code_help';
+
+  const openCodeEntry = () => {
+    if (!paymentCanInteract || verifyingRef.current || cancellingRef.current) return;
+    resetInactivityTimer();
+    setStep('ENTER_CODE');
+    speakText(t('payment_done'));
+  };
+
+  useVoicePage({
+    guidanceKey: `${requestId}:${uiState}:${step}`,
+    paymentRepliesEnabled: paymentCanInteract && step === 'WAITING_PAYMENT',
+    idleEnabled: !['PREPARING', 'VERIFYING', 'SUCCESS'].includes(uiState) && !isCancelling,
+    idleDelayMs: paymentCanInteract && step === 'WAITING_PAYMENT' ? 7000 : 4000,
+    onHelp: (text = '') => speakText(t(paymentCanInteract && /code|कोड|কোড/iu.test(text) ? 'code_help' : paymentGuideKey)),
+    onIdle: () => speakText(t(paymentCanInteract && step === 'WAITING_PAYMENT' ? 'payment_question' : paymentGuideKey)),
+    onPaymentReply: (reply) => {
+      if (!paymentCanInteract || verifyingRef.current || cancellingRef.current) return;
+      resetInactivityTimer();
+      if (reply === 'yes') openCodeEntry();
+      else {
+        setStep('WAITING_PAYMENT');
+        speakText(t('qr_mentor'));
+      }
+    },
+  });
+
+  // Speak once when a QR becomes ready or the user returns to it. The payment
+  // question follows seven quiet seconds after this guidance finishes.
+  useEffect(() => {
+    if (!paymentCanInteract || step !== 'WAITING_PAYMENT') return;
+    const timer = setTimeout(() => speakText(t('qr_mentor')), 400);
+    return () => clearTimeout(timer);
+  }, [requestId, paymentCanInteract, step, speakText, t]);
 
   // ── 2. Create Fresh Payment Request on Local Pi ───────────────────────────
   const createNewPaymentRequest = useCallback(async () => {
@@ -653,11 +668,7 @@ export default function PaymentGate() {
 
           <button
             type="button"
-            onClick={() => {
-              resetInactivityTimer();
-              setStep("ENTER_CODE");
-              speak("enter-code");
-            }}
+            onClick={openCodeEntry}
             className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               step === "ENTER_CODE"
                 ? "bg-orange-500 text-white shadow-md shadow-orange-500/20"
@@ -860,11 +871,7 @@ export default function PaymentGate() {
             <div className="sticky bottom-2 z-20 w-full max-w-[440px] pt-1">
               <button
                 type="button"
-                onClick={() => {
-                  resetInactivityTimer();
-                  setStep("ENTER_CODE");
-                  speak("enter-code");
-                }}
+                onClick={openCodeEntry}
                 className="w-full py-3.5 sm:py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-98 text-white font-extrabold text-base sm:text-lg shadow-xl shadow-orange-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer border-2 border-white/90"
               >
                 <span>I've Paid — Enter Code →</span>
