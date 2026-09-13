@@ -11,7 +11,7 @@ import { useSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
 import { API_BASE } from "../config/api";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { dict } from "../config/MeasurementsDict";
+import { guidanceText } from "../voice/guidanceCopy";
 
 /**
  * MQTT TOPICS — Temperature
@@ -129,23 +129,13 @@ const BodyTemperaturePage = () => {
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
 
-  const t = React.useCallback((key) => {
-    const entry = dict[key];
-    if (!entry) return "";
-    return entry[selectedLang] || entry['en'] || "";
-  }, [selectedLang]);
-
   useVoicePage({
-    expecting: 'temperature',
-    vocabularyHints: ['sensor', 'kaha', 'measure', 'ab', 'kya'],
-    onHelp: () => {
-      speakText(t('tempIdle'));
-    },
-    onTranscript: (lowerText) => {
-      if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next') || lowerText.includes('where') || lowerText.includes('how')) {
-        speakText(t('tempIdle'));
-      }
-    }
+    guidanceKey: measurementState,
+    idleEnabled: measurementState !== 'measuring',
+    onHelp: () => speakText(guidanceText(
+      measurementState === 'measuring' ? 'measuring'
+        : measurementState === 'completed' ? 'measurementDone'
+        : measurementState === 'error' ? 'measurementError' : 'temperature', selectedLang)),
   });
 
   // ── WiFi connectivity check ──────────────────────────────

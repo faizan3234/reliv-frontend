@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { API_BASE } from "../config/api";
 import { useHealth } from "./HealthContext";
+import { GUIDANCE } from "../voice/guidanceCopy";
 
 const SpeechContext = createContext(null);
 
@@ -10,26 +11,10 @@ const DEFAULT_CONFIG = {
     hi: "रिलीव में आपका स्वागत है, आपका पर्सनल हेल्थ कम्पैनियन। तैयार हों तो Start दबाइए।",
     bn: "রিলিভ-এ স্বাগতম, আপনার পার্সোনাল হেলথ কম্প্যানিয়ন। প্রস্তুত হলে Start চাপুন।"
   },
-  "choose-language": {
-    en: "Choose the language you're most comfortable with: English, Hindi, or Bengali.",
-    hi: "जिस भाषा में आप सबसे सहज हैं, उसे चुनिए: English, Hindi या Bengali।",
-    bn: "যে ভাষায় আপনি সবচেয়ে স্বচ্ছন্দ, সেটি বেছে নিন: English, Hindi অথবা Bengali।"
-  },
-  "customer-details": {
-    en: "Let's fill your details. You can use your phone, the touchscreen, or simply speak to me. If you're using your phone, scan the Details QR with your camera — this is not the payment QR. I'll guide you step by step.",
-    hi: "चलिए आपकी details भरते हैं। आप phone, touchscreen या voice — किसी भी तरीके से भर सकते हैं। Phone से भरने के लिए Details QR को camera से scan करें — यह payment QR नहीं है। मैं आपको step by step guide करूँगा।",
-    bn: "চলুন আপনার details পূরণ করি। Phone, touchscreen বা voice—যেটা সহজ লাগে ব্যবহার করুন। Phone দিয়ে করতে Details QR camera দিয়ে scan করুন—এটা payment QR নয়। আমি ধাপে ধাপে গাইড করব।"
-  },
-  "two-options": {
-    en: "What would you like to do today — a Health Checkup or Medicine Dispensing? You can tap an option or tell me.",
-    hi: "आज आप क्या करना चाहते हैं — Health Checkup या Medicine Dispensing? Screen पर चुन सकते हैं या मुझे बोल सकते हैं।",
-    bn: "আজ আপনি কী করতে চান—Health Checkup নাকি Medicine Dispensing? Screen-এ বেছে নিতে পারেন অথবা আমাকে বলতে পারেন।"
-  },
-  "body-composition": {
-    en: "Step onto the scale with both feet on the black area. Keep your feet close and stand still while Reliv measures your weight and height.",
-    hi: "Scale पर दोनों पैर black area पर रखकर खड़े हो जाइए। पैर पास रखें और स्थिर रहें। Reliv आपका weight और height measure करेगा।",
-    bn: "Scale-এর black area-তে দুই পা রেখে দাঁড়ান। পা কাছাকাছি রাখুন এবং স্থির থাকুন। Reliv আপনার weight ও height measure করবে।"
-  },
+  "choose-language": GUIDANCE.language,
+  "customer-details": GUIDANCE.detailsName,
+  "two-options": GUIDANCE.service,
+  "body-composition": GUIDANCE.scale,
   "health-checkup": {
     en: "Now we'll check your blood pressure. Place the wrist cuff correctly and keep your wrist at heart level. Stay relaxed and don't talk while the measurement is running.",
     hi: "अब Blood Pressure check करेंगे। Wrist cuff सही तरह पहनिए और wrist को heart level पर रखिए। Measurement के दौरान relaxed रहें और बात न करें।",
@@ -265,13 +250,13 @@ export function SpeechProvider({ children }) {
           utterance = new window.SpeechSynthesisUtterance(safeText);
           utterance.lang = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' }[targetLang];
           utterance.volume = volumeRef.current;
-          const settings = { ...voiceSettingsRef.current, ...callbacks.voiceSettings };
+          const settings = { ...voiceSettingsRef.current, voicePreference: 'female', ...callbacks.voiceSettings };
           utterance.rate = settings.rate;
           utterance.pitch = settings.pitch;
           const localVoices = window.speechSynthesis.getVoices().filter((voice) =>
             voice.localService && voice.lang.toLowerCase().startsWith(targetLang));
           const preference = settings.voicePreference === 'male' ? /\b(male|david|james)\b/i
-            : settings.voicePreference === 'female' ? /\b(female|samantha|zira)\b/i : null;
+            : settings.voicePreference === 'female' ? /\b(female|samantha|zira|neerja|swara|tanishaa|jenny|susan|hazel)\b/i : null;
           const localVoice = localVoices.find((voice) => preference?.test(voice.name)) || localVoices[0];
           if (localVoice) utterance.voice = localVoice;
           utterance.onend = () => finish();
@@ -363,7 +348,11 @@ export function SpeechProvider({ children }) {
       await stopActivePlayback();
       if (requestId !== playbackRequestRef.current) return;
 
-      const pageConfig = configRef.current[pageKey] || DEFAULT_CONFIG[pageKey];
+      const interactionPrompts = {
+        'choose-language': GUIDANCE.language, 'customer-details': GUIDANCE.detailsName,
+        'two-options': GUIDANCE.service, 'body-composition': GUIDANCE.scale,
+      };
+      const pageConfig = interactionPrompts[pageKey] || configRef.current[pageKey] || DEFAULT_CONFIG[pageKey];
       let textToSpeak = "";
       
       if (typeof pageConfig === "string") {

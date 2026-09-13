@@ -6,10 +6,11 @@ import { recoverBlankScreen } from '../src/utils/crashRecovery.js';
 import { parsePaymentVoice } from '../src/voice/paymentVoice.js';
 import { looksLikeRelivEcho } from '../src/voice/voicePageProfiles.js';
 
-test('payment voice respects negatives, scanned QR and multilingual confirmations', () => {
-  for (const text of ['not paid', 'payment not done', 'payment nahi hua', 'code nahi mila', 'না', 'नहीं']) assert.equal(parsePaymentVoice(text), 'problem');
-  for (const text of ['yes', 'haan', 'paid', 'payment ho gaya', 'হ্যাঁ', 'हाँ', 'enter code']) assert.equal(parsePaymentVoice(text), 'code');
-  assert.equal(parsePaymentVoice('scan done'), 'scanned'); assert.equal(parsePaymentVoice('yesterday'), null);
+test('payment voice accepts replies only and gives negation priority', () => {
+  for (const text of ['not paid', 'payment not done', 'payment nahi hua', 'না', 'नहीं', 'nhi', 'korini', 'naah korlam na', 'nope', 'না করিনি', 'হয়নি', 'जी नहीं']) assert.equal(parsePaymentVoice(text), 'no', text);
+  for (const text of ['yes', 'haan', 'hnn', 'paid', 'payment ho gaya', 'হ্যাঁ', 'हाँ', 'হুম', 'করেছি', 'korechhi', 'kar diya', 'hoye geche']) assert.equal(parsePaymentVoice(text), 'yes', text);
+  for (const text of ['scan done', 'enter code', '1234', 'yesterday', 'क्या आपने पेमेंट कर दिया', 'have you paid']) assert.equal(parsePaymentVoice(text), null, text);
+  assert.equal(parsePaymentVoice('yes but payment is not done'), 'no');
 });
 test('short retry echo is suppressed without rejecting legitimate service answers', () => {
   const recent = [{ text: 'Sorry, try again', at: 1000 }, { text: 'Health checkup or medicine dispensing', at: 1000 }];

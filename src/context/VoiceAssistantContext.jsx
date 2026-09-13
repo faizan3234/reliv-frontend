@@ -3,6 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { useSpeech } from './SpeechContext';
 import { useHealth } from './HealthContext';
 import { looksLikeRelivEcho, normalizeVoiceText } from '../voice/voicePageProfiles';
+import { HELP_HINTS, isHelpRequest } from '../voice/helpIntent';
+import { parsePaymentVoice } from '../voice/paymentVoice';
+import { guidanceText, ROUTE_GUIDANCE, isGuidedRoute } from '../voice/guidanceCopy';
+import { GuidanceTimer } from '../voice/guidanceTimer';
 
 const VoiceAssistantContext = createContext(null);
 
@@ -22,11 +26,15 @@ export const VoiceAssistantProvider = ({ children }) => {
   const reconnectTimeout = useRef(null);
   const connectionTimeout = useRef(null);
   const idleTimer = useRef(null);
-  const idleSecondsRef = useRef(0);
+  const guidanceClock = useRef(new GuidanceTimer(Date.now()));
+  const idleTickRef = useRef(null);
+  const userSpeakingRef = useRef(false);
+  const speakerEndedAtRef = useRef(0);
+  const [assistantSpeaking, setAssistantSpeaking] = useState(false);
   const location = useLocation();
   const currentPathRef = useRef(location.pathname);
   const pageHooks = useRef(new Map());
-  const { stop, speak, speakingRef } = useSpeech();
+  const { stop, speakText, speakingRef, muted } = useSpeech();
   const { data: healthData } = useHealth();
   const languageRef = useRef(healthData?.language || 'en');
   languageRef.current = healthData?.language || 'en';
@@ -35,19 +43,17 @@ export const VoiceAssistantProvider = ({ children }) => {
   const recentRelivSpeechRef = useRef([]);
   const lastPongRef = useRef(Date.now());
 
-  useEffect(() => {
-    currentPathRef.current = location.pathname;
-  }, [location.pathname]);
+  currentPathRef.current = location.pathname;
 
 
   const isRelivSpeakingRef = useRef(speakingRef.current);
-  const lastContextPayloadRef = useRef({ type: 'SET_CONTEXT', page: '/' });
+  const lastContextPayloadRef = useRef({ type: 'SET_CONTEXT', page: '/', expecting: 'help', vocabulary_hints: HELP_HINTS });
 
   const sendToBackend = useCallback((payload) => {
     if (payload.type === 'SET_CONTEXT') {
       const previous = lastContextPayloadRef.current;
       lastContextPayloadRef.current = {
-        type: 'SET_CONTEXT', expecting: '', vocabulary_hints: [],
+        type: 'SET_CONTEXT', expecting: 'help', vocabulary_hints: HELP_HINTS,
         ...(previous.page === payload.page ? previous : {}), ...payload,
       };
       payload = lastContextPayloadRef.current;
@@ -95,10 +101,12 @@ export const VoiceAssistantProvider = ({ children }) => {
   useEffect(() => {
     const handleSpeaking = (e) => {
       const active = Boolean(e.detail);
-      setIsSpeaking(active); // UI requirement from user
+      setAssistantSpeaking(active);
+      if (active) { userSpeakingRef.current = false; setIsSpeaking(false); }
+      else speakerEndedAtRef.current = Date.now();
       isRelivSpeakingRef.current = active;
       setRelivSpeaking(active);
-      idleSecondsRef.current = 0;
+      guidanceClock.current.defer(Date.now());
     };
     window.addEventListener('reliv_speaking', handleSpeaking);
     return () => {
@@ -196,7 +204,7 @@ export const VoiceAssistantProvider = ({ children }) => {
            socket.send(JSON.stringify({ type: 'SET_RELIV_SPEAKING', active: isRelivSpeakingRef.current }));
            socket.send(JSON.stringify({ type: 'SET_LANGUAGE', language: languageRef.current }));
            socket.send(JSON.stringify(lastContextPayloadRef.current));
-           socket.send(JSON.stringify({ type: listeningPausedRef.current ? 'PAUSE_LISTENING' : 'RESUME_LISTENING' }));
+           socket.send(JSON.stringify({ type: listeningPausedRef.current || !isGuidedRoute(currentPathRef.current) ? 'PAUSE_LISTENING' : 'RESUME_LISTENING' }));
         } else if (msg.type === 'CONTROLLER_BUSY') {
            controllerBusy = true;
            socket.close();
@@ -215,7 +223,8 @@ export const VoiceAssistantProvider = ({ children }) => {
       setMicDevice(null);
       processingRef.current = false;
       setIsProcessing(false);
-      setIsSpeaking(isRelivSpeakingRef.current);
+      userSpeakingRef.current = false;
+    setIsSpeaking(false);
       clearTimeout(connectionTimeout.current);
       socket.onopen = socket.onmessage = socket.onclose = socket.onerror = null;
       ws.current = null;
@@ -292,7 +301,9 @@ export const VoiceAssistantProvider = ({ children }) => {
   const handleBackendMessage = (msg) => {
     // NO SELF-TRANSCRIPTION
     // If RELIV is speaking (or in the 350ms acoustic tail), entirely ignore VAD and transcript events
-    if ((isRelivSpeakingRef.current || listeningPausedRef.current) && (msg.type === 'vad' || msg.type === 'transcript')) {
+    if ((isRelivSpeakingRef.current || listeningPausedRef.current ||
+        !isGuidedRoute(currentPathRef.current) || Date.now() - speakerEndedAtRef.current < 300) &&
+        (msg.type === 'vad' || msg.type === 'transcript')) {
        return; 
     }
 
@@ -306,9 +317,11 @@ export const VoiceAssistantProvider = ({ children }) => {
         setIsProcessing(processingRef.current);
         break;
       case 'processing':
+        userSpeakingRef.current = false;
+        setIsSpeaking(false);
         processingRef.current = msg.active === true;
         setIsProcessing(processingRef.current);
-        idleSecondsRef.current = 0;
+        guidanceClock.current.defer(Date.now());
         break;
       case 'mic_status':
         if (!msg.connected) {
@@ -319,26 +332,25 @@ export const VoiceAssistantProvider = ({ children }) => {
         }
         break;
       case 'vad':
-        setIsSpeaking(msg.speaking);
+        userSpeakingRef.current = msg.speaking === true;
+        setIsSpeaking(userSpeakingRef.current);
         if (msg.speaking) {
           resetIdleTimer();
-          // Barge-in temporarily disabled while testing 350ms tail, but keep logic
-          if (speakingRef && speakingRef.current && !isRelivSpeakingRef.current) {
-            console.log('[VoiceAssistant] Barge-in detected! Stopping RELIV speech.');
-            stop();
-          }
+
         }
         break;
       case 'transcript':
         if (msg.is_final !== false && typeof msg.text === 'string' && msg.text.trim().length > 0 &&
+            (!msg.page || msg.page === currentPathRef.current) &&
+            (!msg.expecting || msg.expecting === lastContextPayloadRef.current.expecting) &&
             !looksLikeRelivEcho(msg.text, recentRelivSpeechRef.current)) {
+          if (!processTranscript(msg.text)) break;
           setLastTranscript({
             text: msg.text,
             language: msg.language,
             confidence: msg.confidence,
             timestamp: Date.now()
           });
-          processTranscript(msg.text);
         }
         break;
       case 'no_speech_result':
@@ -354,60 +366,76 @@ export const VoiceAssistantProvider = ({ children }) => {
 
   backendMessageHandlerRef.current = handleBackendMessage;
 
+  const getActiveHook = () => pageHooks.current.get(currentPathRef.current)?.getCurrent?.();
+
+  const guideCurrentPage = (text = '') => {
+    const hook = getActiveHook();
+    if (hook?.onHelp) hook.onHelp(text);
+    else speakText(guidanceText(ROUTE_GUIDANCE[currentPathRef.current], languageRef.current));
+  };
+
   const processTranscript = (text) => {
-    resetIdleTimer();
-    const lowerText = text.toLowerCase().trim();
-    
-    // 1. Check Global Intents (expanded to catch 150+ variations of help requests)
-    const helpRegex = /(ab kya|what to do|what do|how to|help|samajh nahi|kya karu|kya karna|ki korbo|ki kor|sahajyo|কি করবো|কি করব|সাহায্য|কি করতে|क्या करूं|क्या करें|क्या करना|अब क्या|व्हाट टू|व्हाट तो|मदद|সাহায্য করুন|what now|what next|what should i do|guide me|next step|kya kare|kya karun|kya karoon|kaise karu|kaise karna hai|aage kya|age kya|batao|bataiye|ki korte hobe|ki korob|bujhte parchi na|bujhchi na|ebar ki korbo|help me|tell me|samjh nahi|pata nahi|pata nhi|kya krna|kya kru|kaise kru|ki korbo ebar|কি হবে|কী করব|কী করবো|কি করতে হবে|मुझे समझ नहीं|समझ नहीं आ रहा|क्या करना है|आगे क्या|what i need to do|what do i do|next process)/;
-    
-    if (helpRegex.test(lowerText.replace(/([a-z])\1{2,}/g, '$1')) || /ki korte bobe/.test(lowerText)) {
-      const hook = pageHooks.current.get(currentPathRef.current);
-      if (hook && hook.onHelp) {
-        hook.onHelp();
-      } else {
-        speak(currentPathRef.current.replace(/^\//, '') || 'splash');
+    if (isHelpRequest(text)) {
+      resetIdleTimer();
+      guideCurrentPage(text);
+      return true;
+    }
+    const hook = getActiveHook();
+    if (currentPathRef.current === '/payment' && hook?.paymentRepliesEnabled === true) {
+      const reply = parsePaymentVoice(text);
+      if (reply && hook.onPaymentReply) {
+        resetIdleTimer();
+        hook.onPaymentReply(reply);
+        return true;
       }
+    }
+    // Names, ages, genders, choices, codes, and unrelated speech have no action.
+    return false;
+  };
+
+  const resetIdleTimer = useCallback(() => {
+    const hook = pageHooks.current.get(currentPathRef.current)?.getCurrent?.();
+    guidanceClock.current.reset(Date.now(), hook?.idleDelayMs ?? 4000);
+  }, []);
+
+  idleTickRef.current = () => {
+    const hook = getActiveHook();
+    if (!isGuidedRoute(currentPathRef.current) || muted || document.hidden ||
+        hook?.idleEnabled === false || isRelivSpeakingRef.current ||
+        userSpeakingRef.current || processingRef.current) {
+      guidanceClock.current.defer(Date.now());
       return;
     }
-
-    // 2. Delegate to active page hook using the latest path from ref
-    const activeHook = pageHooks.current.get(currentPathRef.current);
-    if (activeHook && activeHook.onTranscript) {
-      activeHook.onTranscript(lowerText, text);
-    } else {
-      console.warn('[VoiceAssistant] No active voice hook for current path:', currentPathRef.current);
+    if (guidanceClock.current.take(Date.now())) {
+      if (hook?.onIdle) hook.onIdle();
+      else guideCurrentPage();
     }
   };
 
-  // Tiered Idle Guidance Logic
-  const resetIdleTimer = useCallback(() => {
-    if (idleTimer.current) clearInterval(idleTimer.current);
-    idleSecondsRef.current = 0;
-
-    if (listeningPausedRef.current) return;
-
-    idleTimer.current = setInterval(() => {
-      if (isRelivSpeakingRef.current || listeningPausedRef.current || processingRef.current) return;
-      idleSecondsRef.current += 1;
-      const activeHook = pageHooks.current.get(currentPathRef.current);
-      if (activeHook && activeHook.onIdle) {
-        activeHook.onIdle(idleSecondsRef.current);
-      }
-    }, 1000); // Check every second
-  }, []);
-
-  // Reset timer on page change
   useEffect(() => {
-    resetIdleTimer();
-    // Update backend context
-    sendToBackend({
-      type: 'SET_CONTEXT',
-      page: location.pathname
-    });
-    return () => {
-      if (idleTimer.current) clearInterval(idleTimer.current);
+    idleTimer.current = setInterval(() => idleTickRef.current?.(), 250);
+    const events = ['pointerdown', 'pointermove', 'touchstart', 'touchmove', 'keydown', 'input', 'change', 'scroll', 'wheel'];
+    const activity = (event) => {
+      if (event.type === 'pointermove' && !event.buttons) return;
+      resetIdleTimer();
     };
+    events.forEach(event => window.addEventListener(event, activity, { capture: true, passive: true }));
+    const visible = () => { if (!document.hidden) resetIdleTimer(); };
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      clearInterval(idleTimer.current);
+      events.forEach(event => window.removeEventListener(event, activity, true));
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, [resetIdleTimer]);
+
+  useEffect(() => {
+    userSpeakingRef.current = false;
+    setIsSpeaking(false);
+    setLastTranscript(null);
+    resetIdleTimer();
+    sendToBackend({ type: 'SET_CONTEXT', page: location.pathname });
+    sendToBackend({ type: listeningPausedRef.current || !isGuidedRoute(location.pathname) ? 'PAUSE_LISTENING' : 'RESUME_LISTENING' });
   }, [location.pathname, resetIdleTimer, sendToBackend]);
 
   useEffect(() => {
@@ -417,15 +445,16 @@ export const VoiceAssistantProvider = ({ children }) => {
   const pauseListening = () => {
     listeningPausedRef.current = true;
     setListeningPaused(true);
-    setIsSpeaking(isRelivSpeakingRef.current);
+    userSpeakingRef.current = false;
+    setIsSpeaking(false);
     sendToBackend({ type: 'PAUSE_LISTENING' });
-    if (idleTimer.current) clearInterval(idleTimer.current);
+    resetIdleTimer();
   };
 
   const resumeListening = () => {
     listeningPausedRef.current = false;
     setListeningPaused(false);
-    sendToBackend({ type: 'RESUME_LISTENING' });
+    sendToBackend({ type: isGuidedRoute(currentPathRef.current) ? 'RESUME_LISTENING' : 'PAUSE_LISTENING' });
     resetIdleTimer();
   };
 
@@ -442,6 +471,8 @@ export const VoiceAssistantProvider = ({ children }) => {
     isConnected,
     micDevice,
     isSpeaking,
+    assistantSpeaking,
+    guidanceAvailable: isGuidedRoute(location.pathname),
     isProcessing,
     lastTranscript,
     listeningPaused,

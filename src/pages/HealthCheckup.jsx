@@ -11,7 +11,7 @@ import meditatingGirl from "../assets/MeditatingGirl.mp4";
 import { useSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { dict } from "../config/MeasurementsDict";
+import { guidanceText } from "../voice/guidanceCopy";
 
 /**
  * Splash screen before BP page
@@ -96,33 +96,13 @@ const BloodPressurePage = () => {
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
 
-  const t = React.useCallback((key) => {
-    const entry = dict[key];
-    if (!entry) return "";
-    return entry[selectedLang] || entry['en'] || "";
-  }, [selectedLang]);
-
   useVoicePage({
-    expecting: 'bp',
-    vocabularyHints: ['cuff', 'kaha', 'lagana', 'measure', 'ab', 'kya'],
-    onHelp: () => {
-      if (measurementState === 'measuring') {
-        speakText(t('bpMeasuring'));
-      } else {
-        speakText(t('bpIdle'));
-      }
-    },
-    onTranscript: (lowerText) => {
-      if (lowerText.includes('cuff') || lowerText.includes('kaha') || lowerText.includes('lagana') || lowerText.includes('where') || lowerText.includes('how')) {
-        speakText(t('bpCuff'));
-      } else if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next')) {
-        if (measurementState === 'measuring') {
-          speakText(t('bpMeasuring'));
-        } else {
-          speakText(t('bpIdle'));
-        }
-      }
-    }
+    guidanceKey: measurementState,
+    idleEnabled: measurementState !== 'measuring',
+    onHelp: () => speakText(guidanceText(
+      measurementState === 'measuring' ? 'bloodPressureRunning'
+        : measurementState === 'completed' ? 'measurementDone'
+        : measurementState === 'error' ? 'measurementError' : 'bloodPressure', selectedLang)),
   });
 
   // Derived state: both must be connected

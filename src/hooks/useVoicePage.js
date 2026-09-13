@@ -1,45 +1,28 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useVoiceAssistant } from '../context/VoiceAssistantContext';
+import { HELP_HINTS } from '../voice/helpIntent';
+import { PAYMENT_HINTS } from '../voice/paymentVoice';
 
-/**
- * useVoicePage hook
- * Allows a page to register its conversational logic with the VoiceAssistantContext.
- * 
- * @param {Object} options
- * @param {Function} options.onTranscript - Called when a new transcript is received
- * @param {Function} options.onIdle - Called when the user has been inactive for 10s
- * @param {Array} options.vocabularyHints - Hints for the Whisper ASR
- * @param {String} options.expecting - What the page is currently expecting (e.g., 'name', 'confirmation')
- */
-export const useVoicePage = ({ onTranscript, onIdle, onHelp, vocabularyHints = [], expecting = '' }) => {
-  const { registerPageHook, unregisterPageHook, sendToBackend } = useVoiceAssistant();
-  const location = useLocation();
-  const handlersRef = useRef({ onTranscript, onIdle, onHelp });
-  handlersRef.current = { onTranscript, onIdle, onHelp };
-  const vocabularyKey = JSON.stringify(vocabularyHints);
+/** Register screen guidance. Only payment may opt into yes/no replies. */
+export const useVoicePage = (options = {}) => {
+  const { registerPageHook, unregisterPageHook, sendToBackend, resetIdleTimer } = useVoiceAssistant();
+  const { pathname } = useLocation();
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+  const paymentRepliesEnabled = pathname === '/payment' && options.paymentRepliesEnabled === true;
+  const { guidanceKey = '', idleEnabled = true, idleDelayMs = 4000 } = options;
 
   useEffect(() => {
-    // Register the hooks for this page
-    const pagePath = location.pathname;
-    
-    registerPageHook(pagePath, {
-      onTranscript: (...args) => handlersRef.current.onTranscript?.(...args),
-      onIdle: (...args) => handlersRef.current.onIdle?.(...args),
-      onHelp: (...args) => handlersRef.current.onHelp?.(...args),
-    });
-
-    return () => {
-      unregisterPageHook(pagePath);
-    };
-  }, [location.pathname, registerPageHook, unregisterPageHook]);
+    registerPageHook(pathname, { getCurrent: () => optionsRef.current });
+    return () => unregisterPageHook(pathname);
+  }, [pathname, registerPageHook, unregisterPageHook]);
 
   useEffect(() => {
-    sendToBackend({
-      type: 'SET_CONTEXT',
-      page: location.pathname,
-      expecting,
-      vocabulary_hints: JSON.parse(vocabularyKey),
+    sendToBackend({ type: 'SET_CONTEXT', page: pathname,
+      expecting: paymentRepliesEnabled ? 'payment_confirmation' : 'help',
+      vocabulary_hints: paymentRepliesEnabled ? [...HELP_HINTS, ...PAYMENT_HINTS] : HELP_HINTS,
     });
-  }, [location.pathname, expecting, vocabularyKey, sendToBackend]);
+    resetIdleTimer();
+  }, [pathname, paymentRepliesEnabled, guidanceKey, idleEnabled, idleDelayMs, sendToBackend, resetIdleTimer]);
 };

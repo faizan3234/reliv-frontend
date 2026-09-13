@@ -7,6 +7,8 @@ import SupportButton from "../components/SupportButton";
 import { useHealth } from "../context/HealthContext";
 import heightImage from "../assets/height.png";
 import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { guidanceText } from "../voice/guidanceCopy";
 import { getMqttConfig } from "../config/mqtt";
 
 const PI_WEIGHT_URL = import.meta.env.VITE_PI_WEIGHT_URL || "http://localhost:5001";
@@ -45,7 +47,7 @@ const isInternalMessage = (msg) => {
 const COUNTDOWN_SECONDS = 120;
 
 const BodyComposition = () => {
-  const { speak, stop } = useSpeech();
+  const { speak, stop, speakText } = useSpeech();
   // Speak instruction on mount
   useEffect(() => {
     const t = setTimeout(() => speak("body-composition"), 400);
@@ -62,7 +64,15 @@ const BodyComposition = () => {
   const [autoProceeding, setAutoProceeding] = useState(false);
 
   const navigate = useNavigate();
-  const { update } = useHealth();
+  const { update, data: healthData } = useHealth();
+  useVoicePage({
+    guidanceKey: measurementState,
+    idleEnabled: measurementState !== 'measuring',
+    onHelp: () => speakText(guidanceText(
+      measurementState === 'measuring' ? 'measuring'
+        : measurementState === 'completed' ? 'measurementDone'
+        : measurementState === 'error' ? 'measurementError' : 'scale', healthData?.language)),
+  });
 
   const clientRef          = useRef(null);
   const countdownRef       = useRef(null);

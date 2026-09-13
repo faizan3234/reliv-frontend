@@ -11,7 +11,7 @@ import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { dict } from "../config/MeasurementsDict";
+import { guidanceText } from "../voice/guidanceCopy";
 
 /**
  * Splash screen before Oxygen page
@@ -97,23 +97,13 @@ const OxygenPulsePage = () => {
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
 
-  const t = React.useCallback((key) => {
-    const entry = dict[key];
-    if (!entry) return "";
-    return entry[selectedLang] || entry['en'] || "";
-  }, [selectedLang]);
-
   useVoicePage({
-    expecting: 'oxygen',
-    vocabularyHints: ['finger', 'kaha', 'sensor', 'measure', 'ab', 'kya'],
-    onHelp: () => {
-      speakText(t('oxIdle'));
-    },
-    onTranscript: (lowerText) => {
-      if (lowerText.includes('ab kya') || lowerText.includes('kya karu') || lowerText.includes('next') || lowerText.includes('where') || lowerText.includes('how')) {
-        speakText(t('oxIdle'));
-      }
-    }
+    guidanceKey: measurementState,
+    idleEnabled: measurementState !== 'measuring',
+    onHelp: () => speakText(guidanceText(
+      measurementState === 'measuring' ? 'measuring'
+        : measurementState === 'completed' ? 'measurementDone'
+        : measurementState === 'error' ? 'measurementError' : 'oxygen', selectedLang)),
   });
 
   // Derived state: both must be connected

@@ -5,6 +5,9 @@ import { HealthProvider, useHealth, MOCK_TEST_REPORT } from '../src/context/Heal
 import { SpeechProvider, useSpeech } from '../src/context/SpeechContext';
 import { VoiceAssistantProvider, useVoiceAssistant } from '../src/context/VoiceAssistantContext';
 import { useVoicePage } from '../src/hooks/useVoicePage';
+import { HELP_HINTS } from '../src/voice/helpIntent';
+import { guidanceText } from '../src/voice/guidanceCopy';
+import { dict as paymentCopy } from '../src/config/PaymentDict';
 import CustomerDetails from '../src/pages/CustomerDetails';
 import TwoOptions from '../src/pages/TwoOptions';
 import Report1 from '../src/pages/Report1';
@@ -129,7 +132,7 @@ function Probe() {
 }
 // eslint-disable-next-line react-refresh/only-export-components
 function VoicePage() {
-  useVoicePage({ expecting: 'gender', vocabularyHints: ['female'], onTranscript: (text) => transcripts.push(text), onIdle: (seconds) => idleEvents.push(seconds) });
+  useVoicePage({ onHelp: (text) => transcripts.push(text), onTranscript: () => { throw new Error('Legacy voice action invoked'); }, onIdle: () => idleEvents.push(Date.now()) });
   return <p>Voice test page</p>;
 }
 async function mount(path, strict = false) {
@@ -153,6 +156,7 @@ async function mount(path, strict = false) {
   await flush();
 }
 async function say(text) {
+  await flush(320); // Wait for the acoustic tail after the previous prompt.
   await act(async () => FakeWebSocket.instances.at(-1).receive({ type: 'transcript', text, is_final: true }));
   await flush();
 }
@@ -162,8 +166,81 @@ async function click(label) {
   const el = button(label); if (!el) throw new Error('Missing button: ' + label);
   await act(async () => el.click()); await flush();
 }
+async function keyPress(key) {
+  const element = [...document.querySelectorAll('[data-skbtn]')].find(el => el.getAttribute('data-skbtn') === key);
+  if (!element) throw new Error('Missing keyboard key: ' + key);
+  await act(async () => {
+    if (typeof element.onpointerdown === 'function') {
+      element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      element.dispatchEvent(new Event('pointerup', { bubbles: true }));
+    } else if (typeof element.ontouchstart === 'function') {
+      element.dispatchEvent(new Event('touchstart', { bubbles: true }));
+      element.dispatchEvent(new Event('touchend', { bubbles: true }));
+    } else element.click();
+  });
+}
+async function fillCustomer() {
+  await act(async () => document.querySelector('input[name="name"]').click());
+  for (const key of 'namita shah') await keyPress(key === ' ' ? '{space}' : key);
+  await keyPress('{close}');
+  await flush(480);
+  assert(events.filter(([kind]) => kind === 'spoken').at(-1)?.[1] === guidanceText('detailsGender'), 'closing the name keyboard guides the user to gender: ' + JSON.stringify({ name: document.querySelector('input[name="name"]').value, spoken: events.filter(([kind]) => kind === 'spoken').at(-1), keyboard: !!document.querySelector('[data-skbtn]') }));
+  await click('👩Female');
+  // Age is deliberately changed from its default via the actual numeric keyboard.
+  const age = [...document.querySelectorAll('span')].find(el => el.textContent === '22');
+  await act(async () => age.click());
+  for (const key of ['{bksp}', '{bksp}', '4', '0', '{close}']) await keyPress(key);
+  await flush();
+}
+async function selectService(label) {
+  const heading = [...document.querySelectorAll('h3')].find(el => el.textContent.trim() === label);
+  if (!heading) throw new Error('Missing service: ' + label);
+  await act(async () => heading.click()); await flush();
+}
+async function checkGuidanceTiming() {
+  const realNow = Date.now;
+  let offset = 0;
+  Date.now = () => realNow() + offset;
+  try {
+    await mount('/choose-language');
+    const beforeIdle = idleEvents.length;
+    offset += 3500; await flush(50);
+    await act(async () => window.dispatchEvent(new Event('touchstart')));
+    offset += 3500; await flush(300);
+    assert(idleEvents.length === beforeIdle, 'touch resets the four-second idle reminder');
+    offset += 600; await flush(300);
+    assert(idleEvents.length === beforeIdle + 1, 'idle guidance runs after four seconds without touch');
+    await act(async () => controls.speech.toggleMute());
+    offset += 4000; await flush(300);
+    assert(idleEvents.length === beforeIdle + 1, 'muted speaker does not trigger idle prompts');
+    await act(async () => controls.speech.toggleMute());
+    apiOverride = async url => url.endsWith('/payment-v2/status')
+      ? responseJSON({ ok: true, status: 'ACTIVE', requestId: 'REQ-TIMER', amount: 2700, expiresAt: Date.now() + 300000, paymentUrl: 'https://example.invalid/pay' }) : null;
+    await act(async () => { controls.health.update({ sessionId: 'KSK-BROWSER' }); controls.navigate('/payment'); });
+    await flush(850);
+    const questionCount = () => events.filter(([kind, text]) => kind === 'spoken' && text === paymentCopy.payment_question.en).length;
+    const beforeQuestion = questionCount();
+    offset += 5500; await flush(300);
+    assert(questionCount() === beforeQuestion, 'payment does not ask after only four seconds');
+    offset += 1700; await flush(300);
+    assert(questionCount() === beforeQuestion + 1, 'payment asks after seven quiet seconds');
+    await say('hnn');
+    assert(document.querySelector('#app').textContent.includes('Payment Confirmation'), 'Hindi hnn opens code entry after the question');
+    assert(!controls.health.data.paymentVerified, 'answering the reminder never verifies a payment');
+    const before = events.filter(([kind]) => kind === 'spoken').length;
+    await say('yes');
+    assert(events.filter(([kind]) => kind === 'spoken').length === before, 'code entry ignores yes/no when no payment question is active');
+    const oldRequestCount = requests.length;
+    await act(async () => { FakeWebSocket.instances.at(-1).receive({ type: 'transcript', text: 'yes', page: '/customer-details', expecting: 'help' }); });
+    assert(requests.length === oldRequestCount, 'stale transcript from another page cannot trigger a payment action');
+  } finally {
+    Date.now = realNow;
+    apiOverride = null;
+    await mount('/choose-language');
+  }
+}
 async function checkPaymentRecovery() {
-  await mount('/voice-test');
+  await mount('/choose-language');
   let statusCalls = 0, createCalls = 0, confirmCalls = 0;
   let statusMode = 'active', confirmMode = 'failure', resolveConfirm;
   apiOverride = async url => {
@@ -201,10 +278,10 @@ async function checkPaymentRecovery() {
   confirmMode = 'pending';
   await act(async () => { button('Verify Payment').click(); button('Verify Payment').click(); }); await flush();
   assert(confirmCalls === 2, 'duplicate taps send only one verification request');
-  await act(async () => controls.navigate('/voice-test'));
+  await act(async () => controls.navigate('/choose-language'));
   await act(async () => resolveConfirm(responseJSON({ ok: true, status: 'VERIFIED', completionStatus: 'report_ready' })));
   await flush(1850);
-  assert(controls.path === '/voice-test', 'late payment response cannot navigate after leaving');
+  assert(controls.path === '/choose-language', 'late payment response cannot navigate after leaving');
   statusMode = 'failure'; await act(async () => controls.navigate('/payment')); await flush();
   assert(document.querySelector('#app').textContent.includes('Status unavailable') && createCalls === 0, 'status outage does not start a new payment');
   statusMode = 'verified'; await click('Retry'); await flush(1300);
@@ -237,7 +314,7 @@ async function checkPhoneDelivery() {
   apiOverride = null;
 }
 async function run() {
-  await mount('/voice-test', true);
+  await mount('/choose-language', true);
   assert(FakeWebSocket.instances.filter((socket) => socket.readyState === 1).length === 1, 'StrictMode leaves exactly one active connection');
   autoEnd = false;
   await act(async () => { void controls.speech.speakText('Dynamic test prompt'); });
@@ -273,9 +350,11 @@ async function run() {
   await say('Proceeding to medicine dispensing');
   assert(transcripts.length === 0, 'recent multiword self-echo is dropped after playback');
   await say('female');
-  assert(transcripts.at(-1) === 'female', 'short user answer is not mistaken for echo');
+  assert(transcripts.length === 0, 'gender is ignored outside payment even after playback');
+  await say('help me');
+  assert(transcripts.at(-1) === 'help me', 'help is accepted after the speaker tail');
   const connectionCount = FakeWebSocket.instances.length;
-  for (const path of ['/voice-next', '/voice-test', '/voice-next']) {
+  for (const path of ['/checkout', '/choose-language', '/checkout']) {
     await act(async () => controls.navigate(path));
   }
   assert(FakeWebSocket.instances.length === connectionCount, 'route changes keep one persistent socket');
@@ -287,7 +366,7 @@ async function run() {
   const recovered = FakeWebSocket.instances.at(-1);
   assert(recovered.created - disconnectedAt < 300, 'forced disconnect reconnects in under 300 ms');
   const context = recovered.sent.filter((msg) => msg.type === 'SET_CONTEXT').at(-1);
-  assert(context.page === '/voice-next' && context.expecting === 'gender' && context.vocabulary_hints[0] === 'female', 'reconnect restores full question and vocabulary context');
+  assert(context.page === '/checkout' && context.expecting === 'help' && context.vocabulary_hints[0] === HELP_HINTS[0], 'reconnect restores help-only vocabulary context');
   assert(recovered.sent.some((msg) => msg.type === 'PAUSE_LISTENING'), 'reconnect preserves intentional pause');
   await act(async () => controls.voice.resumeListening());
   const invalidSocket = FakeWebSocket.instances.at(-1);
@@ -298,7 +377,7 @@ async function run() {
   assert(controls.voice.isConnected, 'malformed transcript payloads do not crash the voice controller');
   autoEnd = false;
   await act(async () => { void controls.speech.speakText('Departing page speech'); });
-  await act(async () => controls.navigate('/voice-departed'));
+  await act(async () => controls.navigate('/wellness-recommendations'));
   assert(!controls.speech.speakingRef.current, 'navigation cancels the previous page voice');
   autoEnd = true;
   FakeWebSocket.acknowledge = false;
@@ -316,54 +395,52 @@ async function run() {
   assert(controls.voice.isProcessing && idleEvents.length === beforeProcessing, 'idle reminders cannot interrupt a slow Whisper answer');
   await act(async () => FakeWebSocket.instances.at(-1).receive({ type: 'processing', active: false }));
   assert(!controls.voice.isProcessing, 'recognition completion clears processing state');
-  for (const [service, destination] of [['checkup korbo', '/body-composition'], ['oshudh nebo', '/medicine-dispensing']]) {
+  for (const [service, destination] of [['Health Checkup', '/body-composition'], ['Medicine Dispensing', '/medicine-dispensing']]) {
     requests.length = 0;
     await mount('/customer-details');
-    await say('my name is Namita Shah');
-    await say('haan');
-    await say('umar challis saal');
-    await say('haan');
-    await say('Femile !');
-    await say('haan');
-    assert(controls.path === '/two-options', 'confirmed gender proceeds to service selection');
-    const saved = requests.find((request) => request.url.endsWith('/customer'));
-    assert(saved.body.customerData.name === 'Namita Shah', 'name cleaning preserves Namita Shah');
-    assert(saved.body.customerData.age === 40 && saved.body.customerData.gender === 'female', 'submitted values include latest confirmed age and gender');
+    for (const word of ['my name is Namita Shah', 'haan', 'forty', 'female', 'next']) await say(word);
+    assert(document.querySelector('input[name="name"]').value === '', 'voice cannot fill name or auto-submit details');
+    await fillCustomer();
+    await click('Proceed →');
+    assert(controls.path === '/two-options', 'touch-entered details proceed to service selection');
+    const saved = requests.find(request => request.url.endsWith('/customer'));
+    assert(saved.body.customerData.name === 'namita shah', 'touch keyboard preserves the entered name');
+    assert(saved.body.customerData.age === 40 && saved.body.customerData.gender === 'female', 'touch submission includes age and gender');
     assert(saved.body.pairingToken === 'browser-token', 'customer request includes authoritative pairing token');
-    assert(requests.filter((request) => request.url.endsWith('create-qr-session')).length === 1, 'customer flow creates one session');
-    await say('health checkup or medicine dispensing');
-    assert(controls.path === '/two-options', 'ambiguous service prompt does not navigate');
-    await say(service);
-    assert(controls.path === destination, 'spoken service reaches ' + destination);
-    assert(requests.findIndex((request) => request.url.endsWith('/customer')) < requests.findIndex((request) => request.url.endsWith('/service')), 'customer is saved before selecting service');
+    assert(requests.filter(request => request.url.endsWith('create-qr-session')).length === 1, 'customer flow creates one session');
+    for (const word of ['health checkup', 'medicine dispensing', 'yes', 'switch']) await say(word);
+    assert(controls.path === '/two-options', 'speech cannot select, switch, or confirm a service');
+    await selectService(service);
+    assert(controls.path === destination, 'touch service reaches ' + destination);
+    assert(requests.findIndex(request => request.url.endsWith('/customer')) < requests.findIndex(request => request.url.endsWith('/service')), 'customer is saved before selecting service');
   }
   rejectCustomer = true;
   await mount('/customer-details');
-  for (const word of ['Test Person', 'yes', 'forty five', 'yes', 'girl', 'yes']) await say(word);
+  await fillCustomer(); await click('Proceed →');
   assert(controls.path === '/customer-details', 'failed customer save does not navigate');
   assert(document.querySelector('[role="alert"]')?.textContent === 'Test save failed', 'save failure is visible and retryable');
   rejectCustomer = false;
-  await say('proceed');
-  assert(controls.path === '/two-options', 'customer save can be retried');
-  rejectService = true; await say('medicine dispensing');
+  await click('Proceed →');
+  assert(controls.path === '/two-options', 'customer save can be retried by touch');
+  rejectService = true; await selectService('Medicine Dispensing');
   assert(controls.path === '/two-options', '409 service rejection cannot navigate to an unselected service');
   rejectService = false;
   let releaseService;
-  pendingService = new Promise((resolve) => { releaseService = resolve; });
-  await say('health checkup');
-  await act(async () => controls.navigate('/voice-test'));
+  pendingService = new Promise(resolve => { releaseService = resolve; });
+  await selectService('Health Checkup');
+  await act(async () => controls.navigate('/choose-language'));
   await act(async () => releaseService());
   await flush();
-  assert(controls.path === '/voice-test', 'late service response cannot navigate away from the current screen');
+  assert(controls.path === '/choose-language', 'late service response cannot navigate away from the current screen');
   pendingService = null;
   let releaseCustomer;
-  pendingCustomer = new Promise((resolve) => { releaseCustomer = resolve; });
+  pendingCustomer = new Promise(resolve => { releaseCustomer = resolve; });
   await mount('/customer-details');
-  for (const word of ['Test Person', 'yes', 'forty five', 'yes', 'girl', 'yes']) await say(word);
-  await act(async () => { controls.navigate('/voice-test'); controls.health.resetHealth(); });
+  await fillCustomer(); await click('Proceed →');
+  await act(async () => { controls.navigate('/choose-language'); controls.health.resetHealth(); });
   await act(async () => releaseCustomer());
   await flush();
-  assert(controls.path === '/voice-test' && !controls.health.data.patient.name, 'late customer response cannot restore a patient after leaving and resetting');
+  assert(controls.path === '/choose-language' && !controls.health.data.patient.name, 'late customer response cannot restore a patient after leaving and resetting');
   pendingCustomer = null;
   await act(async () => controls.navigate('/admin-audit'));
   assert(!document.querySelector('[aria-label="Mute speaker"]'), 'speech control hides on admin navigation without a hook-order crash');
@@ -380,19 +457,20 @@ async function run() {
   await flush();
   await act(async () => {
     localStorage.setItem('reliv_medicine_dispensing_enabled', 'false');
-    controls.navigate('/voice-test');
+    controls.navigate('/choose-language');
   });
   await act(async () => controls.navigate('/medicine-audit'));
   await flush();
   assert(document.querySelector('#app').textContent.includes('Medicine Dispensing Disabled'), 'disabling medicine while mounted keeps hook order valid');
   await act(async () => {
     localStorage.removeItem('reliv_medicine_dispensing_enabled');
-    controls.navigate('/voice-test');
+    controls.navigate('/choose-language');
   });
   await act(async () => controls.navigate('/medicine-audit'));
   await flush();
   assert(!document.querySelector('#app').textContent.includes('Medicine Dispensing Disabled'), 'medicine screen can be enabled again without crashing');
   await checkPaymentRecovery();
+  await checkGuidanceTiming();
   await checkPhoneDelivery();
   await checkAllRoutes();
   await act(async () => root.unmount());
