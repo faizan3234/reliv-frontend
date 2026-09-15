@@ -1,5 +1,5 @@
 // src/pages/Report2.jsx
-import React, { useMemo, useEffect, useRef } from "react";
+import React, { useMemo, useEffect, useRef, useCallback, useState } from "react";
 import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useNavigate, useLocation } from "react-router-dom";
@@ -9,6 +9,7 @@ import Confetti from "react-confetti";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { getReport2Speech } from "../voice/reportVoice";
+import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -888,11 +889,14 @@ const Report2 = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+  const [reportSpeechLanguage, setReportSpeechLanguage] = useState(() =>
+    location.state?.reportSpeechLanguage ||
     data?.reportSpeechLanguage ||
     localStorage.getItem("reliv_report_speech_language") ||
+    sessionStorage.getItem("reliv_report_speech_lang") ||
     data?.language ||
-    "en";
+    "en"
+  );
 
   useVoicePage({
     onHelp: () => {
@@ -1127,6 +1131,28 @@ const Report2 = () => {
     }, 450);
     return () => { clearTimeout(timer); stop(); };
   }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
+
+  const handleReplayOverview = useCallback(() => {
+    const speechPayload = {
+      ...data,
+      patient,
+      vitals,
+    };
+    const text = getReport2Speech(speechPayload, reportSpeechLanguage);
+    speakText(text, { langHint: reportSpeechLanguage });
+  }, [data, patient, vitals, reportSpeechLanguage, speakText]);
+
+  const handleLanguageChange = useCallback((newLang) => {
+    setReportSpeechLanguage(newLang);
+    sessionStorage.setItem('reliv_report_speech_lang', newLang);
+    const speechPayload = {
+      ...data,
+      patient,
+      vitals,
+    };
+    const text = getReport2Speech(speechPayload, newLang);
+    speakText(text, { langHint: newLang });
+  }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
   
   // Calculate control metrics separately (scan-wise unlock)
   const controlMetrics = useMemo(() => {
@@ -1182,6 +1208,18 @@ const Report2 = () => {
             {scanCount === 1 ? "First scan — Data capture mode" : `Scan ${scanCount} — ${getConfidenceStage(scanCount)} analysis`}
           </p>
         </div>
+
+        <ReportVoiceExplainer
+          reportSpeechLanguage={reportSpeechLanguage}
+          onLanguageChange={handleLanguageChange}
+          availableMetrics={['bmi', 'bodyFat', 'muscleMass', 'metabolicAge']}
+          healthData={{
+            ...data,
+            patient,
+            vitals,
+          }}
+          onReplayOverview={handleReplayOverview}
+        />
 
         {/* SYSTEM CARDS */}
         <div className="space-y-3">

@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
@@ -8,6 +8,7 @@ import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { getReport3Speech } from "../voice/reportVoice";
+import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -278,11 +279,14 @@ export default function Report3() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+  const [reportSpeechLanguage, setReportSpeechLanguage] = useState(() =>
+    location.state?.reportSpeechLanguage ||
     data?.reportSpeechLanguage ||
     localStorage.getItem("reliv_report_speech_language") ||
+    sessionStorage.getItem("reliv_report_speech_lang") ||
     data?.language ||
-    "en";
+    "en"
+  );
 
   useVoicePage({
     onHelp: () => {
@@ -373,6 +377,28 @@ export default function Report3() {
     }, 450);
     return () => { clearTimeout(timer); stop(); };
   }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
+
+  const handleReplayOverview = useCallback(() => {
+    const speechPayload = {
+      ...data,
+      patient,
+      vitals,
+    };
+    const text = getReport3Speech(speechPayload, reportSpeechLanguage);
+    speakText(text, { langHint: reportSpeechLanguage });
+  }, [data, patient, vitals, reportSpeechLanguage, speakText]);
+
+  const handleLanguageChange = useCallback((newLang) => {
+    setReportSpeechLanguage(newLang);
+    sessionStorage.setItem('reliv_report_speech_lang', newLang);
+    const speechPayload = {
+      ...data,
+      patient,
+      vitals,
+    };
+    const text = getReport3Speech(speechPayload, newLang);
+    speakText(text, { langHint: newLang });
+  }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
 
   const biologicalAge = metrics?.biologicalAge;
   const ageDiff = biologicalAge ? patient.age - biologicalAge : null;
@@ -579,6 +605,18 @@ export default function Report3() {
             </div>
           )}
         </div>
+
+        <ReportVoiceExplainer
+          reportSpeechLanguage={reportSpeechLanguage}
+          onLanguageChange={handleLanguageChange}
+          availableMetrics={['boneMass', 'protein', 'hydration', 'muscleMass']}
+          healthData={{
+            ...data,
+            patient,
+            vitals,
+          }}
+          onReplayOverview={handleReplayOverview}
+        />
 
         {/* HEIGHT CARD - shown from first scan */}
         {vitals?.height > 0 && (() => {

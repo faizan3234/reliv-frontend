@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useLocation, useNavigate } from "react-router-dom";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
@@ -8,6 +8,7 @@ import { useSpeech } from "../context/SpeechContext";
 import { useHealth } from "../context/HealthContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { getReport1Speech } from "../voice/reportVoice";
+import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 import ChallengeComparison from "../components/ChallengeComparison";
 import { supabase } from "../config/supabase";
 import { QRCodeSVG } from "qrcode.react";
@@ -39,11 +40,14 @@ const Report1 = () => {
   const location = useLocation();
   const { data: healthCtx } = useHealth();
 
-  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+  const [reportSpeechLanguage, setReportSpeechLanguage] = useState(() =>
+    location.state?.reportSpeechLanguage ||
     healthCtx?.reportSpeechLanguage ||
     localStorage.getItem("reliv_report_speech_language") ||
+    sessionStorage.getItem("reliv_report_speech_lang") ||
     healthCtx?.language ||
-    "en";
+    "en"
+  );
 
   useVoicePage({
     onHelp: () => {
@@ -239,6 +243,32 @@ const Report1 = () => {
     }, 450);
     return () => { clearTimeout(timer); stop(); };
   }, [reportData, healthData, patient, vitals, bodyScoreData, reportSpeechLanguage, speakText, stop]);
+
+  const handleReplayOverview = useCallback(() => {
+    const speechPayload = {
+      ...healthData,
+      patient,
+      vitals,
+      bodyScore: bodyScoreData.score,
+      metabolicAge: bodyScoreData.metabolicAge,
+    };
+    const text = getReport1Speech(speechPayload, reportSpeechLanguage);
+    speakText(text, { langHint: reportSpeechLanguage });
+  }, [healthData, patient, vitals, bodyScoreData, reportSpeechLanguage, speakText]);
+
+  const handleLanguageChange = useCallback((newLang) => {
+    setReportSpeechLanguage(newLang);
+    sessionStorage.setItem('reliv_report_speech_lang', newLang);
+    const speechPayload = {
+      ...healthData,
+      patient,
+      vitals,
+      bodyScore: bodyScoreData.score,
+      metabolicAge: bodyScoreData.metabolicAge,
+    };
+    const text = getReport1Speech(speechPayload, newLang);
+    speakText(text, { langHint: newLang });
+  }, [healthData, patient, vitals, bodyScoreData, setReportSpeechLanguage, speakText]);
 
   const peersAverage = 72;
   const yearsYounger = bodyScoreData.metabolicAge
@@ -480,6 +510,20 @@ const Report1 = () => {
             Based on today’s scan • Age {patient?.age || "—"} • {genderDisplay}
           </p>
         </div>
+
+        <ReportVoiceExplainer
+          reportSpeechLanguage={reportSpeechLanguage}
+          onLanguageChange={handleLanguageChange}
+          availableMetrics={['metabolicAge', 'bodyScore', 'bloodPressure', 'pulse']}
+          healthData={{
+            ...healthData,
+            patient,
+            vitals,
+            bodyScore: bodyScoreData.score,
+            metabolicAge: bodyScoreData.metabolicAge,
+          }}
+          onReplayOverview={handleReplayOverview}
+        />
 
         <motion.div
           initial={{ opacity: 0, y: 50 }}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { Line } from "react-chartjs-2";
 import {
@@ -17,6 +17,7 @@ import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { getReport4Speech } from "../voice/reportVoice";
+import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
 import { API_BASE } from "../config/api";
@@ -327,11 +328,14 @@ export default function Report4() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+  const [reportSpeechLanguage, setReportSpeechLanguage] = useState(() =>
+    location.state?.reportSpeechLanguage ||
     data?.reportSpeechLanguage ||
     localStorage.getItem("reliv_report_speech_language") ||
+    sessionStorage.getItem("reliv_report_speech_lang") ||
     data?.language ||
-    "en";
+    "en"
+  );
 
   useVoicePage({
     onHelp: () => {
@@ -399,6 +403,28 @@ export default function Report4() {
     }, 450);
     return () => { clearTimeout(timer); stop(); };
   }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
+
+  const handleReplayOverview = useCallback(() => {
+    const speechPayload = {
+      ...data,
+      patient,
+      vitals,
+    };
+    const text = getReport4Speech(speechPayload, reportSpeechLanguage);
+    speakText(text, { langHint: reportSpeechLanguage });
+  }, [data, patient, vitals, reportSpeechLanguage, speakText]);
+
+  const handleLanguageChange = useCallback((newLang) => {
+    setReportSpeechLanguage(newLang);
+    sessionStorage.setItem('reliv_report_speech_lang', newLang);
+    const speechPayload = {
+      ...data,
+      patient,
+      vitals,
+    };
+    const text = getReport4Speech(speechPayload, newLang);
+    speakText(text, { langHint: newLang });
+  }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
 
   // Chart data preparation
   const chartData = useMemo(() => {
@@ -674,6 +700,18 @@ export default function Report4() {
             </p>
           </div>
 
+          <ReportVoiceExplainer
+            reportSpeechLanguage={reportSpeechLanguage}
+            onLanguageChange={handleLanguageChange}
+            availableMetrics={['bloodPressure', 'oxygen', 'pulse', 'temperature']}
+            healthData={{
+              ...data,
+              patient,
+              vitals,
+            }}
+            onReplayOverview={handleReplayOverview}
+          />
+
           {/* Baseline Metrics Preview (Scan 1) */}
           {vitals && (
             <motion.div
@@ -836,6 +874,18 @@ export default function Report4() {
             {scanCount >= 7 && "Complete timeline established - all insights available"}
           </p>
         </div>
+
+        <ReportVoiceExplainer
+          reportSpeechLanguage={reportSpeechLanguage}
+          onLanguageChange={handleLanguageChange}
+          availableMetrics={['bloodPressure', 'oxygen', 'pulse', 'temperature']}
+          healthData={{
+            ...data,
+            patient,
+            vitals,
+          }}
+          onReplayOverview={handleReplayOverview}
+        />
 
         {/* Chart Container */}
         <motion.div

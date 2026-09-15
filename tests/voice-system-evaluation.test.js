@@ -6,7 +6,9 @@ import {
   getReport2Speech,
   getReport3Speech,
   getReport4Speech,
-  getReport5Speech
+  getReport5Speech,
+  METRIC_EXPLAINERS,
+  getMetricLaymanExplainer
 } from '../src/voice/reportVoice.js';
 
 let passed = 0;
@@ -122,6 +124,27 @@ for (const lang of ['en', 'hi', 'bn']) {
   const r5 = getReport5Speech(mockHealth, lang);
   assert(r5 && r5.length > 50, `Report 5 generated for ${lang}`);
 }
+
+console.log('--- 5. Testing Layman Metric Explainers (5-Year-Old Level) ---');
+const metricKeys = Object.keys(METRIC_EXPLAINERS);
+assert(metricKeys.length >= 8, 'At least 8 metrics have dedicated layman explainers');
+
+for (const key of metricKeys) {
+  for (const lang of ['en', 'hi', 'bn']) {
+    const explainer = getMetricLaymanExplainer(key, mockHealth, lang);
+    assert(explainer && explainer.length >= 40, `Explainer for ${key} in ${lang} exists and is descriptive`);
+  }
+}
+
+// Check Metabolic Age explanation specific metaphors
+const hiMeta = getMetricLaymanExplainer('metabolicAge', mockHealth, 'hi');
+assert(hiMeta.includes('जन्मदिन') || hiMeta.includes('उम्र'), 'Hindi metabolic age explains calendar birthday vs inside age');
+
+const bnMeta = getMetricLaymanExplainer('metabolicAge', mockHealth, 'bn');
+assert(bnMeta.includes('জন্মদিন') || bnMeta.includes('বয়স'), 'Bengali metabolic age explains birthday vs inside age');
+
+const enMeta = getMetricLaymanExplainer('metabolicAge', mockHealth, 'en');
+assert(enMeta.toLowerCase().includes('birthday') && enMeta.toLowerCase().includes('inside'), 'English metabolic age explains birthday vs inside age');
 
 console.log(`\nResults: ${passed} passed, ${failed} failed.`);
 if (failed > 0) process.exit(1);

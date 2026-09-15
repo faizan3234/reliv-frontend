@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
@@ -10,6 +10,7 @@ import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { getReport5Speech } from "../voice/reportVoice";
+import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 import ChallengePrompt from "../components/ChallengePrompt";
 import { API_BASE } from "../config/api";
 
@@ -422,11 +423,14 @@ export default function Report5() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+  const [reportSpeechLanguage, setReportSpeechLanguage] = useState(() =>
+    location.state?.reportSpeechLanguage ||
     data?.reportSpeechLanguage ||
     localStorage.getItem("reliv_report_speech_language") ||
+    sessionStorage.getItem("reliv_report_speech_lang") ||
     data?.language ||
-    "en";
+    "en"
+  );
 
   useVoicePage({
     onHelp: () => {
@@ -525,6 +529,28 @@ export default function Report5() {
     }, 450);
     return () => { clearTimeout(timer); stop(); };
   }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
+
+  const handleReplayOverview = useCallback(() => {
+    const speechPayload = {
+      ...data,
+      patient,
+      vitals,
+    };
+    const text = getReport5Speech(speechPayload, reportSpeechLanguage);
+    speakText(text, { langHint: reportSpeechLanguage });
+  }, [data, patient, vitals, reportSpeechLanguage, speakText]);
+
+  const handleLanguageChange = useCallback((newLang) => {
+    setReportSpeechLanguage(newLang);
+    sessionStorage.setItem('reliv_report_speech_lang', newLang);
+    const speechPayload = {
+      ...data,
+      patient,
+      vitals,
+    };
+    const text = getReport5Speech(speechPayload, newLang);
+    speakText(text, { langHint: newLang });
+  }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
 
   // Inactivity timer - reset on any user interaction
   useEffect(() => {
@@ -816,6 +842,18 @@ export default function Report5() {
             </div>
           )}
         </div>
+
+        <ReportVoiceExplainer
+          reportSpeechLanguage={reportSpeechLanguage}
+          onLanguageChange={handleLanguageChange}
+          availableMetrics={['metabolicAge', 'bodyScore', 'hydration']}
+          healthData={{
+            ...data,
+            patient,
+            vitals,
+          }}
+          onReplayOverview={handleReplayOverview}
+        />
 
         {/* Inactivity Timer */}
         {inactivityTimer <= 30 && (
