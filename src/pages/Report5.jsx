@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
@@ -8,6 +8,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { useReportDelivery } from "../hooks/useReportDelivery";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { getReport5Speech } from "../voice/reportVoice";
 import ChallengePrompt from "../components/ChallengePrompt";
 import { API_BASE } from "../config/api";
 
@@ -417,9 +419,28 @@ function assessBodyMasses(vitals, patient, scanCount) {
 export default function Report5() {
   const { speakText, stop } = useSpeech();
   const { data, resetHealth } = useHealth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+    data?.reportSpeechLanguage ||
+    localStorage.getItem("reliv_report_speech_language") ||
+    data?.language ||
+    "en";
+
+  useVoicePage({
+    onHelp: () => {
+      const helpText = reportSpeechLanguage === 'hi'
+        ? "यहाँ आपका पूरा 7 दिनों का प्लान और क्यूआर कोड है। फोन से स्कैन करके पूरी रिपोर्ट सुरक्षित कीजिए।"
+        : reportSpeechLanguage === 'bn'
+        ? "এখানে আপনার সম্পূর্ণ ৭ দিনের স্বাস্থ্য পরামর্শ এবং কিউআর কোড রয়েছে। ফোনে স্ক্যান করে রিপোর্টটি সেভ করুন।"
+        : "Here is your 7-day action plan and report QR code. Scan the QR with your phone to take the full report home.";
+      speakText(helpText, { langHint: reportSpeechLanguage });
+    }
+  });
+
   const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
   const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
-  const navigate = useNavigate();
 
   const userName = getFirstName(patient);
   const [showChallengePrompt, setShowChallengePrompt] = useState(false);
@@ -488,40 +509,22 @@ export default function Report5() {
       .catch(() => setEcoStats(null));
   }, []);
 
-  // ── Dynamic speech: full summary with all numbers + vision + simple advice ──
+  // ── Dynamic speech: layman explanation in user's selected report voice language ──
   const speechFired = useRef(false);
   useEffect(() => {
     if (speechFired.current) return;
     speechFired.current = true;
     const timer = setTimeout(() => {
-      const name = userName || "Champion";
-      let text = `${name}, here are all your numbers in one place. But more importantly, here is what they mean in simple human language.`;
-      if (vitals?.systolic && vitals?.diastolic) {
-        const bpOk = vitals.systolic < 130 && vitals.diastolic < 85;
-        text += ` Your blood pressure is ${vitals.systolic} over ${vitals.diastolic}. ${bpOk ? "That is normal. No worries." : "That needs monitoring. Watch your salt and stress."}`;
-      }
-      if (vitals?.oxygen) {
-        text += ` Oxygen is ${vitals.oxygen} percent. ${vitals.oxygen >= 95 ? "Healthy levels." : "A bit low. Practice deep breathing."}`;
-      }
-      if (vitals?.temperature) {
-        text += ` Temperature is ${vitals.temperature} degrees.`;
-      }
-      if (vitals?.weight && vitals?.height) {
-        text += ` You weigh ${vitals.weight} kg at ${vitals.height} cm.`;
-      }
-      if (vitals?.leftEye || vitals?.rightEye) {
-        const leftLine = Number(vitals.leftEye);
-        const rightLine = Number(vitals.rightEye);
-        const worstEye = Math.min(leftLine || 13, rightLine || 13);
-        if (worstEye <= 4) text += ` Your eyesight needs attention. Please see an ophthalmologist.`;
-        else if (worstEye <= 8) text += ` Your eyesight is fair. Consider glasses or eye exercises.`;
-        else text += ` Your eyesight is good. Keep it up.`;
-      }
-      text += ` Do you need glasses? Or just more sleep? Is your BP normal? Or a warning? Read the advice on screen. Screenshot it. Follow it for 7 days. Then come back. A new checkup is waiting for you. Now scan the QR code to get your full medical-grade report directly on your phone in simple language. You can also challenge a friend or your partner to see who's healthier. Loser posts on their story! Also you can check out the wellness kits. Curated just for you based on your results.`;
-      speakText(text);
-    }, 400);
+      const speechPayload = {
+        ...data,
+        patient,
+        vitals,
+      };
+      const text = getReport5Speech(speechPayload, reportSpeechLanguage);
+      speakText(text, { langHint: reportSpeechLanguage });
+    }, 450);
     return () => { clearTimeout(timer); stop(); };
-  }, []);
+  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
 
   // Inactivity timer - reset on any user interaction
   useEffect(() => {

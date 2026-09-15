@@ -5,6 +5,9 @@ import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import Confetti from "react-confetti";
 import { useSpeech } from "../context/SpeechContext";
+import { useHealth } from "../context/HealthContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { getReport1Speech } from "../voice/reportVoice";
 import ChallengeComparison from "../components/ChallengeComparison";
 import { supabase } from "../config/supabase";
 import { QRCodeSVG } from "qrcode.react";
@@ -34,6 +37,24 @@ const Report1 = () => {
   const { speakText, stop } = useSpeech();
   const navigate = useNavigate();
   const location = useLocation();
+  const { data: healthCtx } = useHealth();
+
+  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+    healthCtx?.reportSpeechLanguage ||
+    localStorage.getItem("reliv_report_speech_language") ||
+    healthCtx?.language ||
+    "en";
+
+  useVoicePage({
+    onHelp: () => {
+      const helpText = reportSpeechLanguage === 'hi'
+        ? "स्क्रीन पर अपना हेल्थ स्कोर और अंदरूनी उम्र देखिए। नीचे स्क्रॉल करके अगली रिपोर्ट के लिए Next दबाइए।"
+        : reportSpeechLanguage === 'bn'
+        ? "স্ক্রিনে আপনার স্বাস্থ্য স্কোর ও শারীরিক বয়স দেখুন। নিচে স্ক্রল করে পরের রিপোর্টের জন্য Next চাপুন।"
+        : "Check your body score and metabolic age on screen. Scroll to review and tap Next to see detailed measurements.";
+      speakText(helpText, { langHint: reportSpeechLanguage });
+    }
+  });
 
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -200,33 +221,24 @@ const Report1 = () => {
     };
   }, [vitals, patient]);
 
-  // ── Dynamic speech: read user's name, score, elite status ──
+  // ── Dynamic speech: layman explanation in user's selected report voice language ──
   const speechFired = useRef(false);
   useEffect(() => {
-    if (speechFired.current) return;
+    if (speechFired.current || !reportData) return;
     speechFired.current = true;
     const timer = setTimeout(() => {
-      const name = userName || "Champion";
-      const score = bodyScoreData.score;
-      const metAge = bodyScoreData.metabolicAge;
-      let text = `${name}, this is your health score compared to an average person your age.`;
-      if (score !== null) {
-        text += ` Your body score is ${score} out of 100.`;
-        if (score >= 80) text += ` You are an elite performer! Incredible.`;
-        else if (score >= 60) text += ` Good score. Keep it up.`;
-        else text += ` There is room to improve. Let's work on it.`;
-      }
-      if (metAge !== null) {
-        text += ` Your metabolic age is ${metAge} years.`;
-        if (patient?.age && metAge < patient.age) {
-          text += ` That's ${patient.age - metAge} years younger than your actual age!`;
-        }
-      }
-      text += ` Come back next time to see if it improved.`;
-      speakText(text);
-    }, 400);
+      const speechPayload = {
+        ...healthData,
+        patient,
+        vitals,
+        bodyScore: bodyScoreData.score,
+        metabolicAge: bodyScoreData.metabolicAge,
+      };
+      const text = getReport1Speech(speechPayload, reportSpeechLanguage);
+      speakText(text, { langHint: reportSpeechLanguage });
+    }, 450);
     return () => { clearTimeout(timer); stop(); };
-  }, []);
+  }, [reportData, healthData, patient, vitals, bodyScoreData, reportSpeechLanguage, speakText, stop]);
 
   const peersAverage = 72;
   const yearsYounger = bodyScoreData.metabolicAge

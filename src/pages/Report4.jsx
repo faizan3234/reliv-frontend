@@ -11,10 +11,12 @@ import {
   Legend,
 } from "chart.js";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Logo from "../components/Logo";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { getReport4Speech } from "../voice/reportVoice";
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
 import { API_BASE } from "../config/api";
@@ -322,9 +324,28 @@ function assessMetabolicAdvantage(vitals, patient, scanCount) {
 export default function Report4() {
   const { speakText, stop } = useSpeech();
   const { data } = useHealth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+    data?.reportSpeechLanguage ||
+    localStorage.getItem("reliv_report_speech_language") ||
+    data?.language ||
+    "en";
+
+  useVoicePage({
+    onHelp: () => {
+      const helpText = reportSpeechLanguage === 'hi'
+        ? "यहाँ आपका ब्लड प्रेशर, ऑक्सीजन और आँखों की जाँच के नतीजे हैं। नीचे स्क्रॉल करके Next दबाइए।"
+        : reportSpeechLanguage === 'bn'
+        ? "এখানে আপনার ব্লাড প্রেশার, অক্সিজেন ও চোখের পরীক্ষার ফল রয়েছে। স্ক্রল করে Next চাপুন।"
+        : "Here are your blood pressure, oxygen, and eyesight readings. Scroll down and tap Next.";
+      speakText(helpText, { langHint: reportSpeechLanguage });
+    }
+  });
+
   const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
   const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
-  const navigate = useNavigate();
   const [history, setHistory] = useState([]);
 
   const userName = getFirstName(patient);
@@ -362,34 +383,22 @@ export default function Report4() {
     return [...history].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }, [history]);
 
-  // ── Dynamic speech: name, vitals trends, graph progress ──
+  // ── Dynamic speech: layman explanation in user's selected report voice language ──
   const speechFired = useRef(false);
   useEffect(() => {
     if (speechFired.current) return;
     speechFired.current = true;
     const timer = setTimeout(() => {
-      const name = userName || "Champion";
-      let text = `${name}, your vitals trend report.`;
-      if (vitals?.systolic && vitals?.diastolic) {
-        const bpOk = vitals.systolic < 130 && vitals.diastolic < 85;
-        text += ` Blood pressure is ${vitals.systolic} over ${vitals.diastolic}. ${bpOk ? "That looks normal." : "That needs attention."}`;
-      }
-      if (vitals?.oxygen) {
-        text += ` Oxygen is ${vitals.oxygen} percent. ${vitals.oxygen >= 95 ? "Excellent." : "Worth monitoring."}`;
-      }
-      if (vitals?.temperature) {
-        const tempOk = vitals.temperature >= 97.5 && vitals.temperature <= 99.5;
-        text += ` Temperature is ${vitals.temperature} degrees. ${tempOk ? "Normal range." : "Slightly off."}`;
-      }
-      if (scanCount >= 2) {
-        text += ` Your graph is growing. Come back to see trends.`;
-      } else {
-        text += ` Come back tomorrow. Your graph starts building.`;
-      }
-      speakText(text);
-    }, 400);
+      const speechPayload = {
+        ...data,
+        patient,
+        vitals,
+      };
+      const text = getReport4Speech(speechPayload, reportSpeechLanguage);
+      speakText(text, { langHint: reportSpeechLanguage });
+    }, 450);
     return () => { clearTimeout(timer); stop(); };
-  }, []);
+  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
 
   // Chart data preparation
   const chartData = useMemo(() => {

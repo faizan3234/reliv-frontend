@@ -2,10 +2,12 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { getReport3Speech } from "../voice/reportVoice";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -273,9 +275,28 @@ function assessSubcutaneousFat(vitals, patient, scanCount) {
 export default function Report3() {
   const { speakText, stop } = useSpeech();
   const { data } = useHealth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+    data?.reportSpeechLanguage ||
+    localStorage.getItem("reliv_report_speech_language") ||
+    data?.language ||
+    "en";
+
+  useVoicePage({
+    onHelp: () => {
+      const helpText = reportSpeechLanguage === 'hi'
+        ? "यहाँ हड्डियों की मज़बूती और प्रोटीन का स्तर है। नीचे स्क्रॉल करके Next दबाइए।"
+        : reportSpeechLanguage === 'bn'
+        ? "এখানে হাড়ের ঘনত্ব ও প্রোটিনের মাত্রা দেখানো হয়েছে। স্ক্রল করে Next চাপুন।"
+        : "Review your bone mass and protein levels. Scroll to read your insights and tap Next.";
+      speakText(helpText, { langHint: reportSpeechLanguage });
+    }
+  });
+
   const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
   const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
-  const navigate = useNavigate();
   const [showHeightInfo, setShowHeightInfo] = useState(false);
 
   const userName = getFirstName(patient);
@@ -336,29 +357,22 @@ export default function Report3() {
   // Extract for JSX access
   const { boneMassData, proteinData, lbmiData, structuralData, subcutFatData } = tissueMetrics;
 
-  // ── Dynamic speech: name, bone mass, protein, graph progress ──
+  // ── Dynamic speech: layman explanation in user's selected report voice language ──
   const speechFired = useRef(false);
   useEffect(() => {
     if (speechFired.current) return;
     speechFired.current = true;
     const timer = setTimeout(() => {
-      const name = userName || "Champion";
-      let text = `${name}, this graph grows as you visit.`;
-      if (boneMassData?.status) {
-        text += ` Your bone mass is ${boneMassData.status}.`;
-      }
-      if (proteinData?.status) {
-        text += ` Protein level is ${proteinData.status}.`;
-        if (proteinData.status === "Low Protein") text += ` Increase protein intake. Dal, paneer, eggs, soya chunks.`;
-      }
-      if (metrics?.visceralFat) {
-        text += ` Visceral fat is ${metrics.visceralFat}.`;
-      }
-      text += ` Come back tomorrow. New insights unlock.`;
-      speakText(text);
-    }, 400);
+      const speechPayload = {
+        ...data,
+        patient,
+        vitals,
+      };
+      const text = getReport3Speech(speechPayload, reportSpeechLanguage);
+      speakText(text, { langHint: reportSpeechLanguage });
+    }, 450);
     return () => { clearTimeout(timer); stop(); };
-  }, []);
+  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
 
   const biologicalAge = metrics?.biologicalAge;
   const ageDiff = biologicalAge ? patient.age - biologicalAge : null;

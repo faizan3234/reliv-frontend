@@ -128,6 +128,32 @@ export default function PaymentGate() {
     : !paymentCanInteract ? 'recovery'
     : step === 'WAITING_PAYMENT' ? 'qr_mentor' : 'code_help';
 
+  const handleChooseReportLang = useCallback((lang) => {
+    const validLang = ['hi', 'bn', 'en'].includes(lang) ? lang : selectedLang;
+    try {
+      localStorage.setItem('reliv_report_speech_language', validLang);
+    } catch { /* ignore */ }
+    updateHealth({ reportSpeechLanguage: validLang });
+    setUiState("SUCCESS");
+
+    const ack = validLang === 'hi'
+      ? 'हिंदी में रिपोर्ट शुरू कर रहे हैं।'
+      : validLang === 'bn'
+      ? 'বাংলায় রিপোর্ট শুরু করছি।'
+      : 'Starting your report in English.';
+
+    speakText(ack, { langHint: validLang });
+
+    scheduleNavigation("/report-1", {
+      replace: true,
+      state: {
+        sessionId: activeSessionId,
+        fromPayment: true,
+        reportSpeechLanguage: validLang,
+      }
+    }, 1100);
+  }, [selectedLang, updateHealth, speakText, scheduleNavigation, activeSessionId]);
+
   const openCodeEntry = () => {
     if (!paymentCanInteract || verifyingRef.current || cancellingRef.current) return;
     resetInactivityTimer();
@@ -138,10 +164,30 @@ export default function PaymentGate() {
   useVoicePage({
     guidanceKey: `${requestId}:${uiState}:${step}`,
     paymentRepliesEnabled: paymentCanInteract && step === 'WAITING_PAYMENT',
+    reportLanguageEnabled: uiState === 'REPORT_LANG_CHOICE',
     idleEnabled: !['PREPARING', 'VERIFYING', 'SUCCESS'].includes(uiState) && !isCancelling,
-    idleDelayMs: paymentCanInteract && step === 'WAITING_PAYMENT' ? 7000 : 4000,
-    onHelp: (text = '') => speakText(t(paymentCanInteract && /code|कोड|কোড/iu.test(text) ? 'code_help' : paymentGuideKey)),
-    onIdle: () => speakText(t(paymentCanInteract && step === 'WAITING_PAYMENT' ? 'payment_question' : paymentGuideKey)),
+    idleDelayMs: uiState === 'REPORT_LANG_CHOICE' ? 8000 : (paymentCanInteract && step === 'WAITING_PAYMENT' ? 7000 : 4000),
+    onHelp: (text = '') => {
+      if (uiState === 'REPORT_LANG_CHOICE') {
+        speakText(
+          selectedLang === 'hi'
+            ? 'स्क्रीन पर हिंदी, इंग्लिश या बंगाली चुनिए, या बोलकर बताइए।'
+            : selectedLang === 'bn'
+            ? 'স্ক্রিনে হিন্দি, ইংরেজি বা বাংলা বেছে নিন, অথবা মুখে বলুন।'
+            : 'Select Hindi, English, or Bengali on screen, or say your choice aloud.',
+          { langHint: selectedLang }
+        );
+      } else {
+        speakText(t(paymentCanInteract && /code|कोड|কোড/iu.test(text) ? 'code_help' : paymentGuideKey));
+      }
+    },
+    onIdle: () => {
+      if (uiState === 'REPORT_LANG_CHOICE') {
+        handleChooseReportLang(selectedLang);
+      } else {
+        speakText(t(paymentCanInteract && step === 'WAITING_PAYMENT' ? 'payment_question' : paymentGuideKey));
+      }
+    },
     onPaymentReply: (reply) => {
       if (!paymentCanInteract || verifyingRef.current || cancellingRef.current) return;
       resetInactivityTimer();
@@ -150,6 +196,10 @@ export default function PaymentGate() {
         setStep('WAITING_PAYMENT');
         speakText(t('qr_mentor'));
       }
+    },
+    onReportLanguageReply: (chosenLang) => {
+      if (uiState !== 'REPORT_LANG_CHOICE') return;
+      handleChooseReportLang(chosenLang);
     },
   });
 
@@ -266,13 +316,11 @@ export default function PaymentGate() {
           });
           if (lifecycle.signal.aborted) return;
           if (!report.reportId || report.ok !== true) throw new Error('Payment is verified, but the report is not ready. Retry here; do not pay again.');
+
+          updateHealth({ paymentVerified: true, reportReady: true });
+          scheduleNavigation('/report-1', { replace: true, state: { sessionId: activeSessionId } }, 0);
+          return;
         }
-        setUiState("SUCCESS");
-        updateHealth({ paymentVerified: true });
-        scheduleNavigation(needsReport && !hasKits ? '/report-1' : '/order-success', {
-          replace: true, state: { cart, sessionId: activeSessionId },
-        }, 1200);
-        return;
       }
 
       // Check 2: If active request exists and is not expired
@@ -516,17 +564,13 @@ export default function PaymentGate() {
           reportReady: true
         });
 
-        setUiState("SUCCESS");
-        speak("payment-verified");
-
-        scheduleNavigation("/report-1", {
-            replace: true,
-            state: {
-              sessionId: activeSessionId,
-              fromPayment: true
-            }
-          });
-
+        setUiState("REPORT_LANG_CHOICE");
+        const question = selectedLang === 'hi'
+          ? "आपकी रिपोर्ट तैयार है! आप अपनी रिपोर्ट किस भाषा में सुनना चाहेंगे? हिंदी में, इंग्लिश, या बंगाली में?"
+          : selectedLang === 'bn'
+          ? "আপনার রিপোর্ট তৈরি হয়ে গেছে! আপনি কোন ভাষায় রিপোর্ট শুনতে চান? হিন্দি, ইংরেজি, নাকি বাংলা?"
+          : "Your health report is ready! In which language would you like to hear your report? Hindi, English, or Bengali?";
+        speakText(question, { langHint: selectedLang });
         return;
       }
 
@@ -783,6 +827,95 @@ export default function PaymentGate() {
             <h2 className="text-2xl font-extrabold text-slate-900">Payment Verified!</h2>
             <p className="text-sm text-slate-600">Starting your health service now...</p>
             <div className="w-7 h-7 border-4 border-emerald-100 border-t-emerald-500 rounded-full animate-spin mx-auto" />
+          </div>
+        )}
+
+        {/* REPORT LANGUAGE CHOICE STATE */}
+        {uiState === "REPORT_LANG_CHOICE" && (
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-emerald-200 shadow-2xl text-center space-y-4 w-full max-w-md animate-scaleUp">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-300">
+              <CheckCircle2 size={36} className="stroke-[2.5]" />
+            </div>
+
+            <div>
+              <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs mb-1.5">
+                ✓ Payment Verified (₹{formatRupees(authoritativeAmount || 17)})
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                {selectedLang === 'hi'
+                  ? 'रिपोर्ट की आवाज़ चुनें'
+                  : selectedLang === 'bn'
+                  ? 'রিপোর্টের ভাষা বেছে নিন'
+                  : 'Choose Report Voice'}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                {selectedLang === 'hi'
+                  ? 'आप अपनी रिपोर्ट किस भाषा में सुनना चाहेंगे?'
+                  : selectedLang === 'bn'
+                  ? 'আপনি কোন ভাষায় রিপোর্ট শুনতে চান?'
+                  : 'In which language would you like to hear your report?'}
+              </p>
+            </div>
+
+            {/* 3 Touch Options */}
+            <div className="grid grid-cols-1 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => handleChooseReportLang('hi')}
+                className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 border-2 border-orange-300 active:scale-98 transition-all flex items-center justify-between shadow-sm cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🇮🇳</span>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-base">हिंदी (Hindi)</h3>
+                    <p className="text-[11px] text-slate-600">सरल हिंदी में रिपोर्ट सुनें</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-orange-600 bg-white px-3 py-1 rounded-full border border-orange-200">
+                  चुनें →
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleChooseReportLang('en')}
+                className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 border-2 border-indigo-200 active:scale-98 transition-all flex items-center justify-between shadow-sm cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🇬🇧</span>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-base">English</h3>
+                    <p className="text-[11px] text-slate-600">Listen in simple plain English</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-indigo-600 bg-white px-3 py-1 rounded-full border border-indigo-200">
+                  Select →
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleChooseReportLang('bn')}
+                className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 border-2 border-emerald-300 active:scale-98 transition-all flex items-center justify-between shadow-sm cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🇧🇩</span>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-base">বাংলা (Bengali)</h3>
+                    <p className="text-[11px] text-slate-600">সহজ বাংলায় রিপোর্ট শুনুন</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-emerald-700 bg-white px-3 py-1 rounded-full border border-emerald-200">
+                  বেছে নিন →
+                </span>
+              </button>
+            </div>
+
+            {/* Voice Prompt Badge */}
+            <div className="pt-1 flex items-center justify-center gap-2 text-xs font-bold text-orange-600 bg-orange-50/80 p-2.5 rounded-xl border border-orange-200">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping" />
+              <span>🎤 {selectedLang === 'hi' ? 'बोलिए "हिंदी", "इंग्लिश" या "बंगाली" — या बटन दबाएँ' : selectedLang === 'bn' ? 'মুখে বলুন "হিন্দি", "ইংরেজি" বা "বাংলা" — অথবা বোতাম চাপুন' : 'Say "Hindi", "English", or "Bengali" — or tap above'}</span>
+            </div>
           </div>
         )}
 

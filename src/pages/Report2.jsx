@@ -2,11 +2,13 @@
 import React, { useMemo, useEffect, useRef } from "react";
 import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import * as bodyComposition from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import Confetti from "react-confetti";
 import { useSpeech } from "../context/SpeechContext";
+import { useVoicePage } from "../hooks/useVoicePage";
+import { getReport2Speech } from "../voice/reportVoice";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -883,9 +885,28 @@ function getConfidenceStage(scanCount) {
 const Report2 = () => {
   const { speakText, stop } = useSpeech();
   const { data } = useHealth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const reportSpeechLanguage = location.state?.reportSpeechLanguage ||
+    data?.reportSpeechLanguage ||
+    localStorage.getItem("reliv_report_speech_language") ||
+    data?.language ||
+    "en";
+
+  useVoicePage({
+    onHelp: () => {
+      const helpText = reportSpeechLanguage === 'hi'
+        ? "स्क्रीन पर अपनी मांसपेशियों और फैट का संतुलन देखिए। स्क्रॉल करके Next दबाइए।"
+        : reportSpeechLanguage === 'bn'
+        ? "স্ক্রিনে আপনার মাংসপেশি ও ফ্যাটের মাত্রা দেখুন। স্ক্রল করে Next চাপুন।"
+        : "Review your body fat and muscle mass on screen. Scroll to see details and tap Next.";
+      speakText(helpText, { langHint: reportSpeechLanguage });
+    }
+  });
+
   const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
   const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
-  const navigate = useNavigate();
   
   const userName = getFirstName(patient);
   const confettiShownRef = useRef(false);
@@ -1096,29 +1117,16 @@ const Report2 = () => {
     if (speechFired.current) return;
     speechFired.current = true;
     const timer = setTimeout(() => {
-      const name = userName || "Champion";
-      let text = `${name}, your overall status.`;
-      const bmiCard = systems.find(s => s.name === "BMI");
-      const fatCard = systems.find(s => s.name === "Body Fat");
-      const muscleCard = systems.find(s => s.name === "Muscle Mass");
-      if (bmiCard?.assessment?.value) {
-        text += ` Your BMI is ${bmiCard.assessment.value.toFixed(1)}, ${bmiCard.assessment.status || "recorded"}.`;
-      }
-      if (fatCard?.assessment?.value) {
-        text += ` Body fat is ${fatCard.assessment.value.toFixed(1)} percent, ${fatCard.assessment.status || "recorded"}.`;
-      }
-      if (muscleCard?.assessment?.value) {
-        text += ` Muscle mass is ${muscleCard.assessment.value.toFixed(1)} percent, ${muscleCard.assessment.status || "recorded"}.`;
-      }
-      if (bmiCard?.assessment?.status === "Normal" && fatCard?.assessment?.status !== "High") {
-        text += ` Good values. Keep it up!`;
-      } else {
-        text += ` Come back to track your progress.`;
-      }
-      speakText(text);
-    }, 400);
+      const speechPayload = {
+        ...data,
+        patient,
+        vitals,
+      };
+      const text = getReport2Speech(speechPayload, reportSpeechLanguage);
+      speakText(text, { langHint: reportSpeechLanguage });
+    }, 450);
     return () => { clearTimeout(timer); stop(); };
-  }, []);
+  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
   
   // Calculate control metrics separately (scan-wise unlock)
   const controlMetrics = useMemo(() => {

@@ -5,6 +5,7 @@ import { useHealth } from './HealthContext';
 import { looksLikeRelivEcho, normalizeVoiceText } from '../voice/voicePageProfiles';
 import { HELP_HINTS, isHelpRequest } from '../voice/helpIntent';
 import { parsePaymentVoice } from '../voice/paymentVoice';
+import { parseReportLanguageChoice } from '../voice/reportVoice';
 import { guidanceText, ROUTE_GUIDANCE, isGuidedRoute } from '../voice/guidanceCopy';
 import { GuidanceTimer } from '../voice/guidanceTimer';
 
@@ -381,6 +382,14 @@ export const VoiceAssistantProvider = ({ children }) => {
       return true;
     }
     const hook = getActiveHook();
+    if (hook?.reportLanguageEnabled === true) {
+      const chosenLang = parseReportLanguageChoice(text);
+      if (chosenLang && hook.onReportLanguageReply) {
+        resetIdleTimer();
+        hook.onReportLanguageReply(chosenLang);
+        return true;
+      }
+    }
     if (currentPathRef.current === '/payment' && hook?.paymentRepliesEnabled === true) {
       const reply = parsePaymentVoice(text);
       if (reply && hook.onPaymentReply) {
