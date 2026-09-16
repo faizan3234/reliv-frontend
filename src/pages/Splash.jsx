@@ -12,7 +12,7 @@ import i18n from "i18next";
 
 const Splash = () => {
   const navigate = useNavigate();
-  const { stop, speakText, speakChained } = useSpeech();
+  const { stop, speakText, speakChained, speak } = useSpeech();
   const { resetHealth, update, data: healthData } = useHealth();
   
   const [showTerms, setShowTerms] = useState(false);
@@ -88,8 +88,8 @@ const Splash = () => {
   }, [hideLeaderboard, stop]);
 
   const handleLeaderboardVisible = useCallback(() => {
-    speakText(guidanceText('language', healthData?.language));
-  }, [speakText, healthData?.language]);
+    speak("leaderboard");
+  }, [speak]);
 
   // Reset any stale customer session on home/splash mount
   // But preserve the selected UI language so going back doesn't look weird
