@@ -12,7 +12,7 @@ import i18n from "i18next";
 
 const Splash = () => {
   const navigate = useNavigate();
-  const { stop, speakText } = useSpeech();
+  const { stop, speakText, speakChained } = useSpeech();
   const { resetHealth, update, data: healthData } = useHealth();
   
   const [showTerms, setShowTerms] = useState(false);
@@ -110,16 +110,34 @@ const Splash = () => {
     idleEnabled: !showLeaderboard,
     onHelp: () => {
       if (showLeaderboard) hideLeaderboard();
-      speakText(guidanceText(showTerms ? 'terms' : 'language', healthData?.language));
+      if (!healthData?.language || healthData.language === 'auto') {
+        speakChained([
+          { text: "Hello, welcome to Reliv.", langHint: "en" },
+          { text: "Reliv mein aapka swagat hai.", langHint: "hi" },
+          { text: "Main aapko English, Hindi ya Bengali mein guide kar sakti hoon. Apni language choose kijiye, ya seedha mujhe boliye — main aapke saath step by step rahungi.", langHint: "hi" }
+        ]);
+      } else {
+        speakText(guidanceText(showTerms ? 'terms' : 'language', healthData?.language));
+      }
     },
   });
 
   // The shared idle coordinator owns repeats; welcome/promotional timers must
   // not interrupt help requests or instructions while a customer is touching.
   useEffect(() => {
-    const timer = setTimeout(() => speakText(guidanceText('language', healthData?.language)), 500);
+    const timer = setTimeout(() => {
+      if (!healthData?.language || healthData.language === 'auto') {
+        speakChained([
+          { text: "Hello, welcome to Reliv.", langHint: "en" },
+          { text: "Reliv mein aapka swagat hai.", langHint: "hi" },
+          { text: "Main aapko English, Hindi ya Bengali mein guide kar sakti hoon. Apni language choose kijiye, ya seedha mujhe boliye — main aapke saath step by step rahungi.", langHint: "hi" }
+        ]);
+      } else {
+        speakText(guidanceText('language', healthData?.language));
+      }
+    }, 500);
     return () => { clearTimeout(timer); stop(); };
-  }, [speakText, stop, healthData?.language]);
+  }, [speakChained, speakText, stop, healthData?.language]);
 
   // Leaderboard rotation: show after 45s, then every 45s for 20s
   useEffect(() => {
