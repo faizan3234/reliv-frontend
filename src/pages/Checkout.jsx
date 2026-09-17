@@ -228,7 +228,7 @@ export default function Checkout() {
   // If cart is empty and not from payment, show empty state
   if (cart.length === 0 && !fromPaymentGate) {
     return (
-      <div className="min-h-screen h-auto w-full bg-gradient-to-br from-orange-50 via-white to-orange-50 flex flex-col items-center justify-center font-sans p-4 overflow-visible scrollable-container touch-pan-y">
+      <div className="min-h-screen h-auto w-full bg-slate-50 flex flex-col items-center justify-center font-sans p-4 overflow-y-auto scrollable-container touch-pan-y select-none">
         <div className="text-center">
           <div className="mb-6">
             <svg className="w-24 h-24 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,7 +251,7 @@ export default function Checkout() {
 
   // ...existing UI/UX code remains unchanged...
   return (
-    <div className="relative min-h-screen h-auto w-full bg-gradient-to-b from-gray-50 to-white font-serif overflow-visible scrollable-container touch-pan-y pb-28">
+    <div className="min-h-screen h-auto w-full bg-slate-50 flex flex-col justify-between font-sans overflow-y-auto scrollable-container touch-pan-y select-none pb-36">
       {/* BACK BUTTON */}
       <button
         onClick={() => navigate(-1)}
@@ -483,7 +483,7 @@ export default function Checkout() {
           </div>
           {/* Order Summary Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white border-2 border-gray-300 p-8 sticky top-8">
+            <div className="bg-white border-2 border-gray-300 p-6 sm:p-8 rounded-3xl shadow-sm">
               <h2 className="text-sm uppercase tracking-widest text-gray-600 mb-6 pb-4 border-b-2 border-gray-300">Order Summary</h2>
               
               <div className="space-y-3.5 mb-6">
@@ -957,6 +957,39 @@ export default function Checkout() {
                 🔒 No hidden charges • ⚡ Instant dispense • 🏥 Medical grade
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ALWAYS-VISIBLE FIXED BOTTOM CHECKOUT BAR FOR KIOSK TOUCH */}
+      {cart.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl px-6 py-4 flex items-center justify-between gap-4 select-none">
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                Total ({totalQuantity} {totalQuantity === 1 ? 'item' : 'items'})
+              </p>
+              <p className="text-2xl sm:text-3xl font-black text-orange-600">
+                ₹{finalTotalPrice.toFixed(1)}
+              </p>
+            </div>
+            <div className="hidden sm:block text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-semibold">
+              Instant Dispensing at Kiosk
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/medicine-dispensing', { state: { cart, fromPaymentGate } })}
+              className="px-4 py-3 text-sm font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+            >
+              + Add More
+            </button>
+            <PrimaryButton
+              onClick={() => navigate('/payment', { state: { cart, totalPrice: finalTotalPrice, fromPaymentGate } })}
+              className="px-8 py-3.5 text-base font-bold shadow-lg shadow-orange-500/25 active:scale-98 rounded-xl cursor-pointer"
+            >
+              Proceed to Payment →
+            </PrimaryButton>
           </div>
         </div>
       )}

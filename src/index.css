@@ -79,18 +79,20 @@ html, body {
   touch-action: pan-y;
 }
 
-/* Page containers seamlessly flow into the window scroller without scroll traps */
+/* Page containers seamlessly enable direct touch momentum scrolling like TwoOptions */
 .scrollable-container,
 .payment-screen,
 .checkout-bg,
+.vital-screen,
 .mobile-entry-page {
   width: 100%;
   height: auto !important;
   min-height: 100dvh !important;
-  overflow-y: visible !important;
+  overflow-y: auto !important;
   overflow-x: hidden !important;
   touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: auto !important;
 }
 
 .payment-screen > * { flex-shrink: 0; }
