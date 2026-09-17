@@ -264,13 +264,15 @@ export default function KioskGuardian() {
 
 
     // (rest of the listeners attach logic)
+    // Block Safari / WebKit gesture zoom
+    const handleGestureStart = (e) => {
+      if (e.cancelable) e.preventDefault();
+    };
+
     // Attach additional listeners
     window.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("touchstart", handleTouchStart, { passive: false });
-    // touchmove gets its own handler — passive:false only needed because we
-    // must be able to preventDefault on multi-touch pinch; single-finger
-    // scrolling is NOT blocked (the handler returns immediately).
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("gesturestart", handleGestureStart, { passive: false });
+    window.addEventListener("gesturechange", handleGestureStart, { passive: false });
 
 
     // ========== 7. ALLOW BROWSER BACK/FORWARD FOR IN-APP NAVIGATION ==========
@@ -398,8 +400,8 @@ export default function KioskGuardian() {
       
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("gesturestart", handleGestureStart);
+      window.removeEventListener("gesturechange", handleGestureStart);
       
       document.removeEventListener("mousemove", handleUserActivity);
       document.removeEventListener("mousedown", handleUserActivity);

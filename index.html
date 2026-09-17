@@ -104,19 +104,6 @@
           }
         }, { passive: false });
 
-        // Block Pinch-to-zoom (touch gestures) without breaking smooth single-finger scrolling
-        document.addEventListener('touchstart', function(e) {
-          if (e.touches && e.touches.length > 1 && e.cancelable) {
-            e.preventDefault();
-          }
-        }, { passive: false });
-
-        document.addEventListener('touchmove', function(e) {
-          if (e.touches && e.touches.length > 1 && e.cancelable) {
-            e.preventDefault();
-          }
-        }, { passive: false });
-
         // Block window.open before any script can use it
         window._originalOpen = window.open;
         window.open = function() { console.log('[KIOSK] window.open blocked'); return null; };
