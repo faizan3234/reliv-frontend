@@ -1,7 +1,7 @@
 // src/pages/PaymentGate.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import Logo from "../components/Logo";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
@@ -944,35 +944,45 @@ export default function PaymentGate() {
               )}
             </div>
 
-            {/* Large QR Code Card (Pure Black Modules, Crisp Edges, Dedicated Quiet Zone, Kiosk Scaled) */}
-            <div className="bg-white p-3 sm:p-3.5 rounded-3xl border border-orange-200/90 shadow-lg flex flex-col items-center w-full max-w-[440px]">
+            {/* Universal High-Contrast QR Code Card (Razor Sharp Canvas, Level M Error Correction, Pure Quiet Zone) */}
+            <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-orange-200 shadow-xl flex flex-col items-center w-full max-w-[460px]">
               {paymentUrl ? (
-                <div className="bg-white p-2 rounded-2xl flex items-center justify-center">
-                  <QRCodeSVG
+                <div className="bg-white p-3 rounded-2xl flex items-center justify-center shadow-inner border border-slate-100 w-full">
+                  <QRCodeCanvas
                     value={paymentUrl}
-                    size={300}
-                    level="L"
+                    size={340}
+                    level="M"
                     marginSize={4}
                     fgColor="#000000"
                     bgColor="#FFFFFF"
-                    shapeRendering="crispEdges"
-                    className="w-[260px] h-[260px] sm:w-[300px] sm:h-[300px] block"
+                    style={{
+                      width: "100%",
+                      maxWidth: "340px",
+                      height: "auto",
+                      aspectRatio: "1 / 1",
+                      imageRendering: "pixelated",
+                      display: "block",
+                      margin: "0 auto",
+                    }}
                   />
                 </div>
               ) : (
-                <div className="w-[260px] h-[260px] sm:w-[300px] sm:h-[300px] bg-slate-100 rounded-2xl flex items-center justify-center text-sm text-slate-400 font-medium">
+                <div className="w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-slate-100 rounded-2xl flex items-center justify-center text-sm text-slate-400 font-medium">
                   Generating Secure QR...
                 </div>
               )}
 
               {/* Subtitle & Countdown Badge */}
-              <div className="mt-2 flex items-center justify-between w-full px-2 text-xs">
-                <span className="font-bold text-slate-600">Scan with GPay / PhonePe / Paytm</span>
-                <div className="flex items-center gap-1.5 font-bold text-orange-700 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200 shadow-sm">
-                  <Clock size={12} className="text-orange-500 animate-pulse" />
+              <div className="mt-3 flex items-center justify-between w-full px-2 text-xs">
+                <span className="font-bold text-slate-700 text-sm">Scan with Any Scanner / Camera / GPay</span>
+                <div className="flex items-center gap-1.5 font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200 shadow-sm">
+                  <Clock size={13} className="text-orange-500 animate-pulse" />
                   <span>{formatTime(timeLeft)}</span>
                 </div>
               </div>
+              <p className="mt-1.5 text-[11px] text-slate-500 text-center font-medium">
+                Works with Google Lens, iPhone/Android Camera, Google Pay, PhonePe & Paytm
+              </p>
             </div>
 
             {/* 4-Step Visual Guide */}

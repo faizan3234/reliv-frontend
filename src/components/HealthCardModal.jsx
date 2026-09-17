@@ -4,7 +4,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
 import html2canvas from "html2canvas";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import HealthCard from "./HealthCard";
 import { API_BASE } from "../config/api";
 
@@ -172,7 +172,15 @@ export default function HealthCardModal({ open, onClose, patient, score, metabol
                   borderRadius: 16,
                 }}
               >
-                <QRCodeSVG value={shareUrl} size={160} level="M" />
+                <QRCodeCanvas
+                  value={shareUrl}
+                  size={180}
+                  level="M"
+                  marginSize={4}
+                  fgColor="#000000"
+                  bgColor="#FFFFFF"
+                  style={{ imageRendering: "pixelated", display: "block" }}
+                />
               </div>
 
               {/* Email button */}

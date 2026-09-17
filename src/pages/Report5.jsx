@@ -4,7 +4,7 @@ import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
 import Logo from "../components/Logo";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { useReportDelivery } from "../hooks/useReportDelivery";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
@@ -836,10 +836,19 @@ export default function Report5() {
         <div style={{ position: "relative", textAlign: "center", marginBottom: "60px", minHeight: "180px" }}>
           <Logo size="text-6xl" />
           {delivery.ready && (
-            <div style={{ position: "absolute", right: 0, top: 0 }}>
-              <QRCodeSVG value={delivery.downloadUrl} size={140} title="Download this session's report" />
-              <div style={{ fontSize: "12px", color: "#666666", marginTop: "8px", textAlign: "center", maxWidth: "140px" }}>
-                Connect to the kiosk Wi-Fi, then scan to open this report.
+            <div style={{ position: "absolute", right: 0, top: 0, background: "#ffffff", padding: "10px", borderRadius: "16px", border: "2px solid #e2e8f0", boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
+              <QRCodeCanvas
+                value={delivery.downloadUrl}
+                size={160}
+                level="M"
+                marginSize={4}
+                fgColor="#000000"
+                bgColor="#FFFFFF"
+                style={{ imageRendering: "pixelated", display: "block" }}
+                title="Download this session's report"
+              />
+              <div style={{ fontSize: "11px", color: "#666666", marginTop: "8px", textAlign: "center", maxWidth: "160px", fontWeight: "600" }}>
+                Scan with any phone camera to download report
               </div>
             </div>
           )}

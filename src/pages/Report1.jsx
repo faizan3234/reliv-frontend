@@ -11,7 +11,7 @@ import { getReport1Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 import ChallengeComparison from "../components/ChallengeComparison";
 import { supabase } from "../config/supabase";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { API_BASE } from "../config/api";
 
 // Helper: Extract first name from email or name field
@@ -775,11 +775,19 @@ const Report1 = () => {
                 <p className="text-gray-500 text-sm mb-4">
                   Scan this QR with your phone to upload a photo for the leaderboard
                 </p>
-                <div className="bg-gray-50 rounded-xl p-3 inline-block mb-4 border border-gray-100">
-                  <QRCodeSVG
+                <div className="bg-white rounded-2xl p-4 inline-block mb-4 border border-gray-200 shadow-sm">
+                  <QRCodeCanvas
                     value={`${QR_BASE}/photo-upload?sid=${lbSessionId}&name=${encodeURIComponent(userName)}`}
-                    size={180}
+                    size={220}
                     level="M"
+                    marginSize={4}
+                    fgColor="#000000"
+                    bgColor="#FFFFFF"
+                    style={{
+                      imageRendering: "pixelated",
+                      display: "block",
+                      margin: "0 auto",
+                    }}
                   />
                 </div>
                 <div className="flex gap-3 justify-center">

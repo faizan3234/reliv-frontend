@@ -279,7 +279,15 @@ export default function CampusLeaderboard({ overlay = false, onVisible }) {
                     background: "#fff", borderRadius: 6, padding: 2,
                     border: "1px solid #e2e8f0", flexShrink: 0,
                   }}>
-                    <QRCodeSVG value={`https://www.instagram.com/${entry.instagram}`} size={isChamp ? 52 : 42} level="L" />
+                    <QRCodeSVG
+                      value={`https://www.instagram.com/${entry.instagram}`}
+                      size={isChamp ? 52 : 42}
+                      level="M"
+                      marginSize={2}
+                      fgColor="#000000"
+                      bgColor="#FFFFFF"
+                      shapeRendering="crispEdges"
+                    />
                   </div>
                 )}
               </motion.div>
