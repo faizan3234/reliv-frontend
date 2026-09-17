@@ -138,6 +138,7 @@ function KioskTouchHelper() {
     let startY = 0;
     let startScrollTop = 0;
     let scrollTarget = null;
+    let isTouch = false;
 
     const findScrollableParent = (el) => {
       let current = el;
@@ -167,6 +168,14 @@ function KioskTouchHelper() {
       ) {
         return;
       }
+
+      // Real touch devices use native hardware-accelerated touch panning with momentum.
+      // Synthetic window.scrollTo would fight native touch gestures.
+      isTouch = e.pointerType === 'touch';
+      if (isTouch) {
+        return;
+      }
+
       isDragging = true;
       startY = e.clientY;
       scrollTarget = findScrollableParent(e.target);
@@ -178,7 +187,7 @@ function KioskTouchHelper() {
     };
 
     const handlePointerMove = (e) => {
-      if (!isDragging || !scrollTarget) return;
+      if (!isDragging || !scrollTarget || isTouch) return;
       const deltaY = e.clientY - startY;
       if (Math.abs(deltaY) > 3) {
         if (scrollTarget === document.documentElement || scrollTarget === document.body) {
@@ -192,6 +201,7 @@ function KioskTouchHelper() {
     const handlePointerUp = () => {
       isDragging = false;
       scrollTarget = null;
+      isTouch = false;
     };
 
     document.addEventListener('contextmenu', preventContextMenu);

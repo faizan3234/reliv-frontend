@@ -44,74 +44,63 @@ html, body {
   width: 100%;
   min-height: 100%;
   height: auto;
+  margin: 0;
+  padding: 0;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overflow-y: auto !important;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
   overscroll-behavior-y: auto;
 }
 
 #root {
   width: 100%;
   min-height: 100dvh;
-  height: auto;
-  overflow-x: hidden;
-  overflow-y: visible;
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
 }
 
 .app-screen {
   width: 100%;
   min-height: 100dvh;
   height: auto !important;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
   touch-action: pan-y;
-  overscroll-behavior-y: auto;
 }
 
 .vital-screen {
   width: 100%;
   height: auto !important;
   min-height: 100dvh;
-  overflow-x: hidden;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
   touch-action: pan-y;
 }
 
-/* Grow page content so controls and long pages are always fully scrollable */
+/* Page containers seamlessly flow into the window scroller without scroll traps */
 .scrollable-container,
 .payment-screen,
-.checkout-bg {
+.checkout-bg,
+.mobile-entry-page {
   width: 100%;
   height: auto !important;
   min-height: 100dvh !important;
-  overflow-y: auto !important;
+  overflow-y: visible !important;
   overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
-  overscroll-behavior-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 .payment-screen > * { flex-shrink: 0; }
 
-/* Scrollable containers - enable touch scrolling */
+/* Bounded scroll containers (like modals) get smooth momentum scrolling */
 .overflow-y-auto,
 .overflow-auto,
-.overflow-scroll,
-.min-h-screen,
-.mobile-entry-page,
-[style*="overflow"] {
+.overflow-scroll {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-}
-
-/* Ensure mobile pages are always scrollable */
-.mobile-entry-page {
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  touch-action: pan-y !important;
 }
 
 /* Accessible and smooth scrollbars for touch & kiosk */
@@ -160,13 +149,11 @@ html, body, #root, .app-screen {
   touch-action: pan-y;
 }
 
-/* Scrollable containers need full touch support */
+/* Specific scrollable containers need full touch support */
 .overflow-y-auto,
-.overflow-auto,
-[class*="overflow"] {
+.overflow-auto {
   touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch !important;
-  overflow-y: auto !important;
 }
 
 /* Allow pinch zoom only on specific elements if needed */

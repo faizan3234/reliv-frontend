@@ -34,8 +34,22 @@ export default function Checkout() {
   // Always get cart and state from navigation (from MedicineDispensing or PaymentGate)
   const { cart: initialCart = [], fromPaymentGate = false } = location.state || {};
 
-  // Cart state is always initialized from backend-driven data
-  const [cart, setCart] = useState(() => Array.isArray(initialCart) ? initialCart.filter((item) => item && typeof item === 'object') : []);
+  // Cart state is initialized from location.state or restored from sessionStorage/localStorage
+  const [cart, setCart] = useState(() => {
+    if (Array.isArray(initialCart) && initialCart.length > 0) {
+      return initialCart.filter((item) => item && typeof item === 'object');
+    }
+    try {
+      const saved = sessionStorage.getItem("reliv_cart") || localStorage.getItem("reliv_cart");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter((item) => item && typeof item === 'object');
+        }
+      }
+    } catch {}
+    return [];
+  });
   
   // Health report cost - shown as ₹24 (psychological anchor)
   // User thinks: "Wow only ₹24 for report, I'm saving ₹3!"
@@ -214,7 +228,7 @@ export default function Checkout() {
   // If cart is empty and not from payment, show empty state
   if (cart.length === 0 && !fromPaymentGate) {
     return (
-      <div className="min-h-screen h-auto w-full bg-gradient-to-br from-orange-50 via-white to-orange-50 flex flex-col items-center justify-center font-sans p-4 overflow-y-auto scrollable-container touch-pan-y">
+      <div className="min-h-screen h-auto w-full bg-gradient-to-br from-orange-50 via-white to-orange-50 flex flex-col items-center justify-center font-sans p-4 overflow-visible scrollable-container touch-pan-y">
         <div className="text-center">
           <div className="mb-6">
             <svg className="w-24 h-24 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,7 +251,7 @@ export default function Checkout() {
 
   // ...existing UI/UX code remains unchanged...
   return (
-    <div className="relative min-h-screen h-auto w-full bg-gradient-to-b from-gray-50 to-white font-serif overflow-y-auto scrollable-container touch-pan-y pb-28">
+    <div className="relative min-h-screen h-auto w-full bg-gradient-to-b from-gray-50 to-white font-serif overflow-visible scrollable-container touch-pan-y pb-28">
       {/* BACK BUTTON */}
       <button
         onClick={() => navigate(-1)}

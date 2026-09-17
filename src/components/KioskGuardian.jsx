@@ -217,7 +217,7 @@ export default function KioskGuardian() {
 
     // ========== 5.2 BLOCK PINCH ZOOM (Touch) ==========
     const handleTouchStart = (e) => {
-      if (e.touches.length > 1) {
+      if (e.touches && e.touches.length > 1 && e.cancelable) {
         e.preventDefault();
       }
     };
@@ -386,6 +386,9 @@ export default function KioskGuardian() {
       window.removeEventListener("dragover", handleDragOver, { capture: true });
       
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchStart);
       
       document.removeEventListener("mousemove", handleUserActivity);
       document.removeEventListener("mousedown", handleUserActivity);

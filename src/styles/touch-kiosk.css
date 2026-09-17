@@ -38,7 +38,7 @@ html, body {
 /* Touch scrolling for scrollable containers */
 .scrollable-container {
   -webkit-overflow-scrolling: touch; /* Momentum scrolling iOS */
-  overflow-y: auto;
+  overflow-y: visible;
   overflow-x: hidden;
   touch-action: pan-y;
   overscroll-behavior-y: auto;
@@ -170,21 +170,21 @@ body {
 [role="listbox"],
 textarea,
 input[type="text"] {
-  touch-action: pan-y pinch-zoom;
+  touch-action: pan-y;
 }
 
 /* ============================================
    7. SAFE TEXT SELECTION
    ============================================ */
 
-/* Prevent accidental text selection on buttons/interactive elements */
-button, a, .btn, [role="button"] {
+/* Prevent accidental text selection on all touch elements */
+*, button, a, .btn, [role="button"], p, .content, .description {
   -webkit-user-select: none;
   user-select: none;
 }
 
-/* Allow text selection only in content areas */
-p, .content, .description {
+/* Allow text selection only in real input fields */
+input, textarea {
   -webkit-user-select: text;
   user-select: text;
 }

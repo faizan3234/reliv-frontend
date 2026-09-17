@@ -24,14 +24,14 @@
     
     <!-- KIOSK SECURITY: Disable text selection (optional, prevents copy/paste) -->
     <style>
-      /* Kiosk mode - prevent text selection on entire page */
-      body {
+      /* Kiosk mode - prevent text selection on entire page while allowing vertical scroll */
+      html, body {
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
-        /* Disable pull-to-refresh on mobile */
-        overscroll-behavior: none;
+        touch-action: pan-y;
+        overscroll-behavior-y: auto;
       }
       /* But allow text selection in input fields */
       input, textarea {
@@ -39,14 +39,6 @@
         -moz-user-select: text;
         -ms-user-select: text;
         user-select: text;
-      }
-      /* Hide scrollbars for cleaner kiosk look */
-      ::-webkit-scrollbar {
-        display: none;
-      }
-      body {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
       }
       /* Mobile entry page: undo all kiosk restrictions */
       .mobile-entry-page, .mobile-entry-page * {
@@ -112,15 +104,15 @@
           }
         }, { passive: false });
 
-        // Block Pinch-to-zoom (touch gestures)
+        // Block Pinch-to-zoom (touch gestures) without breaking smooth single-finger scrolling
         document.addEventListener('touchstart', function(e) {
-          if (e.touches.length > 1) {
+          if (e.touches && e.touches.length > 1 && e.cancelable) {
             e.preventDefault();
           }
         }, { passive: false });
 
         document.addEventListener('touchmove', function(e) {
-          if (e.touches.length > 1) {
+          if (e.touches && e.touches.length > 1 && e.cancelable) {
             e.preventDefault();
           }
         }, { passive: false });
