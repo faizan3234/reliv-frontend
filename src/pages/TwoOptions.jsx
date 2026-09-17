@@ -124,7 +124,7 @@ export default function TwoOptions() {
   });
 
   return (
-    <div className="min-h-screen h-full bg-slate-50 flex flex-col justify-between font-sans overflow-y-auto scrollable-container touch-pan-y overscroll-contain select-none pb-8">
+    <div className="min-h-screen h-auto w-full bg-slate-50 flex flex-col justify-between font-sans overflow-y-auto scrollable-container touch-pan-y select-none pb-8">
       {/* Header */}
       <div className="bg-gradient-to-b from-orange-50 to-slate-50 pt-8 pb-4 flex items-center justify-between px-6 relative">
         <button

@@ -386,7 +386,7 @@ function WellnessRecommendations() {
 
   if (isLoading) {
     return (
-      <div className="h-screen bg-[#F5F1E8] flex items-center justify-center overflow-y-auto scrollable-container">
+      <div className="min-h-screen h-auto w-full bg-[#F5F1E8] flex items-center justify-center overflow-y-auto scrollable-container touch-pan-y">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto mb-4"></div>
           <p className="text-gray-600 text-base uppercase tracking-wider">Loading...</p>
@@ -398,7 +398,7 @@ function WellnessRecommendations() {
   // Questionnaire Screen
   if (showQuestionnaire) {
     return (
-      <div className="h-screen bg-[#F5F1E8] overflow-y-auto scrollable-container">
+      <div className="min-h-screen h-auto w-full bg-[#F5F1E8] overflow-y-auto scrollable-container touch-pan-y">
         {/* Header */}
         <div className="bg-[#F5F1E8] py-6 border-b border-gray-300">
           <div className="max-w-4xl mx-auto px-8 text-center">
@@ -605,7 +605,7 @@ function WellnessRecommendations() {
 
   // Main Shopping Page
   return (
-    <div className="h-screen bg-[#F5F1E8] overflow-y-auto scrollable-container">
+    <div className="min-h-screen h-auto w-full bg-[#F5F1E8] overflow-y-auto scrollable-container touch-pan-y">
       {/* Header */}
       <div className="bg-[#F5F1E8] py-6 border-b border-gray-300">
         <div className="max-w-7xl mx-auto px-12 flex items-center justify-between">

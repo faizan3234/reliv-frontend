@@ -669,7 +669,7 @@ export default function PaymentGate() {
   };
 
   return (
-    <div className="payment-screen relative min-h-screen bg-slate-50 flex flex-col items-center justify-between px-4 py-3 font-sans select-none overflow-y-auto scrollable-container touch-pan-y overscroll-contain pb-24">
+    <div className="payment-screen relative min-h-screen h-auto w-full bg-slate-50 flex flex-col items-center justify-between px-4 py-3 font-sans select-none overflow-y-auto scrollable-container touch-pan-y pb-24">
       <TopEllipseBackground height="25%" color="#FFF4EC" />
 
       {/* Top Header */}

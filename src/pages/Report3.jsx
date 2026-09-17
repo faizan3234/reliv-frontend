@@ -556,7 +556,7 @@ export default function Report3() {
 
   if (!isBaselineUnlocked) {
     return (
-      <div style={{ height: "100vh", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container">
+      <div style={{ minHeight: "100vh", height: "auto", width: "100%", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container touch-pan-y">
         <Logo size="text-4xl" />
         <div style={{ textAlign: "center", fontSize: "24px", color: "#666666", margin: "80px 0", fontStyle: "italic", maxWidth: "600px" }}>
           Body Composition Profile unlocks after your 2nd scan. Keep scanning to reveal insights about your muscle mass, body fat, and metabolic age.
@@ -581,7 +581,7 @@ export default function Report3() {
   }
 
   return (
-    <div style={{ height: "100vh", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container">
+    <div style={{ minHeight: "100vh", height: "auto", width: "100%", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container touch-pan-y">
       <div style={{ width: "100%", maxWidth: "1000px", margin: "0 auto" }}>
         
         {/* Header */}

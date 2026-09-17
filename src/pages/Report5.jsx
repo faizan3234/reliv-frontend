@@ -805,14 +805,16 @@ export default function Report5() {
 
   return (
     <div style={{ 
-      height: "100vh", 
+      minHeight: "100vh",
+      height: "auto",
+      width: "100%", 
       background: "#ffffff", 
       padding: "48px 32px", 
       position: "relative",
       paddingBottom: "48px",
       overflowY: "auto",
       WebkitOverflowScrolling: "touch"
-    }} className="scrollable-container">
+    }} className="scrollable-container touch-pan-y">
       <div ref={reportContainerRef} style={{ maxWidth: "1000px", margin: "0 auto" }}>
         {healthDataMissing && (
           <div style={{

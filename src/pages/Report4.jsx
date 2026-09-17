@@ -677,7 +677,7 @@ export default function Report4() {
   // LOCKED STATE (Scan 1)
   if (!unlocks.graphVisible) {
     return (
-      <div style={{ height: "100vh", background: "#FDFAF5", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container">
+      <div style={{ minHeight: "100vh", height: "auto", width: "100%", background: "#FDFAF5", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container touch-pan-y">
         <div style={{ width: "100%", maxWidth: "1200px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "40px" }}>
             <div style={{ marginBottom: "10px" }}>
@@ -851,7 +851,7 @@ export default function Report4() {
 
   // UNLOCKED STATE (Scan 2+)
   return (
-    <div style={{ height: "100vh", background: "#FDFAF5", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container">
+    <div style={{ minHeight: "100vh", height: "auto", width: "100%", background: "#FDFAF5", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container touch-pan-y">
       <div style={{ width: "100%", maxWidth: "1200px", margin: "0 auto" }}>
         
         {/* Header */}

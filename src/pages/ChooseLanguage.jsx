@@ -40,7 +40,7 @@ export default function ChooseLanguage() {
   ];
 
   return (
-    <div className="h-screen bg-white flex flex-col font-sans overflow-y-auto scrollable-container">
+    <div className="min-h-screen h-auto w-full bg-white flex flex-col font-sans overflow-y-auto scrollable-container touch-pan-y">
       {/* Top faded orange header area */}
       <div className="bg-gradient-to-b from-orange-50 to-white pt-[100px] pb-6 flex flex-col items-center relative">
         <button

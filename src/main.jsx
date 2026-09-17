@@ -133,13 +133,78 @@ function KioskTouchHelper() {
       }
     };
 
+    // Touch & Pointer Drag-to-Scroll support for kiosk monitors & touchscreens
+    let isDragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+    let scrollTarget = null;
+
+    const findScrollableParent = (el) => {
+      let current = el;
+      while (current && current !== document.body && current !== document.documentElement) {
+        const style = window.getComputedStyle(current);
+        const overflowY = style.overflowY;
+        if ((overflowY === 'auto' || overflowY === 'scroll') && current.scrollHeight > current.clientHeight) {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return document.scrollingElement || document.documentElement || document.body;
+    };
+
+    const handlePointerDown = (e) => {
+      // Don't drag-scroll when interacting with buttons, inputs, links or select elements
+      const tag = e.target.tagName?.toLowerCase() || '';
+      if (
+        tag === 'input' || 
+        tag === 'textarea' || 
+        tag === 'select' || 
+        tag === 'button' ||
+        e.target.closest('button') || 
+        e.target.closest('a') || 
+        e.target.closest('[role="button"]') ||
+        e.target.closest('.no-drag-scroll')
+      ) {
+        return;
+      }
+      isDragging = true;
+      startY = e.clientY;
+      scrollTarget = findScrollableParent(e.target);
+      if (scrollTarget === document.documentElement || scrollTarget === document.body) {
+        startScrollTop = window.scrollY || window.pageYOffset || 0;
+      } else if (scrollTarget) {
+        startScrollTop = scrollTarget.scrollTop;
+      }
+    };
+
+    const handlePointerMove = (e) => {
+      if (!isDragging || !scrollTarget) return;
+      const deltaY = e.clientY - startY;
+      if (Math.abs(deltaY) > 3) {
+        if (scrollTarget === document.documentElement || scrollTarget === document.body) {
+          window.scrollTo(0, startScrollTop - deltaY);
+        } else {
+          scrollTarget.scrollTop = startScrollTop - deltaY;
+        }
+      }
+    };
+
+    const handlePointerUp = () => {
+      isDragging = false;
+      scrollTarget = null;
+    };
+
     document.addEventListener('contextmenu', preventContextMenu);
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
     document.addEventListener('touchmove', handleTouchMove, { passive: true });
     document.addEventListener('keydown', preventKeyboardShortcuts);
     document.addEventListener('dragstart', preventDrag);
-    document.addEventListener('selectstart', preventSelectStart); // NOT passive - must preventDefault
+    document.addEventListener('selectstart', preventSelectStart);
     document.addEventListener('copy', preventCopy);
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('pointerup', handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', handlePointerUp, { passive: true });
 
     // Clear any accidental text selection on touch end
     const clearSelection = () => {
@@ -160,6 +225,10 @@ function KioskTouchHelper() {
       document.removeEventListener('dragstart', preventDrag);
       document.removeEventListener('selectstart', preventSelectStart);
       document.removeEventListener('copy', preventCopy);
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
     };
   }, [pathname]);
 

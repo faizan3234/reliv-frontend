@@ -249,7 +249,7 @@ export default function Feedback() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-orange-50 to-gray-100 flex flex-col items-center justify-center p-6 overflow-y-auto scrollable-container">
+    <div className="min-h-screen h-auto w-full bg-gradient-to-br from-orange-50 to-gray-100 flex flex-col items-center justify-center p-6 overflow-y-auto scrollable-container touch-pan-y">
       <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 max-w-3xl w-full relative overflow-hidden border border-orange-100">
         {/* Logo */}
         <div className="flex justify-center mb-10 mt-4">

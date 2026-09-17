@@ -39,38 +39,61 @@ input::selection, textarea::selection {
   background: #b3d4fc !important;
 }
 
-/* Enable smooth touch scrolling - MOBILE LIKE */
+/* Enable smooth touch and mouse scrolling - MOBILE & KIOSK LIKE */
 html, body {
+  width: 100%;
   min-height: 100%;
+  height: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  overscroll-behavior: contain;
-  overflow-y: auto;
+  overflow-y: auto !important;
   overflow-x: hidden;
+  overscroll-behavior-y: auto;
+}
+
+#root {
+  width: 100%;
+  min-height: 100dvh;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .app-screen {
+  width: 100%;
   min-height: 100dvh;
-  height: 100dvh;
+  height: auto !important;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: auto;
 }
 
 .vital-screen {
-  height: auto;
+  width: 100%;
+  height: auto !important;
   min-height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  overscroll-behavior-y: contain;
 }
 
-/* Grow page content so centered controls never start above scroll zero. */
-.app-screen > .scrollable-container { height: auto !important; min-height: 100dvh; }
+/* Grow page content so controls and long pages are always fully scrollable */
+.scrollable-container,
+.payment-screen,
+.checkout-bg {
+  width: 100%;
+  height: auto !important;
+  min-height: 100dvh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  overscroll-behavior-y: auto !important;
+}
+
 .payment-screen > * { flex-shrink: 0; }
 
 /* Scrollable containers - enable touch scrolling */
@@ -82,7 +105,6 @@ html, body {
 [style*="overflow"] {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  overscroll-behavior: contain;
 }
 
 /* Ensure mobile pages are always scrollable */
@@ -92,24 +114,27 @@ html, body {
   touch-action: pan-y !important;
 }
 
-/* Hide scrollbar but keep functionality (cleaner kiosk look) */
+/* Accessible and smooth scrollbars for touch & kiosk */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
   background: transparent;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 122, 0, 0.4);
-  border-radius: 4px;
+  background: rgba(255, 122, 0, 0.45);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 122, 0, 0.6);
+  background: rgba(255, 122, 0, 0.75);
 }
 
 /* Prevent drag on images and links */
@@ -130,19 +155,14 @@ button, a, [role="button"], .cursor-pointer {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* MOBILE-LIKE SCROLLING - Allow vertical scrolling everywhere */
-html, body, * {
-  touch-action: pan-y pan-x;
+/* MOBILE-LIKE SCROLLING - Allow vertical scrolling */
+html, body, #root, .app-screen {
+  touch-action: pan-y;
 }
-
-/* Grow page content so centered controls never start above scroll zero. */
-.app-screen > .scrollable-container { height: auto !important; min-height: 100dvh; }
-.payment-screen > * { flex-shrink: 0; }
 
 /* Scrollable containers need full touch support */
 .overflow-y-auto,
 .overflow-auto,
-.min-h-screen,
 [class*="overflow"] {
   touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch !important;

@@ -40,8 +40,8 @@ html, body {
   -webkit-overflow-scrolling: touch; /* Momentum scrolling iOS */
   overflow-y: auto;
   overflow-x: hidden;
-  scroll-behavior: smooth;
-  -ms-scroll-chaining: none; /* Disable scroll chaining on Windows */
+  touch-action: pan-y;
+  overscroll-behavior-y: auto;
 }
 
 /* ============================================

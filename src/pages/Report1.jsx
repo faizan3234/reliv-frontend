@@ -487,7 +487,7 @@ const Report1 = () => {
   }
 
   return (
-    <div className="h-screen bg-white overflow-y-auto scrollable-container">
+    <div className="min-h-screen h-auto w-full bg-white overflow-y-auto scrollable-container touch-pan-y">
       {showConfetti && <Confetti />}
 
       {/* Challenge / Couple comparison overlay */}

@@ -164,7 +164,7 @@ export default function CustomerDetails() {
 
   return (
     <div
-      className={`relative min-h-screen h-full bg-gradient-to-br from-indigo-50 via-white to-orange-50 flex flex-col justify-between font-sans select-none overflow-x-hidden overflow-y-auto scrollable-container touch-pan-y overscroll-contain ${
+      className={`relative min-h-screen h-auto w-full bg-gradient-to-br from-indigo-50 via-white to-orange-50 flex flex-col justify-between font-sans select-none overflow-x-hidden overflow-y-auto scrollable-container touch-pan-y ${
         keyboardVisible ? "pb-96" : "pb-12"
       }`}
     >
