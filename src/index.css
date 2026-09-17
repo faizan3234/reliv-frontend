@@ -79,7 +79,8 @@ html, body {
   touch-action: pan-y;
 }
 
-/* Page containers seamlessly enable direct touch momentum scrolling like TwoOptions */
+/* Page containers pass scroll authority to html/body — NO overflow-y:auto
+   here or the container becomes a scroll-trap on kiosk touchscreens */
 .scrollable-container,
 .payment-screen,
 .checkout-bg,
@@ -88,7 +89,7 @@ html, body {
   width: 100%;
   height: auto !important;
   min-height: 100dvh !important;
-  overflow-y: auto !important;
+  overflow-y: visible !important;
   overflow-x: hidden !important;
   touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch !important;

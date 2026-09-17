@@ -35,11 +35,12 @@ html, body {
   font-size: 16px;
 }
 
-/* Touch scrolling for scrollable containers */
+/* Touch scrolling for scrollable containers — visible so scroll
+   events pass through to html/body (the single scroll authority) */
 .scrollable-container {
   -webkit-overflow-scrolling: touch; /* Momentum scrolling iOS */
-  overflow-y: visible;
-  overflow-x: hidden;
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
   touch-action: pan-y;
   overscroll-behavior-y: auto;
 }

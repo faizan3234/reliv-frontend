@@ -222,6 +222,14 @@ export default function KioskGuardian() {
       }
     };
 
+    // Separate handler for touchmove — only block multi-touch (pinch zoom)
+    // Single-finger moves must NOT be blocked or scrolling dies on kiosk
+    const handleTouchMove = (e) => {
+      if (e.touches && e.touches.length > 1 && e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
     // ========== 6. BLOCK DRAG AND DROP ==========
     const handleDragStart = (e) => {
       const target = e.target.closest("a");
@@ -259,7 +267,10 @@ export default function KioskGuardian() {
     // Attach additional listeners
     window.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("touchstart", handleTouchStart, { passive: false });
-    window.addEventListener("touchmove", handleTouchStart, { passive: false });
+    // touchmove gets its own handler — passive:false only needed because we
+    // must be able to preventDefault on multi-touch pinch; single-finger
+    // scrolling is NOT blocked (the handler returns immediately).
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
 
 
     // ========== 7. ALLOW BROWSER BACK/FORWARD FOR IN-APP NAVIGATION ==========
@@ -388,7 +399,7 @@ export default function KioskGuardian() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("wheel", handleWheel);
       window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
       
       document.removeEventListener("mousemove", handleUserActivity);
       document.removeEventListener("mousedown", handleUserActivity);
