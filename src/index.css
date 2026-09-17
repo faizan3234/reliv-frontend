@@ -42,58 +42,49 @@ input::selection, textarea::selection {
 /* Enable smooth touch and mouse scrolling - MOBILE & KIOSK LIKE */
 html, body {
   width: 100%;
-  min-height: 100%;
-  height: auto;
+  height: 100%;
   margin: 0;
   padding: 0;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  overscroll-behavior-y: auto;
+  overflow: hidden;
 }
 
-#root {
-  width: 100%;
-  min-height: 100dvh;
-  height: auto !important;
-  overflow-x: hidden !important;
-  overflow-y: visible !important;
-}
-
+#root,
 .app-screen {
   width: 100%;
-  min-height: 100dvh;
-  height: auto !important;
-  overflow-x: hidden !important;
-  overflow-y: visible !important;
-  touch-action: pan-y;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .vital-screen {
   width: 100%;
-  height: auto !important;
-  min-height: 100dvh;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  overflow-y: auto !important;
   overflow-x: hidden !important;
-  overflow-y: visible !important;
   touch-action: pan-y;
 }
 
-/* Page containers pass scroll authority to html/body — NO overflow-y:auto
-   here or the container becomes a scroll-trap on kiosk touchscreens */
+/* Page containers are full-screen touch-scrollable viewports (100vh / 100dvh) */
 .scrollable-container,
 .payment-screen,
 .checkout-bg,
 .vital-screen,
 .mobile-entry-page {
   width: 100%;
-  height: auto !important;
-  min-height: 100dvh !important;
-  overflow-y: visible !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+  overflow-y: auto !important;
   overflow-x: hidden !important;
   touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch !important;
-  overscroll-behavior-y: auto !important;
+  overscroll-behavior-y: contain !important;
 }
 
 .payment-screen > * { flex-shrink: 0; }

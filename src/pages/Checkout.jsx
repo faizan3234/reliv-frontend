@@ -228,7 +228,7 @@ export default function Checkout() {
   // If cart is empty and not from payment, show empty state
   if (cart.length === 0 && !fromPaymentGate) {
     return (
-      <div className="min-h-screen h-auto w-full bg-slate-50 flex flex-col items-center justify-center font-sans p-4 scrollable-container touch-pan-y select-none">
+      <div className="h-screen w-full bg-slate-50 flex flex-col items-center justify-center font-sans p-4 overflow-y-auto scrollable-container touch-pan-y select-none">
         <div className="text-center">
           <div className="mb-6">
             <svg className="w-24 h-24 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,7 +251,7 @@ export default function Checkout() {
 
   // ...existing UI/UX code remains unchanged...
   return (
-    <div className="min-h-screen h-auto w-full bg-slate-50 flex flex-col justify-between font-sans scrollable-container touch-pan-y select-none pb-36">
+    <div className="h-screen w-full bg-slate-50 flex flex-col justify-between font-sans overflow-y-auto scrollable-container touch-pan-y select-none pb-36">
       {/* BACK BUTTON */}
       <button
         onClick={() => navigate(-1)}
