@@ -4,16 +4,19 @@
  * Designed specifically for Waveshare & Raspberry Pi kiosk touchscreens
  * 
  * Key Principles:
- * 1. Primary Touch Handling uses native Touch Events (touchstart, touchmove, touchend).
- *    This avoids the W3C pointercancel cancellation trap where Chromium aborts pointer
- *    events upon recognizing direct manipulation gestures.
+ * 1. Primary Touch Handling uses native Touch Events (touchstart, touchmove, touchend)
+ *    AND Pointer Events (pointerdown, pointermove, pointerup) with touch detection.
  * 2. e.preventDefault() is called on touchmove ONLY when a drag is active (>6px vertical movement),
  *    ensuring the browser compositor never drops touch gestures or attempts selection.
  * 3. Taps (<6px movement) are completely untouched so buttons, inputs, links, and cards fire instantly.
  * 4. Active drags (>6px) suppress the synthetic click event on touchend for 300ms so lifting a swipe
  *    does not activate whatever button happens to be under the finger.
  * 5. Full kinetic momentum (inertia) with natural deceleration and touch-to-stop.
- * 6. Intelligently finds the scrollable page container (.scrollable-container or any overflow-y:auto ancestor).
+ * 6. Intelligently finds the scrollable page container (.scrollable-container or any overflow-y:auto ancestor)
+ *    or smoothly scrolls the window/document.
+ * 7. Mouse Wheel handler explicitly forwards wheel events to the target or window, guaranteeing that
+ *    mouse wheel scrolls everywhere.
+ * 8. Mouse drag allows testing on desktop by clicking and dragging with left mouse button.
  */
 
 let isInitialized = false;
@@ -36,7 +39,7 @@ export function initKioskTouchScroller() {
   let suppressClickUntil = 0;
   let activeTouchId = null;
 
-  // Find the closest scrollable container, prioritizing .scrollable-container
+  // Find the closest scrollable container, prioritizing .scrollable-container or window
   function findScrollTarget(el) {
     if (!el) return document.querySelector('.scrollable-container') || window;
 
@@ -70,14 +73,7 @@ export function initKioskTouchScroller() {
       return pageContainer;
     }
 
-    // 4. Fallback to document root
-    if (document.documentElement && document.documentElement.scrollHeight > window.innerHeight + 2) {
-      return document.documentElement;
-    }
-    if (document.body && document.body.scrollHeight > window.innerHeight + 2) {
-      return document.body;
-    }
-
+    // 4. Fallback to window/document
     return window;
   }
 
@@ -85,11 +81,10 @@ export function initKioskTouchScroller() {
   function performScroll(target, dy) {
     if (!target) return;
 
-    if (target === window) {
+    if (target === window || target === document.documentElement || target === document.body || target === document.scrollingElement) {
       window.scrollBy(0, -dy);
       if (document.documentElement) document.documentElement.scrollTop -= dy;
       if (document.body) document.body.scrollTop -= dy;
-      if (document.scrollingElement) document.scrollingElement.scrollTop -= dy;
       return;
     }
 
@@ -115,7 +110,7 @@ export function initKioskTouchScroller() {
     stopMomentum();
     if (!scrollTarget || Math.abs(velocityY) < 0.08) return;
 
-    let v = Math.max(Math.min(velocityY, 3.0), -3.0);
+    let v = Math.max(Math.min(velocityY, 3.2), -3.2);
     let lastFrameTime = performance.now();
 
     function step(now) {
@@ -219,7 +214,7 @@ export function initKioskTouchScroller() {
 
   window.addEventListener(
     'touchend',
-    (e) => {
+    () => {
       if (!isTracking) return;
 
       if (isDragging) {
@@ -330,7 +325,30 @@ export function initKioskTouchScroller() {
   );
 
   // =========================================================================
-  // 3. CLICK SUPPRESSION (Prevents accidental clicks after swipe gestures)
+  // 3. MOUSE WHEEL (Ensures mouse wheel ALWAYS scrolls target or window)
+  // =========================================================================
+  window.addEventListener(
+    'wheel',
+    (e) => {
+      if (e.ctrlKey) return; // allow pinch/zoom blocker
+      const target = findScrollTarget(e.target);
+      if (target && target !== window && target !== document.documentElement && target !== document.body) {
+        const prev = target.scrollTop;
+        target.scrollTop += e.deltaY;
+        if (Math.abs(target.scrollTop - prev) > 0.5) {
+          return; // successfully scrolled inner container
+        }
+      }
+      // Otherwise scroll document/window
+      window.scrollBy(0, e.deltaY);
+      if (document.documentElement) document.documentElement.scrollTop += e.deltaY;
+      if (document.body) document.body.scrollTop += e.deltaY;
+    },
+    { passive: true }
+  );
+
+  // =========================================================================
+  // 4. CLICK SUPPRESSION (Prevents accidental clicks after swipe gestures)
   // =========================================================================
   document.addEventListener(
     'click',
@@ -345,5 +363,5 @@ export function initKioskTouchScroller() {
     true // Capture phase: intercepts click before React or buttons see it
   );
 
-  console.log('[KioskTouchScroller] 🚀 Direct touch & drag scroller active');
+  console.log('[KioskTouchScroller] 🚀 Direct touch & drag scroller + wheel active');
 }

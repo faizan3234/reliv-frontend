@@ -7,7 +7,7 @@ const Team = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="h-screen w-full bg-gray-50 relative overflow-y-auto scrollable-container touch-pan-y">
+    <div className="min-h-screen w-full bg-gray-50 relative overflow-y-auto scrollable-container touch-pan-y">
       {/* Subtle Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div

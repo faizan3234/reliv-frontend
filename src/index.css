@@ -42,49 +42,49 @@ input::selection, textarea::selection {
 /* Enable smooth touch and mouse scrolling - MOBILE & KIOSK LIKE */
 html, body {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   margin: 0;
   padding: 0;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  overflow: hidden;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
 }
 
 #root,
 .app-screen {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
 }
 
 .vital-screen {
   width: 100%;
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-height: 100vh !important;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   touch-action: pan-y;
 }
 
-/* Page containers are full-screen touch-scrollable viewports (100vh / 100dvh) */
+/* Page containers are full-screen touch-scrollable viewports */
 .scrollable-container,
 .payment-screen,
 .checkout-bg,
 .vital-screen,
 .mobile-entry-page {
   width: 100%;
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-height: 100vh !important;
-  max-height: 100dvh !important;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch !important;
-  overscroll-behavior-y: contain !important;
 }
 
 .payment-screen > * { flex-shrink: 0; }
