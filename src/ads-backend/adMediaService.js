@@ -6,7 +6,6 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import { exec } from 'child_process';
 import { promisify } from 'util';

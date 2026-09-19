@@ -215,21 +215,6 @@ export default function KioskGuardian() {
       }
     };
 
-    // ========== 5.2 BLOCK PINCH ZOOM (Touch) ==========
-    const handleTouchStart = (e) => {
-      if (e.touches && e.touches.length > 1 && e.cancelable) {
-        e.preventDefault();
-      }
-    };
-
-    // Separate handler for touchmove — only block multi-touch (pinch zoom)
-    // Single-finger moves must NOT be blocked or scrolling dies on kiosk
-    const handleTouchMove = (e) => {
-      if (e.touches && e.touches.length > 1 && e.cancelable) {
-        e.preventDefault();
-      }
-    };
-
     // ========== 6. BLOCK DRAG AND DROP ==========
     const handleDragStart = (e) => {
       const target = e.target.closest("a");

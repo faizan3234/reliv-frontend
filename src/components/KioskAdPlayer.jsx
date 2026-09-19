@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
+import { useSpeech } from "../context/SpeechContext";
+import { useVoiceAssistant } from "../context/VoiceAssistantContext";
 import { 
   getCurrentlyEligibleAds, 
   verifyAndActivateCode,
@@ -32,6 +34,9 @@ const FingerTouchSvg = () => (
 
 export default function KioskAdPlayer() {
   const location = useLocation();
+  const { stop: stopSpeech } = useSpeech();
+  const { pauseListening, resumeListening } = useVoiceAssistant();
+  const isHome = location.pathname === '/';
 
   // Ad Overlay State
   const [isAdActive, setIsAdActive] = useState(false);
@@ -79,23 +84,6 @@ export default function KioskAdPlayer() {
     };
   }, []);
 
-  // Fast Exit on any Touch / Pointerdown event (Capture Phase)
-  const exitAdMode = useCallback((e) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-
-    // 0ms immediate mute & pause
-    if (videoRef.current) {
-      videoRef.current.muted = true;
-      videoRef.current.pause();
-    }
-
-    setIsAdActive(false);
-    resetIdleTimer();
-  }, []);
-
   // Reset Idle Timer
   const resetIdleTimer = useCallback(() => {
     if (idleTimerRef.current) {
@@ -119,6 +107,34 @@ export default function KioskAdPlayer() {
       }
     }, IDLE_TIMEOUT_MS);
   }, [location.pathname, pendingPayment]);
+
+  // Fast Exit on any Touch / Pointerdown event (Capture Phase)
+  const exitAdMode = useCallback((e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+
+    if (videoRef.current) {
+      videoRef.current.muted = true;
+      videoRef.current.pause();
+    }
+
+    setIsAdActive(false);
+    resetIdleTimer();
+  }, [resetIdleTimer]);
+
+  // Ads/payment overlays own the speaker while visible. This prevents Reliv guidance,
+  // microphone recognition and ad audio from talking over one another.
+  const overlayActive = isHome && (isAdActive || Boolean(pendingPayment) || isKeypadOpen);
+  useEffect(() => {
+    if (overlayActive) {
+      stopSpeech();
+      pauseListening();
+    } else {
+      resumeListening();
+    }
+  }, [isHome, overlayActive, pauseListening, resumeListening, stopSpeech]);
 
   // Window user activity listeners
   useEffect(() => {
@@ -144,6 +160,7 @@ export default function KioskAdPlayer() {
   useEffect(() => {
     if (location.pathname !== '/') {
       setIsAdActive(false);
+      setIsKeypadOpen(false);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (rotationTimerRef.current) clearTimeout(rotationTimerRef.current);
     } else {
@@ -251,7 +268,7 @@ export default function KioskAdPlayer() {
   return (
     <>
       {/* 1. PHYSICAL KIOSK PAYMENT SCREEN (VERY LARGE QR ON KIOSK DISPLAY) */}
-      {pendingPayment && (
+      {isHome && pendingPayment && (
         <div className="kiosk-payment-active-screen">
           <div className="kiosk-payment-container">
             <div className="kiosk-pay-left">
@@ -319,7 +336,7 @@ export default function KioskAdPlayer() {
       )}
 
       {/* 2. FULL-SCREEN AD PLAYER OVERLAY */}
-      {isAdActive && !pendingPayment && (
+      {isHome && isAdActive && !pendingPayment && (
         <div 
           className="kiosk-ad-player-overlay"
           onPointerDown={exitAdMode}
@@ -402,7 +419,7 @@ export default function KioskAdPlayer() {
       )}
 
       {/* 3. OFFLINE ACTIVATION KEYPAD & SUCCESS MODAL */}
-      {isKeypadOpen && (
+      {isHome && isKeypadOpen && (
         <div className="kiosk-activation-modal">
           {!activatedSuccessData ? (
             <div className="activation-keypad-card">

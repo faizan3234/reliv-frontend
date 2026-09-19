@@ -4,7 +4,7 @@ import "./AuraBackground.css";
 
 export default function AuraBackground({ children }) {
   return (
-    <div className="premium-root">
+    <div className="premium-root scrollable-container touch-pan-y">
       {/* AMBIENT BACKGROUND GLOWS - The "Secret Sauce" */}
       <div className="ambient-glow ambient-glow-top" />
       <div className="ambient-glow ambient-glow-bottom" />

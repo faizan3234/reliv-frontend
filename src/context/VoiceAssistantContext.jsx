@@ -410,7 +410,7 @@ export const VoiceAssistantProvider = ({ children }) => {
   idleTickRef.current = () => {
     const hook = getActiveHook();
     if (!isGuidedRoute(currentPathRef.current) || muted || document.hidden ||
-        hook?.idleEnabled === false || isRelivSpeakingRef.current ||
+        listeningPausedRef.current || hook?.idleEnabled === false || isRelivSpeakingRef.current ||
         userSpeakingRef.current || processingRef.current) {
       guidanceClock.current.defer(Date.now());
       return;
@@ -451,21 +451,21 @@ export const VoiceAssistantProvider = ({ children }) => {
     sendToBackend({ type: 'SET_LANGUAGE', language: languageRef.current });
   }, [healthData?.language, sendToBackend]);
 
-  const pauseListening = () => {
+  const pauseListening = useCallback(() => {
     listeningPausedRef.current = true;
     setListeningPaused(true);
     userSpeakingRef.current = false;
     setIsSpeaking(false);
     sendToBackend({ type: 'PAUSE_LISTENING' });
     resetIdleTimer();
-  };
+  }, [resetIdleTimer, sendToBackend]);
 
-  const resumeListening = () => {
+  const resumeListening = useCallback(() => {
     listeningPausedRef.current = false;
     setListeningPaused(false);
     sendToBackend({ type: isGuidedRoute(currentPathRef.current) ? 'RESUME_LISTENING' : 'PAUSE_LISTENING' });
     resetIdleTimer();
-  };
+  }, [resetIdleTimer, sendToBackend]);
 
   // Allow pages to register themselves
   const registerPageHook = useCallback((path, hook) => {

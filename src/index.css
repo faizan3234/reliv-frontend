@@ -51,6 +51,16 @@ html, body {
   overflow-y: auto !important;
 }
 
+html {
+  height: 100%;
+}
+
+body,
+#root {
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
 #root,
 .app-screen {
   width: 100%;
@@ -94,6 +104,14 @@ html, body {
 .overflow-auto,
 .overflow-scroll {
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+/* Route roots remain scrollable even when a page uses fixed-height design helpers. */
+.app-screen > :not(.fixed),
+.premium-root,
+.premium-content {
+  max-height: none;
   touch-action: pan-y;
 }
 

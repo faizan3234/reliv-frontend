@@ -109,7 +109,7 @@ const Splash = () => {
 
   useVoicePage({
     guidanceKey: showTerms ? 'terms' : 'language',
-    idleEnabled: !showLeaderboard,
+    idleEnabled: !showLeaderboard && !showAdModal,
     onHelp: () => {
       if (showLeaderboard) hideLeaderboard();
       if (!healthData?.language || healthData.language === 'auto') {
@@ -194,8 +194,8 @@ const Splash = () => {
         )}
       </AnimatePresence>
 
-      <div className="h-screen bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container">
-        <div className="w-full min-h-screen relative overflow-hidden">
+      <div className="min-h-[100dvh] h-auto bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container touch-pan-y">
+        <div className="w-full min-h-[100dvh] relative overflow-x-hidden overflow-y-visible">
 
           {/* TOP WAVE */}
           <div
