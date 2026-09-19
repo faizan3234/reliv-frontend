@@ -13,6 +13,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 const Splash = () => {
   const navigate = useNavigate();
+  const kioskWifiQr = import.meta.env.VITE_KIOSK_WIFI_QR || "WIFI:S:RELIV-KIOSK;T:nopass;;";
   const { stop, speakText, speakChained, speak } = useSpeech();
   const { resetHealth, update, data: healthData } = useHealth();
   
@@ -434,7 +435,7 @@ const Splash = () => {
 
               <div style={{ display: 'inline-block', padding: '16px', background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', margin: '0 auto 16px auto' }}>
                 <QRCodeSVG 
-                  value="WIFI:S:RELIV-KIOSK;T:nopass;;" 
+                  value={kioskWifiQr} 
                   size={160} 
                 />
               </div>
@@ -454,17 +455,6 @@ const Splash = () => {
                   }}
                 >
                   Enter 4-Digit Activation Code
-                </button>
-
-                <button
-                  type="button"
-                  className="btn-secondary-ads"
-                  onClick={() => {
-                    setShowAdModal(false);
-                    navigate('/advertise');
-                  }}
-                >
-                  Open Booking Portal (Demo)
                 </button>
 
                 <button
