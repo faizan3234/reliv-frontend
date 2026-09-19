@@ -36,6 +36,7 @@ import ProtectedReportRoute from "./components/ProtectedReportRoute";
 import { VoiceAssistantProvider } from "./context/VoiceAssistantContext";
 import VoiceAssistantOverlay from "./components/VoiceAssistantOverlay";
 import Advertise from "./pages/Advertise.jsx";
+import PayAd from "./pages/PayAd.jsx";
 import KioskAdPlayer from "./components/KioskAdPlayer.jsx";
 
 export default function App() {
@@ -51,6 +52,7 @@ export default function App() {
       return (
         <div className="app-screen">
           <Routes>
+            <Route path="/pay" element={<PayAd />} />
             <Route path="/advertise" element={<Advertise />} />
             <Route path="/mobile-entry" element={<MobileEntry />} />
             <Route path="/photo-upload" element={<PhotoUpload />} />
@@ -73,6 +75,7 @@ export default function App() {
           <Routes>
           <Route path="/" element={<Splash />} />
           <Route path="/advertise" element={<Advertise />} />
+          <Route path="/pay" element={<PayAd />} />
           <Route path="/choose-language" element={<ChooseLanguage />} />
           <Route path="/customer-details" element={<CustomerDetailsWrapper />} />
           <Route path="/two-options" element={<TwoOptions />} />

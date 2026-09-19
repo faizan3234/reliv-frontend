@@ -318,18 +318,27 @@ export default function KioskAdPlayer() {
             <div className="kiosk-pay-right">
               <div className="kiosk-large-qr-wrap">
                 <QRCodeSVG 
-                  value={`https://reliv7.vercel.app/pay#p=${btoa(JSON.stringify({
+                  value={`https://reliv7.vercel.app/pay?campaign=${pendingPayment.campaignId}&amt=${pendingPayment.priceRupees}&venue=${encodeURIComponent(pendingPayment.venueName || 'Gurukul')}&code=${pendingPayment.confirmationCode}#p=${btoa(JSON.stringify({
                     campaignId: pendingPayment.campaignId,
                     price: pendingPayment.priceRupees,
                     venue: pendingPayment.venueId,
+                    confirmationCode: pendingPayment.confirmationCode,
                     purpose: 'RELIV_AD_CAMPAIGN'
                   }))}`}
                   size={240}
                 />
               </div>
               <span style={{ fontSize: '13px', color: '#64748b', marginTop: '12px', fontWeight: 600 }}>
-                Scan with any UPI / Camera app
+                Scan with any Camera or UPI app
               </span>
+              <a 
+                href={`/pay?campaign=${pendingPayment.campaignId}&amt=${pendingPayment.priceRupees}&venue=${encodeURIComponent(pendingPayment.venueName || 'Gurukul')}&code=${pendingPayment.confirmationCode}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize: '11px', color: '#ea580c', marginTop: '6px', textDecoration: 'underline' }}
+              >
+                Open Payment Page in New Tab (Demo)
+              </a>
             </div>
           </div>
         </div>

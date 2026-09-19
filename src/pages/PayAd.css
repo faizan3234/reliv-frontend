@@ -1,0 +1,294 @@
+/* src/pages/PayAd.css */
+
+.payad-container {
+  min-height: 100vh;
+  background-color: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.payad-card {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  max-width: 460px;
+  width: 100%;
+  padding: 32px 28px;
+}
+
+.payad-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.payad-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #1d1d1f;
+  margin: 6px 0 2px 0;
+}
+
+.payad-subtitle {
+  font-size: 14px;
+  color: #6e6e73;
+  margin: 0;
+}
+
+.payad-order-box {
+  background: #f5f5f7;
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.payad-order-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.payad-label {
+  color: #6e6e73;
+}
+
+.payad-value {
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.payad-divider {
+  height: 1px;
+  background: #e5e5ea;
+  margin: 12px 0;
+}
+
+.payad-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.payad-total-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.payad-total-price {
+  font-size: 26px;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.payad-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1d1d1f;
+  margin: 0 0 12px 0;
+}
+
+.payad-methods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.payad-method-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1.5px solid #e5e5ea;
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.payad-method-item:hover {
+  border-color: #c7c7cc;
+}
+
+.payad-method-item.active {
+  border-color: #ea580c;
+  background: #fffbf8;
+}
+
+.payad-method-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #c7c7cc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payad-method-item.active .payad-method-radio {
+  border-color: #ea580c;
+}
+
+.radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ea580c;
+}
+
+.payad-method-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.payad-method-sub {
+  font-size: 12px;
+  color: #6e6e73;
+}
+
+.badge-instant-pay {
+  font-size: 10px;
+  font-weight: 800;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+}
+
+.payad-upi-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #d2d2d7;
+  border-radius: 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.15s ease;
+}
+
+.payad-upi-input:focus {
+  border-color: #ea580c;
+}
+
+.payad-btn-submit {
+  width: 100%;
+  height: 52px;
+  background: #ea580c;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 10px;
+}
+
+.payad-btn-submit:hover {
+  background: #c2410c;
+}
+
+.payad-secure-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #86868b;
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* Processing Spinner */
+.payad-processing-box {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.payad-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e5ea;
+  border-top-color: #ea580c;
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Success View */
+.payad-success-view {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.payad-success-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+}
+
+.payad-success-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #1d1d1f;
+  margin: 0 0 6px 0;
+}
+
+.payad-success-sub {
+  font-size: 14px;
+  color: #6e6e73;
+  margin: 0 0 20px 0;
+}
+
+.payad-code-box {
+  background: #f5f5f7;
+  border-radius: 18px;
+  padding: 24px 20px;
+  margin-bottom: 20px;
+  border: 2px dashed #d2d2d7;
+}
+
+.payad-code-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #86868b;
+  margin-bottom: 8px;
+}
+
+.payad-code-digits {
+  font-size: 44px;
+  font-weight: 800;
+  color: #1d1d1f;
+  letter-spacing: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.payad-instruction-banner {
+  background: #fffbf8;
+  border: 1px solid #fed7aa;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #9a3412;
+  line-height: 1.4;
+}

@@ -423,25 +423,29 @@ const Splash = () => {
           </div>
         </div>
 
-        {/* Modal: Wi-Fi QR & Code Entry */}
+        {/* Modal: Direct Link QR & Code Entry */}
         {showAdModal && (
           <div className="kiosk-activation-modal" onClick={() => setShowAdModal(false)}>
             <div className="activation-keypad-card" onClick={(e) => e.stopPropagation()}>
               <h2 className="activation-header-title">Advertise on Reliv</h2>
               <p className="activation-header-sub">
-                Connect to kiosk Wi-Fi <strong>RELIV-KIOSK</strong> to book your ad instantly.
+                Scan with any camera or QR scanner to book instantly on your phone.
               </p>
 
-              <div style={{ display: 'inline-block', padding: '16px', background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', margin: '0 auto 16px auto' }}>
+              {/* Direct Web URL QR: Opens immediately on any phone camera without app */}
+              <div style={{ display: 'inline-block', padding: '16px', background: '#ffffff', borderRadius: '20px', border: '2px solid #ea580c', margin: '0 auto 14px auto', boxShadow: '0 8px 24px rgba(234, 88, 12, 0.12)' }}>
                 <QRCodeSVG 
-                  value="WIFI:S:RELIV-KIOSK;T:nopass;;" 
-                  size={160} 
+                  value={`${window.location.origin}/advertise`} 
+                  size={180} 
                 />
               </div>
 
-              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>
-                Scan Wi-Fi QR above, or visit <strong>http://192.168.50.1/advertise</strong> on your phone.
-              </p>
+              <div style={{ background: '#f5f5f7', borderRadius: '12px', padding: '10px 14px', marginBottom: '18px', textAlign: 'center', fontSize: '13px', color: '#1d1d1f' }}>
+                <div style={{ fontWeight: 600 }}>Kiosk Local Wi-Fi: <strong>RELIV-KIOSK</strong></div>
+                <div style={{ fontSize: '12px', color: '#6e6e73', marginTop: '2px' }}>
+                  No password required • <strong>http://192.168.50.1/advertise</strong>
+                </div>
+              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <button
@@ -458,13 +462,13 @@ const Splash = () => {
 
                 <button
                   type="button"
-                  className="btn-secondary-ads"
+                  className="link-secondary-action"
                   onClick={() => {
                     setShowAdModal(false);
                     navigate('/advertise');
                   }}
                 >
-                  Open Booking Portal (Demo)
+                  Open Booking Portal On This Screen
                 </button>
 
                 <button
