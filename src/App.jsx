@@ -46,8 +46,11 @@ export default function App() {
       window.location.hostname === 'reliv7.vercel.app' ||
       window.location.hostname === 'mail-request-m33c.vercel.app' ||
       window.location.port === '5000';
+    // /advertise is a phone-first captive-portal route. Never boot kiosk
+    // guardian/voice/ad-player services in the advertiser's browser.
+    const isAdvertiseRoute = window.location.pathname.startsWith('/advertise');
 
-    if (isQRDomain) {
+    if (isQRDomain || isAdvertiseRoute) {
       return (
         <div className="app-screen">
           <Routes>
