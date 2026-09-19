@@ -57,6 +57,11 @@ export default function KioskAdPlayer() {
   const rotationTimerRef = useRef(null);
   const videoRef = useRef(null);
 
+  const advanceToNextAd = useCallback(() => {
+    setCurrentAdIndex(prev => eligibleAds.length ? (prev + 1) % eligibleAds.length : 0);
+    setCurrentSlideType('attract');
+  }, [eligibleAds.length]);
+
   // Check for pending payment broadcasts
   useEffect(() => {
     const checkPayment = () => {
@@ -188,16 +193,13 @@ export default function KioskAdPlayer() {
         videoRef.current.volume = 0.30;
       }
 
-      rotationTimerRef.current = setTimeout(() => {
-        setCurrentAdIndex(prev => (prev + 1) % eligibleAds.length);
-        setCurrentSlideType('attract');
-      }, duration);
+      rotationTimerRef.current = setTimeout(advanceToNextAd, duration);
     }
 
     return () => {
       if (rotationTimerRef.current) clearTimeout(rotationTimerRef.current);
     };
-  }, [isAdActive, currentSlideType, currentAdIndex, eligibleAds]);
+  }, [advanceToNextAd, isAdActive, currentSlideType, currentAdIndex, eligibleAds]);
 
   // Open activation keypad event listener
   useEffect(() => {
@@ -264,6 +266,20 @@ export default function KioskAdPlayer() {
   };
 
   const currentAd = eligibleAds[currentAdIndex % eligibleAds.length];
+  const isBuiltInFallback = currentAd &&
+    (!currentAd.mediaUrl || currentAd.mediaUrl === '/gurukul-ad.png');
+
+  const handleVideoReady = useCallback((event) => {
+    const video = event.currentTarget;
+    video.volume = 0.3;
+    video.muted = false;
+    const playback = video.play();
+    playback?.catch(() => {
+      // Chromium may block unmuted autoplay after a reboot. Never leave a frozen ad.
+      video.muted = true;
+      video.play().catch(advanceToNextAd);
+    });
+  }, [advanceToNextAd]);
 
   return (
     <>
@@ -345,18 +361,29 @@ export default function KioskAdPlayer() {
           {currentSlideType === 'attract' || !currentAd ? (
             /* Reliv Attract Screen (5s) */
             <div className="reliv-attract-screen">
-              <div className="attract-logo-wrap">
-                <RelivHeartSvg className="ad-reliv-heart" />
-                <span style={{ fontSize: '32px', fontWeight: 800 }}>RELIV HEALTH</span>
+              <div className="attract-ambient attract-ambient-one" />
+              <div className="attract-ambient attract-ambient-two" />
+              <div className="attract-content">
+                <div className="attract-logo-wrap">
+                  <span className="attract-logo-icon"><RelivHeartSvg className="ad-reliv-heart" /></span>
+                  <span>RELIV HEALTH</span>
+                </div>
+                <div className="attract-kicker">A smarter health check, right here</div>
+                <h1 className="attract-title">Know your body.<br />In under 3 minutes.</h1>
+                <p className="attract-subtitle">
+                  Blood pressure, oxygen, BMI, temperature and clear wellness guidance — in one simple checkup.
+                </p>
+                <div className="attract-metrics" aria-hidden="true">
+                  <span>Blood Pressure</span><i />
+                  <span>SpO₂ & Pulse</span><i />
+                  <span>Body Composition</span>
+                </div>
+                <div className="attract-touch-prompt">
+                  <FingerTouchSvg />
+                  <span>Touch anywhere to begin</span>
+                </div>
               </div>
-              <h1 className="attract-title">Your Health, Measured in Minutes</h1>
-              <p className="attract-subtitle">
-                Instant contactless vitals, BMI composition, vision screening & wellness guidance.
-              </p>
-              <div className="attract-touch-prompt">
-                <FingerTouchSvg />
-                <span>Touch Screen to Begin Checkup</span>
-              </div>
+              <div className="attract-progress" aria-hidden="true"><span /></div>
             </div>
           ) : (
             /* Active Advertisement Screen */
@@ -367,19 +394,12 @@ export default function KioskAdPlayer() {
               </div>
 
               {/* Blurred background wings if not true 16:9 */}
-              {!currentAd.isTrue16x9 && (
+              {!currentAd.isTrue16x9 && !isBuiltInFallback && (
                 currentAd.mediaType === 'video' ? (
-                  <video 
-                    src={currentAd.mediaUrl} 
-                    className="ad-blur-wings" 
-                    autoPlay 
-                    loop 
-                    muted 
-                    playsInline 
-                  />
+                  <div className="ad-video-wings" />
                 ) : (
                   <img 
-                    src={currentAd.mediaUrl || '/gurukul-ad.png'} 
+                    src={currentAd.mediaUrl}
                     alt="wings" 
                     className="ad-blur-wings" 
                   />
@@ -387,19 +407,32 @@ export default function KioskAdPlayer() {
               )}
 
               {/* Sharp Foreground Creative */}
-              {currentAd.mediaType === 'video' ? (
+              {isBuiltInFallback ? (
+                <div className="reliv-house-ad">
+                  <div className="house-ad-mark"><RelivHeartSvg /></div>
+                  <div className="house-ad-kicker">RELIV HEALTH CHECKUP</div>
+                  <h2>Small check.<br />Powerful habit.</h2>
+                  <p>Understand your everyday health in minutes.</p>
+                  <div className="house-ad-tags"><span>Fast</span><span>Private</span><span>Paperless</span></div>
+                </div>
+              ) : currentAd.mediaType === 'video' ? (
                 <video 
+                  key={currentAd.campaignId || currentAd.mediaUrl}
                   ref={videoRef}
                   src={currentAd.mediaUrl} 
                   className={`ad-foreground-media ${currentAd.isTrue16x9 ? 'edge-to-edge' : ''}`}
                   autoPlay 
                   playsInline 
+                  onCanPlay={handleVideoReady}
+                  onEnded={advanceToNextAd}
+                  onError={advanceToNextAd}
                 />
               ) : (
                 <img 
-                  src={currentAd.mediaUrl || '/gurukul-ad.png'} 
+                  src={currentAd.mediaUrl}
                   alt={currentAd.brandName || "Reliv Ad"} 
                   className={`ad-foreground-media ${currentAd.isTrue16x9 ? 'edge-to-edge' : ''}`}
+                  onError={advanceToNextAd}
                 />
               )}
 
