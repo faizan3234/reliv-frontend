@@ -79,7 +79,7 @@ export default function KioskAdPlayer() {
     if (!available.length) return;
     stop();
     pauseListening();
-    setSlide("attract");
+    setSlide("ad");
     setIsAdActive(true);
   }, [location.pathname, pendingPayment, keypadOpen, refreshPlaylist, stop, pauseListening]);
 
@@ -128,7 +128,8 @@ export default function KioskAdPlayer() {
       try {
         const data = await getPendingAdPayment();
         setPendingPayment(data.pending || null);
-        if (data.pending) {
+        if (data.pending && location.pathname === "/") {
+          endCurrentPlay(true);
           setIsAdActive(false);
           clearTimer(rotationTimer);
           stop();
@@ -139,7 +140,7 @@ export default function KioskAdPlayer() {
     poll();
     paymentPoll.current = setInterval(poll, 1000);
     return () => clearInterval(paymentPoll.current);
-  }, [stop, pauseListening]);
+  }, [stop, pauseListening, location.pathname, endCurrentPlay]);
 
   useEffect(() => {
     const activity = () => {
