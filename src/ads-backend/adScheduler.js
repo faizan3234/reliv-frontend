@@ -76,7 +76,6 @@ export const adRotator = new AdRotator();
  * Purges media for campaigns expired longer than 24 hours
  */
 export function cleanupExpiredMedia(campaigns) {
-  const { todayStr } = getKolkataTime();
   const purged = [];
 
   for (const c of campaigns) {

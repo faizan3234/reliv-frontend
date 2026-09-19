@@ -6,6 +6,7 @@
 /* ROOT CONTAINER */
 .premium-root {
   min-height: 100vh;
+  min-height: 100dvh;
   height: auto;
   width: 100%;
   position: relative;
@@ -216,4 +217,6 @@
 .premium-content {
   position: relative;
   z-index: 10;
+  min-height: 100vh;
+  min-height: 100dvh;
 }

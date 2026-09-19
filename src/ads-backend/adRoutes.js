@@ -5,20 +5,18 @@
  */
 
 import express from 'express';
-import path from 'path';
 import fs from 'fs';
 import { calculateAuthoritativePrice } from './adPricingService.js';
-import { normalizeImage, normalizeVideo, computeFileSHA256 } from './adMediaService.js';
+import { computeFileSHA256 } from './adMediaService.js';
 import { 
   computeCodeHmac, 
   generate4DigitCode, 
   verifyConfirmationCode, 
   buildPaymentPayload 
 } from './adCryptoService.js';
-import { isCampaignEligible, getKolkataTime } from './adScheduler.js';
+import { getKolkataTime } from './adScheduler.js';
 
 const router = express.Router();
-const DATA_DIR = process.env.RELIV_DATA_DIR || '/home/reliv/reliv-data/ads';
 
 // 1. Venue & Pricing Config
 router.get('/config', (req, res) => {
@@ -114,7 +112,7 @@ router.post('/confirm-booking', async (req, res) => {
 // 4. Activate Campaign with 4-Digit Code
 router.post('/activate', (req, res) => {
   try {
-    const { campaignId, code, campaignRecord } = req.body;
+    const { code, campaignRecord } = req.body;
     const result = verifyConfirmationCode(campaignRecord, code);
 
     if (!result.valid) {

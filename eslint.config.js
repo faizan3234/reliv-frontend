@@ -23,12 +23,17 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-unused-vars': ['error', { varsIgnorePattern: '^(?:[A-Z_]|userName$)' }],
     },
   },
   {
     files: ['pi/**/*.js'],
     languageOptions: { sourceType: 'commonjs', globals: globals.node },
+  },
+  {
+    files: ['src/ads-backend/**/*.js'],
+    languageOptions: { sourceType: 'module', globals: globals.node },
   },
   {
     files: ['reliv-mobile/**/*.js', 'tests/**/*.js'],

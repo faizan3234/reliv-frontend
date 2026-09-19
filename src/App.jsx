@@ -1,6 +1,6 @@
 // src/App.jsx
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import Splash from "./pages/Splash.jsx";
 import ChooseLanguage from "./pages/ChooseLanguage.jsx";
 import CustomerDetailsWrapper from "./pages/CustomerDetails.jsx";
@@ -135,6 +135,7 @@ export default function App() {
           <Route path="/photo-upload" element={<PhotoUpload />} />
           <Route path="/admin" element={<AdminMedicinePage />} />
           <Route path="/admin-x7k9/speech" element={<SpeechAdmin />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
       </VoiceAssistantProvider>

@@ -27,7 +27,9 @@ export default function EyeSight() {
       body{background:#fff;margin:0;font-family:'Inter',system-ui,sans-serif}
 
       .vision-container{
-        height:100vh;
+        min-height:100vh;
+        min-height:100dvh;
+        height:auto;
         display:flex;
         align-items:flex-start;
         justify-content:center;

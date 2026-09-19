@@ -39,7 +39,7 @@ export function initKioskTouchScroller() {
   let suppressClickUntil = 0;
   let activeTouchId = null;
 
-  // Find the closest scrollable container, prioritizing .scrollable-container or window
+  // Find the closest scrollable container, prioritizing the touched container.
   function findScrollTarget(el) {
     if (!el) return document.querySelector('.scrollable-container') || window;
 
@@ -55,7 +55,7 @@ export function initKioskTouchScroller() {
         ) {
           return current;
         }
-      } catch (err) {
+      } catch {
         break;
       }
       current = current.parentElement;
@@ -68,7 +68,10 @@ export function initKioskTouchScroller() {
     }
 
     // 3. Check for any .scrollable-container on the active page
-    const pageContainer = document.querySelector('.scrollable-container');
+    const pageContainer = Array.from(document.querySelectorAll('.scrollable-container')).find(
+      (container) => container.getClientRects().length > 0 &&
+        container.scrollHeight > container.clientHeight + 2
+    );
     if (pageContainer && pageContainer.scrollHeight > pageContainer.clientHeight + 2) {
       return pageContainer;
     }
@@ -82,9 +85,8 @@ export function initKioskTouchScroller() {
     if (!target) return;
 
     if (target === window || target === document.documentElement || target === document.body || target === document.scrollingElement) {
-      window.scrollBy(0, -dy);
-      if (document.documentElement) document.documentElement.scrollTop -= dy;
-      if (document.body) document.body.scrollTop -= dy;
+      const rootScroller = document.scrollingElement || document.documentElement;
+      rootScroller.scrollTop -= dy;
       return;
     }
 
@@ -144,6 +146,8 @@ export function initKioskTouchScroller() {
       stopMomentum();
 
       if (!e.touches || e.touches.length === 0) return;
+      // A second finger must not restart the active drag and create a jump.
+      if (isTracking) return;
       const touch = e.touches[0];
       activeTouchId = touch.identifier;
 
@@ -214,8 +218,23 @@ export function initKioskTouchScroller() {
 
   window.addEventListener(
     'touchend',
-    () => {
+    (e) => {
       if (!isTracking) return;
+
+      // If the active finger is still down, another finger was lifted. Keep scrolling.
+      if (Array.from(e.touches || []).some((touch) => touch.identifier === activeTouchId)) return;
+
+      // Seamlessly hand the gesture to a remaining finger for two-finger kiosk use.
+      if (e.touches?.length) {
+        const touch = e.touches[0];
+        activeTouchId = touch.identifier;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        lastY = touch.clientY;
+        lastTime = performance.now();
+        velocityY = 0;
+        return;
+      }
 
       if (isDragging) {
         // Suppress any synthetic click event on whatever button is under the finger
@@ -325,7 +344,7 @@ export function initKioskTouchScroller() {
   );
 
   // =========================================================================
-  // 3. MOUSE WHEEL (Ensures mouse wheel ALWAYS scrolls target or window)
+  // 3. MOUSE WHEEL (manual forwarding without native double-scrolling)
   // =========================================================================
   window.addEventListener(
     'wheel',
@@ -336,15 +355,16 @@ export function initKioskTouchScroller() {
         const prev = target.scrollTop;
         target.scrollTop += e.deltaY;
         if (Math.abs(target.scrollTop - prev) > 0.5) {
+          if (e.cancelable) e.preventDefault();
           return; // successfully scrolled inner container
         }
       }
       // Otherwise scroll document/window
-      window.scrollBy(0, e.deltaY);
-      if (document.documentElement) document.documentElement.scrollTop += e.deltaY;
-      if (document.body) document.body.scrollTop += e.deltaY;
+      const rootScroller = document.scrollingElement || document.documentElement;
+      rootScroller.scrollTop += e.deltaY;
+      if (e.cancelable) e.preventDefault();
     },
-    { passive: true }
+    { passive: false }
   );
 
   // =========================================================================
