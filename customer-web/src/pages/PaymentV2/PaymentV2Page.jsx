@@ -449,7 +449,12 @@ export function PaymentV2Page({ sessionStore }) {
   const isHealthCheckup =
     normalizedServiceType === 'HEALTH_CHECKUP' ||
     normalizedServiceType === 'CHECKUP';
-  const displayService = isHealthCheckup ? 'Health Checkup' : 'Medicine Kit Purchase';
+  const isAdCampaign = normalizedServiceType === 'AD_CAMPAIGN';
+  const displayService = isAdCampaign
+    ? 'Reliv Advertising Campaign'
+    : isHealthCheckup
+    ? 'Health Checkup'
+    : 'Medicine Kit Purchase';
 
   // IDLE STATE (Direct open without #p or saved session)
   if (!encryptedPackage && loadingState === 'IDLE' && !getPendingVerification() && !getPaymentRecovery()) {
@@ -557,6 +562,43 @@ export function PaymentV2Page({ sessionStore }) {
   if (loadingState === 'SUCCESS') {
     const digits = confirmationCode.split('');
 
+    if (isAdCampaign) {
+      return (
+        <div className="space-y-5 animate-in fade-in zoom-in-95 duration-400">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-600 mb-1 shadow-sm">
+              <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 font-outfit">Payment Successful</h2>
+            <p className="text-sm text-slate-600">Enter this activation code on the Reliv kiosk.</p>
+          </div>
+
+          <div className="rounded-3xl border border-orange-200 bg-white p-6 shadow-md space-y-5 text-center">
+            <div className="flex justify-center items-center gap-3 py-2">
+              {digits.map((digit, idx) => (
+                <div
+                  key={idx}
+                  className="w-14 h-16 sm:w-16 sm:h-20 rounded-2xl bg-orange-500 border-2 border-orange-600 text-white font-extrabold text-3xl sm:text-4xl flex items-center justify-center shadow-md font-mono"
+                >
+                  {digit}
+                </div>
+              ))}
+            </div>
+            <div className="p-3.5 rounded-2xl bg-orange-50 border border-orange-100 text-xs text-orange-950">
+              <p className="font-semibold text-slate-900">Keep this page open until you enter the code.</p>
+              <p className="text-slate-600 mt-1">This code activates only the advertising campaign you just paid for.</p>
+            </div>
+            {displayRupees !== '0' && (
+              <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs text-slate-500">
+                <span>Amount Paid</span>
+                <span className="font-bold text-slate-900 text-sm">₹{displayRupees}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-5 animate-in fade-in zoom-in-95 duration-400">
         <div className="text-center space-y-2">
@@ -567,7 +609,7 @@ export function PaymentV2Page({ sessionStore }) {
             Payment Successful
           </h2>
           <p className="text-sm font-semibold text-slate-700">
-            Your Kiosk Code
+            {isAdCampaign ? 'Your Activation Code' : 'Your Kiosk Code'}
           </p>
         </div>
 
@@ -589,7 +631,9 @@ export function PaymentV2Page({ sessionStore }) {
               Enter this 4-digit code on the Reliv kiosk.
             </p>
             <p className="text-slate-600">
-              Your service will begin immediately upon verification.
+              {isAdCampaign
+                ? 'Enter it on the kiosk to activate or schedule your advertisement.'
+                : 'Your service will begin immediately upon verification.'}
             </p>
           </div>
 
@@ -605,11 +649,13 @@ export function PaymentV2Page({ sessionStore }) {
         <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
           <div className="text-center space-y-0.5">
             <h3 className="text-base font-bold text-slate-900 font-outfit">
-              {isHealthCheckup ? 'Get your Health Report & Receipt' : 'Get your payment receipt'}
+              {isHealthCheckup ? 'Get your Health Report & Receipt' : isAdCampaign ? 'Get your advertising receipt' : 'Get your payment receipt'}
             </h3>
             <p className="text-xs text-slate-500">
               {isHealthCheckup
                 ? 'Enter your email to receive your detailed health report and payment receipt.'
+                : isAdCampaign
+                ? 'Optional: enter your email for a digital advertising receipt.'
                 : 'Enter your email to receive a digital receipt.'}
             </p>
           </div>
