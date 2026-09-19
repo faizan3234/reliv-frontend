@@ -35,6 +35,8 @@ import PhotoUpload from "./pages/PhotoUpload.jsx";
 import ProtectedReportRoute from "./components/ProtectedReportRoute";
 import { VoiceAssistantProvider } from "./context/VoiceAssistantContext";
 import VoiceAssistantOverlay from "./components/VoiceAssistantOverlay";
+import Advertise from "./pages/Advertise.jsx";
+import KioskAdPlayer from "./components/KioskAdPlayer.jsx";
 
 export default function App() {
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
@@ -49,6 +51,7 @@ export default function App() {
       return (
         <div className="app-screen">
           <Routes>
+            <Route path="/advertise" element={<Advertise />} />
             <Route path="/mobile-entry" element={<MobileEntry />} />
             <Route path="/photo-upload" element={<PhotoUpload />} />
             {/* Everything else → Session Expired (MobileEntryGateway with no token) */}
@@ -62,12 +65,14 @@ export default function App() {
     return (
       <VoiceAssistantProvider>
         <div className="app-screen">
+          <KioskAdPlayer />
           <KioskGuardian />
           <KioskSafetyManager />
           <SpeechControl />
           <VoiceAssistantOverlay />
           <Routes>
           <Route path="/" element={<Splash />} />
+          <Route path="/advertise" element={<Advertise />} />
           <Route path="/choose-language" element={<ChooseLanguage />} />
           <Route path="/customer-details" element={<CustomerDetailsWrapper />} />
           <Route path="/two-options" element={<TwoOptions />} />

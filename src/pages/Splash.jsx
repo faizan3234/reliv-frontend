@@ -9,6 +9,7 @@ import CampusLeaderboard from "../components/CampusLeaderboard";
 import { AnimatePresence } from "framer-motion";
 import { API_BASE } from "../config/api";
 import i18n from "i18next";
+import { QRCodeSVG } from "qrcode.react";
 
 const Splash = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const Splash = () => {
   const { resetHealth, update, data: healthData } = useHealth();
   
   const [showTerms, setShowTerms] = useState(false);
+  const [showAdModal, setShowAdModal] = useState(false);
   const [disagreed, setDisagreed] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const disagreedRef = useRef(false);
@@ -403,6 +405,79 @@ const Splash = () => {
             </div>
           </div>
         </div>
+
+        {/* Permanent Advertise on Reliv Badge (Kiosk V1 DOOH) */}
+        <div 
+          className="splash-advertise-pill" 
+          onClick={() => setShowAdModal(true)}
+          title="Advertise on this kiosk"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <div>
+            <div className="advertise-pill-title">Advertise on Reliv</div>
+            <div className="advertise-pill-sub">From ₹50/day · Touch for Wi-Fi QR</div>
+          </div>
+        </div>
+
+        {/* Modal: Wi-Fi QR & Code Entry */}
+        {showAdModal && (
+          <div className="kiosk-activation-modal" onClick={() => setShowAdModal(false)}>
+            <div className="activation-keypad-card" onClick={(e) => e.stopPropagation()}>
+              <h2 className="activation-header-title">Advertise on Reliv</h2>
+              <p className="activation-header-sub">
+                Connect to kiosk Wi-Fi <strong>RELIV-KIOSK</strong> to book your ad instantly.
+              </p>
+
+              <div style={{ display: 'inline-block', padding: '16px', background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', margin: '0 auto 16px auto' }}>
+                <QRCodeSVG 
+                  value="WIFI:S:RELIV-KIOSK;T:nopass;;" 
+                  size={160} 
+                />
+              </div>
+
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>
+                Scan Wi-Fi QR above, or visit <strong>http://192.168.50.1/advertise</strong> on your phone.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn-primary-ads"
+                  style={{ height: '48px', padding: '0 16px' }}
+                  onClick={() => {
+                    setShowAdModal(false);
+                    window.dispatchEvent(new CustomEvent('reliv_open_ad_keypad'));
+                  }}
+                >
+                  Enter 4-Digit Activation Code
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-secondary-ads"
+                  onClick={() => {
+                    setShowAdModal(false);
+                    navigate('/advertise');
+                  }}
+                >
+                  Open Booking Portal (Demo)
+                </button>
+
+                <button
+                  type="button"
+                  className="link-secondary-action"
+                  onClick={() => setShowAdModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
