@@ -449,7 +449,12 @@ export function PaymentV2Page({ sessionStore }) {
   const isHealthCheckup =
     normalizedServiceType === 'HEALTH_CHECKUP' ||
     normalizedServiceType === 'CHECKUP';
-  const displayService = isHealthCheckup ? 'Health Checkup' : 'Medicine Kit Purchase';
+  const isAdCampaign = normalizedServiceType === 'AD_CAMPAIGN';
+  const displayService = isAdCampaign
+    ? 'Reliv Advertising Campaign'
+    : isHealthCheckup
+    ? 'Health Checkup'
+    : 'Medicine Kit Purchase';
 
   // IDLE STATE (Direct open without #p or saved session)
   if (!encryptedPackage && loadingState === 'IDLE' && !getPendingVerification() && !getPaymentRecovery()) {
@@ -567,7 +572,7 @@ export function PaymentV2Page({ sessionStore }) {
             Payment Successful
           </h2>
           <p className="text-sm font-semibold text-slate-700">
-            Your Kiosk Code
+            {isAdCampaign ? 'Your Activation Code' : 'Your Kiosk Code'}
           </p>
         </div>
 
@@ -589,7 +594,9 @@ export function PaymentV2Page({ sessionStore }) {
               Enter this 4-digit code on the Reliv kiosk.
             </p>
             <p className="text-slate-600">
-              Your service will begin immediately upon verification.
+              {isAdCampaign
+                ? 'Enter it on the kiosk to activate or schedule your advertisement.'
+                : 'Your service will begin immediately upon verification.'}
             </p>
           </div>
 
@@ -605,11 +612,13 @@ export function PaymentV2Page({ sessionStore }) {
         <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
           <div className="text-center space-y-0.5">
             <h3 className="text-base font-bold text-slate-900 font-outfit">
-              {isHealthCheckup ? 'Get your Health Report & Receipt' : 'Get your payment receipt'}
+              {isHealthCheckup ? 'Get your Health Report & Receipt' : isAdCampaign ? 'Get your advertising receipt' : 'Get your payment receipt'}
             </h3>
             <p className="text-xs text-slate-500">
               {isHealthCheckup
                 ? 'Enter your email to receive your detailed health report and payment receipt.'
+                : isAdCampaign
+                ? 'Optional: enter your email for a digital advertising receipt.'
                 : 'Enter your email to receive a digital receipt.'}
             </p>
           </div>
