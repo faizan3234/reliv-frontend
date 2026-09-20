@@ -608,9 +608,10 @@ export default function PhotoUpload() {
 }
 
 const pageStyle = {
-  minHeight: "100vh", background: "#f8fafc",
+  minHeight: "100dvh", height: "auto", background: "#f8fafc",
   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
   padding: "32px 20px",
+  overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", touchAction: "pan-y",
 };
 
 const cardStyle = {
