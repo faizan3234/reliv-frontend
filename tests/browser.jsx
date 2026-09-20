@@ -286,6 +286,10 @@ async function checkPaymentRecovery() {
   assert(document.querySelector('#app').textContent.includes('Status unavailable') && createCalls === 0, 'status outage does not start a new payment');
   statusMode = 'verified'; await click('Retry'); await flush(1300);
   assert(controls.path === '/report-1', 'verified retry prepares the paid report before navigating');
+  await act(async () => controls.navigate('/choose-language'));
+  await act(async () => controls.navigate('/payment', { state: { cart: [{ kit_id: 'KIT-TEST', cartQuantity: 1 }] } }));
+  await flush(80);
+  assert(controls.path === '/order-success' && createCalls === 0, 'already-paid medicine refresh restores the order without requesting payment again');
   apiOverride = null;
 }
 // Real production routes with synthetic network and hardware responses.

@@ -444,7 +444,7 @@ export default function AdminMedicinePage() {
   // ═════════════════════════════════════════════════════════════════════════
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center px-4 py-8 font-sans">
+      <div className="min-h-screen h-auto w-full bg-slate-50 flex flex-col justify-center items-center overflow-y-auto scrollable-container touch-pan-y px-4 py-8 font-sans">
         <div className="w-full max-w-sm bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
           <div className="flex flex-col items-center text-center space-y-3 mb-6">
             <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center border border-orange-200 shadow-inner">
@@ -513,7 +513,7 @@ export default function AdminMedicinePage() {
   // VIEW: MAIN MOBILE ADMIN INVENTORY APP
   // ═════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans pb-28">
+    <div className="min-h-screen h-auto w-full overflow-y-auto scrollable-container touch-pan-y bg-slate-100 text-slate-900 font-sans pb-28">
 
       {/* Ephemeral Toast */}
       {toast && (

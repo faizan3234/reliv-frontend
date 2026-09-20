@@ -231,7 +231,7 @@ export default function MedicineDispensing() {
 
   if (!isMedicineDispensingEnabled) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+      <div className="min-h-screen h-auto w-full flex flex-col items-center justify-center overflow-y-auto scrollable-container touch-pan-y bg-gray-50 px-4 py-8">
         <Logo />
         <h2 className="text-3xl font-bold text-red-600 mt-8 mb-4">
           Medicine Dispensing Disabled
@@ -413,7 +413,7 @@ function EnabledMedicineDispensing() {
   if (isLoading) {
     return (
       <AuraBackground>
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex min-h-[100dvh] h-auto items-center justify-center overflow-y-auto scrollable-container touch-pan-y">
           <div className="text-center space-y-4">
             <motion.div
               animate={{ rotate: 360 }}

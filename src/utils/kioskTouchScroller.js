@@ -67,38 +67,28 @@ export function initKioskTouchScroller() {
       return closestContainer;
     }
 
-    // 3. Check for any .scrollable-container on the active page
-    const pageContainer = Array.from(document.querySelectorAll('.scrollable-container')).find(
-      (container) => container.getClientRects().length > 0 &&
-        container.scrollHeight > container.clientHeight + 2
-    );
-    if (pageContainer && pageContainer.scrollHeight > pageContainer.clientHeight + 2) {
-      return pageContainer;
-    }
-
-    // 4. Fallback to window/document
+    // Never scroll an unrelated page behind a modal or floating control.
     return window;
   }
 
   // Perform scroll on target, bubbling to root if container boundary reached
   function performScroll(target, dy) {
-    if (!target) return;
-
-    if (target === window || target === document.documentElement || target === document.body || target === document.scrollingElement) {
-      const rootScroller = document.scrollingElement || document.documentElement;
-      rootScroller.scrollTop -= dy;
-      return;
+    if (!target || (target !== window && !target.isConnected)) return;
+    const rootScroller = document.scrollingElement || document.documentElement;
+    let remaining = -dy;
+    let current = target;
+    while (current && current !== window && current !== document.body && current !== rootScroller) {
+      const style = window.getComputedStyle(current);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll' || current.classList.contains('scrollable-container')) {
+        const previous = current.scrollTop;
+        current.scrollTop += remaining;
+        remaining -= current.scrollTop - previous;
+        if (Math.abs(remaining) < 0.5 || ['contain', 'none'].includes(style.overscrollBehaviorY)) return;
+      }
+      current = current.parentElement;
     }
-
-    const prev = target.scrollTop;
-    target.scrollTop -= dy;
-
-    // If target didn't move (reached top/bottom edge), bubble to document/window
-    if (Math.abs(target.scrollTop - prev) < 0.5) {
-      window.scrollBy(0, -dy);
-      if (document.documentElement) document.documentElement.scrollTop -= dy;
-      if (document.body) document.body.scrollTop -= dy;
-    }
+    // Only the unconsumed delta reaches the root, exactly once.
+    rootScroller.scrollTop += remaining;
   }
 
   function stopMomentum() {
@@ -349,20 +339,12 @@ export function initKioskTouchScroller() {
   window.addEventListener(
     'wheel',
     (e) => {
-      if (e.ctrlKey) return; // allow pinch/zoom blocker
+      if (e.ctrlKey || e.defaultPrevented || !e.cancelable) return;
+      stopMomentum();
       const target = findScrollTarget(e.target);
-      if (target && target !== window && target !== document.documentElement && target !== document.body) {
-        const prev = target.scrollTop;
-        target.scrollTop += e.deltaY;
-        if (Math.abs(target.scrollTop - prev) > 0.5) {
-          if (e.cancelable) e.preventDefault();
-          return; // successfully scrolled inner container
-        }
-      }
-      // Otherwise scroll document/window
-      const rootScroller = document.scrollingElement || document.documentElement;
-      rootScroller.scrollTop += e.deltaY;
-      if (e.cancelable) e.preventDefault();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
+      performScroll(target, -e.deltaY * unit);
+      e.preventDefault();
     },
     { passive: false }
   );

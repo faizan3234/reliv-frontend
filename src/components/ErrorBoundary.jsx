@@ -37,7 +37,7 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-white to-orange-50 px-6 text-center">
+        <div className="min-h-screen h-auto w-full flex flex-col items-center justify-center overflow-y-auto scrollable-container touch-pan-y bg-gradient-to-b from-white to-orange-50 px-6 py-8 text-center">
           <div className="bg-white rounded-3xl shadow-xl p-10 max-w-md w-full border border-orange-100">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 text-orange-600">
               <svg className="h-9 w-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">

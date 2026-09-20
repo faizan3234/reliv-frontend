@@ -116,7 +116,7 @@ const ProtectedReportRoute = ({ children }) => {
 
   if (status === "LOADING") {
     return (
-      <div className="h-screen bg-white flex items-center justify-center px-6">
+      <div className="min-h-screen h-auto w-full bg-white flex items-center justify-center overflow-y-auto scrollable-container touch-pan-y px-6 py-8">
         <div className="text-center">
           <div className="text-2xl font-semibold text-gray-900">
             Loading your health report...
@@ -132,7 +132,7 @@ const ProtectedReportRoute = ({ children }) => {
 
   if (status === "DENIED") {
     return (
-      <div className="h-screen bg-white flex items-center justify-center px-6">
+      <div className="min-h-screen h-auto w-full bg-white flex items-center justify-center overflow-y-auto scrollable-container touch-pan-y px-6 py-8">
         <div className="max-w-xl text-center">
           <div className="text-3xl font-bold text-gray-900">
             Report unavailable

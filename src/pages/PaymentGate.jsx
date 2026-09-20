@@ -1,7 +1,7 @@
 // src/pages/PaymentGate.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 import Logo from "../components/Logo";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
@@ -10,6 +10,7 @@ import { useVoicePage } from "../hooks/useVoicePage";
 import { dict } from "../config/PaymentDict";
 import { API_BASE } from "../config/api";
 import { requestJSON } from "../utils/request";
+import { normalizePaymentQrValue } from "../utils/paymentQr";
 import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode, Sparkles } from "lucide-react";
 
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // Allow the full phone-payment window.
@@ -256,7 +257,8 @@ export default function PaymentGate() {
       });
 
       if (lifecycle.signal.aborted) return;
-      if (!reqData.ok || !reqData.paymentUrl) {
+      const safePaymentUrl = normalizePaymentQrValue(reqData.paymentUrl);
+      if (reqData.ok !== true || !safePaymentUrl || typeof reqData.requestId !== 'string' || !reqData.requestId.trim()) {
         throw new Error(reqData.message || "Invalid payment request response from kiosk backend");
       }
 
@@ -269,9 +271,13 @@ export default function PaymentGate() {
       setAuthoritativeAmount(displayRupees);
 
       setRequestId(reqData.requestId);
-      setPaymentUrl(reqData.paymentUrl);
+      setPaymentUrl(safePaymentUrl);
 
-      const expiresAt = Number(reqData.expiresAt) || (Date.now() + 300000);
+      const expiresAt = Number(reqData.expiresAt);
+      if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        setUiState('EXPIRED');
+        return;
+      }
       deadlineRef.current = expiresAt;
       const remainingSeconds = Math.max(10, Math.floor((expiresAt - Date.now()) / 1000));
       setTimeLeft(remainingSeconds);
@@ -309,7 +315,7 @@ export default function PaymentGate() {
       if (lifecycle.signal.aborted) return;
 
       // Check 1: If Pi backend already verified payment for this session
-      if (statusData && (statusData.paymentVerified || statusData.status === "VERIFIED")) {
+      if (statusData && (statusData.paymentVerified === true || statusData.status === "VERIFIED")) {
         if (needsReport && !hasKits) {
           const report = await requestJSON(`${API_BASE}/api/sessions/${encodeURIComponent(activeSessionId)}/report`, {
             method: 'POST', signal: lifecycle.signal, timeoutMs: 30000,
@@ -321,6 +327,12 @@ export default function PaymentGate() {
           scheduleNavigation('/report-1', { replace: true, state: { sessionId: activeSessionId } }, 0);
           return;
         }
+        // Refreshing an already-paid medicine order must never create another
+        // payment request or re-trigger dispensing from this screen.
+        updateHealth({ paymentVerified: true });
+        setUiState('SUCCESS');
+        scheduleNavigation('/order-success', { replace: true, state: { cart, sessionId: activeSessionId } }, 0);
+        return;
       }
 
       // Check 2: If active request exists and is not expired
@@ -328,7 +340,8 @@ export default function PaymentGate() {
       if (
         statusData &&
         statusData.status === "ACTIVE" &&
-        statusData.paymentUrl &&
+        typeof statusData.requestId === 'string' && statusData.requestId.trim() &&
+        normalizePaymentQrValue(statusData.paymentUrl) &&
         statusData.expiresAt > now
       ) {
         // Backend must return a valid authoritative amount in paise
@@ -340,7 +353,7 @@ export default function PaymentGate() {
         setAuthoritativeAmount(displayRupees);
 
         setRequestId(statusData.requestId);
-        setPaymentUrl(statusData.paymentUrl);
+        setPaymentUrl(normalizePaymentQrValue(statusData.paymentUrl));
 
         const remainingSeconds = Math.max(10, Math.floor((statusData.expiresAt - now) / 1000));
         deadlineRef.current = Number(statusData.expiresAt);
@@ -591,7 +604,7 @@ export default function PaymentGate() {
     } finally {
       if (lifecycleRef.current === lifecycle) verifyingRef.current = false;
     }
-  }, [isValidSession, activeSessionId, codeDigits, requestId, attemptsRemaining, needsReport, cart, scheduleNavigation, updateHealth, speak]);
+  }, [isValidSession, activeSessionId, codeDigits, requestId, attemptsRemaining, needsReport, cart, scheduleNavigation, updateHealth, speak, selectedLang, speakText]);
 
   // ── 7. On-Screen Touch Keypad Handlers (NO AUTO-SUBMIT) ───────────────────
   const handleKeypadPress = useCallback((key) => {
@@ -944,26 +957,29 @@ export default function PaymentGate() {
               )}
             </div>
 
-            {/* Universal High-Contrast QR Code Card (Razor Sharp Canvas, Level M Error Correction, Pure Quiet Zone) */}
+            {/* Universal high-contrast QR: SVG stays sharp at every kiosk scale. */}
             <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-orange-200 shadow-xl flex flex-col items-center w-full max-w-[460px]">
               {paymentUrl ? (
                 <div className="bg-white p-3 rounded-2xl flex items-center justify-center shadow-inner border border-slate-100 w-full">
-                  <QRCodeCanvas
+                  <QRCodeSVG
                     value={paymentUrl}
-                    size={340}
+                    size={360}
                     level="M"
                     marginSize={4}
+                    boostLevel={false}
                     fgColor="#000000"
                     bgColor="#FFFFFF"
                     style={{
                       width: "100%",
-                      maxWidth: "340px",
+                      maxWidth: "360px",
                       height: "auto",
                       aspectRatio: "1 / 1",
-                      imageRendering: "pixelated",
                       display: "block",
                       margin: "0 auto",
                     }}
+                    role="img"
+                    aria-label="Secure Reliv payment QR code"
+                    title="Scan with any phone camera or payment scanner"
                   />
                 </div>
               ) : (

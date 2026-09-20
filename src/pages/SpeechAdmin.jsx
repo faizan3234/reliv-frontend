@@ -507,7 +507,7 @@ export default function SpeechAdmin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white flex items-center justify-center">
+      <div className="min-h-screen h-auto w-full bg-gradient-to-br from-orange-50 to-white flex items-center justify-center overflow-y-auto scrollable-container touch-pan-y">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-500">Loading speech config...</p>
@@ -517,7 +517,7 @@ export default function SpeechAdmin() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-orange-50 via-white to-orange-50 font-sans">
+    <div className="min-h-screen h-auto w-full flex flex-col bg-gradient-to-br from-orange-50 via-white to-orange-50 font-sans overflow-y-auto scrollable-container touch-pan-y">
       {/* ═══ Fixed Header ═══ */}
       <div className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-orange-100 shadow-sm z-50">
         <div className="max-w-4xl mx-auto px-4 py-3">
