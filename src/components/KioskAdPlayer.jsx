@@ -4,12 +4,8 @@ import { useLocation } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoiceAssistant } from "../context/VoiceAssistantContext";
-import { 
-  getCurrentlyEligibleAds, 
-  verifyAndActivateCode,
-  getPendingPaymentCampaign,
-  clearPendingPayment
-} from "../utils/adCryptoLocal";
+import { absoluteAdMediaUrl, activateAdCampaign, getActiveAdPlaylist, getPendingAdPayment, recordAdPlay } from "../services/adApi";
+import { normalizePaymentQrValue } from "../utils/paymentQr";
 import "./KioskAdPlayer.css";
 
 const IDLE_TIMEOUT_MS = 20_000; // 20 seconds idle before ads start
@@ -35,7 +31,9 @@ const FingerTouchSvg = () => (
 export default function KioskAdPlayer() {
   const location = useLocation();
   const { stop: stopSpeech } = useSpeech();
-  const { pauseListening, resumeListening } = useVoiceAssistant();
+  const { pauseListening, resumeListening, listeningPaused } = useVoiceAssistant();
+  const wasListeningPausedRef = useRef(listeningPaused);
+  wasListeningPausedRef.current = listeningPaused;
   const isHome = location.pathname === '/';
 
   // Ad Overlay State
@@ -57,218 +55,272 @@ export default function KioskAdPlayer() {
   const rotationTimerRef = useRef(null);
   const videoRef = useRef(null);
 
-  // Check for pending payment broadcasts
-  useEffect(() => {
-    const checkPayment = () => {
-      const pending = getPendingPaymentCampaign();
-      setPendingPayment(pending);
-    };
 
-    checkPayment();
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [dismissedRequestId, setDismissedRequestId] = useState('');
+  const [isActivating, setIsActivating] = useState(false);
+  const [backendError, setBackendError] = useState('');
+  const lifecycleRef = useRef(null);
+  const activationRef = useRef(false);
+  const suppressClickUntilRef = useRef(0);
+  const lastActivityRef = useRef(Date.now());
+  const activePlayRef = useRef(null);
+  const currentAd = eligibleAds.length ? eligibleAds[currentAdIndex % eligibleAds.length] : null;
+  const paymentVisible = isHome && pendingPayment && pendingPayment.requestId !== dismissedRequestId;
+  const paymentQrValue = normalizePaymentQrValue(pendingPayment?.paymentUrl);
+  const overlayActive = isHome && (isAdActive || Boolean(paymentVisible) || isKeypadOpen);
+  const isBuiltInFallback = false;
 
-    const handleShowPayment = (e) => {
-      setIsAdActive(false);
-      setPendingPayment(e.detail);
-    };
-
-    const handleClearPayment = () => {
-      setPendingPayment(null);
-    };
-
-    window.addEventListener('reliv_kiosk_show_payment_qr', handleShowPayment);
-    window.addEventListener('reliv_kiosk_clear_payment_qr', handleClearPayment);
-
-    return () => {
-      window.removeEventListener('reliv_kiosk_show_payment_qr', handleShowPayment);
-      window.removeEventListener('reliv_kiosk_clear_payment_qr', handleClearPayment);
-    };
-  }, []);
-
-  // Reset Idle Timer
-  const resetIdleTimer = useCallback(() => {
-    if (idleTimerRef.current) {
-      clearTimeout(idleTimerRef.current);
-      idleTimerRef.current = null;
-    }
-
-    // Advertising only allowed when user is idle on the Home/Splash screen
-    // And no active kiosk payment screen is open
-    if (location.pathname !== '/' || pendingPayment) {
-      setIsAdActive(false);
-      return;
-    }
-
-    idleTimerRef.current = setTimeout(() => {
-      const ads = getCurrentlyEligibleAds();
-      setEligibleAds(ads);
-      if (ads.length > 0) {
-        setIsAdActive(true);
-        setCurrentSlideType('attract'); // Always start with Reliv attract screen
-      }
-    }, IDLE_TIMEOUT_MS);
-  }, [location.pathname, pendingPayment]);
-
-  // Fast Exit on any Touch / Pointerdown event (Capture Phase)
-  const exitAdMode = useCallback((e) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-
+  const stopVideo = useCallback(() => {
     if (videoRef.current) {
       videoRef.current.muted = true;
       videoRef.current.pause();
     }
+  }, []);
 
-    setIsAdActive(false);
-    resetIdleTimer();
-  }, [resetIdleTimer]);
+  const finishPlay = useCallback((interrupted) => {
+    const play = activePlayRef.current;
+    activePlayRef.current = null;
+    if (play) void recordAdPlay(play.campaignId, {
+      startedAt: play.startedAt, completed: !interrupted, interruptedByUser: interrupted,
+    });
+  }, []);
 
-  // Ads/payment overlays own the speaker while visible. This prevents Reliv guidance,
-  // microphone recognition and ad audio from talking over one another.
-  const overlayActive = isHome && (isAdActive || Boolean(pendingPayment) || isKeypadOpen);
+  const advanceToNextAd = useCallback(() => {
+    stopVideo();
+    finishPlay(false);
+    setCurrentAdIndex(prev => eligibleAds.length ? (prev + 1) % eligibleAds.length : 0);
+    setCurrentSlideType('attract');
+  }, [eligibleAds.length, finishPlay, stopVideo]);
+
+  // The Pi is authoritative: phone localStorage cannot notify another device.
+  // Serial polling prevents overlapping requests and stale post-navigation updates.
   useEffect(() => {
+    const controller = new AbortController();
+    lifecycleRef.current = controller;
+    let timer;
+    if (isHome) {
+      const poll = async () => {
+        try {
+          const [payment, playlist] = await Promise.all([
+            getPendingAdPayment({ signal: controller.signal }),
+            getActiveAdPlaylist({ signal: controller.signal }),
+          ]);
+          if (controller.signal.aborted) return;
+          const pending = payment.pending;
+          const next = pending && typeof pending.campaignId === 'string' && pending.campaignId && typeof pending.requestId === 'string' && pending.requestId && Number.isInteger(pending.amountPaise) && pending.amountPaise > 0
+            ? {
+                campaignId: pending.campaignId, requestId: pending.requestId,
+                paymentUrl: pending.expiresAt && Number(pending.expiresAt) <= Date.now() ? '' : normalizePaymentQrValue(pending.paymentUrl),
+                venueName: typeof pending.venueName === 'string' ? pending.venueName : 'Reliv kiosk',
+                durationDays: Number(pending.durationDays) || 0,
+                priceRupees: Number(pending.amountPaise) / 100,
+              } : null;
+          if (pending && !next) throw new Error('The kiosk returned an incomplete ad payment. Please retry.');
+          const ads = (Array.isArray(playlist.ads) ? playlist.ads : [])
+            .filter(ad => ad && typeof ad.campaignId === 'string' && ['image', 'video'].includes(ad.mediaType))
+            .map(ad => ({ ...ad, mediaUrl: absoluteAdMediaUrl(ad.mediaUrl) }))
+            .filter(ad => ad.mediaUrl);
+          setPendingPayment(prev => JSON.stringify(prev) === JSON.stringify(next) ? prev : next);
+          setEligibleAds(prev => JSON.stringify(prev) === JSON.stringify(ads) ? prev : ads);
+          setBackendError('');
+        } catch (error) {
+          if (!controller.signal.aborted) {
+            setBackendError(error.message || 'Advertising service unavailable.');
+            setEligibleAds([]);
+            setIsAdActive(false);
+            stopVideo();
+          }
+        } finally {
+          if (!controller.signal.aborted) timer = setTimeout(poll, 2500);
+        }
+      };
+      void poll();
+    }
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+      stopVideo();
+      finishPlay(true);
+      activationRef.current = false;
+    };
+  }, [isHome, stopVideo, finishPlay]);
+
+  const resetIdleTimer = useCallback(() => {
+    clearTimeout(idleTimerRef.current);
+    if (!isHome || paymentVisible || isKeypadOpen || isBookingOpen || isAdActive || !eligibleAds.length) return;
+    const remaining = Math.max(0, IDLE_TIMEOUT_MS - (Date.now() - lastActivityRef.current));
+    idleTimerRef.current = setTimeout(() => {
+      setCurrentSlideType('attract');
+      setIsAdActive(true);
+    }, remaining);
+  }, [isHome, paymentVisible, isKeypadOpen, isBookingOpen, isAdActive, eligibleAds.length]);
+
+  const exitAdMode = useCallback((event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    event?.nativeEvent?.stopImmediatePropagation?.();
+    stopVideo();
+    finishPlay(true);
+    suppressClickUntilRef.current = Date.now() + 500;
+    lastActivityRef.current = Date.now();
+    setIsAdActive(false);
+  }, [finishPlay, stopVideo]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('reliv_ad_audio_focus', { detail: { owner: 'player', active: overlayActive } }));
+    const shouldResume = overlayActive && !wasListeningPausedRef.current;
     if (overlayActive) {
       stopSpeech();
       pauseListening();
-    } else {
-      resumeListening();
     }
-  }, [isHome, overlayActive, pauseListening, resumeListening, stopSpeech]);
+    return () => {
+      window.dispatchEvent(new CustomEvent('reliv_ad_audio_focus', { detail: { owner: 'player', active: false } }));
+      if (shouldResume) resumeListening();
+    };
+  }, [overlayActive, stopSpeech, pauseListening, resumeListening]);
 
-  // Window user activity listeners
   useEffect(() => {
-    const handleUserActivity = () => {
-      if (!isAdActive) {
-        resetIdleTimer();
+    const activity = () => {
+      lastActivityRef.current = Date.now();
+      if (!isAdActive) resetIdleTimer();
+    };
+    const swallowClick = event => {
+      if (Date.now() < suppressClickUntilRef.current) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
       }
     };
-
-    window.addEventListener('pointerdown', handleUserActivity, { passive: true });
-    window.addEventListener('keydown', handleUserActivity, { passive: true });
-
+    const booking = event => {
+      setIsBookingOpen(Boolean(event.detail));
+      lastActivityRef.current = Date.now();
+      if (event.detail) { stopVideo(); finishPlay(true); setIsAdActive(false); }
+    };
+    window.addEventListener('pointerdown', activity, { passive: true });
+    window.addEventListener('keydown', activity);
+    window.addEventListener('reliv_splash_overlay', booking);
+    document.addEventListener('click', swallowClick, true);
     resetIdleTimer();
-
     return () => {
-      window.removeEventListener('pointerdown', handleUserActivity);
-      window.removeEventListener('keydown', handleUserActivity);
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      window.removeEventListener('pointerdown', activity);
+      window.removeEventListener('keydown', activity);
+      window.removeEventListener('reliv_splash_overlay', booking);
+      document.removeEventListener('click', swallowClick, true);
+      clearTimeout(idleTimerRef.current);
     };
-  }, [isAdActive, resetIdleTimer]);
+  }, [isAdActive, resetIdleTimer, stopVideo, finishPlay]);
 
-  // Handle route changes
   useEffect(() => {
-    if (location.pathname !== '/') {
+    if (!isHome || paymentVisible || isBookingOpen) {
+      stopVideo();
+      finishPlay(true);
       setIsAdActive(false);
-      setIsKeypadOpen(false);
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      if (rotationTimerRef.current) clearTimeout(rotationTimerRef.current);
-    } else {
-      resetIdleTimer();
-    }
-  }, [location.pathname, resetIdleTimer]);
-
-  // Fair Rotation State Machine: Attract (5s) -> Ad A -> Attract (5s) -> Ad B -> ...
-  useEffect(() => {
-    if (!isAdActive || eligibleAds.length === 0) {
-      if (rotationTimerRef.current) clearTimeout(rotationTimerRef.current);
-      return;
-    }
-
-    if (currentSlideType === 'attract') {
-      rotationTimerRef.current = setTimeout(() => {
-        setCurrentSlideType('ad');
-      }, RELIV_ATTRACT_DURATION_MS);
-    } else if (currentSlideType === 'ad') {
-      const activeAd = eligibleAds[currentAdIndex % eligibleAds.length];
-      const duration = activeAd.mediaType === 'video' ? 15_000 : DEFAULT_IMAGE_DURATION_MS;
-
-      // Ensure ad video volume is kept at 30% kiosk volume
-      if (videoRef.current) {
-        videoRef.current.volume = 0.30;
+      clearTimeout(rotationTimerRef.current);
+      if (!isHome) {
+        setIsKeypadOpen(false);
+        setIsActivating(false);
+        lastActivityRef.current = Date.now();
       }
-
-      rotationTimerRef.current = setTimeout(() => {
-        setCurrentAdIndex(prev => (prev + 1) % eligibleAds.length);
-        setCurrentSlideType('attract');
-      }, duration);
     }
+  }, [isHome, paymentVisible, isBookingOpen, stopVideo, finishPlay]);
 
-    return () => {
-      if (rotationTimerRef.current) clearTimeout(rotationTimerRef.current);
-    };
-  }, [isAdActive, currentSlideType, currentAdIndex, eligibleAds]);
-
-  // Open activation keypad event listener
   useEffect(() => {
-    const handleOpenModal = () => {
-      setIsAdActive(false);
+    clearTimeout(rotationTimerRef.current);
+    if (!isHome || !isAdActive || !currentAd) return;
+    if (currentSlideType === 'attract') {
+      rotationTimerRef.current = setTimeout(() => setCurrentSlideType('ad'), RELIV_ATTRACT_DURATION_MS);
+    } else {
+      const seconds = Number(currentAd.durationSeconds);
+      const duration = currentAd.mediaType === 'video'
+        ? (Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 300) * 1000 : 30000)
+        : DEFAULT_IMAGE_DURATION_MS;
+      activePlayRef.current = { campaignId: currentAd.campaignId, startedAt: Date.now() };
+      rotationTimerRef.current = setTimeout(advanceToNextAd, duration);
+    }
+    return () => clearTimeout(rotationTimerRef.current);
+  }, [isHome, isAdActive, currentSlideType, currentAd, advanceToNextAd]);
+
+  useEffect(() => {
+    const open = () => {
+      if (!isHome) return;
+      stopVideo(); finishPlay(true); setIsAdActive(false);
+      setDismissedRequestId('');
       setIsKeypadOpen(true);
       setEnteredCode('');
       setActivationFeedback(null);
       setActivatedSuccessData(null);
     };
+    window.addEventListener('reliv_open_ad_keypad', open);
+    return () => window.removeEventListener('reliv_open_ad_keypad', open);
+  }, [isHome, finishPlay, stopVideo]);
 
-    window.addEventListener('reliv_open_ad_keypad', handleOpenModal);
-    return () => {
-      window.removeEventListener('reliv_open_ad_keypad', handleOpenModal);
-    };
-  }, []);
-
-  // Keypad Handlers
-  const handleKeypadPress = (val) => {
-    if (enteredCode.length < 4) {
-      const nextCode = enteredCode + val;
-      setEnteredCode(nextCode);
-
-      if (nextCode.length === 4) {
-        setTimeout(() => {
-          const result = verifyAndActivateCode(nextCode);
-          if (result.success) {
-            setActivatedSuccessData({
-              campaign: result.campaign,
-              isScheduled: result.isScheduled
-            });
-            setActivationFeedback(null);
-            setEligibleAds(getCurrentlyEligibleAds());
-
-            // Auto-dismiss after 4 seconds
-            setTimeout(() => {
-              setIsKeypadOpen(false);
-              setActivatedSuccessData(null);
-              setEnteredCode('');
-              setPendingPayment(null);
-            }, 4000);
-          } else {
-            setActivationFeedback({
-              type: 'error',
-              message: result.error
-            });
-            setTimeout(() => {
-              setEnteredCode('');
-            }, 1200);
-          }
-        }, 150);
+  const handleKeypadPress = digit => {
+    if (!activationRef.current) setEnteredCode(prev => prev.length < 4 ? prev + digit : prev);
+  };
+  const handleKeypadBackspace = () => {
+    if (!activationRef.current) { setEnteredCode(prev => prev.slice(0, -1)); setActivationFeedback(null); }
+  };
+  const handleKeypadClear = () => {
+    if (!activationRef.current) { setEnteredCode(''); setActivationFeedback(null); }
+  };
+  const handleActivate = async () => {
+    if (activationRef.current || !/^\d{4}$/.test(enteredCode)) return;
+    const lifecycle = lifecycleRef.current;
+    if (!pendingPayment || lifecycle?.signal.aborted) {
+      setActivationFeedback({ message: 'No ad payment is waiting. Please complete your booking first.' });
+      return;
+    }
+    activationRef.current = true;
+    setIsActivating(true);
+    setActivationFeedback(null);
+    try {
+      const result = await activateAdCampaign({
+        campaignId: pendingPayment.campaignId, requestId: pendingPayment.requestId, code: enteredCode,
+      }, { signal: lifecycle.signal });
+      if (lifecycle.signal.aborted) return;
+      if (!['ACTIVE', 'SCHEDULED'].includes(result.status || result.campaign?.status)) {
+        throw new Error('The kiosk has not confirmed activation. Retry here; do not pay again.');
+      }
+      setActivatedSuccessData({
+        isScheduled: result.status === 'SCHEDULED' || result.campaign?.status === 'SCHEDULED',
+        campaign: result.campaign || {},
+      });
+      setDismissedRequestId(pendingPayment.requestId);
+      setPendingPayment(null);
+    } catch (error) {
+      if (!lifecycle.signal.aborted) {
+        setActivationFeedback({ message: error.message || 'Activation unavailable. Retry; do not pay again.' });
+        setEnteredCode('');
+      }
+    } finally {
+      if (lifecycleRef.current === lifecycle && !lifecycle.signal.aborted) {
+        activationRef.current = false;
+        setIsActivating(false);
       }
     }
   };
-
-  const handleKeypadBackspace = () => {
-    setEnteredCode(prev => prev.slice(0, -1));
-    setActivationFeedback(null);
+  const clearPendingPayment = () => {
+    setDismissedRequestId(pendingPayment?.requestId || '');
+    setIsKeypadOpen(false);
+    lastActivityRef.current = Date.now();
   };
 
-  const handleKeypadClear = () => {
-    setEnteredCode('');
-    setActivationFeedback(null);
-  };
-
-  const currentAd = eligibleAds[currentAdIndex % eligibleAds.length];
+  const handleVideoReady = useCallback((event) => {
+    const video = event.currentTarget;
+    if (!isHome || !isAdActive || currentSlideType !== 'ad' || paymentVisible || isKeypadOpen || isBookingOpen) return;
+    video.volume = currentAd?.hasAudio === false ? 0 : 0.3;
+    video.muted = false;
+    video.play()?.catch(() => {
+      if (!video.isConnected) return;
+      video.muted = true;
+      video.play()?.catch(advanceToNextAd);
+    });
+  }, [isHome, isAdActive, currentSlideType, paymentVisible, isKeypadOpen, isBookingOpen, currentAd, advanceToNextAd]);
 
   return (
     <>
       {/* 1. PHYSICAL KIOSK PAYMENT SCREEN (VERY LARGE QR ON KIOSK DISPLAY) */}
-      {isHome && pendingPayment && (
+      {paymentVisible && (
         <div className="kiosk-payment-active-screen">
           <div className="kiosk-payment-container">
             <div className="kiosk-pay-left">
@@ -309,7 +361,7 @@ export default function KioskAdPlayer() {
                   className="link-secondary-action"
                   onClick={() => clearPendingPayment()}
                 >
-                  Cancel
+                  Back to health
                 </button>
               </div>
             </div>
@@ -317,55 +369,71 @@ export default function KioskAdPlayer() {
             {/* VERY LARGE PAYMENT QR ON KIOSK */}
             <div className="kiosk-pay-right">
               <div className="kiosk-large-qr-wrap">
-                <QRCodeSVG 
-                  value={`https://reliv7.vercel.app/pay?campaign=${pendingPayment.campaignId}&amt=${pendingPayment.priceRupees}&venue=${encodeURIComponent(pendingPayment.venueName || 'Gurukul')}&code=${pendingPayment.confirmationCode}#p=${btoa(JSON.stringify({
-                    campaignId: pendingPayment.campaignId,
-                    price: pendingPayment.priceRupees,
-                    venue: pendingPayment.venueId,
-                    confirmationCode: pendingPayment.confirmationCode,
-                    purpose: 'RELIV_AD_CAMPAIGN'
-                  }))}`}
-                  size={240}
-                />
+                {paymentQrValue ? (
+                  <QRCodeSVG
+                    value={paymentQrValue}
+                    size={300}
+                    level="M"
+                    marginSize={4}
+                    boostLevel={false}
+                    fgColor="#000000"
+                    bgColor="#FFFFFF"
+                    role="img"
+                    aria-label="Secure Reliv advertisement payment QR code"
+                    title="Scan with a phone camera or Google Lens"
+                    style={{ display: 'block', width: '100%', height: 'auto' }}
+                  />
+                ) : (
+                  <div className="kiosk-payment-qr-pending" role="status">
+                    {backendError || 'Secure payment QR is unavailable or expired. Please return to booking.'}
+                  </div>
+                )}
               </div>
               <span style={{ fontSize: '13px', color: '#64748b', marginTop: '12px', fontWeight: 600 }}>
-                Scan with any Camera or UPI app
+                Scan with your phone camera or Google Lens
               </span>
-              <a 
-                href={`/pay?campaign=${pendingPayment.campaignId}&amt=${pendingPayment.priceRupees}&venue=${encodeURIComponent(pendingPayment.venueName || 'Gurukul')}&code=${pendingPayment.confirmationCode}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ fontSize: '11px', color: '#ea580c', marginTop: '6px', textDecoration: 'underline' }}
-              >
-                Open Payment Page in New Tab (Demo)
-              </a>
             </div>
           </div>
         </div>
       )}
 
       {/* 2. FULL-SCREEN AD PLAYER OVERLAY */}
-      {isHome && isAdActive && !pendingPayment && (
+      {isHome && isAdActive && !paymentVisible && !isKeypadOpen && !isBookingOpen && (
         <div 
           className="kiosk-ad-player-overlay"
-          onPointerDown={exitAdMode}
+          onPointerDownCapture={exitAdMode}
+          onKeyDown={exitAdMode}
+          role="button"
+          tabIndex={0}
+          aria-label="Advertisement. Touch to start your health check."
           title="Touch anywhere to resume Reliv"
         >
           {currentSlideType === 'attract' || !currentAd ? (
             /* Reliv Attract Screen (5s) */
             <div className="reliv-attract-screen">
-              <div className="attract-logo-wrap">
-                <RelivHeartSvg className="ad-reliv-heart" />
-                <span style={{ fontSize: '32px', fontWeight: 800 }}>RELIV HEALTH</span>
+              <div className="attract-ambient attract-ambient-one" />
+              <div className="attract-ambient attract-ambient-two" />
+              <div className="attract-content">
+                <div className="attract-logo-wrap">
+                  <span className="attract-logo-icon"><RelivHeartSvg className="ad-reliv-heart" /></span>
+                  <span>RELIV HEALTH</span>
+                </div>
+                <div className="attract-kicker">A smarter health check, right here</div>
+                <h1 className="attract-title">Know your body.<br />In under 3 minutes.</h1>
+                <p className="attract-subtitle">
+                  Blood pressure, oxygen, BMI, temperature and clear wellness guidance — in one simple checkup.
+                </p>
+                <div className="attract-metrics" aria-hidden="true">
+                  <span>Blood Pressure</span><i />
+                  <span>SpO₂ & Pulse</span><i />
+                  <span>Body Composition</span>
+                </div>
+                <div className="attract-touch-prompt">
+                  <FingerTouchSvg />
+                  <span>Touch anywhere to begin</span>
+                </div>
               </div>
-              <h1 className="attract-title">Your Health, Measured in Minutes</h1>
-              <p className="attract-subtitle">
-                Instant contactless vitals, BMI composition, vision screening & wellness guidance.
-              </p>
-              <div className="attract-touch-prompt">
-                <FingerTouchSvg />
-                <span>Touch Screen to Begin Checkup</span>
-              </div>
+              <div className="attract-progress" aria-hidden="true"><span /></div>
             </div>
           ) : (
             /* Active Advertisement Screen */
@@ -376,19 +444,12 @@ export default function KioskAdPlayer() {
               </div>
 
               {/* Blurred background wings if not true 16:9 */}
-              {!currentAd.isTrue16x9 && (
+              {!currentAd.isTrue16x9 && !isBuiltInFallback && (
                 currentAd.mediaType === 'video' ? (
-                  <video 
-                    src={currentAd.mediaUrl} 
-                    className="ad-blur-wings" 
-                    autoPlay 
-                    loop 
-                    muted 
-                    playsInline 
-                  />
+                  <div className="ad-video-wings" />
                 ) : (
                   <img 
-                    src={currentAd.mediaUrl || '/gurukul-ad.png'} 
+                    src={currentAd.mediaUrl}
                     alt="wings" 
                     className="ad-blur-wings" 
                   />
@@ -396,19 +457,33 @@ export default function KioskAdPlayer() {
               )}
 
               {/* Sharp Foreground Creative */}
-              {currentAd.mediaType === 'video' ? (
+              {isBuiltInFallback ? (
+                <div className="reliv-house-ad">
+                  <div className="house-ad-mark"><RelivHeartSvg /></div>
+                  <div className="house-ad-kicker">RELIV HEALTH CHECKUP</div>
+                  <h2>Small check.<br />Powerful habit.</h2>
+                  <p>Understand your everyday health in minutes.</p>
+                  <div className="house-ad-tags"><span>Fast</span><span>Private</span><span>Paperless</span></div>
+                </div>
+              ) : currentAd.mediaType === 'video' ? (
                 <video 
+                  key={currentAd.campaignId || currentAd.mediaUrl}
                   ref={videoRef}
                   src={currentAd.mediaUrl} 
                   className={`ad-foreground-media ${currentAd.isTrue16x9 ? 'edge-to-edge' : ''}`}
-                  autoPlay 
+                  autoPlay
+                  muted
                   playsInline 
+                  onCanPlay={handleVideoReady}
+                  onEnded={advanceToNextAd}
+                  onError={advanceToNextAd}
                 />
               ) : (
                 <img 
-                  src={currentAd.mediaUrl || '/gurukul-ad.png'} 
+                  src={currentAd.mediaUrl}
                   alt={currentAd.brandName || "Reliv Ad"} 
                   className={`ad-foreground-media ${currentAd.isTrue16x9 ? 'edge-to-edge' : ''}`}
+                  onError={advanceToNextAd}
                 />
               )}
 
@@ -490,6 +565,9 @@ export default function KioskAdPlayer() {
                 </button>
               </div>
 
+              <button type="button" className="btn-primary-ads" disabled={isActivating || enteredCode.length !== 4 || !pendingPayment} onClick={handleActivate}>
+                {isActivating ? 'Verifying…' : 'Verify activation code'}
+              </button>
               <button
                 type="button"
                 className="link-secondary-action"
@@ -511,8 +589,8 @@ export default function KioskAdPlayer() {
               </p>
 
               <div className="activation-campaign-info-box">
-                <div><strong>Venue:</strong> {activatedSuccessData.campaign.venueName}</div>
-                <div><strong>Duration:</strong> {activatedSuccessData.campaign.startDate} to {activatedSuccessData.campaign.endDate}</div>
+                <div><strong>Venue:</strong> {activatedSuccessData.campaign.venueName || 'Reliv kiosk'}</div>
+                <div><strong>Duration:</strong> {activatedSuccessData.campaign.startDate || 'As booked'} {activatedSuccessData.campaign.endDate ? 'to ' + activatedSuccessData.campaign.endDate : ''}</div>
                 <div><strong>Status:</strong> {activatedSuccessData.isScheduled ? 'Scheduled' : 'Added to rotation'}</div>
               </div>
 

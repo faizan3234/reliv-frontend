@@ -723,3 +723,24 @@
   color: #1d1d1f;
   font-variant-numeric: tabular-nums;
 }
+/* Touch-first production portal */
+.ads-step-item { border: 0; background: transparent; padding: 6px 0; }
+.btn-primary-ads:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.upload-drop-zone { width: 100%; display: flex; flex-direction: column; align-items: center; color: inherit; }
+.hour-select { min-height: 44px; font-size: 16px; }
+.ads-card :is(button, input, select):focus-visible { outline: 3px solid rgba(234,88,12,.3); outline-offset: 2px; }
+.payment-modal-overlay { overflow-y: auto; align-items: flex-start; overscroll-behavior-y: contain; touch-action: pan-y; }
+.payment-modal-card { margin-block: auto; flex-shrink: 0; max-width: 100%; }
+@media (max-width: 600px) {
+  .reliv-ads-portal { padding: 22px 12px 64px; }
+  .ads-container { max-width: 100%; }
+  .ads-headline { font-size: 28px; }
+  .ads-card { padding: 24px 18px; border-radius: 20px; }
+  .ads-steps-bar { gap: 10px; margin-bottom: 24px; }
+  .ads-step-line { width: 24px; }
+  .ads-step-item { font-size: 12px; gap: 5px; }
+  .venue-card-btn { padding: 15px 14px; gap: 12px; flex-wrap: wrap; }
+  .hours-picker-box { align-items: stretch; gap: 12px; }
+  .review-row-line { gap: 12px; flex-wrap: wrap; }
+  .kiosk-system-pill-bottom { max-width: calc(100% - 24px); padding: 7px 14px; }
+}

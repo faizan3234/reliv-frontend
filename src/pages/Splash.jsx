@@ -73,6 +73,14 @@ const Splash = () => {
   }, []);
 
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('reliv_splash_overlay', { detail: showAdModal || showTerms || showLeaderboard }));
+    window.dispatchEvent(new CustomEvent('reliv_ad_audio_focus', { detail: { owner: 'booking', active: showAdModal } }));
+    return () => {
+      window.dispatchEvent(new CustomEvent('reliv_splash_overlay', { detail: false }));
+      window.dispatchEvent(new CustomEvent('reliv_ad_audio_focus', { detail: { owner: 'booking', active: false } }));
+    };
+  }, [showAdModal, showTerms, showLeaderboard]);
   const lbCycleRef = useRef(null);
   const lbHideTimer = useRef(null);
 
@@ -429,21 +437,25 @@ const Splash = () => {
             <div className="activation-keypad-card" onClick={(e) => e.stopPropagation()}>
               <h2 className="activation-header-title">Advertise on Reliv</h2>
               <p className="activation-header-sub">
-                Scan with any camera or QR scanner to book instantly on your phone.
+                Connect your phone to <strong>RELIV-KIOSK</strong> Wi-Fi first, then scan to book your ad.
               </p>
 
               {/* Direct Web URL QR: Opens immediately on any phone camera without app */}
               <div style={{ display: 'inline-block', padding: '16px', background: '#ffffff', borderRadius: '20px', border: '2px solid #ea580c', margin: '0 auto 14px auto', boxShadow: '0 8px 24px rgba(234, 88, 12, 0.12)' }}>
                 <QRCodeSVG 
-                  value={`${window.location.origin}/advertise`} 
-                  size={180} 
+                  value={import.meta.env.VITE_KIOSK_PORTAL_URL || 'http://192.168.50.1/advertise'}
+                  size={220}
+                  marginSize={4}
+                  level="M"
+                  boostLevel={false}
+                  title="Local Reliv booking portal. Connect to kiosk Wi-Fi first."
                 />
               </div>
 
               <div style={{ background: '#f5f5f7', borderRadius: '12px', padding: '10px 14px', marginBottom: '18px', textAlign: 'center', fontSize: '13px', color: '#1d1d1f' }}>
                 <div style={{ fontWeight: 600 }}>Kiosk Local Wi-Fi: <strong>RELIV-KIOSK</strong></div>
                 <div style={{ fontSize: '12px', color: '#6e6e73', marginTop: '2px' }}>
-                  No password required • <strong>http://192.168.50.1/advertise</strong>
+                  Use the Wi-Fi password displayed at the kiosk, if requested.
                 </div>
               </div>
 
