@@ -20,6 +20,7 @@ const dom = new JSDOM('<!doctype html><html><body><pre id="results">Running...</
   pretendToBeVisual: true, virtualConsole: console,
 });
 const channels = [];
+dom.window.TextEncoder = TextEncoder;
 dom.window.scrollTo = () => {};
 dom.window.HTMLMediaElement.prototype.play = async () => {};
 dom.window.HTMLMediaElement.prototype.pause = () => {};

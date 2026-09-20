@@ -6,7 +6,10 @@
  * object in the browser) lets URL-capable camera apps open the gateway.
  * Payment-only scanners may reject web URLs; their support is app-dependent.
  */
-export function normalizePaymentQrValue(value) {
+export const PAYMENT_QR_MEDIUM_BYTES = 2331;
+export const PAYMENT_QR_MAX_BYTES = 2953;
+
+export function normalizePaymentQrValue(value, { maxBytes = PAYMENT_QR_MEDIUM_BYTES } = {}) {
   if (typeof value !== "string") return "";
 
   const raw = value.trim();
@@ -32,11 +35,27 @@ export function normalizePaymentQrValue(value) {
           (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127)) return "";
     }
     const normalized = url.toString();
-    // QR level M holds at most 2331 byte-mode bytes. Leave headroom and fail
-    // visibly instead of throwing during React render for oversized packages.
-    if (normalized.length > 2200) return "";
+    // Keep the limit tied to the QR error-correction level. Payment V2 with
+    // the backend's standard 4096-bit key legitimately exceeds 2200 bytes.
+    if (new TextEncoder().encode(normalized).length > maxBytes) return "";
     return normalized;
   } catch {
     return "";
   }
+}
+
+export function getPaymentQrConfig(value) {
+  const url = normalizePaymentQrValue(value, { maxBytes: PAYMENT_QR_MAX_BYTES });
+  if (!url) return null;
+  return {
+    value: url,
+    level: new TextEncoder().encode(url).length <= PAYMENT_QR_MEDIUM_BYTES ? 'M' : 'L',
+  };
+}
+
+export function paymentQrError(value) {
+  const url = normalizePaymentQrValue(value, { maxBytes: 65536 });
+  return url && new TextEncoder().encode(url).length > PAYMENT_QR_MAX_BYTES
+    ? 'This payment QR is too large. Ask the kiosk operator to update the payment service, or return to the cart and select fewer items. If you already paid, do not pay again.'
+    : 'The kiosk returned an invalid payment address. Ask the kiosk operator to check the payment service configuration.';
 }
