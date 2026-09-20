@@ -15,6 +15,7 @@ import Report5 from '../src/pages/Report5';
 import MedicineDispensing from '../src/pages/MedicineDispensing';
 import SpeechControl from '../src/components/SpeechControl';
 import PaymentGate from '../src/pages/PaymentGate';
+import paymentQrFixtures from './fixtures/payment-v2-qr.json';
 import App from '../src/App';
 import { emailHealthReport, emailPaymentReceipt, PAYMENT_API_BASE } from '../customer-web/src/services/bridgeApi';
 import '../src/i18n';
@@ -292,6 +293,47 @@ async function checkPaymentRecovery() {
   assert(controls.path === '/order-success' && createCalls === 0, 'already-paid medicine refresh restores the order without requesting payment again');
   apiOverride = null;
 }
+async function checkPaymentQrCapacity() {
+  for (const [name, fixture, value] of [
+    ['one-item legacy', paymentQrFixtures.medicine1, paymentQrFixtures.medicine1.legacyUrl],
+    ['two-item legacy', paymentQrFixtures.medicine2, paymentQrFixtures.medicine2.legacyUrl],
+    ['three-item compressed', paymentQrFixtures.medicine3, paymentQrFixtures.medicine3.paymentUrl],
+  ]) {
+    await mount('/choose-language');
+    let creates = 0;
+    apiOverride = async url => {
+      if (url.endsWith('/payment-v2/status')) return responseJSON({ ok: true, status: 'NONE' });
+      if (url.endsWith('/payment-v2/request')) {
+        creates++;
+        return responseJSON({ ok: true, requestId: 'REQ-CAPACITY', amount: fixture.amount, expiresAt: Date.now() + 300000, paymentUrl: value });
+      }
+    };
+    await act(async () => {
+      controls.health.update({ sessionId: 'KSK-BROWSER' });
+      controls.navigate('/payment', { state: { cart: [{ kit_id: 'KIT-QR-1', cartQuantity: 1 }] } });
+    });
+    await flush(80);
+    assert(document.querySelector('svg[aria-label="Secure Reliv payment QR code"]'), name + ' backend QR renders instead of Payment Service Unavailable');
+    assert(creates === 1, name + ' request is created once');
+  }
+  await mount('/choose-language');
+  let creates = 0;
+  let paymentUrl = paymentQrFixtures.medicine1.legacyUrl;
+  apiOverride = async url => {
+    if (url.endsWith('/payment-v2/status')) return responseJSON({ ok: true, status: 'ACTIVE', requestId: 'REQ-CAPACITY', amount: 5912, expiresAt: Date.now() + 300000, paymentUrl });
+    if (url.endsWith('/payment-v2/request')) { creates++; return responseJSON({ ok: false }, 500); }
+  };
+  await act(async () => { controls.health.update({ sessionId: 'KSK-BROWSER' }); controls.navigate('/payment'); });
+  await flush(80);
+  assert(document.querySelector('svg[aria-label="Secure Reliv payment QR code"]') && creates === 0, 'refresh restores a large existing QR without replacing the payment');
+  await act(async () => controls.navigate('/choose-language'));
+  paymentUrl = paymentQrFixtures.medicine3.legacyUrl;
+  await act(async () => controls.navigate('/payment')); await flush(80);
+  assert(document.querySelector('#app').textContent.includes('This payment QR is too large'), 'unencodable legacy QR has an actionable error without crashing');
+  await click('Retry');
+  assert(creates === 0, 'retry of an oversized active request cannot create a replacement payment');
+  apiOverride = null;
+}
 // Real production routes with synthetic network and hardware responses.
 // eslint-disable-next-line react-refresh/only-export-components
 function ScreenProbe() {
@@ -474,6 +516,7 @@ async function run() {
   await flush();
   assert(!document.querySelector('#app').textContent.includes('Medicine Dispensing Disabled'), 'medicine screen can be enabled again without crashing');
   await checkPaymentRecovery();
+  await checkPaymentQrCapacity();
   await checkGuidanceTiming();
   await checkPhoneDelivery();
   await checkAllRoutes();

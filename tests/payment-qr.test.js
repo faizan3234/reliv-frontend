@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizePaymentQrValue } from "../src/utils/paymentQr.js";
+import { getPaymentQrConfig, normalizePaymentQrValue, paymentQrError, PAYMENT_QR_MEDIUM_BYTES, PAYMENT_QR_MAX_BYTES } from "../src/utils/paymentQr.js";
+import { readFileSync } from 'node:fs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
@@ -19,11 +20,37 @@ test('payment QR rejects credentials, private gateways, and unsupported schemes'
   }
 });
 
-test('oversized QR packages fail validation rather than crashing render', () => {
-  assert.equal(normalizePaymentQrValue('https://example.com/pay#p=' + 'x'.repeat(2300)), '');
-  const value = normalizePaymentQrValue('https://example.com/pay#p=' + 'x'.repeat(2100));
-  const svg = renderToStaticMarkup(React.createElement(QRCodeSVG, { value, level: 'M', marginSize: 4, boostLevel: false }));
-  assert.match(svg, /<svg/);
+test('exact QR capacities choose the matching correction level without a render exception', () => {
+  const prefix = 'https://example.com/pay#p=';
+  for (const [size, level] of [[2201, 'M'], [PAYMENT_QR_MEDIUM_BYTES, 'M'], [PAYMENT_QR_MEDIUM_BYTES + 1, 'L'], [PAYMENT_QR_MAX_BYTES, 'L']]) {
+    const value = prefix + 'x'.repeat(size - prefix.length);
+    const config = getPaymentQrConfig(value);
+    assert.equal(config.level, level);
+    assert.equal(config.value, value);
+    const svg = renderToStaticMarkup(React.createElement(QRCodeSVG, { ...config, marginSize: 4, boostLevel: false }));
+    assert.match(svg, /<svg/);
+  }
+  const oversized = prefix + 'x'.repeat(PAYMENT_QR_MAX_BYTES + 1 - prefix.length);
+  assert.equal(getPaymentQrConfig(oversized), null);
+  assert.match(paymentQrError(oversized), /too large/);
+  assert.match(paymentQrError('http://localhost/pay'), /invalid payment address/);
+  assert.equal(normalizePaymentQrValue(prefix + 'x'.repeat(PAYMENT_QR_MEDIUM_BYTES)), '');
+});
+
+test('actual backend requests using standard 4096-bit keys render without changing encrypted payment data', () => {
+  const fixtures = JSON.parse(readFileSync(new URL('./fixtures/payment-v2-qr.json', import.meta.url)));
+  for (const [key, fixture] of Object.entries(fixtures)) {
+    for (const value of [fixture.legacyUrl, fixture.paymentUrl]) {
+      const config = getPaymentQrConfig(value);
+      if (value.length > PAYMENT_QR_MAX_BYTES) {
+        assert.equal(config, null);
+        continue;
+      }
+      assert.equal(config.value, value, key);
+      assert.match(renderToStaticMarkup(React.createElement(QRCodeSVG, { ...config, marginSize: 4, boostLevel: false })), /<svg/);
+    }
+    assert.equal(getPaymentQrConfig(fixture.paymentUrl).level, 'M');
+  }
 });
 
 test("payment QR rejects LAN, malformed, and whitespace-contaminated values", () => {

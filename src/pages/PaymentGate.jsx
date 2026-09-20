@@ -10,7 +10,7 @@ import { useVoicePage } from "../hooks/useVoicePage";
 import { dict } from "../config/PaymentDict";
 import { API_BASE } from "../config/api";
 import { requestJSON } from "../utils/request";
-import { normalizePaymentQrValue } from "../utils/paymentQr";
+import { getPaymentQrConfig, paymentQrError } from "../utils/paymentQr";
 import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode, Sparkles } from "lucide-react";
 
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // Allow the full phone-payment window.
@@ -63,6 +63,7 @@ export default function PaymentGate() {
   // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR' | 'SESSION_INVALID'
   const [uiState, setUiState] = useState("PREPARING");
   const [paymentUrl, setPaymentUrl] = useState("");
+  const paymentQr = React.useMemo(() => getPaymentQrConfig(paymentUrl), [paymentUrl]);
   const [authoritativeAmount, setAuthoritativeAmount] = useState(null);
   const [requestId, setRequestId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -257,10 +258,11 @@ export default function PaymentGate() {
       });
 
       if (lifecycle.signal.aborted) return;
-      const safePaymentUrl = normalizePaymentQrValue(reqData.paymentUrl);
-      if (reqData.ok !== true || !safePaymentUrl || typeof reqData.requestId !== 'string' || !reqData.requestId.trim()) {
+      const qr = getPaymentQrConfig(reqData.paymentUrl);
+      if (reqData.ok !== true || typeof reqData.requestId !== 'string' || !reqData.requestId.trim()) {
         throw new Error(reqData.message || "Invalid payment request response from kiosk backend");
       }
+      if (!qr) throw new Error(paymentQrError(reqData.paymentUrl));
 
       // Backend must return a valid authoritative amount in paise
       const rawPaise = Number(reqData.amount);
@@ -271,7 +273,7 @@ export default function PaymentGate() {
       setAuthoritativeAmount(displayRupees);
 
       setRequestId(reqData.requestId);
-      setPaymentUrl(safePaymentUrl);
+      setPaymentUrl(qr.value);
 
       const expiresAt = Number(reqData.expiresAt);
       if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
@@ -341,9 +343,12 @@ export default function PaymentGate() {
         statusData &&
         statusData.status === "ACTIVE" &&
         typeof statusData.requestId === 'string' && statusData.requestId.trim() &&
-        normalizePaymentQrValue(statusData.paymentUrl) &&
         statusData.expiresAt > now
       ) {
+        // An existing request must never be recreated just because its QR
+        // cannot render. Preserve payment identity and show a specific error.
+        const qr = getPaymentQrConfig(statusData.paymentUrl);
+        if (!qr) throw new Error(paymentQrError(statusData.paymentUrl));
         // Backend must return a valid authoritative amount in paise
         const rawPaise = Number(statusData.amount);
         if (!Number.isInteger(rawPaise) || rawPaise <= 0) {
@@ -353,7 +358,7 @@ export default function PaymentGate() {
         setAuthoritativeAmount(displayRupees);
 
         setRequestId(statusData.requestId);
-        setPaymentUrl(normalizePaymentQrValue(statusData.paymentUrl));
+        setPaymentUrl(qr.value);
 
         const remainingSeconds = Math.max(10, Math.floor((statusData.expiresAt - now) / 1000));
         deadlineRef.current = Number(statusData.expiresAt);
@@ -948,7 +953,7 @@ export default function PaymentGate() {
             <div className="flex items-center justify-between w-full max-w-[440px] px-1">
               <div>
                 <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Scan to Pay</h1>
-                <p className="text-xs text-slate-500">Scan with Google Lens / Camera / Any UPI App</p>
+                <p className="text-xs text-slate-500">Scan with your phone camera or Google Lens</p>
               </div>
               {authoritativeAmount !== null && (
                 <div className="inline-flex items-center px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-orange-500 text-white font-extrabold text-lg sm:text-xl shadow-md shadow-orange-500/20">
@@ -959,12 +964,12 @@ export default function PaymentGate() {
 
             {/* Universal high-contrast QR: SVG stays sharp at every kiosk scale. */}
             <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-orange-200 shadow-xl flex flex-col items-center w-full max-w-[460px]">
-              {paymentUrl ? (
+              {paymentQr ? (
                 <div className="bg-white p-3 rounded-2xl flex items-center justify-center shadow-inner border border-slate-100 w-full">
                   <QRCodeSVG
-                    value={paymentUrl}
+                    value={paymentQr.value}
                     size={360}
-                    level="M"
+                    level={paymentQr.level}
                     marginSize={4}
                     boostLevel={false}
                     fgColor="#000000"
@@ -979,7 +984,7 @@ export default function PaymentGate() {
                     }}
                     role="img"
                     aria-label="Secure Reliv payment QR code"
-                    title="Scan with any phone camera or payment scanner"
+                    title="Open secure payment with your phone camera or Google Lens"
                   />
                 </div>
               ) : (
@@ -990,14 +995,14 @@ export default function PaymentGate() {
 
               {/* Subtitle & Countdown Badge */}
               <div className="mt-3 flex items-center justify-between w-full px-2 text-xs">
-                <span className="font-bold text-slate-700 text-sm">Scan with Any Scanner / Camera / GPay</span>
+                <span className="font-bold text-slate-700 text-sm">Scan with Camera / Google Lens</span>
                 <div className="flex items-center gap-1.5 font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200 shadow-sm">
                   <Clock size={13} className="text-orange-500 animate-pulse" />
                   <span>{formatTime(timeLeft)}</span>
                 </div>
               </div>
               <p className="mt-1.5 text-[11px] text-slate-500 text-center font-medium">
-                Works with Google Lens, iPhone/Android Camera, Google Pay, PhonePe & Paytm
+                Open the payment page, then choose UPI or card.
               </p>
             </div>
 
