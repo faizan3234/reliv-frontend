@@ -1,28 +1,30 @@
-// src/pages/Advertise.jsx
-import React, { useState, useMemo, useRef } from "react";
-import { 
-  calculatePricing, 
-  VENUES, 
-  DURATION_TIERS, 
-  savePendingCampaign 
-} from "../utils/adCryptoLocal";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  absoluteAdMediaUrl,
+  confirmAdBooking,
+  createAdDraft,
+  finalizeAd,
+  getAdConfig,
+  getAdQuote,
+  uploadAdFile
+} from "../services/adApi";
 import "./Advertise.css";
+import { readAdHandoff, safeAdPaymentUrl, saveAdHandoff } from '../utils/adHandoff';
 
-// Clean SVG Icons
-const RelivHeartSvg = () => (
-  <svg className="ads-reliv-svg" viewBox="0 0 24 24" fill="currentColor">
+const RelivHeartSvg = ({ className = "ads-reliv-svg" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
   </svg>
 );
 
 const CheckSvg = ({ className = "badge-check-svg" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="20 6 9 17 4 12"/>
   </svg>
 );
 
 const UploadSvg = () => (
-  <svg className="upload-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+  <svg className="upload-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
     <polyline points="17 8 12 3 7 8"/>
     <line x1="12" y1="3" x2="12" y2="15"/>
@@ -30,610 +32,507 @@ const UploadSvg = () => (
 );
 
 const FingerTouchSvg = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
-    <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
-    <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M18 11V6a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2"/>
+    <path d="M14 10V4a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v2"/>
+    <path d="M10 10.5V6a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v8"/>
     <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
   </svg>
 );
 
-export default function Advertise() {
-  const [currentStep, setCurrentStep] = useState(1); // 1: Schedule, 2: Creative, 3: Review & Pay
+const StarSvg = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="m12 2.4 2.83 5.73 6.32.92-4.57 4.45 1.08 6.29L12 16.82l-5.66 2.97 1.08-6.29-4.57-4.45 6.32-.92L12 2.4Z"/>
+  </svg>
+);
 
-  // Step 1: Schedule State
-  const [selectedVenue, setSelectedVenue] = useState('gurukul');
+const SpeakerSvg = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+    <path d="M19 5a10 10 0 0 1 0 14"/>
+  </svg>
+);
+
+const formatISTDate = (offsetDays = 0) => {
+  const base = new Date(Date.now() + offsetDays * 86400000);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(base);
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+};
+
+const toMinutes = (hour) => Number(hour) * 60;
+
+export default function Advertise() {
+  const [step, setStep] = useState(1);
+  const [config, setConfig] = useState(null);
+  const [configError, setConfigError] = useState("");
+  const [selectedVenue, setSelectedVenue] = useState("gurukul");
   const [selectedDays, setSelectedDays] = useState(3);
+  const [startDate, setStartDate] = useState(formatISTDate(0));
   const [isAllDay, setIsAllDay] = useState(true);
   const [startHour, setStartHour] = useState(10);
   const [endHour, setEndHour] = useState(18);
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState("");
 
-  // Step 2: Creative State
+  const [campaignId, setCampaignId] = useState("");
   const [mediaFile, setMediaFile] = useState(null);
-  const [mediaUrl, setMediaUrl] = useState(null);
-  const [mediaType, setMediaType] = useState('image'); // 'image' | 'video'
-  const [aspectRatioCategory, setAspectRatioCategory] = useState('landscape'); // 'landscape' | 'portrait' | 'square'
-  const [isTrue16x9, setIsTrue16x9] = useState(false);
-  const [videoDuration, setVideoDuration] = useState(12);
-  const [hasAudio, setHasAudio] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isReady, setIsReady] = useState(false);
-  const [showVideoLengthNotice, setShowVideoLengthNotice] = useState(false);
-  const fileInputRef = useRef(null);
-
-  // Step 3: Interactive Preview State
+  const [media, setMedia] = useState(null);
+  const [uploadState, setUploadState] = useState("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState("");
   const [isSandboxTouching, setIsSandboxTouching] = useState(false);
   const [showSafeArea, setShowSafeArea] = useState(false);
-  const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+  const [handoffOpen, setHandoffOpen] = useState(() => Boolean(readAdHandoff()));
+  const [paymentUrl, setPaymentUrl] = useState(() => readAdHandoff()?.paymentUrl || '');
+  const [confirming, setConfirming] = useState(false);
+  const fileInputRef = useRef(null);
+  const uploadControllerRef = useRef(null);
+  const confirmingRef = useRef(false);
+  const previewTimerRef = useRef(null);
+  const isBusy = confirming || ['creating', 'uploading', 'processing'].includes(uploadState);
 
-  // Authoritative Pricing
-  const pricing = useMemo(() => {
-    return calculatePricing({
-      venueSelection: selectedVenue,
-      durationDays: selectedDays,
-      isAllDay,
-      startHour,
-      endHour
-    });
-  }, [selectedVenue, selectedDays, isAllDay, startHour, endHour]);
+  useEffect(() => () => {
+    uploadControllerRef.current?.abort();
+    clearTimeout(previewTimerRef.current);
+  }, []);
 
-  // Handle Media File Upload
-  const handleFileChange = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
+  useEffect(() => {
+    const controller = new AbortController();
+    getAdConfig({ signal: controller.signal })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        if (!Array.isArray(data.venues) || !data.venues.length) throw new Error('The kiosk advertising configuration is unavailable. Connect to RELIV-KIOSK Wi-Fi and retry.');
+        setConfig(data);
+        const current = data.currentVenueId || "gurukul";
+        setSelectedVenue(current);
+      })
+      .catch((err) => !controller.signal.aborted && setConfigError(err.message));
+    return () => controller.abort();
+  }, []);
 
-    setIsUploading(true);
-    setIsReady(false);
-    setShowVideoLengthNotice(false);
+  const venueIds = useMemo(() => {
+    if (selectedVenue === "all") return (config?.venues || []).map((v) => v.id);
+    return [selectedVenue];
+  }, [selectedVenue, config]);
 
-    const isVid = file.type.startsWith('video');
-    setMediaType(isVid ? 'video' : 'image');
-    setMediaFile(file);
+  const hasRemoteVenue = useMemo(
+    () => venueIds.some((id) => id !== config?.currentVenueId),
+    [venueIds, config]
+  );
 
-    const objectUrl = URL.createObjectURL(file);
-    setMediaUrl(objectUrl);
+  useEffect(() => {
+    if (!config) return;
+    const min = formatISTDate(hasRemoteVenue ? 1 : 0);
+    if (startDate < min) setStartDate(min);
+  }, [hasRemoteVenue, config, startDate]);
 
-    if (isVid) {
-      const tempVideo = document.createElement('video');
-      tempVideo.preload = 'metadata';
-      tempVideo.src = objectUrl;
-      tempVideo.onloadedmetadata = () => {
-        const width = tempVideo.videoWidth;
-        const height = tempVideo.videoHeight;
-        const dur = Math.round(tempVideo.duration) || 12;
-        setVideoDuration(dur);
-        setHasAudio(Boolean(tempVideo.webkitAudioDecodedByteCount !== 0 || tempVideo.mozHasAudio || true));
+  useEffect(() => {
+    if (!config || venueIds.length === 0) return;
+    const controller = new AbortController();
+    setQuote(null);
+    setQuoteError("");
+    getAdQuote({ targetVenueIds: venueIds, durationDays: selectedDays }, { signal: controller.signal })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        if (!Number.isFinite(data.quote?.finalRupees) || data.quote.finalRupees <= 0) throw new Error('The kiosk could not confirm the price.');
+        setQuote(data.quote);
+      })
+      .catch((err) => !controller.signal.aborted && setQuoteError(err.message));
+    return () => controller.abort();
+  }, [config, venueIds, selectedDays]);
 
-        const ratio = width / height;
-        // Strictly true 16:9 check (1.74 <= ratio <= 1.81)
-        if (ratio >= 1.74 && ratio <= 1.81) {
-          setIsTrue16x9(true);
-          setAspectRatioCategory('landscape');
-        } else if (ratio > 1.0) {
-          setIsTrue16x9(false);
-          setAspectRatioCategory('landscape');
-        } else if (ratio < 0.85) {
-          setIsTrue16x9(false);
-          setAspectRatioCategory('portrait');
-        } else {
-          setIsTrue16x9(false);
-          setAspectRatioCategory('square');
-        }
+  useEffect(() => {
+    uploadControllerRef.current?.abort();
+    setCampaignId("");
+    setMediaFile(null);
+    setMedia(null);
+    setUploadState("idle");
+    setUploadProgress(0);
+  // Intentionally invalidate a prepared draft whenever schedule changes.
+  }, [selectedVenue, selectedDays, startDate, isAllDay, startHour, endHour]);
 
-        if (dur > 15) {
-          setShowVideoLengthNotice(true);
-        }
+  const tiers = config?.pricing || [
+    { days:1, rupees:50, perDay:50 },
+    { days:3, rupees:117, perDay:39, tag:"Most Popular" },
+    { days:7, rupees:245, perDay:35 },
+    { days:15, rupees:450, perDay:30 },
+    { days:30, rupees:750, perDay:25 }
+  ];
 
-        setTimeout(() => {
-          setIsUploading(false);
-          setIsReady(true);
-        }, 800);
-      };
-    } else {
-      const tempImg = new Image();
-      tempImg.src = objectUrl;
-      tempImg.onload = () => {
-        const width = tempImg.naturalWidth;
-        const height = tempImg.naturalHeight;
-        const ratio = width / height;
+  const minStartDate = formatISTDate(hasRemoteVenue ? 1 : 0);
 
-        // Strictly true 16:9 check (1.74 <= ratio <= 1.81)
-        if (ratio >= 1.74 && ratio <= 1.81) {
-          setIsTrue16x9(true);
-          setAspectRatioCategory('landscape');
-        } else if (ratio > 1.0) {
-          setIsTrue16x9(false);
-          setAspectRatioCategory('landscape');
-        } else if (ratio < 0.85) {
-          setIsTrue16x9(false);
-          setAspectRatioCategory('portrait');
-        } else {
-          setIsTrue16x9(false);
-          setAspectRatioCategory('square');
-        }
-
-        setTimeout(() => {
-          setIsUploading(false);
-          setIsReady(true);
-        }, 600);
-      };
+  const handleVenue = (id) => {
+    setSelectedVenue(id);
+    if (id === "all" || id !== config?.currentVenueId) {
+      setStartDate((prev) => prev < formatISTDate(1) ? formatISTDate(1) : prev);
     }
   };
 
-  // Interactive Sandbox Tap Test
+  const handleFile = async (event) => {
+    if (isBusy) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+    setMediaFile(file);
+    setMedia(null);
+    setUploadProgress(0);
+    setCampaignId('');
+    setUploadState('idle');
+
+    const isVideo = file.type === "video/mp4" || file.type === "video/quicktime";
+    const allowedImage = ["image/jpeg","image/png","image/webp"].includes(file.type);
+    if (!isVideo && !allowedImage) {
+      setUploadError("Use JPG, PNG, WebP, MP4 or MOV.");
+      return;
+    }
+    if (!file.size || (!isVideo && file.size > 20 * 1024 * 1024) || (isVideo && file.size > 150 * 1024 * 1024)) {
+      setUploadError(isVideo ? "Video must be 150 MB or smaller." : "Image must be 20 MB or smaller.");
+      return;
+    }
+
+    if (!quote || quoteError || startDate < minStartDate || (!isAllDay && endHour <= startHour)) {
+      setUploadError('Check the schedule and wait for a confirmed price.');
+      return;
+    }
+    uploadControllerRef.current?.abort();
+    const controller = new AbortController();
+    uploadControllerRef.current = controller;
+    try {
+      setUploadState("creating");
+      const draft = await createAdDraft({
+        targetVenueIds: venueIds,
+        durationDays: selectedDays,
+        startDate,
+        isAllDay,
+        dailyStartMinute: isAllDay ? 0 : toMinutes(startHour),
+        dailyEndMinute: isAllDay ? 1440 : toMinutes(endHour)
+      }, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      if (typeof draft.campaignId !== 'string' || !draft.campaignId) throw new Error('The kiosk did not create a campaign.');
+      setCampaignId(draft.campaignId);
+
+      setUploadState("uploading");
+      await uploadAdFile({
+        campaignId: draft.campaignId,
+        file,
+        onProgress: setUploadProgress,
+        signal: controller.signal
+      });
+
+      setUploadState("processing");
+      const result = await finalizeAd(draft.campaignId, file, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      if (!absoluteAdMediaUrl(result.media?.previewUrl)) throw new Error('The kiosk did not return a ready creative. Please retry uploading.');
+      setMedia({
+        ...result.media,
+        previewUrl: absoluteAdMediaUrl(result.media.previewUrl)
+      });
+      setUploadState("ready");
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      setUploadState("error");
+      setUploadError(err.message || "Could not prepare this creative.");
+    }
+  };
+
   const handlePreviewTap = () => {
     setIsSandboxTouching(true);
-    setTimeout(() => {
-      setIsSandboxTouching(false);
-    }, 2000);
+    clearTimeout(previewTimerRef.current);
+    previewTimerRef.current = window.setTimeout(() => setIsSandboxTouching(false), 1700);
   };
 
-  // Confirm & Pay Flow
-  const handleConfirmAndPay = () => {
-    const venueObj = VENUES.find(v => v.id === selectedVenue) || { name: 'All Venues' };
-    const today = new Date();
-    const startOffset = selectedVenue === 'gurukul' ? 0 : 1;
-    const startDateObj = new Date(today.getTime() + (startOffset * 86400000));
-    const endDateObj = new Date(startDateObj.getTime() + (selectedDays * 86400000));
-
-    const campaignData = {
-      venueId: selectedVenue,
-      venueName: selectedVenue === 'all' ? 'All Venues (3 Kiosks)' : venueObj.name,
-      durationDays: selectedDays,
-      isAllDay,
-      dailyStartHour: isAllDay ? 0 : startHour,
-      dailyEndHour: isAllDay ? 24 : endHour,
-      startDate: startDateObj.toISOString().split('T')[0],
-      endDate: endDateObj.toISOString().split('T')[0],
-      mediaType,
-      aspectRatio: isTrue16x9 ? '16:9' : aspectRatioCategory,
-      isTrue16x9,
-      hasAudio,
-      mediaUrl: mediaUrl || '/gurukul-ad.png',
-      priceRupees: pricing.totalPrice
-    };
-
-    savePendingCampaign(campaignData);
-    setIsSavedModalOpen(true);
+  const handleConfirm = async () => {
+    if (confirmingRef.current || !campaignId || uploadState !== "ready" || !quote || quoteError) return;
+    confirmingRef.current = true;
+    const controller = uploadControllerRef.current;
+    try {
+      setConfirming(true);
+      const payment = await confirmAdBooking(campaignId, { signal: controller?.signal });
+      if (controller?.signal.aborted) return;
+      const url = safeAdPaymentUrl(payment.paymentUrl);
+      if (!url) {
+        throw new Error('The kiosk did not return a secure payment link. Retry; do not upload again.');
+      }
+      saveAdHandoff(payment);
+      setPaymentUrl(url);
+      setHandoffOpen(true);
+    } catch (err) {
+      if (!controller?.signal.aborted) setUploadError(err.message || "Could not prepare payment.");
+    } finally {
+      confirmingRef.current = false;
+      if (!controller?.signal.aborted) setConfirming(false);
+    }
   };
+
+  const selectedVenueName = selectedVenue === "all"
+    ? "All Venues"
+    : config?.venues?.find((v) => v.id === selectedVenue)?.name || selectedVenue;
 
   return (
     <div className="reliv-ads-portal">
-      <div className="ads-container">
-        
-        {/* Apple-style Restrained Header */}
+      <fieldset className="ads-container" disabled={isBusy} style={{ border: 0, padding: 0, minWidth: 0 }}>
         <header className="ads-header">
           <div className="ads-logo-wrap">
             <RelivHeartSvg />
             <span className="ads-reliv-title">Reliv Ads</span>
           </div>
           <h1 className="ads-headline">Put your brand on Reliv</h1>
-          <p className="ads-subheadline">
-            Reach people while Reliv is idle.
-          </p>
-          <div className="ads-pricing-pill">
-            From ₹50/day · 3 days ₹117
-          </div>
+          <p className="ads-subheadline">Reach people while Reliv is idle.</p>
+          <div className="ads-pricing-pill">From ₹50/day · 3 days ₹117</div>
         </header>
 
-        {/* Clean 3-Step Navigation */}
-        <div className="ads-steps-bar">
-          <div 
-            className={`ads-step-item ${currentStep === 1 ? 'active' : 'completed'}`}
-            onClick={() => setCurrentStep(1)}
-          >
-            <span className="ads-step-dot" />
-            <span>Schedule</span>
-          </div>
-          <div className="ads-step-line" />
-          <div 
-            className={`ads-step-item ${currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : ''}`}
-            onClick={() => currentStep > 1 && setCurrentStep(2)}
-          >
-            <span className="ads-step-dot" />
-            <span>Creative</span>
-          </div>
-          <div className="ads-step-line" />
-          <div 
-            className={`ads-step-item ${currentStep === 3 ? 'active' : ''}`}
-            onClick={() => isReady && setCurrentStep(3)}
-          >
-            <span className="ads-step-dot" />
-            <span>Review</span>
-          </div>
-        </div>
-
-        {/* SCREEN 1: SCHEDULE */}
-        {currentStep === 1 && (
-          <div className="ads-card">
-            <h2 className="ads-section-title">Where should your ad appear?</h2>
-            <p className="ads-section-sub">11.6″ Full-HD Reliv displays · Up to 8 concurrent sponsors</p>
-
-            <div className="venue-options-list">
-              {VENUES.map(v => (
-                <button
-                  key={v.id}
-                  type="button"
-                  className={`venue-card-btn ${selectedVenue === v.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedVenue(v.id)}
-                >
-                  <div>
-                    <span className="venue-name">{v.name}</span>
-                    <span className={`venue-status-text ${v.isCurrent ? 'current' : ''}`}>
-                      {v.isCurrent && <span style={{ color: '#15803d' }}>●</span>}
-                      {v.statusText}
-                    </span>
-                  </div>
-                  {selectedVenue === v.id && <CheckSvg />}
-                </button>
-              ))}
-
-              {/* All Venues Option */}
+        <div className="ads-steps-bar" aria-label="Booking progress">
+          {["Schedule","Creative","Review"].map((label, index) => (
+            <React.Fragment key={label}>
+              {index > 0 && <div className="ads-step-line" />}
               <button
                 type="button"
-                className={`venue-card-btn ${selectedVenue === 'all' ? 'selected' : ''}`}
-                onClick={() => setSelectedVenue('all')}
+                className={`ads-step-item ${step === index + 1 ? "active" : step > index + 1 ? "completed" : ""}`}
+                onClick={() => {
+                  if (index === 0 || (index === 1 && step > 1) || (index === 2 && media)) setStep(index + 1);
+                }}
+              >
+                <span className="ads-step-dot" />
+                <span>{label}</span>
+              </button>
+            </React.Fragment>
+          ))}
+        </div>
+
+        {configError && <div className="ads-card" role="alert"><p className="review-legal-text">{configError}</p><button type="button" className="btn-primary-ads" onClick={() => window.location.reload()}>Retry connection</button></div>}
+
+        {step === 1 && (
+          <section className="ads-card">
+            <h2 className="ads-section-title">Where should your ad appear?</h2>
+            <p className="ads-section-sub">11.6″ Full-HD Reliv displays · up to 8 campaigns per time window</p>
+
+            <div className="venue-options-list">
+              {(config?.venues || []).map((venue) => (
+                <button
+                  key={venue.id}
+                  type="button"
+                  className={`venue-card-btn ${selectedVenue === venue.id ? "selected" : ""}`}
+                  onClick={() => handleVenue(venue.id)}
+                >
+                  <div>
+                    <span className="venue-name">{venue.name}</span>
+                    <span className={`venue-status-text ${venue.isCurrent ? "current" : ""}`}>
+                      {venue.isCurrent ? "Current kiosk · Instant activation" : venue.requiresApproval ? "Scheduled after approval" : "Scheduled placement"}
+                    </span>
+                  </div>
+                  {selectedVenue === venue.id && <CheckSvg />}
+                </button>
+              ))}
+              {(config?.venues?.length || 0) > 1 && <button
+                type="button"
+                className={`venue-card-btn ${selectedVenue === "all" ? "selected" : ""}`}
+                onClick={() => handleVenue("all")}
               >
                 <div>
                   <span className="venue-name">All Venues</span>
-                  <span className="venue-status-text">
-                    Gurukul + DPS Megacity + Beeu Resorts
-                  </span>
+                  <span className="venue-status-text">Gurukul + DPS Megacity + Beeu Resorts</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <span className="venue-badge-pill badge-reach-20">BEST REACH · SAVE 20%</span>
-                  {selectedVenue === 'all' && <CheckSvg />}
+                  {selectedVenue === "all" && <CheckSvg />}
                 </div>
-              </button>
+              </button>}
             </div>
 
             <h2 className="ads-section-title">How long?</h2>
             <div className="duration-chips-grid">
-              {DURATION_TIERS.map(t => (
-                <div
-                  key={t.days}
-                  className={`duration-chip ${selectedDays === t.days ? 'selected' : ''}`}
-                  onClick={() => setSelectedDays(t.days)}
+              {tiers.map((tier) => (
+                <button
+                  key={tier.days}
+                  type="button"
+                  className={`duration-chip ${selectedDays === tier.days ? "selected" : ""}`}
+                  onClick={() => setSelectedDays(tier.days)}
                 >
-                  {t.tag && <span className="duration-tag">{t.tag}</span>}
-                  <span className="duration-days">{t.days} {t.days === 1 ? 'Day' : 'Days'}</span>
-                  <div className="duration-price-row">
-                    {t.savings && <span className="duration-price-strike">₹{t.basePrice}</span>}
-                    <span className="duration-price">₹{t.launchPrice}</span>
-                  </div>
-                  <span className="duration-rate">₹{t.perDay}/day</span>
-                </div>
+                  {tier.tag && <span className="duration-tag">{tier.tag}</span>}
+                  <span className="duration-days">{tier.days} {tier.days === 1 ? "Day" : "Days"}</span>
+                  <span className="duration-price">₹{tier.rupees}</span>
+                  <span className="duration-rate">₹{tier.perDay}/day</span>
+                </button>
               ))}
             </div>
 
             <h2 className="ads-section-title">When should it run?</h2>
+            <div className="hours-picker-box" style={{marginBottom:16}}>
+              <label style={{display:"flex",flexDirection:"column",gap:6,width:"100%"}}>
+                <span>Starts</span>
+                <input
+                  type="date"
+                  className="hour-select"
+                  min={minStartDate}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </label>
+            </div>
+
             <div className="timing-tabs">
-              <button
-                type="button"
-                className={`timing-tab ${isAllDay ? 'active' : ''}`}
-                onClick={() => setIsAllDay(true)}
-              >
-                All Day
-              </button>
-              <button
-                type="button"
-                className={`timing-tab ${!isAllDay ? 'active' : ''}`}
-                onClick={() => setIsAllDay(false)}
-              >
-                Choose Hours
-              </button>
+              <button type="button" className={`timing-tab ${isAllDay ? "active" : ""}`} onClick={() => setIsAllDay(true)}>All Day</button>
+              <button type="button" className={`timing-tab ${!isAllDay ? "active" : ""}`} onClick={() => setIsAllDay(false)}>Choose Hours</button>
             </div>
 
             {!isAllDay && (
               <div className="hours-picker-box">
-                <div>
-                  <span>From: </span>
-                  <select 
-                    className="hour-select"
-                    value={startHour} 
-                    onChange={e => setStartHour(parseInt(e.target.value, 10))}
-                  >
-                    {[8, 9, 10, 11, 12, 13, 14].map(h => (
-                      <option key={h} value={h}>{h}:00 AM</option>
-                    ))}
+                <label>From
+                  <select className="hour-select" value={startHour} onChange={(e) => { const hour = Number(e.target.value); setStartHour(hour); setEndHour(end => Math.max(end, hour + 1)); }}>
+                    {[8,9,10,11,12,13,14,15,16,17,18].map((h) => <option key={h} value={h}>{h > 12 ? h - 12 : h}:00 {h >= 12 ? "PM" : "AM"}</option>)}
                   </select>
-                </div>
-                <div>
-                  <span>To: </span>
-                  <select 
-                    className="hour-select"
-                    value={endHour} 
-                    onChange={e => setEndHour(parseInt(e.target.value, 10))}
-                  >
-                    {[15, 16, 17, 18, 19, 20, 21, 22].map(h => (
-                      <option key={h} value={h}>{h > 12 ? `${h - 12}:00 PM` : `${h}:00 PM`}</option>
-                    ))}
+                </label>
+                <label>To
+                  <select className="hour-select" value={endHour} onChange={(e) => setEndHour(Number(e.target.value))}>
+                    {[10,11,12,13,14,15,16,17,18,19,20,21,22].filter((h) => h > startHour).map((h) => <option key={h} value={h}>{h > 12 ? h - 12 : h}:00 {h >= 12 ? "PM" : "AM"}</option>)}
                   </select>
-                </div>
+                </label>
               </div>
             )}
 
-            {/* Clean Pricing Quote */}
             <div className="pricing-quote-banner">
               <div>
-                <div className="quote-total">₹{pricing.totalPrice} total</div>
-                <div className="quote-breakdown">₹{pricing.effectivePerDay}/day with this plan</div>
-                {pricing.savings > 0 && (
-                  <div className="quote-savings">Save ₹{pricing.savings} launch discount</div>
-                )}
+                <div className="quote-total">{quote ? `₹${quote.finalRupees} total` : "Calculating…"}</div>
+                <div className="quote-breakdown">{quote ? `₹${quote.effectivePerDayRupees}/day with this plan` : ""}</div>
+                {quote?.discountRupees > 0 && <div className="quote-savings">Save ₹{quote.discountRupees}</div>}
               </div>
-              <span style={{ fontSize: '13px', color: '#15803d', fontWeight: 600 }}>● Available</span>
+              {quote && !quoteError && <span style={{fontSize:13,color:"#15803d",fontWeight:600}}>Available</span>}
             </div>
+            {quoteError && <p className="review-legal-text">{quoteError}</p>}
 
-            <p className="quote-notice">
-              Your ad runs while Reliv is idle. Health sessions always come first.
-            </p>
-
-            <button
-              type="button"
-              className="btn-primary-ads"
-              onClick={() => setCurrentStep(2)}
-            >
-              Continue to Creative →
+            {hasRemoteVenue && (
+              <p className="review-legal-text">
+                Remote offline venues are scheduled from the next day. Gurukul, the current kiosk, can activate immediately.
+              </p>
+            )}
+            <p className="quote-notice">Your ad runs while Reliv is idle. Health sessions always come first.</p>
+            <button type="button" className="btn-primary-ads" disabled={!quote || Boolean(quoteError) || !startDate || startDate < minStartDate || (!isAllDay && endHour <= startHour)} onClick={() => setStep(2)}>
+              Continue to Creative
             </button>
-          </div>
+          </section>
         )}
 
-        {/* SCREEN 2: CREATIVE UPLOAD */}
-        {currentStep === 2 && (
-          <div className="ads-card">
+        {step === 2 && (
+          <section className="ads-card">
             <h2 className="ads-section-title">Add your advertisement</h2>
-            <p className="ads-section-sub">
-              Landscape looks best. Portrait and square ads are automatically optimized.
-            </p>
-
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              style={{ display: 'none' }}
+            <p className="ads-section-sub">Landscape looks best. Portrait and square ads are automatically optimized.</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              hidden
               accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"
-              onChange={handleFileChange}
+              onChange={handleFile}
             />
-
-            <div className="upload-drop-zone" onClick={() => fileInputRef.current?.click()}>
+            <button type="button" className="upload-drop-zone" onClick={() => fileInputRef.current?.click()}>
               <UploadSvg />
-              <div className="upload-title">
-                {mediaFile ? mediaFile.name : 'Photo or Video'}
-              </div>
-              <div className="upload-hint">
-                JPG, PNG, WebP, MP4 or MOV
-              </div>
-              <span className="upload-limits-pill">
-                Image ≤ 20 MB · Video ≤ 150 MB, max 15s
-              </span>
-            </div>
-
-            {isUploading && (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#6e6e73', fontSize: '14px' }}>
-                Optimizing creative for Reliv…
-              </div>
-            )}
-
-            {isReady && (
-              <div style={{ marginTop: '18px' }}>
-                {isTrue16x9 ? (
-                  <div className="fit-status-pill fit-perfect">
-                    ⭐ Perfect Fit — Edge-to-edge full screen
-                  </div>
-                ) : (
-                  <div className="fit-status-pill fit-optimized">
-                    ✓ {aspectRatioCategory === 'portrait' ? 'Portrait Optimized' : aspectRatioCategory === 'square' ? 'Square Optimized' : 'Optimized for Reliv'}
-                  </div>
-                )}
-
-                {hasAudio && (
-                  <div style={{ fontSize: '12px', color: '#6e6e73', marginTop: '8px' }}>
-                    🔊 Audio included (volume automatically balanced on kiosk)
-                  </div>
-                )}
-
-                {showVideoLengthNotice && (
-                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '12px', fontSize: '13px', color: '#92400e', marginTop: '12px' }}>
-                    Your video is {videoDuration} seconds. Reliv ad slots support up to 15 seconds. We'll use the first 15 seconds.
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  className="btn-primary-ads"
-                  onClick={() => setCurrentStep(3)}
-                >
-                  Preview on Reliv Screen →
-                </button>
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="link-secondary-action"
-              onClick={() => setCurrentStep(1)}
-            >
-              ← Back to Schedule
+              <span className="upload-title">{mediaFile?.name || "Choose Photo or Video"}</span>
+              <span className="upload-hint">JPG, PNG, WebP, MP4 or MOV</span>
+              <span className="upload-limits-pill">Image ≤ 20 MB · Video ≤ 150 MB · playback length confirmed by kiosk</span>
             </button>
-          </div>
+
+            {["creating","uploading","processing"].includes(uploadState) && (
+              <div style={{textAlign:"center",padding:20,color:"#6e6e73",fontSize:14}}>
+                {uploadState === "uploading" ? `Uploading ${uploadProgress}%` : uploadState === "processing" ? "Optimizing for the Reliv display…" : "Preparing your slot…"}
+              </div>
+            )}
+            {uploadError && <p className="review-legal-text" style={{color:"#b91c1c"}}>{uploadError}</p>}
+
+            {media && (
+              <div style={{marginTop:18}}>
+                <div className={`fit-status-pill ${media.isTrue16x9 ? "fit-perfect" : "fit-optimized"}`}>
+                  {media.isTrue16x9 ? <><StarSvg /> Perfect Fit · Edge-to-edge</> : <><CheckSvg /> {media.aspectRatio === "portrait" ? "Portrait Optimized" : media.aspectRatio === "square" ? "Square Optimized" : "Optimized for Reliv"}</>}
+                </div>
+                {media.hasAudio && <div style={{fontSize:12,color:"#6e6e73",marginTop:8,display:"flex",gap:6,alignItems:"center"}}><SpeakerSvg /> Audio included · kiosk playback is volume-limited</div>}
+                <button type="button" className="btn-primary-ads" onClick={() => setStep(3)}>Preview on Reliv Screen</button>
+              </div>
+            )}
+            <button type="button" className="link-secondary-action" onClick={() => setStep(1)}>Back to Schedule</button>
+          </section>
         )}
 
-        {/* SCREEN 3: REVIEW & PAY */}
-        {currentStep === 3 && (
-          <div className="ads-card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <h2 className="ads-section-title" style={{ margin: 0 }}>Your ad on Reliv</h2>
-              <button 
-                type="button" 
-                className="link-secondary-action"
-                style={{ margin: 0, fontSize: '12px' }}
-                onClick={() => setShowSafeArea(!showSafeArea)}
-              >
-                {showSafeArea ? 'Hide safe area' : 'Show safe area'}
+        {step === 3 && media && (
+          <section className="ads-card">
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+              <h2 className="ads-section-title" style={{margin:0}}>Your ad on Reliv</h2>
+              <button type="button" className="link-secondary-action" style={{margin:0,fontSize:12}} onClick={() => setShowSafeArea((v) => !v)}>
+                {showSafeArea ? "Hide safe area" : "Show safe area"}
               </button>
             </div>
 
-            {/* True 16:9 Kiosk Preview */}
-            <div className="kiosk-preview-frame" onClick={handlePreviewTap} title="Tap to test instant exit">
+            <div className="kiosk-preview-frame" onPointerDown={handlePreviewTap} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handlePreviewTap(); } }} role="button" tabIndex={0}>
               {isSandboxTouching ? (
-                /* Simulated Reliv Home Screen after touch */
-                <div style={{ width: '100%', height: '100%', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#ffffff', padding: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <RelivHeartSvg />
-                    <span style={{ fontSize: '20px', fontWeight: 800 }}>RELIV HEALTH KIOSK</span>
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-                    Touch detected — Reliv resumes instantly.
-                  </div>
+                <div style={{width:"100%",height:"100%",background:"#f5f5f7",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#1d1d1f"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,color:"#ea580c"}}><RelivHeartSvg /><strong style={{fontSize:22}}>Reliv</strong></div>
+                  <div style={{fontSize:13,color:"#6e6e73",marginTop:8}}>Health Checkup & Medicine Dispenser</div>
                 </div>
               ) : (
                 <div className="preview-media-container">
-                  {/* Top-Right Translucent Label */}
-                  <div className="kiosk-system-pill-top">
-                    ADVERTISEMENT
-                  </div>
-
-                  {/* Blurred wings if non-16:9 */}
-                  {!isTrue16x9 && (
-                    mediaType === 'video' ? (
-                      <video src={mediaUrl} className="preview-blur-bg" autoPlay loop muted playsInline />
-                    ) : (
-                      <img src={mediaUrl || '/gurukul-ad.png'} alt="blur-bg" className="preview-blur-bg" />
-                    )
-                  )}
-
-                  {/* Sharp Foreground Creative */}
-                  {mediaType === 'video' ? (
-                    <video 
-                      src={mediaUrl} 
-                      className={`preview-main-media ${isTrue16x9 ? 'edge-to-edge' : ''}`}
-                      autoPlay 
-                      loop 
-                      muted 
-                      playsInline 
-                    />
-                  ) : (
-                    <img 
-                      src={mediaUrl || '/gurukul-ad.png'} 
-                      alt="Ad Preview" 
-                      className={`preview-main-media ${isTrue16x9 ? 'edge-to-edge' : ''}`}
-                    />
-                  )}
-
-                  {/* Safe Area Visual Overlay (Optional) */}
-                  {showSafeArea && (
-                    <div style={{ position: 'absolute', inset: 0, border: '1px dashed rgba(234,88,12,0.6)', pointerEvents: 'none', zIndex: 9 }} />
-                  )}
-
-                  {/* Bottom-Center Floating Reliv System Pill */}
+                  <div className="kiosk-system-pill-top">ADVERTISEMENT</div>
+                  {media.mediaType === "video"
+                    ? <video src={media.previewUrl} className="preview-main-media" autoPlay loop muted playsInline />
+                    : <img src={media.previewUrl} className="preview-main-media" alt="Your advertisement preview" />}
+                  {showSafeArea && <div style={{position:"absolute",inset:12,border:"1px dashed rgba(255,255,255,.72)",pointerEvents:"none",zIndex:9,borderRadius:8}} />}
                   <div className="kiosk-system-pill-bottom">
-                    <span style={{ color: '#ea580c', display: 'flex', alignItems: 'center' }}>
-                      <RelivHeartSvg />
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.5px' }}>
-                      RELIV TOUCH TO START
-                    </span>
-                    <span style={{ opacity: 0.8, display: 'flex', alignItems: 'center' }}>
-                      <FingerTouchSvg />
-                    </span>
+                    <span style={{color:"#ea580c",display:"flex"}}><RelivHeartSvg /></span>
+                    <span style={{fontSize:13,fontWeight:700,letterSpacing:".5px"}}>RELIV · TOUCH TO START</span>
+                    <span className="ad-system-touch-anim"><FingerTouchSvg /></span>
                   </div>
                 </div>
               )}
             </div>
+            <div className="preview-touch-helper">Try it · touch anywhere and Reliv returns instantly</div>
 
-            <div className="preview-touch-helper">
-              Touch anywhere → Reliv opens instantly
-            </div>
-
-            {/* Clean Invoice-Free Summary */}
             <div className="review-clean-summary">
               <div className="review-row-line">
-                <span style={{ fontWeight: 700 }}>
-                  {selectedVenue === 'all' ? 'All Venues (3 Kiosks)' : VENUES.find(v => v.id === selectedVenue)?.name}
-                </span>
-                <span className="review-row-sub">
-                  {selectedDays} Days · {isAllDay ? 'All day' : `${startHour}:00 - ${endHour > 12 ? endHour - 12 : endHour}:00 PM`}
-                </span>
+                <span style={{fontWeight:700}}>{selectedVenueName}</span>
+                <span className="review-row-sub">{selectedDays} {selectedDays === 1 ? "day" : "days"} · {isAllDay ? "All day" : `${startHour}:00–${endHour > 12 ? endHour - 12 : endHour}:00 ${endHour >= 12 ? "PM" : "AM"}`}</span>
               </div>
-
               <div className="review-row-line">
-                <span style={{ color: '#6e6e73' }}>
-                  {mediaType === 'video' ? `${videoDuration}s video` : 'Image'} · {isTrue16x9 ? 'Perfect fit' : 'Optimized'}
-                </span>
-                <span style={{ color: '#15803d', fontWeight: 600 }}>
-                  ₹{pricing.effectivePerDay}/day
-                </span>
+                <span style={{color:"#6e6e73"}}>{media.mediaType === "video" ? `${Math.round(media.durationSeconds)}s video` : "Image"} · {media.isTrue16x9 ? "Perfect fit" : "Optimized"}</span>
+                <span style={{color:"#15803d",fontWeight:600}}>{quote ? `₹${quote.effectivePerDayRupees}/day` : ""}</span>
               </div>
-
               <div className="review-total-divider" />
-
               <div className="review-total-row">
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#6e6e73' }}>TOTAL</span>
-                <span className="review-total-price">₹{pricing.totalPrice}</span>
+                <span style={{fontSize:14,fontWeight:700,color:"#6e6e73"}}>TOTAL</span>
+                <span className="review-total-price">{quote ? `₹${quote.finalRupees}` : ""}</span>
               </div>
             </div>
 
-            <div style={{ textAlign: 'center' }}>
-              <button
-                type="button"
-                className="link-secondary-action"
-                onClick={() => setCurrentStep(2)}
-              >
-                ✎ Change ad
-              </button>
-            </div>
-
+            <div style={{textAlign:"center"}}><button type="button" className="link-secondary-action" onClick={() => setStep(2)}>Change ad</button></div>
             <p className="review-legal-text">
-              By continuing, you confirm that you have the right to display this creative.<br />
+              By continuing, you confirm that you have the right to display this creative.<br/>
               Your ad runs while Reliv is idle. Health sessions always come first.
             </p>
-
-            <button
-              type="button"
-              className="btn-primary-ads"
-              onClick={handleConfirmAndPay}
-            >
-              Confirm & Pay ₹{pricing.totalPrice}
+            {uploadError && <p className="review-legal-text" style={{color:"#b91c1c"}}>{uploadError}</p>}
+            <button type="button" className="btn-primary-ads" disabled={confirming} onClick={handleConfirm}>
+              {confirming ? "Preparing Payment…" : `Confirm & Pay ₹${quote?.finalRupees ?? ""}`}
             </button>
-          </div>
+          </section>
         )}
 
-        {/* PHONE HANDOFF MODAL (NO QR ON PHONE!) */}
-        {isSavedModalOpen && (
-          <div className="payment-modal-overlay">
+        {handoffOpen && (
+          <div className="payment-modal-overlay" role="dialog" aria-modal="true">
             <div className="payment-modal-card">
-              <div className="saved-check-icon">
-                <CheckSvg className="badge-check-svg" />
-              </div>
+              <div className="saved-check-icon"><CheckSvg /></div>
               <h3 className="saved-title">Your ad is saved</h3>
-              <p className="saved-subtext">It's already safely stored on Reliv.</p>
-
+              <p className="saved-subtext">It is already safely stored on this Reliv kiosk.</p>
               <div className="saved-instruction-box">
-                <div style={{ marginBottom: '8px' }}>
-                  <strong>1. Turn Wi-Fi off</strong> on your phone.
-                </div>
-                <div>
-                  <strong>2. Scan the payment QR</strong> shown on the Reliv kiosk screen.
-                </div>
+                <div><strong>1. Turn Wi-Fi off</strong> on your phone.</div>
+                <div style={{marginTop:8}}><strong>2. Use mobile data</strong> and open secure payment below.</div>
+                <div style={{marginTop:8}}><strong>3. Enter your paid 4-digit code</strong> using “Enter ad code” on the kiosk.</div>
               </div>
-
-              <p style={{ fontSize: '13px', color: '#86868b', margin: '0 0 20px 0' }}>
-                Your advertisement will not be lost.
-              </p>
-
-              <button
-                type="button"
-                className="btn-primary-ads"
-                style={{ marginTop: 0 }}
-                onClick={() => setIsSavedModalOpen(false)}
-              >
-                Got it
-              </button>
+              <p style={{fontSize:13,color:"#86868b",margin:"0 0 20px"}}>You will not need to upload your creative again.</p>
+              <a className="btn-primary-ads" style={{marginTop:0, display:'flex', alignItems:'center', justifyContent:'center', textDecoration:'none'}} href={paymentUrl} target="_blank" rel="noopener noreferrer">Open secure payment</a>
+              <p style={{fontSize:13,color:'#62626b',marginTop:16}}>Keep this page open. If you are in a Wi-Fi sign-in window, open the link in your phone browser before disconnecting Wi-Fi.</p>
+              <button type="button" className="link-secondary-action" onClick={() => setHandoffOpen(false)}>Back to booking</button>
             </div>
           </div>
         )}
-
-      </div>
+      </fieldset>
     </div>
   );
 }
