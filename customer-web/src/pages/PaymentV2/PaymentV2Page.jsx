@@ -44,6 +44,7 @@ export function PaymentV2Page({ sessionStore }) {
   const [reportDownloadStatus, setReportDownloadStatus] = useState('idle');
 
   const isSyncingRef = useRef(false);
+  const checkoutOpenRef = useRef(false);
   const emailSendingRef = useRef(false);
 
   // Core verification execution function that uses a normalized payload
@@ -65,7 +66,7 @@ export function PaymentV2Page({ sessionStore }) {
         });
 
         const code = String(verifyRes.confirmationCode || '').trim();
-        if (code) {
+        if (verifyRes.paid === true && /^\d{4}$/.test(code)) {
           if (verifyRes.requestId) {
             setActiveRequestId(verifyRes.requestId);
           }
@@ -98,7 +99,7 @@ export function PaymentV2Page({ sessionStore }) {
 
   // Authoritative State Sync with Oracle Payment Bridge
   const syncWithOracle = useCallback(async () => {
-    if (isSyncingRef.current) return;
+    if (isSyncingRef.current || checkoutOpenRef.current) return;
     isSyncingRef.current = true;
 
     try {
@@ -125,8 +126,7 @@ export function PaymentV2Page({ sessionStore }) {
       if (currentReqId) {
         try {
           const recoverRes = await recoverPaymentV2({ requestId: currentReqId });
-          if (recoverRes.paid && recoverRes.confirmationCode) {
-            console.log(`[PaymentV2] Payment recovered and verified via Oracle: ${recoverRes.confirmationCode}`);
+          if (recoverRes.paid === true && /^\d{4}$/.test(String(recoverRes.confirmationCode || ''))) {
             setActiveRequestId(recoverRes.requestId || currentReqId);
             setOrderData((prev) => ({
               ...(prev || {}),
@@ -138,7 +138,7 @@ export function PaymentV2Page({ sessionStore }) {
             }));
             clearPendingVerification();
             clearPaymentRecovery();
-            setConfirmationCode(recoverRes.confirmationCode);
+            setConfirmationCode(String(recoverRes.confirmationCode));
             setLoadingState('SUCCESS');
             return;
           }
@@ -150,44 +150,6 @@ export function PaymentV2Page({ sessionStore }) {
 
       // 3. Check if we have an encrypted payment package to check / initialize
       const activePackage = encryptedPackage || extractPaymentPackage() || getPaymentRecovery()?.encryptedPackage;
-
-      // Check if this is a Reliv Ad campaign payment payload
-      try {
-        let adPayload = null;
-        if (activePackage) {
-          try {
-            const raw = atob(activePackage);
-            if (raw.includes('RELIV_AD_CAMPAIGN') || raw.includes('campaignId')) {
-              adPayload = JSON.parse(raw);
-            }
-          } catch {
-            // Not a base64 ad payload
-          }
-        }
-        const urlParams = new URLSearchParams(window.location.search);
-        if (!adPayload && urlParams.get('campaign')) {
-          adPayload = {
-            campaignId: urlParams.get('campaign'),
-            price: parseInt(urlParams.get('amt') || '117', 10),
-            venue: urlParams.get('venue') || 'Gurukul',
-            confirmationCode: urlParams.get('code') || '5829'
-          };
-        }
-        if (adPayload) {
-          setOrderData({
-            orderId: adPayload.campaignId,
-            amount: (adPayload.price || 117) * 100,
-            currency: 'INR',
-            serviceType: 'RELIV_AD_CAMPAIGN',
-            adPayload
-          });
-          setLoadingState('ORDER_READY');
-          return;
-        }
-      } catch (adErr) {
-        console.log('[PaymentV2] Ad payload check fallback:', adErr);
-      }
-
       if (!activePackage) {
         setLoadingState('IDLE');
         return;
@@ -205,12 +167,12 @@ export function PaymentV2Page({ sessionStore }) {
       setOrderData(order);
 
       // 4. If Oracle indicates this request is already PAID, NEVER launch Razorpay!
-      if (order.paid === true || order.raw?.status === 'PAID') {
+      if (order.paid === true || order.raw?.paid === true || order.raw?.status === 'PAID') {
         console.log('[PaymentV2] Authoritative Oracle check: Order is already PAID');
 
         // Check if confirmation code is already returned
         const returnedCode = String(order.confirmationCode || order.raw?.confirmationCode || '').trim();
-        if (returnedCode) {
+        if (/^\d{4}$/.test(returnedCode)) {
           clearPendingVerification();
           clearPaymentRecovery();
           setConfirmationCode(returnedCode);
@@ -222,10 +184,10 @@ export function PaymentV2Page({ sessionStore }) {
         if (order.requestId) {
           try {
             const recoverRes = await recoverPaymentV2({ requestId: order.requestId });
-            if (recoverRes.confirmationCode) {
+            if (recoverRes.paid === true && /^\d{4}$/.test(String(recoverRes.confirmationCode || ''))) {
               clearPendingVerification();
               clearPaymentRecovery();
-              setConfirmationCode(recoverRes.confirmationCode);
+              setConfirmationCode(String(recoverRes.confirmationCode));
               setLoadingState('SUCCESS');
               return;
             }
@@ -233,6 +195,11 @@ export function PaymentV2Page({ sessionStore }) {
             console.warn('[PaymentV2] Code reveal via recover failed:', e.message);
           }
         }
+        throw new Error('Payment is already received, but the activation code is not available yet. Retry here; do not pay again.');
+      }
+
+      if (!order.orderId || !order.requestId || !order.keyId || !Number.isInteger(order.amount) || order.amount <= 0) {
+        throw new Error('The payment service returned an incomplete order. Please retry.');
       }
 
       // 5. Unpaid / Active Order Ready
@@ -278,7 +245,7 @@ export function PaymentV2Page({ sessionStore }) {
     };
 
     // Initial mount sync
-    syncWithOracle();
+    handleResume();
 
     if (typeof window !== 'undefined') {
       window.addEventListener('focus', handleResume);
@@ -297,24 +264,16 @@ export function PaymentV2Page({ sessionStore }) {
 
   // Open Razorpay Checkout on explicit button tap
   const handlePayClick = async () => {
-    if (!orderData || loadingState === 'PAYING' || loadingState === 'VERIFYING') return;
+    if (!orderData || checkoutOpenRef.current || loadingState !== 'ORDER_READY') return;
 
     // Safety: If already marked paid, do not open Razorpay
-    if (orderData.paid === true) {
+    if (orderData.paid === true || orderData.raw?.paid === true || orderData.raw?.status === 'PAID') {
       syncWithOracle();
       return;
     }
 
-    if (orderData?.serviceType === 'RELIV_AD_CAMPAIGN') {
-      setLoadingState('PAYING');
-      setTimeout(() => {
-        setConfirmationCode(orderData.adPayload?.confirmationCode || '5829');
-        setLoadingState('SUCCESS');
-      }, 600);
-      return;
-    }
-
     try {
+      checkoutOpenRef.current = true;
       setLoadingState('PAYING');
 
       // Update recovery state to PAYING
@@ -336,6 +295,7 @@ export function PaymentV2Page({ sessionStore }) {
         keyId: orderData.keyId,
         customerDetails: {},
         onSuccess: async (paymentResult) => {
+          checkoutOpenRef.current = false;
           // Normalize at boundary
           const orderId = paymentResult?.orderId || paymentResult?.razorpay_order_id;
           const paymentId = paymentResult?.paymentId || paymentResult?.razorpay_payment_id;
@@ -369,15 +329,18 @@ export function PaymentV2Page({ sessionStore }) {
           await runVerification(normalizedPayload);
         },
         onDismiss: () => {
+          checkoutOpenRef.current = false;
           setLoadingState('ORDER_READY');
         },
         onError: (err) => {
+          checkoutOpenRef.current = false;
           console.error('[PaymentV2] Razorpay error:', err.message || err.description || err);
           setErrorMessage(err.description || err.message || 'Payment was declined or cancelled.');
           setLoadingState('ERROR');
         },
       });
     } catch (checkoutErr) {
+      checkoutOpenRef.current = false;
       console.error('[PaymentV2] Checkout modal error:', checkoutErr.message || checkoutErr);
       setErrorMessage(checkoutErr.message || 'Could not open payment checkout modal.');
       setLoadingState('ERROR');
@@ -496,7 +459,12 @@ export function PaymentV2Page({ sessionStore }) {
   const isHealthCheckup =
     normalizedServiceType === 'HEALTH_CHECKUP' ||
     normalizedServiceType === 'CHECKUP';
-  const displayService = isHealthCheckup ? 'Health Checkup' : 'Medicine Kit Purchase';
+  const isAdCampaign = ['AD_CAMPAIGN', 'RELIV_AD_CAMPAIGN'].includes(normalizedServiceType);
+  const displayService = isAdCampaign
+    ? 'Reliv Advertising Campaign'
+    : isHealthCheckup
+    ? 'Health Checkup'
+    : 'Medicine Kit Purchase';
 
   // IDLE STATE (Direct open without #p or saved session)
   if (!encryptedPackage && loadingState === 'IDLE' && !getPendingVerification() && !getPaymentRecovery()) {
@@ -604,6 +572,43 @@ export function PaymentV2Page({ sessionStore }) {
   if (loadingState === 'SUCCESS') {
     const digits = confirmationCode.split('');
 
+    if (isAdCampaign) {
+      return (
+        <div className="space-y-5 animate-in fade-in zoom-in-95 duration-400">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-600 mb-1 shadow-sm">
+              <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 font-outfit">Payment Successful</h2>
+            <p className="text-sm text-slate-600">Enter this activation code on the Reliv kiosk.</p>
+          </div>
+
+          <div className="rounded-3xl border border-orange-200 bg-white p-6 shadow-md space-y-5 text-center">
+            <div className="flex justify-center items-center gap-3 py-2">
+              {digits.map((digit, idx) => (
+                <div
+                  key={idx}
+                  className="w-14 h-16 sm:w-16 sm:h-20 rounded-2xl bg-orange-500 border-2 border-orange-600 text-white font-extrabold text-3xl sm:text-4xl flex items-center justify-center shadow-md font-mono"
+                >
+                  {digit}
+                </div>
+              ))}
+            </div>
+            <div className="p-3.5 rounded-2xl bg-orange-50 border border-orange-100 text-xs text-orange-950">
+              <p className="font-semibold text-slate-900">Keep this page open until you enter the code.</p>
+              <p className="text-slate-600 mt-1">This code activates only the advertising campaign you just paid for.</p>
+            </div>
+            {displayRupees !== '0' && (
+              <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs text-slate-500">
+                <span>Amount Paid</span>
+                <span className="font-bold text-slate-900 text-sm">₹{displayRupees}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-5 animate-in fade-in zoom-in-95 duration-400">
         <div className="text-center space-y-2">
@@ -614,7 +619,7 @@ export function PaymentV2Page({ sessionStore }) {
             Payment Successful
           </h2>
           <p className="text-sm font-semibold text-slate-700">
-            Your Kiosk Code
+            {isAdCampaign ? 'Your Activation Code' : 'Your Kiosk Code'}
           </p>
         </div>
 
@@ -636,7 +641,9 @@ export function PaymentV2Page({ sessionStore }) {
               Enter this 4-digit code on the Reliv kiosk.
             </p>
             <p className="text-slate-600">
-              Your service will begin immediately upon verification.
+              {isAdCampaign
+                ? 'Enter it on the kiosk to activate or schedule your advertisement.'
+                : 'Your service will begin immediately upon verification.'}
             </p>
           </div>
 
@@ -652,11 +659,13 @@ export function PaymentV2Page({ sessionStore }) {
         <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
           <div className="text-center space-y-0.5">
             <h3 className="text-base font-bold text-slate-900 font-outfit">
-              {isHealthCheckup ? 'Get your Health Report & Receipt' : 'Get your payment receipt'}
+              {isHealthCheckup ? 'Get your Health Report & Receipt' : isAdCampaign ? 'Get your advertising receipt' : 'Get your payment receipt'}
             </h3>
             <p className="text-xs text-slate-500">
               {isHealthCheckup
                 ? 'Enter your email to receive your detailed health report and payment receipt.'
+                : isAdCampaign
+                ? 'Optional: enter your email for a digital advertising receipt.'
                 : 'Enter your email to receive a digital receipt.'}
             </p>
           </div>

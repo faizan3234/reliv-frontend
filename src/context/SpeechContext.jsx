@@ -119,6 +119,7 @@ export function SpeechProvider({ children }) {
   volumeRef.current = volume;
   
   const speakerGateRef = useRef(false);
+  const adSpeechBlocksRef = useRef(new Set());
 
   const setSpeakerGate = useCallback((active) => {
     const next = Boolean(active);
@@ -190,9 +191,24 @@ export function SpeechProvider({ children }) {
     await stopActivePlayback();
   }, [stopActivePlayback]);
 
+  // An ad/payment overlay also blocks delayed page prompts, not just whatever
+  // was speaking when the overlay first appeared. No persisted mute changes.
+  useEffect(() => {
+    const handleAdAudio = ({ detail }) => {
+      const owner = detail?.owner;
+      if (!owner) return;
+      if (detail.active) {
+        adSpeechBlocksRef.current.add(owner);
+        stop();
+      } else adSpeechBlocksRef.current.delete(owner);
+    };
+    window.addEventListener('reliv_ad_audio_focus', handleAdAudio);
+    return () => window.removeEventListener('reliv_ad_audio_focus', handleAdAudio);
+  }, [stop]);
+
   const speakViaSynthesis = useCallback(
     (text, requestId, langHint, callbacks = {}) => {
-      if (requestId !== playbackRequestRef.current) return Promise.resolve();
+      if (requestId !== playbackRequestRef.current || adSpeechBlocksRef.current.size) return Promise.resolve();
 
       return new Promise((resolve) => {
         const safeText = String(text).trim();
@@ -314,7 +330,7 @@ export function SpeechProvider({ children }) {
 
   const speakText = useCallback(
     async (text, callbacks) => {
-      if (!text || muted) return;
+      if (!text || muted || adSpeechBlocksRef.current.size) return;
       const requestId = ++playbackRequestRef.current;
       await stopActivePlayback();
       if (requestId !== playbackRequestRef.current) return;
@@ -325,7 +341,7 @@ export function SpeechProvider({ children }) {
 
   const speakChained = useCallback(
     async (messages, callbacks = {}) => {
-      if (!messages || messages.length === 0 || muted) return;
+      if (!messages || messages.length === 0 || muted || adSpeechBlocksRef.current.size) return;
       const requestId = ++playbackRequestRef.current;
       await stopActivePlayback();
       if (requestId !== playbackRequestRef.current) return;
@@ -343,7 +359,7 @@ export function SpeechProvider({ children }) {
 
   const speak = useCallback(
     async (pageKey) => {
-      if (muted) return;
+      if (muted || adSpeechBlocksRef.current.size) return;
       const requestId = ++playbackRequestRef.current;
       await stopActivePlayback();
       if (requestId !== playbackRequestRef.current) return;

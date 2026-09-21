@@ -9,7 +9,6 @@ import CampusLeaderboard from "../components/CampusLeaderboard";
 import { AnimatePresence } from "framer-motion";
 import { API_BASE } from "../config/api";
 import i18n from "i18next";
-import { QRCodeSVG } from "qrcode.react";
 
 const Splash = () => {
   const navigate = useNavigate();
@@ -17,7 +16,6 @@ const Splash = () => {
   const { resetHealth, update, data: healthData } = useHealth();
   
   const [showTerms, setShowTerms] = useState(false);
-  const [showAdModal, setShowAdModal] = useState(false);
   const [disagreed, setDisagreed] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const disagreedRef = useRef(false);
@@ -73,7 +71,12 @@ const Splash = () => {
   }, []);
 
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const lbCycleRef = useRef(null);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('reliv_splash_overlay', { detail: showTerms || showLeaderboard }));
+    return () => {
+      window.dispatchEvent(new CustomEvent('reliv_splash_overlay', { detail: false }));
+    };
+  }, [showTerms, showLeaderboard]);
   const lbHideTimer = useRef(null);
 
   const hideLeaderboard = useCallback(() => {
@@ -81,13 +84,6 @@ const Splash = () => {
     stop();
     setShowLeaderboard(false);
   }, [stop]);
-
-  const showLeaderboardOverlay = useCallback(() => {
-    stop();
-    setShowLeaderboard(true);
-    clearTimeout(lbHideTimer.current);
-    lbHideTimer.current = setTimeout(hideLeaderboard, 20000);
-  }, [hideLeaderboard, stop]);
 
   const handleLeaderboardVisible = useCallback(() => {
     speak("leaderboard");
@@ -109,7 +105,7 @@ const Splash = () => {
 
   useVoicePage({
     guidanceKey: showTerms ? 'terms' : 'language',
-    idleEnabled: !showLeaderboard && !showAdModal,
+    idleEnabled: !showLeaderboard,
     onHelp: () => {
       if (showLeaderboard) hideLeaderboard();
       if (!healthData?.language || healthData.language === 'auto') {
@@ -141,17 +137,7 @@ const Splash = () => {
     return () => { clearTimeout(timer); stop(); };
   }, [speakChained, speakText, stop, healthData?.language]);
 
-  // Leaderboard rotation: show after 45s, then every 45s for 20s
-  useEffect(() => {
-    const firstShow = setTimeout(showLeaderboardOverlay, 45000);
-    lbCycleRef.current = setInterval(showLeaderboardOverlay, 65000); // 45s wait + 20s show = 65s cycle
-
-    return () => {
-      clearTimeout(firstShow);
-      clearTimeout(lbHideTimer.current);
-      clearInterval(lbCycleRef.current);
-    };
-  }, [showLeaderboardOverlay]);
+  // The idle screen remains the original splash between paid ads.
 
   const [sliding, setSliding] = useState(false);
   const [textVisible, setTextVisible] = useState(false);
@@ -391,6 +377,11 @@ const Splash = () => {
                     </button>
                   </div>
 
+                  <button type="button" className="splash-code-button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('reliv_open_ad_keypad'))}>
+                    Enter ad code
+                  </button>
+
                   {/* Optional Team Link */}
                   <p className="text-white text-center text-sm mt-6 opacity-75">
                     <span
@@ -406,82 +397,6 @@ const Splash = () => {
           </div>
         </div>
 
-        {/* Permanent Advertise on Reliv Badge (Kiosk V1 DOOH) */}
-        <div 
-          className="splash-advertise-pill" 
-          onClick={() => setShowAdModal(true)}
-          title="Advertise on this kiosk"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-          <div>
-            <div className="advertise-pill-title">Advertise on Reliv</div>
-            <div className="advertise-pill-sub">From ₹50/day · Touch for Wi-Fi QR</div>
-          </div>
-        </div>
-
-        {/* Modal: Direct Link QR & Code Entry */}
-        {showAdModal && (
-          <div className="kiosk-activation-modal" onClick={() => setShowAdModal(false)}>
-            <div className="activation-keypad-card" onClick={(e) => e.stopPropagation()}>
-              <h2 className="activation-header-title">Advertise on Reliv</h2>
-              <p className="activation-header-sub">
-                Scan with any camera or QR scanner to book instantly on your phone.
-              </p>
-
-              {/* Direct Web URL QR: Opens immediately on any phone camera without app */}
-              <div style={{ display: 'inline-block', padding: '16px', background: '#ffffff', borderRadius: '20px', border: '2px solid #ea580c', margin: '0 auto 14px auto', boxShadow: '0 8px 24px rgba(234, 88, 12, 0.12)' }}>
-                <QRCodeSVG 
-                  value={`${window.location.origin}/advertise`} 
-                  size={180} 
-                />
-              </div>
-
-              <div style={{ background: '#f5f5f7', borderRadius: '12px', padding: '10px 14px', marginBottom: '18px', textAlign: 'center', fontSize: '13px', color: '#1d1d1f' }}>
-                <div style={{ fontWeight: 600 }}>Kiosk Local Wi-Fi: <strong>RELIV-KIOSK</strong></div>
-                <div style={{ fontSize: '12px', color: '#6e6e73', marginTop: '2px' }}>
-                  No password required • <strong>http://192.168.50.1/advertise</strong>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <button
-                  type="button"
-                  className="btn-primary-ads"
-                  style={{ height: '48px', padding: '0 16px' }}
-                  onClick={() => {
-                    setShowAdModal(false);
-                    window.dispatchEvent(new CustomEvent('reliv_open_ad_keypad'));
-                  }}
-                >
-                  Enter 4-Digit Activation Code
-                </button>
-
-                <button
-                  type="button"
-                  className="link-secondary-action"
-                  onClick={() => {
-                    setShowAdModal(false);
-                    navigate('/advertise');
-                  }}
-                >
-                  Open Booking Portal On This Screen
-                </button>
-
-                <button
-                  type="button"
-                  className="link-secondary-action"
-                  onClick={() => setShowAdModal(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </>
   );

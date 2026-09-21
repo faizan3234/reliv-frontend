@@ -1,6 +1,6 @@
 // src/App.jsx
 import React from "react";
-import { Navigate, Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route, useLocation } from "react-router-dom";
 import Splash from "./pages/Splash.jsx";
 import ChooseLanguage from "./pages/ChooseLanguage.jsx";
 import CustomerDetailsWrapper from "./pages/CustomerDetails.jsx";
@@ -40,6 +40,7 @@ import PayAd from "./pages/PayAd.jsx";
 import KioskAdPlayer from "./components/KioskAdPlayer.jsx";
 
 export default function App() {
+    const { pathname } = useLocation();
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
 
     // The mobile service hosts the one-time QR flow on port 5000 or customer web domain.
@@ -48,7 +49,8 @@ export default function App() {
       window.location.hostname === 'mail-request-m33c.vercel.app' ||
       window.location.port === '5000';
 
-    if (isQRDomain) {
+    // Phone booking/payment pages must not mount kiosk voice, guardian or ads.
+    if (isQRDomain || pathname === '/advertise' || pathname === '/pay') {
       return (
         <div className="app-screen">
           <Routes>

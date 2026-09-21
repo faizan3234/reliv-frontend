@@ -24,6 +24,7 @@ import { API_BASE } from "../config/api";
 import { formatINR } from "../utils/currency";
 import { getMedicineImageUrl } from "./MedicineDispensing";
 import { adminFetch, readAdminSession, saveAdminSession, clearAdminSession } from '../utils/adminSession';
+import AdminAdSettings from '../components/AdminAdSettings';
 
 export default function AdminMedicinePage() {
   const navigate = useNavigate();
@@ -538,7 +539,7 @@ export default function AdminMedicinePage() {
             </div>
             <div>
               <h1 className="text-base font-black text-slate-900 leading-tight">Reliv Admin</h1>
-              <p className="text-[11px] text-slate-500 font-semibold">Medicine Inventory</p>
+              <p className="text-[11px] text-slate-500 font-semibold">Inventory & Settings</p>
             </div>
           </div>
 
@@ -564,6 +565,7 @@ export default function AdminMedicinePage() {
 
       {/* ── Main Container (Max-width for phone ergonomics) ───────────────── */}
       <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
+        <AdminAdSettings />
 
         {/* Top Summary Metrics */}
         <div className="grid grid-cols-3 gap-2.5">
