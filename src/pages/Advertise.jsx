@@ -11,12 +11,6 @@ import {
 import "./Advertise.css";
 import { readAdHandoff, safeAdPaymentUrl, saveAdHandoff } from '../utils/adHandoff';
 
-const RelivHeartSvg = ({ className = "ads-reliv-svg" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-  </svg>
-);
-
 const CheckSvg = ({ className = "badge-check-svg" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="20 6 9 17 4 12"/>
@@ -28,15 +22,6 @@ const UploadSvg = () => (
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
     <polyline points="17 8 12 3 7 8"/>
     <line x1="12" y1="3" x2="12" y2="15"/>
-  </svg>
-);
-
-const FingerTouchSvg = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M18 11V6a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2"/>
-    <path d="M14 10V4a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v2"/>
-    <path d="M10 10.5V6a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v8"/>
-    <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
   </svg>
 );
 
@@ -64,6 +49,14 @@ const formatISTDate = (offsetDays = 0) => {
 };
 
 const toMinutes = (hour) => Number(hour) * 60;
+const formatHour = (hour) => `${hour % 12 || 12}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
+const formatCampaignDate = (start, offset = 0) => {
+  const date = new Date(`${start}T00:00:00+05:30`);
+  date.setTime(date.getTime() + offset * 86400000);
+  return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric'
+  }).format(date) : '';
+};
 
 export default function Advertise() {
   const [step, setStep] = useState(1);
@@ -84,23 +77,23 @@ export default function Advertise() {
   const [uploadState, setUploadState] = useState("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState("");
-  const [isSandboxTouching, setIsSandboxTouching] = useState(false);
-  const [showSafeArea, setShowSafeArea] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(() => Boolean(readAdHandoff()));
   const [paymentUrl, setPaymentUrl] = useState(() => readAdHandoff()?.paymentUrl || '');
   const [confirming, setConfirming] = useState(false);
   const fileInputRef = useRef(null);
   const uploadControllerRef = useRef(null);
   const confirmingRef = useRef(false);
-  const previewTimerRef = useRef(null);
+  const stepHeadingRef = useRef(null);
+  const [paymentAmount, setPaymentAmount] = useState(() => readAdHandoff()?.amountPaise || 0);
   const isBusy = confirming || ['creating', 'uploading', 'processing'].includes(uploadState);
 
   useEffect(() => () => {
     uploadControllerRef.current?.abort();
-    clearTimeout(previewTimerRef.current);
   }, []);
 
   useEffect(() => {
+    if (handoffOpen) return;
     const controller = new AbortController();
     getAdConfig({ signal: controller.signal })
       .then((data) => {
@@ -112,7 +105,7 @@ export default function Advertise() {
       })
       .catch((err) => !controller.signal.aborted && setConfigError(err.message));
     return () => controller.abort();
-  }, []);
+  }, [handoffOpen]);
 
   const venueIds = useMemo(() => {
     if (selectedVenue === "all") return (config?.venues || []).map((v) => v.id);
@@ -131,7 +124,7 @@ export default function Advertise() {
   }, [hasRemoteVenue, config, startDate]);
 
   useEffect(() => {
-    if (!config || venueIds.length === 0) return;
+    if (handoffOpen || !config || venueIds.length === 0) return;
     const controller = new AbortController();
     setQuote(null);
     setQuoteError("");
@@ -143,7 +136,7 @@ export default function Advertise() {
       })
       .catch((err) => !controller.signal.aborted && setQuoteError(err.message));
     return () => controller.abort();
-  }, [config, venueIds, selectedDays]);
+  }, [config, venueIds, selectedDays, handoffOpen]);
 
   useEffect(() => {
     uploadControllerRef.current?.abort();
@@ -154,6 +147,10 @@ export default function Advertise() {
     setUploadProgress(0);
   // Intentionally invalidate a prepared draft whenever schedule changes.
   }, [selectedVenue, selectedDays, startDate, isAllDay, startHour, endHour]);
+
+  useEffect(() => {
+    stepHeadingRef.current?.scrollIntoView?.({ block: 'start', behavior: 'auto' });
+  }, [step, handoffOpen]);
 
   const tiers = config?.pricing || [
     { days:1, rupees:50, perDay:50 },
@@ -177,6 +174,7 @@ export default function Advertise() {
     const file = event.target.files?.[0];
     if (!file) return;
     setUploadError("");
+    setPreviewFailed(false);
     setMediaFile(file);
     setMedia(null);
     setUploadProgress(0);
@@ -239,12 +237,6 @@ export default function Advertise() {
     }
   };
 
-  const handlePreviewTap = () => {
-    setIsSandboxTouching(true);
-    clearTimeout(previewTimerRef.current);
-    previewTimerRef.current = window.setTimeout(() => setIsSandboxTouching(false), 1700);
-  };
-
   const handleConfirm = async () => {
     if (confirmingRef.current || !campaignId || uploadState !== "ready" || !quote || quoteError) return;
     confirmingRef.current = true;
@@ -257,7 +249,9 @@ export default function Advertise() {
       if (!url) {
         throw new Error('The kiosk did not return a secure payment link. Retry; do not upload again.');
       }
-      saveAdHandoff(payment);
+      const amountPaise = payment.amountPaise || Math.round(quote.finalRupees * 100);
+      saveAdHandoff({ ...payment, amountPaise });
+      setPaymentAmount(amountPaise);
       setPaymentUrl(url);
       setHandoffOpen(true);
     } catch (err) {
@@ -274,17 +268,17 @@ export default function Advertise() {
 
   return (
     <div className="reliv-ads-portal">
-      <fieldset className="ads-container" disabled={isBusy} style={{ border: 0, padding: 0, minWidth: 0 }}>
-        <header className="ads-header">
+      <div className="ads-container">
+        <header className="ads-header" ref={stepHeadingRef}>
           <div className="ads-logo-wrap">
-            <RelivHeartSvg />
-            <span className="ads-reliv-title">Reliv Ads</span>
+            <span className="ads-wordmark" aria-label="Reliv"><span>Re</span>liv</span><span className="ads-brand-caption">ADVERTISE</span>
           </div>
-          <h1 className="ads-headline">Put your brand on Reliv</h1>
-          <p className="ads-subheadline">Reach people while Reliv is idle.</p>
-          <div className="ads-pricing-pill">From ₹50/day · 3 days ₹117</div>
+          <h1 className="ads-headline">{handoffOpen ? "Your ad is saved" : step === 3 ? "Ready for the big screen" : "Your brand. On Reliv."}</h1>
+          <p className="ads-subheadline">{handoffOpen ? "One last step to activate your advertisement." : "A local audience. A screen that gets noticed."}</p>
+          {!handoffOpen && <div className="ads-pricing-pill">From ₹50/day · 3 days ₹117</div>}
         </header>
 
+        {!handoffOpen && <fieldset disabled={isBusy} className="ads-booking-fields">
         <div className="ads-steps-bar" aria-label="Booking progress">
           {["Schedule","Creative","Review"].map((label, index) => (
             <React.Fragment key={label}>
@@ -456,41 +450,22 @@ export default function Advertise() {
 
         {step === 3 && media && (
           <section className="ads-card">
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-              <h2 className="ads-section-title" style={{margin:0}}>Your ad on Reliv</h2>
-              <button type="button" className="link-secondary-action" style={{margin:0,fontSize:12}} onClick={() => setShowSafeArea((v) => !v)}>
-                {showSafeArea ? "Hide safe area" : "Show safe area"}
-              </button>
-            </div>
-
-            <div className="kiosk-preview-frame" onPointerDown={handlePreviewTap} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handlePreviewTap(); } }} role="button" tabIndex={0}>
-              {isSandboxTouching ? (
-                <div style={{width:"100%",height:"100%",background:"#f5f5f7",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#1d1d1f"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,color:"#ea580c"}}><RelivHeartSvg /><strong style={{fontSize:22}}>Reliv</strong></div>
-                  <div style={{fontSize:13,color:"#6e6e73",marginTop:8}}>Health Checkup & Medicine Dispenser</div>
-                </div>
-              ) : (
-                <div className="preview-media-container">
-                  <div className="kiosk-system-pill-top">ADVERTISEMENT</div>
-                  {media.mediaType === "video"
-                    ? <video src={media.previewUrl} className="preview-main-media" autoPlay loop muted playsInline />
-                    : <img src={media.previewUrl} className="preview-main-media" alt="Your advertisement preview" />}
-                  {showSafeArea && <div style={{position:"absolute",inset:12,border:"1px dashed rgba(255,255,255,.72)",pointerEvents:"none",zIndex:9,borderRadius:8}} />}
-                  <div className="kiosk-system-pill-bottom">
-                    <span style={{color:"#ea580c",display:"flex"}}><RelivHeartSvg /></span>
-                    <span style={{fontSize:13,fontWeight:700,letterSpacing:".5px"}}>RELIV · TOUCH TO START</span>
-                    <span className="ad-system-touch-anim"><FingerTouchSvg /></span>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="preview-touch-helper">Try it · touch anywhere and Reliv returns instantly</div>
+            <h2 className="ads-section-title">Your advertisement</h2>
+            <p className="ads-section-sub">This is the prepared file that will play on the kiosk.</p>
+            <figure className="ads-creative-preview">
+              {media.mediaType === "video"
+                ? <video src={media.previewUrl} controls playsInline preload="metadata" onError={() => setPreviewFailed(true)} />
+                : <img src={media.previewUrl} alt="Your advertisement, fitted to the Reliv display" decoding="async" onError={() => setPreviewFailed(true)} />}
+            </figure>
+            {previewFailed && <p role="alert" className="ads-inline-error">Preview could not load. Connect to RELIV-KIOSK and choose your file again before paying.</p>}
+            <p className="ads-preview-caption">{media.isTrue16x9 ? "Perfect fit · Full HD display" : "Automatically fitted · Your full creative stays visible"}</p>
 
             <div className="review-clean-summary">
               <div className="review-row-line">
                 <span style={{fontWeight:700}}>{selectedVenueName}</span>
-                <span className="review-row-sub">{selectedDays} {selectedDays === 1 ? "day" : "days"} · {isAllDay ? "All day" : `${startHour}:00–${endHour > 12 ? endHour - 12 : endHour}:00 ${endHour >= 12 ? "PM" : "AM"}`}</span>
+                <span className="review-row-sub">{selectedDays} {selectedDays === 1 ? "day" : "days"} · {isAllDay ? "All day" : `${formatHour(startHour)}–${formatHour(endHour)} IST`}</span>
               </div>
+              <p className="review-row-sub">{formatCampaignDate(startDate)}{selectedDays > 1 ? ` – ${formatCampaignDate(startDate, selectedDays - 1)}` : ''}</p>
               <div className="review-row-line">
                 <span style={{color:"#6e6e73"}}>{media.mediaType === "video" ? `${Math.round(media.durationSeconds)}s video` : "Image"} · {media.isTrue16x9 ? "Perfect fit" : "Optimized"}</span>
                 <span style={{color:"#15803d",fontWeight:600}}>{quote ? `₹${quote.effectivePerDayRupees}/day` : ""}</span>
@@ -508,31 +483,31 @@ export default function Advertise() {
               Your ad runs while Reliv is idle. Health sessions always come first.
             </p>
             {uploadError && <p className="review-legal-text" style={{color:"#b91c1c"}}>{uploadError}</p>}
-            <button type="button" className="btn-primary-ads" disabled={confirming} onClick={handleConfirm}>
+            <button type="button" className="btn-primary-ads" disabled={confirming || previewFailed} onClick={handleConfirm}>
               {confirming ? "Preparing Payment…" : `Confirm & Pay ₹${quote?.finalRupees ?? ""}`}
             </button>
           </section>
         )}
 
+        </fieldset>}
         {handoffOpen && (
-          <div className="payment-modal-overlay" role="dialog" aria-modal="true">
-            <div className="payment-modal-card">
-              <div className="saved-check-icon"><CheckSvg /></div>
-              <h3 className="saved-title">Your ad is saved</h3>
-              <p className="saved-subtext">It is already safely stored on this Reliv kiosk.</p>
-              <div className="saved-instruction-box">
-                <div><strong>1. Turn Wi-Fi off</strong> on your phone.</div>
-                <div style={{marginTop:8}}><strong>2. Use mobile data</strong> and open secure payment below.</div>
-                <div style={{marginTop:8}}><strong>3. Enter your paid 4-digit code</strong> using “Enter ad code” on the kiosk.</div>
-              </div>
-              <p style={{fontSize:13,color:"#86868b",margin:"0 0 20px"}}>You will not need to upload your creative again.</p>
-              <a className="btn-primary-ads" style={{marginTop:0, display:'flex', alignItems:'center', justifyContent:'center', textDecoration:'none'}} href={paymentUrl} target="_blank" rel="noopener noreferrer">Open secure payment</a>
-              <p style={{fontSize:13,color:'#62626b',marginTop:16}}>Keep this page open. If you are in a Wi-Fi sign-in window, open the link in your phone browser before disconnecting Wi-Fi.</p>
-              <button type="button" className="link-secondary-action" onClick={() => setHandoffOpen(false)}>Back to booking</button>
-            </div>
-          </div>
+          <section className="ads-card ads-payment-handoff" aria-label="Pay for your saved advertisement">
+            <div className="saved-check-icon"><CheckSvg /></div>
+            <h2>Advertisement saved ✓</h2>
+            <p>Your file is safely stored on this kiosk. It will not be lost when you switch Wi-Fi off.</p>
+            <ol className="ads-payment-steps">
+              <li><strong>Turn Wi-Fi OFF once.</strong><span>Use your phone's 4G or 5G connection.</span></li>
+              <li><strong>Tap Pay below.</strong><span>Complete payment on Reliv's secure payment page.</span></li>
+            </ol>
+            <a className="btn-primary-ads ads-pay-link" href={paymentUrl} rel="noreferrer">
+              {paymentAmount > 0 ? `Pay ₹${(paymentAmount / 100).toLocaleString('en-IN')}` : 'Pay securely'} <span aria-hidden="true">→</span>
+            </a>
+            <p className="ads-payment-note">After payment, enter the 4-digit code on the kiosk using <strong>Enter ad code</strong>. No reconnection or re-upload needed.</p>
+            <details className="ads-payment-help"><summary>Using the Wi-Fi sign-in window?</summary><p>Before turning Wi-Fi off, press and hold Pay to copy its payment link. Then open that link in Safari or Chrome. Use the payment link above so you can continue with this saved advertisement.</p></details>
+            <button type="button" className="link-secondary-action" onClick={() => setHandoffOpen(false)}>Back to review</button>
+          </section>
         )}
-      </fieldset>
+      </div>
     </div>
   );
 }

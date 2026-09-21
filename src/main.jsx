@@ -14,9 +14,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { recoverBlankScreen } from './utils/crashRecovery';
 import { SpeechProvider, useSpeech } from "./context/SpeechContext.jsx";
 import { initKioskTouchScroller } from "./utils/kioskTouchScroller";
-
-// Boot universal kiosk touch momentum scroller for Waveshare / RPi touchscreen
-initKioskTouchScroller();
+import { usesNativeScrolling } from './utils/phoneExperience';
 
 // ── Kiosk Crash Watchdog ──
 // If the screen goes blank (React tree unmounts or white-screens),
@@ -50,6 +48,21 @@ if (typeof window !== "undefined") {
 function KioskTouchHelper() {
   const { pathname, key } = useLocation();
   const { stop } = useSpeech();
+  const nativeScrolling = usesNativeScrolling(pathname);
+
+  useLayoutEffect(() => {
+    if (nativeScrolling) {
+      document.documentElement.dataset.nativeScroll = 'true';
+      const viewport = document.querySelector('meta[name="viewport"]');
+      const previousViewport = viewport?.getAttribute('content');
+      viewport?.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      return () => {
+        delete document.documentElement.dataset.nativeScroll;
+        if (previousViewport != null) viewport?.setAttribute('content', previousViewport);
+      };
+    }
+    return initKioskTouchScroller();
+  }, [nativeScrolling]);
 
   useLayoutEffect(() => {
     stop();
@@ -58,11 +71,7 @@ function KioskTouchHelper() {
 
   useEffect(() => {
     // Skip kiosk protections on user-phone routes and hidden admin tools
-    if (
-      pathname.startsWith('/mobile-entry') ||
-      pathname === '/h' ||
-      pathname.startsWith('/admin')
-    ) {
+    if (nativeScrolling) {
       return;
     }
 
@@ -165,7 +174,7 @@ function KioskTouchHelper() {
       document.removeEventListener('selectstart', preventSelectStart);
       document.removeEventListener('copy', preventCopy);
     };
-  }, [pathname]);
+  }, [nativeScrolling]);
 
   return null;
 }
