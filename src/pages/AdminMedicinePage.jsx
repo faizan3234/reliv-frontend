@@ -12,7 +12,6 @@ import {
   AlertTriangle,
   RefreshCw,
   LogOut,
-  Lock,
   ArrowLeft,
   Camera,
   Image as ImageIcon,
@@ -25,6 +24,7 @@ import { formatINR } from "../utils/currency";
 import { getMedicineImageUrl } from "./MedicineDispensing";
 import { adminFetch, readAdminSession, saveAdminSession, clearAdminSession } from '../utils/adminSession';
 import AdminAdSettings from '../components/AdminAdSettings';
+import RelivBrandLogo from '../components/RelivBrandLogo';
 
 export default function AdminMedicinePage() {
   const navigate = useNavigate();
@@ -448,12 +448,10 @@ export default function AdminMedicinePage() {
       <div className="min-h-screen h-auto w-full bg-slate-50 flex flex-col justify-center items-center overflow-y-auto scrollable-container touch-pan-y px-4 py-8 font-sans">
         <div className="w-full max-w-sm bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80">
           <div className="flex flex-col items-center text-center space-y-3 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center border border-orange-200 shadow-inner">
-              <Lock size={28} />
-            </div>
+            <RelivBrandLogo width={144} />
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Reliv Admin</h1>
-              <p className="text-xs text-slate-500 font-medium">Medicine Inventory Management</p>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Admin</h1>
+              <p className="text-xs text-slate-500 font-medium">Inventory & Advertisement Settings</p>
             </div>
           </div>
 
@@ -465,10 +463,11 @@ export default function AdminMedicinePage() {
                 className="w-full px-4 py-3.5 rounded-2xl border border-slate-300 text-slate-900" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label htmlFor="admin-password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 Admin Password
               </label>
               <input
+                id="admin-password"
                 type="password"
                 autoComplete="current-password"
                 autoFocus
@@ -491,7 +490,7 @@ export default function AdminMedicinePage() {
               disabled={isLoggingIn || !passwordInput || !emailInput.trim()}
               className="w-full py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-98 text-white font-bold text-base shadow-lg shadow-orange-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
-              {isLoggingIn ? "Verifying..." : "Access Inventory"}
+              {isLoggingIn ? "Verifying..." : "Sign in"}
             </button>
           </form>
 
@@ -533,12 +532,10 @@ export default function AdminMedicinePage() {
       {/* ── Sticky Top Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200/80 px-4 py-3 shadow-xs">
         <div className="max-w-md mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-base shadow-sm">
-              R
-            </div>
+          <div className="flex flex-col gap-1 min-w-0">
+            <RelivBrandLogo width={94} />
             <div>
-              <h1 className="text-base font-black text-slate-900 leading-tight">Reliv Admin</h1>
+              <h1 className="text-sm font-black text-slate-900 leading-tight">Admin</h1>
               <p className="text-[11px] text-slate-500 font-semibold">Inventory & Settings</p>
             </div>
           </div>

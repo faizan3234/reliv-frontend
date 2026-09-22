@@ -562,8 +562,6 @@
 
 /* A quiet, full-width creative and native phone scrolling. */
 .ads-booking-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
-.ads-wordmark { color: #171717; font-size: 32px; font-weight: 850; letter-spacing: -1.5px; line-height: 1; }
-.ads-wordmark > span { color: #f97316; }
 .ads-brand-caption { border-left: 1px solid #dedee3; padding-left: 12px; margin-left: 4px; color: #74747c; letter-spacing: 2px; font-size: 10px; font-weight: 700; }
 .ads-header { padding-top: 8px; }
 .ads-headline { scroll-margin-top: 20px; font-size: clamp(26px, 5.8vw, 34px); line-height: 1.15; }

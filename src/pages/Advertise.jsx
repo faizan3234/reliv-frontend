@@ -10,6 +10,7 @@ import {
 } from "../services/adApi";
 import "./Advertise.css";
 import { readAdHandoff, safeAdPaymentUrl, saveAdHandoff } from '../utils/adHandoff';
+import RelivBrandLogo from '../components/RelivBrandLogo';
 
 const CheckSvg = ({ className = "badge-check-svg" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -271,7 +272,7 @@ export default function Advertise() {
       <div className="ads-container">
         <header className="ads-header" ref={stepHeadingRef}>
           <div className="ads-logo-wrap">
-            <span className="ads-wordmark" aria-label="Reliv"><span>Re</span>liv</span><span className="ads-brand-caption">ADVERTISE</span>
+            <RelivBrandLogo /><span className="ads-brand-caption">ADVERTISE</span>
           </div>
           <h1 className="ads-headline">{handoffOpen ? "Your ad is saved" : step === 3 ? "Ready for the big screen" : "Your brand. On Reliv."}</h1>
           <p className="ads-subheadline">{handoffOpen ? "One last step to activate your advertisement." : "A local audience. A screen that gets noticed."}</p>

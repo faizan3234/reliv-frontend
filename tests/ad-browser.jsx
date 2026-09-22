@@ -153,7 +153,7 @@ async function run() {
   const confirm = findButton('Confirm & Pay ₹117');
   await act(async () => { confirm.click(); confirm.click(); }); await flush();
   assert(calls.filter(call => call.url.endsWith('/confirm-booking')).length === 1, 'booking confirmation is protected against duplicate taps');
-  assert(document.querySelector('#app').textContent.includes('Your ad is saved') && !document.querySelector('svg[role="img"]'), 'phone handoff appears after backend confirmation and shows no payment QR');
+  assert(document.querySelector('#app').textContent.includes('Your ad is saved') && !document.querySelector('svg[role="img"]:not([aria-label="Reliv"])'), 'phone handoff appears after backend confirmation and shows no payment QR');
   assert(document.querySelector('a[href="https://reliv7.vercel.app/pay#p=synthetic"]'), 'phone receives its own secure payment link');
   const payLink = document.querySelector('.ads-pay-link');
   assert(!payLink.target && payLink.textContent.includes('₹117'), 'payment opens in the same tab with the server-confirmed amount');
