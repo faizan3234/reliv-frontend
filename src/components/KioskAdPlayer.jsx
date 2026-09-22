@@ -185,7 +185,7 @@ export default function KioskAdPlayer() {
       {play.ad.mediaType === 'video'
         ? <video ref={video} key={play.ad.campaignId} src={play.ad.mediaUrl} muted playsInline preload="auto" onCanPlay={() => ready(play.token)} onEnded={() => finish(true)} onError={() => finish()} />
         : <img src={play.ad.mediaUrl} alt="Advertisement" onLoad={() => ready(play.token)} onError={() => finish()} />}
-      {play.ready && <><span className="ad-label">Advertisement</span><span className="ad-touch-hint">Reliv · Touch to return</span></>}
+      {play.ready && <span className="ad-touch-hint"><strong>Reliv</strong><span>Touch to start</span></span>}
     </div>}
     {keypad && <div className="kiosk-activation-modal">
       <section className="activation-keypad-card" role="dialog" aria-modal="true" aria-labelledby="ad-code-title" tabIndex={-1} ref={dialog}

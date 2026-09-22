@@ -18,6 +18,16 @@
   scroll-behavior: auto;
 }
 
+/* Phone/admin routes use one native document scroller, including Safari inertia. */
+html[data-native-scroll] { height: auto; overflow-x: clip !important; overflow-y: auto !important; overscroll-behavior-y: auto; touch-action: auto; }
+html[data-native-scroll] :is(body, #root, .app-screen, .reliv-ads-portal) {
+  height: auto !important; max-height: none; overflow: visible !important; touch-action: auto !important;
+}
+html[data-native-scroll] :is(body, #root) { min-height: 100svh; }
+html[data-native-scroll] * { -webkit-touch-callout: default !important; touch-action: auto; }
+html[data-native-scroll] :is(p, span, a, label) { -webkit-user-select: text !important; user-select: text !important; }
+html[data-native-scroll] :is(button, a, [role="button"]):active { transform: none; }
+
 /* ============================================
    1. TOUCH RESPONSIVENESS
    ============================================ */

@@ -23,7 +23,7 @@ function fixture() {
   Object.defineProperty(document, 'scrollingElement', { value: root });
   window.requestAnimationFrame = () => 1;
   window.cancelAnimationFrame = () => {};
-  window.eval(source + '\ninitKioskTouchScroller();');
+  window.eval(source + '\nwindow.stopKioskScroller = initKioskTouchScroller(); window.startKioskScroller = initKioskTouchScroller;');
   const touch = (type, touches) => {
     const event = new window.Event(type, { bubbles: true, cancelable: true });
     Object.defineProperty(event, 'touches', { value: touches.map(([identifier, clientY]) => ({ identifier, clientY, clientX: 30 })) });
@@ -72,5 +72,25 @@ test('modal containment blocks background scrolling and wheel line units are res
     assert.deepEqual([outer.scrollTop, root.scrollTop], [0, 0]);
     root.dispatchEvent(new window.WheelEvent('wheel', { deltaY: 2, deltaMode: 1, bubbles: true, cancelable: true }));
     assert.equal(root.scrollTop, 32);
+  } finally { dom.window.close(); }
+});
+
+test('leaving kiosk removes touch and click interception; returning installs only one scroller', () => {
+  const { dom, window, inner, touch } = fixture();
+  try {
+    touch('touchstart', [[1, 200]]);
+    touch('touchmove', [[1, 180]]);
+    window.stopKioskScroller();
+    const position = inner.scrollTop;
+    touch('touchstart', [[1, 200]]);
+    assert.equal(touch('touchmove', [[1, 150]]).defaultPrevented, false);
+    const click = new window.MouseEvent('click', { bubbles: true, cancelable: true });
+    inner.dispatchEvent(click);
+    assert.equal(click.defaultPrevented, false);
+    assert.equal(inner.scrollTop, position);
+    const stop = window.startKioskScroller();
+    inner.dispatchEvent(new window.WheelEvent('wheel', { deltaY: 10, bubbles: true, cancelable: true }));
+    assert.equal(inner.scrollTop, position + 10);
+    stop();
   } finally { dom.window.close(); }
 });

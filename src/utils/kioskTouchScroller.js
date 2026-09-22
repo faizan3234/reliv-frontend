@@ -26,6 +26,11 @@ export function initKioskTouchScroller() {
     return;
   }
   isInitialized = true;
+  const listeners = [];
+  const listen = (target, type, handler, options) => {
+    target.addEventListener(type, handler, options);
+    listeners.push(() => target.removeEventListener(type, handler, options));
+  };
 
   let isTracking = false;
   let isDragging = false;
@@ -129,7 +134,7 @@ export function initKioskTouchScroller() {
   // =========================================================================
   // 1. TOUCH EVENTS (Primary for Waveshare / RPi touchscreens)
   // =========================================================================
-  window.addEventListener(
+  listen(window,
     'touchstart',
     (e) => {
       // Arrest any coasting momentum immediately upon contact
@@ -154,7 +159,7 @@ export function initKioskTouchScroller() {
     { passive: true }
   );
 
-  window.addEventListener(
+  listen(window,
     'touchmove',
     (e) => {
       if (!isTracking || !e.touches || e.touches.length === 0) return;
@@ -206,7 +211,7 @@ export function initKioskTouchScroller() {
     { passive: false } // passive: false is REQUIRED so e.preventDefault() keeps the gesture alive
   );
 
-  window.addEventListener(
+  listen(window,
     'touchend',
     (e) => {
       if (!isTracking) return;
@@ -239,7 +244,7 @@ export function initKioskTouchScroller() {
     { passive: true }
   );
 
-  window.addEventListener(
+  listen(window,
     'touchcancel',
     () => {
       isTracking = false;
@@ -261,7 +266,7 @@ export function initKioskTouchScroller() {
   let mouseTarget = null;
   let mouseVelocityY = 0;
 
-  window.addEventListener(
+  listen(window,
     'mousedown',
     (e) => {
       if (e.button !== 0) return; // only left click
@@ -281,7 +286,7 @@ export function initKioskTouchScroller() {
     { passive: true }
   );
 
-  window.addEventListener(
+  listen(window,
     'mousemove',
     (e) => {
       if (!isMouseTracking) return;
@@ -311,7 +316,7 @@ export function initKioskTouchScroller() {
     { passive: true }
   );
 
-  window.addEventListener(
+  listen(window,
     'mouseup',
     () => {
       if (!isMouseTracking) return;
@@ -336,7 +341,7 @@ export function initKioskTouchScroller() {
   // =========================================================================
   // 3. MOUSE WHEEL (manual forwarding without native double-scrolling)
   // =========================================================================
-  window.addEventListener(
+  listen(window,
     'wheel',
     (e) => {
       if (e.ctrlKey || e.defaultPrevented || !e.cancelable) return;
@@ -352,7 +357,7 @@ export function initKioskTouchScroller() {
   // =========================================================================
   // 4. CLICK SUPPRESSION (Prevents accidental clicks after swipe gestures)
   // =========================================================================
-  document.addEventListener(
+  listen(document,
     'click',
     (e) => {
       if (performance.now() < suppressClickUntil) {
@@ -365,5 +370,13 @@ export function initKioskTouchScroller() {
     true // Capture phase: intercepts click before React or buttons see it
   );
 
-  console.log('[KioskTouchScroller] 🚀 Direct touch & drag scroller + wheel active');
+  // Remove every non-passive handler when navigating to phone/admin pages.
+  return () => {
+    stopMomentum();
+    isTracking = false;
+    isMouseTracking = false;
+    suppressClickUntil = 0;
+    listeners.forEach(remove => remove());
+    isInitialized = false;
+  };
 }

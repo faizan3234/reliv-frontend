@@ -38,21 +38,18 @@ import VoiceAssistantOverlay from "./components/VoiceAssistantOverlay";
 import Advertise from "./pages/Advertise.jsx";
 import PayAd from "./pages/PayAd.jsx";
 import KioskAdPlayer from "./components/KioskAdPlayer.jsx";
+import { isPhoneExperience } from './utils/phoneExperience';
 
 export default function App() {
     const { pathname } = useLocation();
     const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
 
     // The mobile service hosts the one-time QR flow on port 5000 or customer web domain.
-    const isQRDomain =
-      window.location.hostname === 'reliv7.vercel.app' ||
-      window.location.hostname === 'mail-request-m33c.vercel.app' ||
-      window.location.port === '5000';
 
     // Phone booking/payment pages must not mount kiosk voice, guardian or ads.
-    if (isQRDomain || pathname === '/advertise' || pathname === '/pay') {
+    if (isPhoneExperience(pathname)) {
       return (
-        <div className="app-screen">
+        <div className="app-screen phone-screen">
           <Routes>
             <Route path="/pay" element={<PayAd />} />
             <Route path="/advertise" element={<Advertise />} />

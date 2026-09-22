@@ -14,6 +14,6 @@ export function readAdHandoff() {
 }
 export function saveAdHandoff(payment) {
   // Contains only the already-encrypted short-lived URL, never the paid code.
-  try { sessionStorage.setItem(KEY, JSON.stringify({ paymentUrl:payment.paymentUrl, expiresAt:payment.expiresAt })); }
+  try { sessionStorage.setItem(KEY, JSON.stringify({ paymentUrl:payment.paymentUrl, expiresAt:payment.expiresAt, amountPaise:payment.amountPaise })); }
   catch { /* The in-memory link still works if browser storage is unavailable. */ }
 }

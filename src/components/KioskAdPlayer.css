@@ -1,9 +1,9 @@
 .kiosk-ad-player-overlay { position: fixed; inset: 0; z-index: 9000; background: #fff; cursor: pointer; }
 .kiosk-ad-player-overlay.is-loading { visibility: hidden; pointer-events: none; }
 .kiosk-ad-player-overlay > video, .kiosk-ad-player-overlay > img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.ad-label, .ad-touch-hint { position: absolute; background: rgba(255,255,255,.94); color: #343438; border: 1px solid #e8e8ed; border-radius: 100px; padding: 10px 18px; font: 600 14px/1.4 system-ui, sans-serif; }
-.ad-label { top: max(18px, env(safe-area-inset-top)); right: 18px; font-size: 11px; }
-.ad-touch-hint { bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); white-space: nowrap; }
+.ad-touch-hint { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); right: max(18px, env(safe-area-inset-right)); display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; background: #fff; color: #c2410c; border: 1px solid #fed7aa; border-radius: 100px; padding: 10px 16px; font: 600 clamp(12px, 1vw, 16px)/1.3 system-ui, sans-serif; pointer-events: none; box-shadow: 0 2px 10px #0000000a; }
+.ad-touch-hint strong { color: #ea580c; font-weight: 800; }
+.ad-touch-hint > span { border-left: 1px solid #fed7aa; padding-left: 10px; }
 .kiosk-activation-modal { position: fixed; inset: 0; z-index: 9100; background: rgba(245,245,247,.96); display: grid; align-items: safe center; justify-items: center; padding: 20px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y pinch-zoom; }
 .activation-keypad-card { width: min(100%, 380px); box-sizing: border-box; padding: clamp(20px, 4vw, 32px); background: white; border: 1px solid #e5e5ea; border-radius: 28px; box-shadow: 0 18px 60px #1d1d1f12; text-align: center; color: #1d1d1f; font-family: system-ui, sans-serif; }
 .activation-keypad-card h2 { margin: 0 0 10px; font-size: 26px; font-weight: 700; }

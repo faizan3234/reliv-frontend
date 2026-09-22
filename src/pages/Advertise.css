@@ -3,7 +3,7 @@
 
 .reliv-ads-portal {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
   height: auto;
   background-color: #f5f5f7;
   color: #1d1d1f;
@@ -12,10 +12,9 @@
   flex-direction: column;
   align-items: center;
   padding: 32px 16px 80px 16px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  touch-action: auto;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -36,19 +35,6 @@
   justify-content: center;
   gap: 8px;
   margin-bottom: 12px;
-}
-
-.ads-reliv-svg {
-  width: 26px;
-  height: 26px;
-  color: #ea580c;
-}
-
-.ads-reliv-title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: #1d1d1f;
 }
 
 .ads-headline {
@@ -170,7 +156,7 @@
   padding: 16px 20px;
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   width: 100%;
 }
 
@@ -246,7 +232,7 @@
   padding: 16px 12px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -446,7 +432,7 @@
   text-align: center;
   background: #fafafc;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease;
 }
 
 .upload-drop-zone:hover {
@@ -506,99 +492,6 @@
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* Screen 3: Hero Kiosk Preview */
-.kiosk-preview-frame {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: #ffffff;
-  border-radius: 14px;
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-  border: 2px solid #27272a;
-  margin-bottom: 14px;
-}
-
-.preview-media-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.preview-blur-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: blur(40px) brightness(0.75) saturate(0.85);
-  transform: scale(1.08);
-}
-
-.preview-main-media {
-  position: relative;
-  z-index: 2;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-/* 16:9 Edge-to-Edge for true 16:9 creatives */
-.preview-main-media.edge-to-edge {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* System Overlays conforming to true screen proportions */
-.kiosk-system-pill-top {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  z-index: 10;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(10px);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  padding: 5px 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  pointer-events: none;
-}
-
-.kiosk-system-pill-bottom {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  background: rgba(17, 24, 39, 0.88);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 9999px;
-  padding: 8px 22px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #ffffff;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
-  pointer-events: none;
-}
-
-.preview-touch-helper {
-  font-size: 13px;
-  color: #6e6e73;
-  text-align: center;
-  margin-bottom: 20px;
-}
-
 /* Clean Review Breakdown Hierarchy */
 .review-clean-summary {
   background: #f5f5f7;
@@ -648,89 +541,12 @@
   line-height: 1.4;
 }
 
-/* Phone Payment Handoff Modal (No QR on Phone!) */
-.payment-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(245, 245, 247, 0.96);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-  padding: 16px;
-}
-
-.payment-modal-card {
-  background: #ffffff;
-  border-radius: 24px;
-  max-width: 440px;
-  width: 100%;
-  padding: 36px 28px;
-  text-align: center;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
-}
-
-.saved-check-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #dcfce7;
-  color: #15803d;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px auto;
-}
-
-.saved-title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: #1d1d1f;
-  margin: 0 0 6px 0;
-}
-
-.saved-subtext {
-  font-size: 15px;
-  color: #6e6e73;
-  margin: 0 0 24px 0;
-}
-
-.saved-instruction-box {
-  background: #f5f5f7;
-  border-radius: 16px;
-  padding: 18px 20px;
-  text-align: left;
-  font-size: 14px;
-  color: #1d1d1f;
-  line-height: 1.5;
-  margin-bottom: 24px;
-}
-
-/* Giant 4-Digit Activation Box */
-.giant-code-display {
-  background: #f5f5f7;
-  border-radius: 18px;
-  padding: 24px 16px;
-  margin: 20px 0;
-}
-
-.giant-code-digits {
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: 12px;
-  color: #1d1d1f;
-  font-variant-numeric: tabular-nums;
-}
 /* Touch-first production portal */
 .ads-step-item { border: 0; background: transparent; padding: 6px 0; }
 .btn-primary-ads:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 .upload-drop-zone { width: 100%; display: flex; flex-direction: column; align-items: center; color: inherit; }
 .hour-select { min-height: 44px; font-size: 16px; }
 .ads-card :is(button, input, select):focus-visible { outline: 3px solid rgba(234,88,12,.3); outline-offset: 2px; }
-.payment-modal-overlay { overflow-y: auto; align-items: flex-start; overscroll-behavior-y: contain; touch-action: pan-y; }
-.payment-modal-card { margin-block: auto; flex-shrink: 0; max-width: 100%; }
 @media (max-width: 600px) {
   .reliv-ads-portal { padding: 22px 12px 64px; }
   .ads-container { max-width: 100%; }
@@ -742,5 +558,42 @@
   .venue-card-btn { padding: 15px 14px; gap: 12px; flex-wrap: wrap; }
   .hours-picker-box { align-items: stretch; gap: 12px; }
   .review-row-line { gap: 12px; flex-wrap: wrap; }
-  .kiosk-system-pill-bottom { max-width: calc(100% - 24px); padding: 7px 14px; }
+}
+
+/* A quiet, full-width creative and native phone scrolling. */
+.ads-booking-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ads-wordmark { color: #171717; font-size: 32px; font-weight: 850; letter-spacing: -1.5px; line-height: 1; }
+.ads-wordmark > span { color: #f97316; }
+.ads-brand-caption { border-left: 1px solid #dedee3; padding-left: 12px; margin-left: 4px; color: #74747c; letter-spacing: 2px; font-size: 10px; font-weight: 700; }
+.ads-header { padding-top: 8px; }
+.ads-headline { scroll-margin-top: 20px; font-size: clamp(26px, 5.8vw, 34px); line-height: 1.15; }
+.ads-subheadline { font-size: 14px; line-height: 1.6; margin-top: 12px; }
+.ads-card { box-shadow: 0 2px 8px #1d1d1f05; }
+.ads-creative-preview { width: 100%; aspect-ratio: 16 / 9; position: relative; margin: 20px 0 12px; background: #fff; border: 1px solid #e5e5ea; border-radius: 12px; overflow: hidden; }
+.ads-creative-preview > img, .ads-creative-preview > video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.ads-preview-caption { font-size: 12px; color: #74747c; line-height: 1.5; margin: 0 0 20px; }
+.ads-inline-error { color: #b91c1c; font-size: 14px; line-height: 1.5; }
+.ads-payment-handoff { text-align: center; }
+.ads-payment-handoff h2 { margin: 16px 0 8px; font-size: 22px; font-weight: 700; }
+.ads-payment-handoff > p { color: #66666f; line-height: 1.6; font-size: 15px; }
+.saved-check-icon { display: grid; place-items: center; width: 48px; height: 48px; margin: auto; border-radius: 50%; background: #ecfdf3; color: #15803d; }
+.ads-payment-steps { display: grid; gap: 18px; text-align: left; margin: 26px 0; padding: 20px 20px 20px 42px; border-radius: 16px; background: #f7f7f9; list-style: decimal; }
+.ads-payment-steps li { padding-left: 4px; font-size: 15px; }
+.ads-payment-steps span { display: block; color: #66666f; font-size: 13px; line-height: 1.6; margin-top: 4px; }
+.ads-pay-link { display: flex; align-items: center; justify-content: center; gap: 12px; text-decoration: none; box-sizing: border-box; }
+.ads-payment-handoff .ads-payment-note { margin: 20px 0 12px; font-size: 13px; }
+.ads-payment-help { text-align: left; color: #66666f; font-size: 12px; line-height: 1.6; }
+.ads-payment-help summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.ads-payment-help p { margin-bottom: 16px; }
+.reliv-ads-portal button, .reliv-ads-portal a { transform: none; transition-property: color, background-color, border-color; }
+.reliv-ads-portal .btn-primary-ads { min-height: 54px; height: auto; font-size: 16px; line-height: 1.4; padding: 16px 20px; box-shadow: none; }
+@media (max-width: 600px) {
+  .reliv-ads-portal { padding: 20px 14px max(28px, env(safe-area-inset-bottom)); }
+  .ads-card { padding: 22px 18px; }
+  .ads-creative-preview { border-radius: 9px; }
+  .ads-steps-bar { gap: 10px; }
+  .ads-step-item { min-width: 0; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reliv-ads-portal * { animation: none !important; transition: none !important; }
 }

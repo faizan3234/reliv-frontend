@@ -48,7 +48,7 @@ window.fetch = async (url, options = {}) => {
   if (url.endsWith('/api/ads/drafts')) return json({ ok: true, campaignId: 'AD-TEST' });
   if (url.includes('/chunks?')) return json({ ok: true });
   if (url.endsWith('/finalize')) return json({ ok: true, media: { previewUrl: '/media/ad.png', mediaType: 'image', aspectRatio: 'portrait' } });
-  if (url.endsWith('/confirm-booking')) return json({ ok: true, requestId: 'AD-REQUEST', paymentUrl: 'https://reliv7.vercel.app/pay#p=synthetic' });
+  if (url.endsWith('/confirm-booking')) return json({ ok: true, requestId: 'AD-REQUEST', paymentUrl: 'https://reliv7.vercel.app/pay#p=synthetic', amountPaise: 11700, expiresAt: Date.now() + 900000 });
   if (url.endsWith('/api/v2/create-order')) return json({ ok: true, orderId: 'order_AD_TEST', requestId: 'AD-REQUEST', amount: 11700, keyId: 'rzp_test_synthetic', serviceType: 'AD_CAMPAIGN', ...(paid ? { status: 'PAID', confirmationCode: '0042' } : {}) });
   if (url.endsWith('/api/v2/recover-payment')) return json({ ok: true, paid: false });
   return json({ ok: true });
@@ -65,9 +65,10 @@ async function tick(ms) {
 }
 // eslint-disable-next-line react-refresh/only-export-components
 function Probe() { navigate = useNavigate(); pathname = useLocation().pathname; speech = useSpeech(); return null; }
-async function mount(element, route = '/') {
+async function mount(element, route = '/', savedHandoff = null) {
   if (root) await act(async () => root.unmount());
   scheduled.clear(); localStorage.clear(); sessionStorage.clear();
+  if (savedHandoff) sessionStorage.setItem('reliv_ad_payment_handoff', savedHandoff);
   root = createRoot(document.getElementById('app'));
   await act(async () => root.render(<HealthProvider><MemoryRouter initialEntries={[route]}><SpeechProvider><VoiceAssistantProvider><Probe />{element}</VoiceAssistantProvider></SpeechProvider></MemoryRouter></HealthProvider>));
   await flush();
@@ -145,13 +146,25 @@ async function run() {
   await flush();
   assert(calls.some(call => call.url.includes('/chunks?')) && calls.some(call => call.url.endsWith('/finalize')), 'phone creative is uploaded and finalized on the Pi');
   await click('Preview on Reliv Screen');
+  const creative = document.querySelector('.ads-creative-preview img');
+  assert(creative && !document.querySelector('.preview-touch-pill') && !document.querySelector('#app').textContent.includes('Touch to start'), 'phone preview displays only the uploaded creative');
+  await act(async () => creative.click());
+  assert(document.querySelector('.ads-creative-preview img') && !document.querySelector('#app').textContent.includes('Touch detected'), 'touching the preview never replaces it with a fake kiosk screen');
   const confirm = findButton('Confirm & Pay ₹117');
   await act(async () => { confirm.click(); confirm.click(); }); await flush();
   assert(calls.filter(call => call.url.endsWith('/confirm-booking')).length === 1, 'booking confirmation is protected against duplicate taps');
   assert(document.querySelector('#app').textContent.includes('Your ad is saved') && !document.querySelector('svg[role="img"]'), 'phone handoff appears after backend confirmation and shows no payment QR');
   assert(document.querySelector('a[href="https://reliv7.vercel.app/pay#p=synthetic"]'), 'phone receives its own secure payment link');
+  const payLink = document.querySelector('.ads-pay-link');
+  assert(!payLink.target && payLink.textContent.includes('₹117'), 'payment opens in the same tab with the server-confirmed amount');
+  const saved = JSON.parse(sessionStorage.getItem('reliv_ad_payment_handoff'));
+  assert(saved.paymentUrl === payLink.href && saved.amountPaise === 11700 && saved.expiresAt > Date.now(), 'encrypted payment link and amount survive a reload without re-uploading');
   assert(!document.querySelector('#app').textContent.includes('Scan the payment QR'), 'phone handoff does not require scanning another device');
   assert(!localStorage.getItem('reliv_ads_campaigns_v1') && !localStorage.getItem('reliv_kiosk_pending_payment_v1'), 'campaigns and activation secrets are not stored in browser simulation');
+  const apiCallsBeforeRestore = calls.length;
+  await mount(<Advertise />, '/advertise', JSON.stringify(saved));
+  assert(document.querySelector('.ads-pay-link')?.href === saved.paymentUrl, 'returning to the saved page restores the actual payment destination');
+  assert(calls.slice(apiCallsBeforeRestore).every(call => !call.url.includes('/api/ads/')), 'saved payment handoff requires no connection to the Pi');
 
   window.history.replaceState({}, '', '/pay?campaign=FORGED&amt=1&code=5829');
   await mount(<PayAd />, '/pay');
