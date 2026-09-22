@@ -595,3 +595,65 @@
 @media (prefers-reduced-motion: reduce) {
   .reliv-ads-portal * { animation: none !important; transition: none !important; }
 }
+
+.ads-captive-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 14px auto 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ads-captive-steps { margin-top: 18px; }
+.ads-copy-payment { width: 100%; border: 0; cursor: pointer; }
+.ads-captive-note {
+  margin: 12px 0 0 !important;
+  color: #7c2d12 !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+}
+.ads-copy-secondary {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  border: 0;
+  background: transparent;
+  color: #52525b;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ads-copy-fallback {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 14px;
+  background: #fff7ed;
+  text-align: left;
+}
+.ads-copy-fallback p {
+  margin: 0 0 8px;
+  color: #9a3412;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.ads-copy-fallback textarea {
+  width: 100%;
+  min-height: 72px;
+  box-sizing: border-box;
+  resize: none;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+  color: #3f3f46;
+  font-size: 11px;
+  line-height: 1.4;
+}
