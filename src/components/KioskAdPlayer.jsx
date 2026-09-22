@@ -171,7 +171,7 @@ export default function KioskAdPlayer() {
       const data = await activateAdCampaign({ code }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       if (!['ACTIVE', 'SCHEDULED', 'PENDING_APPROVAL'].includes(data.status)) throw new Error('Activation was not confirmed. Retry; do not pay again.');
-      setSuccess(data.status === 'ACTIVE' ? 'Your ad is now in rotation.' : data.status === 'PENDING_APPROVAL' ? 'Payment confirmed. Your ad is awaiting venue approval.' : 'Your ad is scheduled for its booked dates.');
+      setSuccess(data.status === 'ACTIVE' ? 'Your ad is now in rotation.' : data.status === 'PENDING_APPROVAL' ? 'Payment confirmed. Your ad is awaiting venue approval.' : 'Your ad is scheduled for its booked dates and hours.');
     } catch (error) {
       if (!controller.signal.aborted) { setFeedback(error.message || 'Please retry. Do not pay again.'); setCode(''); }
     } finally {
