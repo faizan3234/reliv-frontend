@@ -9,7 +9,7 @@ import {
   uploadAdFile
 } from "../services/adApi";
 import "./Advertise.css";
-import { readAdHandoff, safeAdPaymentUrl, saveAdHandoff } from '../utils/adHandoff';
+import { copyAdPaymentUrl, isIosCaptiveBrowser, readAdHandoff, safeAdPaymentUrl, saveAdHandoff } from '../utils/adHandoff';
 import RelivBrandLogo from '../components/RelivBrandLogo';
 
 const CheckSvg = ({ className = "badge-check-svg" }) => (
@@ -87,6 +87,9 @@ export default function Advertise() {
   const confirmingRef = useRef(false);
   const stepHeadingRef = useRef(null);
   const [paymentAmount, setPaymentAmount] = useState(() => readAdHandoff()?.amountPaise || 0);
+  const [paymentLinkCopied, setPaymentLinkCopied] = useState(false);
+  const [paymentCopyError, setPaymentCopyError] = useState('');
+  const iosCaptiveBrowser = useMemo(() => isIosCaptiveBrowser(), []);
   const isBusy = confirming || ['creating', 'uploading', 'processing'].includes(uploadState);
 
   useEffect(() => () => {
@@ -260,6 +263,15 @@ export default function Advertise() {
     } finally {
       confirmingRef.current = false;
       if (!controller?.signal.aborted) setConfirming(false);
+    }
+  };
+
+  const handleCopyPaymentLink = async () => {
+    setPaymentCopyError('');
+    const copied = await copyAdPaymentUrl(paymentUrl);
+    setPaymentLinkCopied(copied);
+    if (!copied) {
+      setPaymentCopyError('Could not copy automatically. Press and hold the payment link below, copy it, then open it in Safari.');
     }
   };
 
@@ -496,15 +508,53 @@ export default function Advertise() {
             <div className="saved-check-icon"><CheckSvg /></div>
             <h2>Advertisement saved ✓</h2>
             <p>Your file is safely stored on this kiosk. It will not be lost when you switch Wi-Fi off.</p>
-            <ol className="ads-payment-steps">
-              <li><strong>Turn Wi-Fi OFF once.</strong><span>Use your phone's 4G or 5G connection.</span></li>
-              <li><strong>Tap Pay below.</strong><span>Complete payment on Reliv's secure payment page.</span></li>
-            </ol>
-            <a className="btn-primary-ads ads-pay-link" href={paymentUrl} rel="noreferrer">
-              {paymentAmount > 0 ? `Pay ₹${(paymentAmount / 100).toLocaleString('en-IN')}` : 'Pay securely'} <span aria-hidden="true">→</span>
-            </a>
+
+            {iosCaptiveBrowser ? (
+              <>
+                <div className="ads-captive-banner" role="status">iPhone Wi-Fi sign-in detected</div>
+                <ol className="ads-payment-steps ads-captive-steps">
+                  <li><strong>Copy your payment link now.</strong><span>Stay connected to RELIV-KIOSK for this step.</span></li>
+                  <li><strong>Close this Wi-Fi window.</strong><span>Tap the X at the top-right of the screen.</span></li>
+                  <li><strong>Turn Wi-Fi OFF and open Safari.</strong><span>Use your phone's 4G or 5G connection.</span></li>
+                  <li><strong>Paste the copied link and pay.</strong><span>Reliv's secure payment page will open using mobile data.</span></li>
+                </ol>
+                <button type="button" className="btn-primary-ads ads-copy-payment" onClick={handleCopyPaymentLink}>
+                  {paymentLinkCopied
+                    ? '✓ Link copied — close this window'
+                    : paymentAmount > 0
+                      ? `Copy payment link for ₹${(paymentAmount / 100).toLocaleString('en-IN')}`
+                      : 'Copy secure payment link'}
+                </button>
+                <p className="ads-captive-note">Do not open the Internet payment page inside Hotspot Login. That window can lose network access after Wi-Fi is switched off.</p>
+              </>
+            ) : (
+              <>
+                <ol className="ads-payment-steps">
+                  <li><strong>Turn Wi-Fi OFF once.</strong><span>Use your phone's 4G or 5G connection.</span></li>
+                  <li><strong>Tap Pay below.</strong><span>Complete payment on Reliv's secure payment page.</span></li>
+                </ol>
+                <a className="btn-primary-ads ads-pay-link" href={paymentUrl} rel="noreferrer">
+                  {paymentAmount > 0 ? `Pay ₹${(paymentAmount / 100).toLocaleString('en-IN')}` : 'Pay securely'} <span aria-hidden="true">→</span>
+                </a>
+                <button type="button" className="ads-copy-secondary" onClick={handleCopyPaymentLink}>
+                  {paymentLinkCopied ? '✓ Payment link copied' : 'Copy payment link instead'}
+                </button>
+              </>
+            )}
+
+            {paymentCopyError && (
+              <div className="ads-copy-fallback" role="alert">
+                <p>{paymentCopyError}</p>
+                <textarea
+                  readOnly
+                  value={paymentUrl}
+                  aria-label="Secure payment link"
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+              </div>
+            )}
+
             <p className="ads-payment-note">After payment, enter the 4-digit code on the kiosk using <strong>Enter ad code</strong>. No reconnection or re-upload needed.</p>
-            <details className="ads-payment-help"><summary>Using the Wi-Fi sign-in window?</summary><p>Before turning Wi-Fi off, press and hold Pay to copy its payment link. Then open that link in Safari or Chrome. Use the payment link above so you can continue with this saved advertisement.</p></details>
             <button type="button" className="link-secondary-action" onClick={() => setHandoffOpen(false)}>Back to review</button>
           </section>
         )}
