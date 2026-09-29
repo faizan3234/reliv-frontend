@@ -1,146 +1,26 @@
-// src/App.jsx
-import React from "react";
-import { Navigate, Routes, Route, useLocation } from "react-router-dom";
-import Splash from "./pages/Splash.jsx";
-import ChooseLanguage from "./pages/ChooseLanguage.jsx";
-import CustomerDetailsWrapper from "./pages/CustomerDetails.jsx";
-import TwoOptions from "./pages/TwoOptions.jsx";
-import HealthCheckup from "./pages/HealthCheckup.jsx";
-import MedicineDispensing from "./pages/MedicineDispensing.jsx";
-import EyeSight from "./pages/EyeSight.jsx";
-import PaymentGate from "./pages/PaymentGate.jsx";
-import OxygenPulse from "./pages/OxygenPulse.jsx";
-import BodyTemperature from "./pages/BodyTemperature.jsx";
-import Checkout from "./pages/Checkout.jsx";
-import OrderSuccess from "./pages/OrderSuccess.jsx";
-import BodyComposition from "./pages/BodyComposition.jsx";
-import Feedback from "./pages/feedback.jsx";
-import KioskGuardian from "./components/KioskGuardian.jsx";
-import KioskSafetyManager from "./components/KioskSafetyManager.jsx";
-
-// Import your new Report pages
-import Report1 from "./pages/Report1.jsx";
-import Report2 from "./pages/Report2.jsx";
-import Report3 from "./pages/Report3.jsx";
-import Report4 from "./pages/Report4.jsx";
-import Report5 from "./pages/Report5.jsx";
-import Team from "./pages/Team.jsx";
-import WellnessRecommendations from "./pages/WellnessRecommendations.jsx";
-import MobileEntry from "./pages/MobileEntry.jsx";
-import MobileEntryGateway from "./pages/MobileEntryGateway.jsx";
-import SpeechAdmin from "./pages/SpeechAdmin.jsx";
-import AdminMedicinePage from "./pages/AdminMedicinePage.jsx";
-import SpeechControl from "./components/SpeechControl.jsx";
-import PhotoUpload from "./pages/PhotoUpload.jsx";
-import ProtectedReportRoute from "./components/ProtectedReportRoute";
-import { VoiceAssistantProvider } from "./context/VoiceAssistantContext";
-import VoiceAssistantOverlay from "./components/VoiceAssistantOverlay";
-import Advertise from "./pages/Advertise.jsx";
-import PayAd from "./pages/PayAd.jsx";
-import KioskAdPlayer from "./components/KioskAdPlayer.jsx";
+import React, { lazy, Suspense } from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { isPhoneExperience } from './utils/phoneExperience';
-import { readBrowserStorage } from './utils/browserStorage';
+
+// Advertisers do not download report charts, MQTT or kiosk screens to book an ad.
+const KioskApp = lazy(() => import('./KioskApp'));
+const Advertise = lazy(() => import('./pages/Advertise'));
+const PayAd = lazy(() => import('./pages/PayAd'));
+const MobileEntry = lazy(() => import('./pages/MobileEntry'));
+const PhotoUpload = lazy(() => import('./pages/PhotoUpload'));
+const MobileEntryGateway = lazy(() => import('./pages/MobileEntryGateway'));
 
 export default function App() {
-    const { pathname } = useLocation();
-    const isMedicineDispensingEnabled = readBrowserStorage('reliv_medicine_dispensing_enabled') !== 'false';
-
-    // The mobile service hosts the one-time QR flow on port 5000 or customer web domain.
-
-    // Phone booking/payment pages must not mount kiosk voice, guardian or ads.
-    if (isPhoneExperience(pathname)) {
-      return (
-        <div className="app-screen phone-screen">
-          <Routes>
-            <Route path="/pay" element={<PayAd />} />
-            <Route path="/advertise" element={<Advertise />} />
-            <Route path="/mobile-entry" element={<MobileEntry />} />
-            <Route path="/photo-upload" element={<PhotoUpload />} />
-            {/* Everything else → Session Expired (MobileEntryGateway with no token) */}
-            <Route path="*" element={<MobileEntryGateway />} />
-          </Routes>
-        </div>
-      );
-    }
-
-    // Normal kiosk app (reliv-frontend-henna.vercel.app)
-    return (
-      <VoiceAssistantProvider>
-        <div className="app-screen">
-          <KioskAdPlayer />
-          <KioskGuardian />
-          <KioskSafetyManager />
-          <SpeechControl />
-          <VoiceAssistantOverlay />
-          <Routes>
-          <Route path="/" element={<Splash />} />
-          <Route path="/advertise" element={<Advertise />} />
-          <Route path="/pay" element={<PayAd />} />
-          <Route path="/choose-language" element={<ChooseLanguage />} />
-          <Route path="/customer-details" element={<CustomerDetailsWrapper />} />
-          <Route path="/two-options" element={<TwoOptions />} />
-          <Route path="/health-checkup" element={<HealthCheckup />} />
-          {isMedicineDispensingEnabled && (
-            <Route path="/medicine-dispensing" element={<MedicineDispensing />} />
-          )}
-          <Route path="/payment" element={<PaymentGate />} />
-          <Route path="/oxygen-pulse" element={<OxygenPulse />} />
-          <Route path="/eyesight" element={<EyeSight />} />
-          <Route path="/body-temperature" element={<BodyTemperature />} />
-          <Route path="/body-composition" element={<BodyComposition />} />
-          <Route
-            path="/report-1"
-            element={
-              <ProtectedReportRoute>
-                <Report1 />
-              </ProtectedReportRoute>
-            }
-          />
-          <Route
-            path="/report-2"
-            element={
-              <ProtectedReportRoute>
-                <Report2 />
-              </ProtectedReportRoute>
-            }
-          />
-          <Route
-            path="/report-3"
-            element={
-              <ProtectedReportRoute>
-                <Report3 />
-              </ProtectedReportRoute>
-            }
-          />
-          <Route
-            path="/report-4"
-            element={
-              <ProtectedReportRoute>
-                <Report4 />
-              </ProtectedReportRoute>
-            }
-          />
-          <Route
-            path="/report-5"
-            element={
-              <ProtectedReportRoute>
-                <Report5 />
-              </ProtectedReportRoute>
-            }
-          />
-          <Route path="/wellness-recommendations" element={<WellnessRecommendations />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/order-success" element={<OrderSuccess />} />
-          <Route path="/feedback" element={<Feedback />} />
-          <Route path="/team" element={<Team />} />
-          <Route path="/mobile-entry" element={<MobileEntry />} />
-          <Route path="/h" element={<MobileEntryGateway />} />
-          <Route path="/photo-upload" element={<PhotoUpload />} />
-          <Route path="/admin" element={<AdminMedicinePage />} />
-          <Route path="/admin-x7k9/speech" element={<SpeechAdmin />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
-      </VoiceAssistantProvider>
-    );
+  const { pathname } = useLocation();
+  return <Suspense fallback={<div role="status" className="min-h-screen flex items-center justify-center bg-white text-slate-700">Loading Reliv…</div>}>
+    {!isPhoneExperience(pathname) ? <KioskApp /> : <div className="app-screen phone-screen">
+    <Routes>
+      <Route path="/advertise" element={<Advertise />} />
+      <Route path="/pay" element={<PayAd />} />
+      <Route path="/mobile-entry" element={<MobileEntry />} />
+      <Route path="/photo-upload" element={<PhotoUpload />} />
+      <Route path="*" element={<MobileEntryGateway />} />
+    </Routes>
+  </div>}
+  </Suspense>;
 }
