@@ -9,8 +9,9 @@ import {
   uploadAdFile
 } from "../services/adApi";
 import "./Advertise.css";
-import { copyAdPaymentUrl, isIosCaptiveBrowser, readAdHandoff, safeAdPaymentUrl, saveAdHandoff } from '../utils/adHandoff';
+import { readAdHandoff, safeAdPaymentUrl, saveAdHandoff } from '../utils/adHandoff';
 import RelivBrandLogo from '../components/RelivBrandLogo';
+import { prepareAdImageUpload } from '../utils/adImageUpload';
 
 const CheckSvg = ({ className = "badge-check-svg" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -87,10 +88,7 @@ export default function Advertise() {
   const confirmingRef = useRef(false);
   const stepHeadingRef = useRef(null);
   const [paymentAmount, setPaymentAmount] = useState(() => readAdHandoff()?.amountPaise || 0);
-  const [paymentLinkCopied, setPaymentLinkCopied] = useState(false);
-  const [paymentCopyError, setPaymentCopyError] = useState('');
-  const iosCaptiveBrowser = useMemo(() => isIosCaptiveBrowser(), []);
-  const isBusy = confirming || ['creating', 'uploading', 'processing'].includes(uploadState);
+  const isBusy = confirming || ['optimizing', 'creating', 'uploading', 'processing'].includes(uploadState);
 
   useEffect(() => () => {
     uploadControllerRef.current?.abort();
@@ -204,6 +202,9 @@ export default function Advertise() {
     const controller = new AbortController();
     uploadControllerRef.current = controller;
     try {
+      setUploadState('optimizing');
+      const uploadFile = await prepareAdImageUpload(file, controller.signal);
+      if (controller.signal.aborted) return;
       setUploadState("creating");
       const draft = await createAdDraft({
         targetVenueIds: venueIds,
@@ -220,13 +221,13 @@ export default function Advertise() {
       setUploadState("uploading");
       await uploadAdFile({
         campaignId: draft.campaignId,
-        file,
+        file: uploadFile,
         onProgress: setUploadProgress,
         signal: controller.signal
       });
 
       setUploadState("processing");
-      const result = await finalizeAd(draft.campaignId, file, { signal: controller.signal });
+      const result = await finalizeAd(draft.campaignId, uploadFile, { signal: controller.signal });
       if (controller.signal.aborted) return;
       if (!absoluteAdMediaUrl(result.media?.previewUrl)) throw new Error('The kiosk did not return a ready creative. Please retry uploading.');
       setMedia({
@@ -263,15 +264,6 @@ export default function Advertise() {
     } finally {
       confirmingRef.current = false;
       if (!controller?.signal.aborted) setConfirming(false);
-    }
-  };
-
-  const handleCopyPaymentLink = async () => {
-    setPaymentCopyError('');
-    const copied = await copyAdPaymentUrl(paymentUrl);
-    setPaymentLinkCopied(copied);
-    if (!copied) {
-      setPaymentCopyError('Could not copy automatically. Press and hold the payment link below, copy it, then open it in Safari.');
     }
   };
 
@@ -315,7 +307,7 @@ export default function Advertise() {
         {step === 1 && (
           <section className="ads-card">
             <h2 className="ads-section-title">Where should your ad appear?</h2>
-            <p className="ads-section-sub">11.6″ Full-HD Reliv displays · up to 8 campaigns per time window</p>
+            <p className="ads-section-sub">10.1″ Reliv display · 1280 × 800 · up to 8 campaigns per time window</p>
 
             <div className="venue-options-list">
               {(config?.venues || []).map((venue) => (
@@ -438,20 +430,20 @@ export default function Advertise() {
               <UploadSvg />
               <span className="upload-title">{mediaFile?.name || "Choose Photo or Video"}</span>
               <span className="upload-hint">JPG, PNG, WebP, MP4 or MOV</span>
-              <span className="upload-limits-pill">Image ≤ 20 MB · Video ≤ 150 MB · playback length confirmed by kiosk</span>
+              <span className="upload-limits-pill">Image ≤ 20 MB · Video ≤ 150 MB · First 15 seconds play. Short clips upload faster.</span>
             </button>
 
-            {["creating","uploading","processing"].includes(uploadState) && (
+            {["optimizing","creating","uploading","processing"].includes(uploadState) && (
               <div style={{textAlign:"center",padding:20,color:"#6e6e73",fontSize:14}}>
-                {uploadState === "uploading" ? `Uploading ${uploadProgress}%` : uploadState === "processing" ? "Optimizing for the Reliv display…" : "Preparing your slot…"}
+                {uploadState === "uploading" ? `Uploading ${uploadProgress}%` : uploadState === "processing" ? "Preparing your 1280 × 800 preview…" : uploadState === 'optimizing' ? 'Preparing your file for a faster upload…' : "Preparing your slot…"}
               </div>
             )}
             {uploadError && <p className="review-legal-text" style={{color:"#b91c1c"}}>{uploadError}</p>}
 
             {media && (
               <div style={{marginTop:18}}>
-                <div className={`fit-status-pill ${media.isTrue16x9 ? "fit-perfect" : "fit-optimized"}`}>
-                  {media.isTrue16x9 ? <><StarSvg /> Perfect Fit · Edge-to-edge</> : <><CheckSvg /> {media.aspectRatio === "portrait" ? "Portrait Optimized" : media.aspectRatio === "square" ? "Square Optimized" : "Optimized for Reliv"}</>}
+                <div className={`fit-status-pill ${media.isDisplayFit ? "fit-perfect" : "fit-optimized"}`}>
+                  {media.isDisplayFit ? <><StarSvg /> Perfect Fit · Edge-to-edge</> : <><CheckSvg /> {media.aspectRatio === "portrait" ? "Portrait Optimized" : media.aspectRatio === "square" ? "Square Optimized" : "Optimized for Reliv"}</>}
                 </div>
                 {media.hasAudio && <div style={{fontSize:12,color:"#6e6e73",marginTop:8,display:"flex",gap:6,alignItems:"center"}}><SpeakerSvg /> Audio included · kiosk playback is volume-limited</div>}
                 <button type="button" className="btn-primary-ads" onClick={() => setStep(3)}>Preview on Reliv Screen</button>
@@ -465,13 +457,13 @@ export default function Advertise() {
           <section className="ads-card">
             <h2 className="ads-section-title">Your advertisement</h2>
             <p className="ads-section-sub">This is the prepared file that will play on the kiosk.</p>
-            <figure className="ads-creative-preview">
+            <figure className="ads-creative-preview" style={{ aspectRatio: `${media.width || 1280} / ${media.height || 800}` }}>
               {media.mediaType === "video"
-                ? <video src={media.previewUrl} controls playsInline preload="metadata" onError={() => setPreviewFailed(true)} />
+                ? <video src={media.previewUrl} controls playsInline preload="auto" onError={() => setPreviewFailed(true)} />
                 : <img src={media.previewUrl} alt="Your advertisement, fitted to the Reliv display" decoding="async" onError={() => setPreviewFailed(true)} />}
             </figure>
             {previewFailed && <p role="alert" className="ads-inline-error">Preview could not load. Connect to RELIV-KIOSK and choose your file again before paying.</p>}
-            <p className="ads-preview-caption">{media.isTrue16x9 ? "Perfect fit · Full HD display" : "Automatically fitted · Your full creative stays visible"}</p>
+            <p className="ads-preview-caption">{media.isDisplayFit ? "Perfect fit · 1280 × 800 display" : "Automatically fitted · Your full creative stays visible"}</p>
 
             <div className="review-clean-summary">
               <div className="review-row-line">
@@ -480,7 +472,7 @@ export default function Advertise() {
               </div>
               <p className="review-row-sub">{formatCampaignDate(startDate)}{selectedDays > 1 ? ` – ${formatCampaignDate(startDate, selectedDays - 1)}` : ''}</p>
               <div className="review-row-line">
-                <span style={{color:"#6e6e73"}}>{media.mediaType === "video" ? `${Math.round(media.durationSeconds)}s video` : "Image"} · {media.isTrue16x9 ? "Perfect fit" : "Optimized"}</span>
+                <span style={{color:"#6e6e73"}}>{media.mediaType === "video" ? `${Math.round(media.durationSeconds)}s video` : "Image"} · {media.isDisplayFit ? "Perfect fit" : "Optimized"}</span>
                 <span style={{color:"#15803d",fontWeight:600}}>{quote ? `₹${quote.effectivePerDayRupees}/day` : ""}</span>
               </div>
               <div className="review-total-divider" />
@@ -509,50 +501,14 @@ export default function Advertise() {
             <h2>Advertisement saved ✓</h2>
             <p>Your file is safely stored on this kiosk. It will not be lost when you switch Wi-Fi off.</p>
 
-            {iosCaptiveBrowser ? (
-              <>
-                <div className="ads-captive-banner" role="status">iPhone Wi-Fi sign-in detected</div>
-                <ol className="ads-payment-steps ads-captive-steps">
-                  <li><strong>Copy your payment link now.</strong><span>Stay connected to RELIV-KIOSK for this step.</span></li>
-                  <li><strong>Close this Wi-Fi window.</strong><span>Tap the X at the top-right of the screen.</span></li>
-                  <li><strong>Turn Wi-Fi OFF and open Safari.</strong><span>Use your phone's 4G or 5G connection.</span></li>
-                  <li><strong>Paste the copied link and pay.</strong><span>Reliv's secure payment page will open using mobile data.</span></li>
-                </ol>
-                <button type="button" className="btn-primary-ads ads-copy-payment" onClick={handleCopyPaymentLink}>
-                  {paymentLinkCopied
-                    ? '✓ Link copied — close this window'
-                    : paymentAmount > 0
-                      ? `Copy payment link for ₹${(paymentAmount / 100).toLocaleString('en-IN')}`
-                      : 'Copy secure payment link'}
-                </button>
-                <p className="ads-captive-note">Do not open the Internet payment page inside Hotspot Login. That window can lose network access after Wi-Fi is switched off.</p>
-              </>
-            ) : (
-              <>
-                <ol className="ads-payment-steps">
-                  <li><strong>Turn Wi-Fi OFF once.</strong><span>Use your phone's 4G or 5G connection.</span></li>
-                  <li><strong>Tap Pay below.</strong><span>Complete payment on Reliv's secure payment page.</span></li>
-                </ol>
-                <a className="btn-primary-ads ads-pay-link" href={paymentUrl} rel="noreferrer">
-                  {paymentAmount > 0 ? `Pay ₹${(paymentAmount / 100).toLocaleString('en-IN')}` : 'Pay securely'} <span aria-hidden="true">→</span>
-                </a>
-                <button type="button" className="ads-copy-secondary" onClick={handleCopyPaymentLink}>
-                  {paymentLinkCopied ? '✓ Payment link copied' : 'Copy payment link instead'}
-                </button>
-              </>
-            )}
-
-            {paymentCopyError && (
-              <div className="ads-copy-fallback" role="alert">
-                <p>{paymentCopyError}</p>
-                <textarea
-                  readOnly
-                  value={paymentUrl}
-                  aria-label="Secure payment link"
-                  onFocus={(event) => event.currentTarget.select()}
-                />
-              </div>
-            )}
+            <ol className="ads-payment-steps">
+              <li><strong>Turn Wi-Fi OFF once.</strong><span>Use your phone's 4G or 5G connection.</span></li>
+              <li><strong>Tap Pay below.</strong><span>Go directly to Reliv's secure payment page.</span></li>
+            </ol>
+            <a className="btn-primary-ads ads-pay-link" href={paymentUrl} rel="noreferrer">
+              {paymentAmount > 0 ? `Pay ₹${(paymentAmount / 100).toLocaleString('en-IN')}` : 'Pay securely'} <span aria-hidden="true">→</span>
+            </a>
+            <p className="ads-payment-note">Use Safari or Chrome for payment. Your phone's Wi-Fi sign-in window may close when you disconnect.</p>
 
             <p className="ads-payment-note">After payment, enter the 4-digit code on the kiosk using <strong>Enter ad code</strong>. No reconnection or re-upload needed.</p>
             {campaignId && <button type="button" className="link-secondary-action" onClick={() => setHandoffOpen(false)}>Back to review</button>}

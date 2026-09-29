@@ -12,8 +12,10 @@ export default function KioskAdPlayer() {
   const pausedRef = useRef(listeningPaused);
   pausedRef.current = listeningPaused;
   const [ads, setAds] = useState([]);
+  const [playlistVersion, setPlaylistVersion] = useState(0);
   const [gap, setGap] = useState(5);
   const [play, setPlay] = useState(null);
+  const [gapElapsed, setGapElapsed] = useState(false);
   const [lastActivity, setLastActivity] = useState(Date.now);
   const [blocked, setBlocked] = useState(false);
   const [keypad, setKeypad] = useState(false);
@@ -22,13 +24,16 @@ export default function KioskAdPlayer() {
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
   const index = useRef(0);
+  const activatedCampaign = useRef(null);
   const video = useRef(null);
+  const backdrop = useRef(null);
   const activePlay = useRef(null);
   const swallowUntil = useRef(0);
   const activation = useRef(null);
   const dialog = useRef(null);
   const previousFocus = useRef(null);
-  const overlayActive = isHome && (Boolean(play?.ready) || keypad);
+  const showing = isHome && Boolean(play?.ready) && gapElapsed && !blocked && !keypad;
+  const overlayActive = showing || (isHome && keypad);
 
   const finish = useCallback((completed = false, interrupted = false) => {
     if (video.current) { video.current.muted = true; video.current.pause(); }
@@ -36,6 +41,7 @@ export default function KioskAdPlayer() {
     activePlay.current = null;
     if (entry) void recordAdPlay(entry.campaignId, { startedAt: entry.startedAt, completed, interruptedByUser: interrupted });
     setPlay(null);
+    setGapElapsed(false);
     setLastActivity(Date.now());
   }, []);
 
@@ -60,7 +66,7 @@ export default function KioskAdPlayer() {
     };
     void poll();
     return () => { controller.abort(); clearTimeout(timer); };
-  }, [isHome, finish]);
+  }, [isHome, finish, playlistVersion]);
 
   useEffect(() => {
     if (!isHome || blocked || keypad || document.hidden) return;
@@ -69,21 +75,28 @@ export default function KioskAdPlayer() {
       return;
     }
     if (!ads.length) return;
-    // No overlay in the gap: the actual Splash stays visible and usable.
-    const timer = setTimeout(() => {
-      setPlay({ ad: ads[index.current++ % ads.length], ready: false, token: Symbol() });
-    }, Math.max(0, gap * 1000 - (Date.now() - lastActivity)));
-    return () => clearTimeout(timer);
+    // Prepare one upcoming creative DURING the splash interval. Reuse this same
+    // media element when revealed, so playback doesn't start another download.
+    const newlyActivated = ads.find(ad => ad.campaignId === activatedCampaign.current);
+    if (newlyActivated) activatedCampaign.current = null;
+    setPlay({ ad: newlyActivated || ads[index.current++ % ads.length], ready: false, token: Symbol() });
   }, [isHome, ads, gap, lastActivity, blocked, keypad, play, finish]);
+
+  useEffect(() => {
+    if (!isHome || blocked || keypad || document.hidden) return;
+    const timer = setTimeout(() => setGapElapsed(true), Math.max(0, gap * 1000 - (Date.now() - lastActivity)));
+    return () => clearTimeout(timer);
+  }, [isHome, gap, lastActivity, blocked, keypad, play]);
 
   useEffect(() => {
     if (!play || !isHome) return;
     const seconds = Number(play.ad.durationSeconds);
     const duration = Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 300) : 10;
     // Failed media cannot leave the kiosk covered or loading forever.
-    const timer = setTimeout(() => finish(play.ready && play.ad.mediaType === 'image'), play.ready ? duration * 1000 : 10000);
+    if (play.ready && !showing) return;
+    const timer = setTimeout(() => finish(showing && play.ad.mediaType === 'image'), showing ? duration * 1000 : 15000);
     return () => clearTimeout(timer);
-  }, [play, isHome, finish]);
+  }, [play, isHome, showing, finish]);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('reliv_ad_audio_focus', { detail: { owner: 'player', active: overlayActive } }));
@@ -96,7 +109,7 @@ export default function KioskAdPlayer() {
   }, [overlayActive, stop, pauseListening, resumeListening]);
 
   useEffect(() => {
-    if (!play?.ready || !isHome || keypad || blocked) return;
+    if (!showing) return;
     activePlay.current = { campaignId: play.ad.campaignId, startedAt: Date.now() };
     const el = video.current;
     if (el) {
@@ -114,12 +127,12 @@ export default function KioskAdPlayer() {
       void start();
       return () => { cancelled = true; el.muted = true; el.pause(); };
     }
-  }, [play, isHome, keypad, blocked, finish]);
+  }, [play, showing, finish]);
 
   useEffect(() => {
     if (!isHome || keypad || blocked) return;
     const activity = event => {
-      if (play?.ready) {
+      if (showing) {
         event.preventDefault(); event.stopImmediatePropagation();
         swallowUntil.current = Date.now() + 600;
         finish(false, true);
@@ -142,7 +155,7 @@ export default function KioskAdPlayer() {
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('reliv_splash_overlay', overlay);
     };
-  }, [isHome, keypad, blocked, play, finish]);
+  }, [isHome, keypad, blocked, play, showing, finish]);
 
   const close = useCallback(() => {
     activation.current?.abort(); activation.current = null;
@@ -172,6 +185,10 @@ export default function KioskAdPlayer() {
       const data = await activateAdCampaign({ code }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       if (!['ACTIVE', 'SCHEDULED', 'PENDING_APPROVAL'].includes(data.status)) throw new Error('Activation was not confirmed. Retry; do not pay again.');
+      if (data.status === 'ACTIVE') {
+        activatedCampaign.current = data.campaignId || null;
+        setPlaylistVersion(version => version + 1);
+      }
       setSuccess(data.status === 'ACTIVE' ? 'Your ad is now in rotation.' : data.status === 'PENDING_APPROVAL' ? 'Payment confirmed. Your ad is awaiting venue approval.' : 'Your ad is scheduled for its booked dates and hours.');
     } catch (error) {
       if (!controller.signal.aborted) { setFeedback(error.message || 'Please retry. Do not pay again.'); setCode(''); }
@@ -179,14 +196,31 @@ export default function KioskAdPlayer() {
       if (activation.current === controller) { activation.current = null; setBusy(false); }
     }
   };
-  const ready = token => setPlay(prev => prev?.token === token && !prev.ready ? { ...prev, ready: true } : prev);
+  const ready = (token, element) => {
+    if (play?.token !== token || play.ready) return;
+    // Existing paid 16:9 files keep their signed bytes. Draw ONE small blurred
+    // frame behind them to fill a 16:10 display, without decoding a second video.
+    try {
+      const width = element.videoWidth || element.naturalWidth;
+      const height = element.videoHeight || element.naturalHeight;
+      const context = backdrop.current?.getContext('2d');
+      if (width && height && context) {
+        const cropWidth = Math.min(width, height * 1.6);
+        const cropHeight = Math.min(height, width / 1.6);
+        context.filter = 'blur(4px)';
+        context.drawImage(element, (width - cropWidth) / 2, (height - cropHeight) / 2, cropWidth, cropHeight, -8, -8, 176, 116);
+      }
+    } catch { /* Media playback stays available when canvas is unsupported. */ }
+    setPlay(prev => prev?.token === token && !prev.ready ? { ...prev, ready: true } : prev);
+  };
   if (!isHome) return null;
   return <>
-    {play && !blocked && !keypad && <div className={`kiosk-ad-player-overlay ${play.ready ? 'is-ready' : 'is-loading'}`} aria-hidden={!play.ready}>
+    {play && !blocked && !keypad && <div className={`kiosk-ad-player-overlay ${showing ? 'is-ready' : 'is-loading'}`} aria-hidden={!showing}>
+      <canvas ref={backdrop} width="160" height="100" aria-hidden="true" />
       {play.ad.mediaType === 'video'
-        ? <video ref={video} key={play.ad.campaignId} src={play.ad.mediaUrl} muted playsInline preload="auto" onCanPlay={() => ready(play.token)} onEnded={() => finish(true)} onError={() => finish()} />
-        : <img src={play.ad.mediaUrl} alt="Advertisement" onLoad={() => ready(play.token)} onError={() => finish()} />}
-      {play.ready && <span className="ad-touch-hint"><strong>Reliv</strong><span>Touch to start</span></span>}
+        ? <video ref={video} key={play.ad.mediaUrl} src={play.ad.mediaUrl} muted playsInline preload="auto" onCanPlay={event => ready(play.token, event.currentTarget)} onEnded={() => finish(true)} onError={() => finish()} />
+        : <img key={play.ad.mediaUrl} src={play.ad.mediaUrl} alt="Advertisement" onLoad={event => ready(play.token, event.currentTarget)} onError={() => finish()} />}
+      {showing && <span className="ad-touch-hint"><strong>Reliv</strong><span>Touch to start</span></span>}
     </div>}
     {keypad && <div className="kiosk-activation-modal">
       <section className="activation-keypad-card" role="dialog" aria-modal="true" aria-labelledby="ad-code-title" tabIndex={-1} ref={dialog}
