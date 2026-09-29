@@ -555,7 +555,7 @@ export default function Advertise() {
             )}
 
             <p className="ads-payment-note">After payment, enter the 4-digit code on the kiosk using <strong>Enter ad code</strong>. No reconnection or re-upload needed.</p>
-            <button type="button" className="link-secondary-action" onClick={() => setHandoffOpen(false)}>Back to review</button>
+            {campaignId && <button type="button" className="link-secondary-action" onClick={() => setHandoffOpen(false)}>Back to review</button>}
           </section>
         )}
       </div>

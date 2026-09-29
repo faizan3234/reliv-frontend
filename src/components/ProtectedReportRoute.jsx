@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { requestJSON } from "../utils/request";
+import { readBrowserStorage } from '../utils/browserStorage';
 
 const ProtectedReportRoute = ({ children }) => {
   const navigate = useNavigate();
@@ -27,8 +28,8 @@ const ProtectedReportRoute = ({ children }) => {
 
   const sessionId =
     location.state?.sessionId ||
-    localStorage.getItem("reliv_session_id") ||
-    sessionStorage.getItem("reliv_session_id") ||
+    readBrowserStorage("reliv_session_id") ||
+    readBrowserStorage("reliv_session_id", "sessionStorage") ||
     "";
 
   useEffect(() => {

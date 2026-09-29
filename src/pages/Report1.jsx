@@ -159,15 +159,7 @@ const Report1 = () => {
   // The backend snapshot is the ONLY source of report measurements.
   const healthData = reportData?.healthData || null;
 
-  const patient =
-    healthData?.patient ||
-    (
-      reportData?.customerData
-        ? {
-            ...reportData.customerData
-          }
-        : null
-    );
+  const patient = healthData?.patient || reportData?.customerData || null;
 
   const vitals =
     healthData?.vitals || null;

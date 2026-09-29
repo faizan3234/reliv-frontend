@@ -91,7 +91,7 @@ const OxygenPulsePage = () => {
   const hasReceivedData = useRef(false);
   const measurementStarted = useRef(false); // Guard: ignore retained MQTT data
   const wifiCheckInterval = useRef(null);
-  const fallbackTimeout = useRef(null);
+
   const autoProceedTriggered = useRef(false);
 
   const selectedLang = data?.language || 'en';
@@ -125,16 +125,9 @@ const OxygenPulsePage = () => {
     checkWiFi();
 
     // Listen to online/offline events
-    window.addEventListener('online', () => {
-      if (import.meta.env.DEV) console.log("✅ WiFi Connected");
-      setIsWifiConnected(true);
-    });
+    window.addEventListener('online', checkWiFi);
 
-    window.addEventListener('offline', () => {
-      if (import.meta.env.DEV) console.log("❌ WiFi Disconnected");
-      setIsWifiConnected(false);
-      setDeviceStatus("WiFi Disconnected");
-    });
+    window.addEventListener('offline', checkWiFi);
 
     // Periodic check every 5 seconds
     wifiCheckInterval.current = setInterval(checkWiFi, 5000);
@@ -194,6 +187,7 @@ const OxygenPulsePage = () => {
           if (import.meta.env.DEV) console.log(`📨 Received on ${topic}:`, payload);
 
           if (topic === "kiosk/status") {
+            if (!measurementStarted.current) return;
             // Status messages
             setStatusMessage(sanitizeError(payload));
             
@@ -203,17 +197,17 @@ const OxygenPulsePage = () => {
             } else if (payload.includes("measuring") || payload.includes("Measuring")) {
               setMeasurementState("measuring");
             } else if (payload.includes("complete") || payload.includes("Complete")) {
-              // Measurement complete - data should come separately
-              if (measurementTimeout.current) {
-                clearTimeout(measurementTimeout.current);
-              }
+              // Keep the deadline until a valid sensor packet arrives.
             } else if (payload.includes("timeout") || payload.includes("Timeout")) {
+              measurementStarted.current = false;
               setMeasurementState("error");
               setStatusMessage(sanitizeError(payload));
               if (measurementTimeout.current) {
                 clearTimeout(measurementTimeout.current);
               }
             } else if (payload.includes("error") || payload.includes("Error")) {
+              measurementStarted.current = false;
+              clearTimeout(measurementTimeout.current);
               setMeasurementState("error");
               setDeviceStatus("Error - Check Connection");
             }
@@ -226,13 +220,12 @@ const OxygenPulsePage = () => {
               try {
                 const data = JSON.parse(payload);
                 
-                if (data.oxygen !== undefined) {
+                if (Number.isFinite(Number(data.oxygen)) && Number(data.oxygen) > 0 && Number(data.oxygen) <= 100 && Number.isFinite(Number(data.bpm)) && Number(data.bpm) > 0 && Number(data.bpm) <= 300) {
                   if (import.meta.env.DEV) console.log("✅ Oxygen Data Received:", data);
                   
-                  setOxygen(data.oxygen);
-                  // BPM: Always generate random 72-100 (not from sensor)
-                  const randomBpm = Math.floor(Math.random() * (100 - 72 + 1)) + 72;
-                  setBpm(randomBpm);
+                  setOxygen(Number(data.oxygen));
+                  setBpm(Number(data.bpm));
+                  measurementStarted.current = false;
                   setMeasurementState("completed");
                   setStatusMessage("Measurement Complete");
                   hasReceivedData.current = true;
@@ -251,7 +244,8 @@ const OxygenPulsePage = () => {
         mqttClient.current.on("error", (err) => {
           if (import.meta.env.DEV) console.error("❌ MQTT Error:", err);
           setIsMqttConnected(false);
-          if (measurementState === "measuring") {
+          if (measurementStarted.current) {
+            measurementStarted.current = false;
             setMeasurementState("error");
             setStatusMessage("MQTT connection error during measurement");
           }
@@ -266,7 +260,8 @@ const OxygenPulsePage = () => {
         mqttClient.current.on("close", () => {
           if (import.meta.env.DEV) console.log("🔌 MQTT Connection Closed");
           setIsMqttConnected(false);
-          if (measurementState === "measuring") {
+          if (measurementStarted.current) {
+            measurementStarted.current = false;
             setMeasurementState("error");
             setStatusMessage("MQTT connection lost during measurement");
           }
@@ -288,49 +283,26 @@ const OxygenPulsePage = () => {
 
     // Cleanup on unmount
     return () => {
+      measurementStarted.current = false;
       if (mqttClient.current) {
-        mqttClient.current.end();
+        mqttClient.current.removeAllListeners();
+        mqttClient.current.end(true);
       }
       if (measurementTimeout.current) {
         clearTimeout(measurementTimeout.current);
-      }
-      if (fallbackTimeout.current) {
-        clearTimeout(fallbackTimeout.current);
       }
     };
   }, []);
 
-  // Countdown timer effect
+  // A timeout never invents a reading.
   useEffect(() => {
-    let timer;
-    if (measurementState === "measuring" && countdown > 40) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else if (countdown <= 40 && measurementState === "measuring") {
-      // Safety timeout at 20 seconds (User requested fallback)
-      if (import.meta.env.DEV) console.log("⏱️ 20s timeout reached - applying random fallback");
-      
-      // Randomize Oxygen between 95-99%
-      const randomOxygen = Math.floor(Math.random() * (99 - 95 + 1)) + 95;
-      // BPM: Always random 72-100
-      const randomBpm = Math.floor(Math.random() * (100 - 72 + 1)) + 72;
-      
-      setOxygen(randomOxygen);
-      setBpm(randomBpm);
-      setMeasurementState("completed");
-      setStatusMessage("Measurement Complete (Fallback)");
-      hasReceivedData.current = true;
-      
-      if (measurementTimeout.current) {
-        clearTimeout(measurementTimeout.current);
-      }
-      if (fallbackTimeout.current) {
-        clearTimeout(fallbackTimeout.current);
-      }
-    }
+    if (measurementState !== 'measuring' || countdown <= 0) return;
+    const timer = setTimeout(() => setCountdown(value => value - 1), 1000);
     return () => clearTimeout(timer);
   }, [measurementState, countdown]);
 
   const triggerOxygen = () => {
+    if (measurementStarted.current) return;
     // Check both WiFi and MQTT connection
     if (!isFullyConnected) {
       setMeasurementState("error");
@@ -353,6 +325,7 @@ const OxygenPulsePage = () => {
     // Reset state
     setMeasurementState("measuring");
     setCountdown(60);
+    clearTimeout(measurementTimeout.current);
     setOxygen(null);
     setBpm(null);
     setStatusMessage("Starting measurement...");
@@ -364,39 +337,20 @@ const OxygenPulsePage = () => {
       if (err) {
         if (import.meta.env.DEV) console.error("❌ Failed to send oxygen command:", err);
         setMeasurementState("error");
+        measurementStarted.current = false;
         setStatusMessage("Failed to send command to sensor");
       } else {
         if (import.meta.env.DEV) console.log("✅ Oxygen measurement command sent");
       }
     });
 
-    // Fallback timeout - 25 seconds
-    if (fallbackTimeout.current) clearTimeout(fallbackTimeout.current);
-    fallbackTimeout.current = setTimeout(() => {
-      if (!hasReceivedData.current) {
-        if (import.meta.env.DEV) console.log("⏱️ Fallback timeout triggered (25s) - Using generated oxygen data");
-        const randomOxy = Math.floor(Math.random() * (99 - 95 + 1)) + 95;
-        const randomBpm = Math.floor(Math.random() * (95 - 65 + 1)) + 65;
-        
-        setOxygen(randomOxy);
-        setBpm(randomBpm);
-        setMeasurementState("completed");
-        setStatusMessage("Measurement Complete");
-        hasReceivedData.current = true;
-        
-        if (measurementTimeout.current) clearTimeout(measurementTimeout.current);
-      }
-    }, 25000);
-
-    // Safety timeout - 90 seconds (extra buffer)
     measurementTimeout.current = setTimeout(() => {
-      if (!hasReceivedData.current) {
-        if (import.meta.env.DEV) console.log("⏱️ Safety timeout triggered - No data received");
-        setMeasurementState("error");
-        setStatusMessage("Safety timeout (90s) - No response from sensor");
-        hasReceivedData.current = false;
+      if (measurementStarted.current && !hasReceivedData.current) {
+        measurementStarted.current = false;
+        setMeasurementState('error');
+        setStatusMessage('No valid sensor reading received. Reposition your finger and retry.');
       }
-    }, 90000);
+    }, 60000);
   };
 
   const handleRefresh = () => {
@@ -432,12 +386,12 @@ const OxygenPulsePage = () => {
       setStatusMessage("✅ Data Recorded! Moving to next step...");
       stopSpeech();
       update({
-        vitals: { ...data.vitals, oxygen, bpm },
+        vitals: { oxygen, bpm },
       });
       const t = setTimeout(() => navigate("/eyesight"), 2000);
       return () => clearTimeout(t);
     }
-  }, [measurementState, oxygen, bpm]);
+  }, [measurementState, oxygen, bpm, navigate, stopSpeech, update]);
 
   const handleProceed = () => {
     update({
@@ -816,7 +770,7 @@ export default function OxygenPulse() {
   useEffect(() => {
     const t = setTimeout(() => speak("oxygen-pulse"), 400);
     return () => { clearTimeout(t); stop(); };
-  }, []);
+  }, [speak, stop]);
   const [currentPage, setCurrentPage] = useState("splash");
 
   const showOxygenPage = () => setCurrentPage("oxygen");

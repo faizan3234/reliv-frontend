@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
+import { requestJSON } from "../utils/request";
+
+function readSavedData() {
+  for (const name of ['localStorage', 'sessionStorage']) {
+    try {
+      const value = JSON.parse(window[name].getItem('reliv_customer_data'));
+      if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+    } catch { /* Storage can be blocked or corrupted. */ }
+  }
+  return null;
+}
 
 function MobileEntry({ gatewaySessionId }) {
   const [searchParams] = useSearchParams();
@@ -15,6 +26,13 @@ function MobileEntry({ gatewaySessionId }) {
   const emailRef = useRef(null);
   const phoneRef = useRef(null);
   const autoSubmitSessionRef = useRef(null);
+  const submitController = useRef(null);
+
+  useEffect(() => () => {
+    submitController.current?.abort();
+    submitController.current = null;
+    autoSubmitSessionRef.current = null;
+  }, [sessionId]);
 
   // Only gender & checkbox need state (they're radio/checkbox, not text)
   const [gender, setGender] = useState("");
@@ -51,50 +69,8 @@ function MobileEntry({ gatewaySessionId }) {
     setShowOverlay(false);
   }, [enterFullscreen]);
 
-  // Hide the domain / URL bar content: replace visible URL with clean root path
-  // and set a branded document title so no deployment details are exposed.
-  // Runs on every render path (direct /mobile-entry or via /h gateway).
-  useEffect(() => {
-    document.title = 'Reliv Health';
-    try {
-      // Replace the visible URL so the real domain path isn't in the address bar
-      window.history.replaceState({ reliv: true }, 'Reliv Health', '/');
-    } catch {
-      // Ignore SecurityError in cross-origin iframes
-    }
-
-    // Block forward-button navigation that would re-expose the original URL,
-    // but only if the user is still on a Reliv-owned history entry.
-    const blockNav = (event) => {
-      // Only intervene if we're on a Reliv-pushed state — don't trap
-      // users who genuinely want to leave the page.
-      if (event.state && event.state.reliv) {
-        try {
-          window.history.replaceState({ reliv: true }, 'Reliv Health', '/');
-        } catch { /* ignore */ }
-      }
-    };
-    window.addEventListener('popstate', blockNav);
-    return () => window.removeEventListener('popstate', blockNav);
-  }, []);
-
-  // ── Helper: safely read and parse JSON from a Storage backend ──
-  const tryReadFromStorage = (storage, key) => {
-    try {
-      const raw = storage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  };
-
-  // ── Helper: read saved customer data from any available storage ──
-  const readSavedData = () => {
-    return (
-      tryReadFromStorage(localStorage, 'reliv_customer_data') ||
-      tryReadFromStorage(sessionStorage, 'reliv_customer_data')
-    );
-  };
+  // Keep the session URL intact so refresh and browser back remain recoverable.
+  useEffect(() => { document.title = 'Reliv Health'; }, []);
 
   // ── Helper: persist customer data to all available storages ──
   const persistCustomerData = (data) => {
@@ -133,22 +109,26 @@ function MobileEntry({ gatewaySessionId }) {
         };
 
         setIsSubmitting(true);
-        fetch(`${API_BASE}/api/save-customer-data`, {
+        const controller = new AbortController();
+        submitController.current = controller;
+        requestJSON(`${API_BASE}/api/save-customer-data`, {
           method: "POST",
+          signal: controller.signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId, customerData: savedCustomerData }),
         })
-          .then((res) => {
-            if (!res.ok) {
-              throw new Error(`Server error: ${res.status}`);
-            }
+          .then(() => {
+            if (controller.signal.aborted) return;
             setSubmittedSavedDetails(true);
             setSubmitted(true);
           })
           .catch(() => {
+            if (controller.signal.aborted) return;
             setSubmitError("We could not send your saved details. Please review and submit the form.");
           })
           .finally(() => {
+            if (submitController.current !== controller) return;
+            submitController.current = null;
             setIsSubmitting(false);
           });
       }
@@ -195,6 +175,7 @@ function MobileEntry({ gatewaySessionId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitController.current) return;
     setSubmitError("");
 
     const form = getFormValues();
@@ -202,6 +183,8 @@ function MobileEntry({ gatewaySessionId }) {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
+    const controller = new AbortController();
+    submitController.current = controller;
     setIsSubmitting(true);
     try {
       // Save to all available storages for auto-fill on next visit
@@ -209,22 +192,24 @@ function MobileEntry({ gatewaySessionId }) {
         ...form, rememberMe: true, lastSaved: new Date().toISOString()
       });
 
-      const res = await fetch(`${API_BASE}/api/save-customer-data`, {
+      await requestJSON(`${API_BASE}/api/save-customer-data`, {
         method: 'POST',
+        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, customerData: form })
       });
 
-      if (res.ok) {
-        setSubmittedSavedDetails(false);
-        setSubmitted(true);
-      } else {
-        setSubmitError(`Server error: ${res.status}. Please try again.`);
-      }
+      if (controller.signal.aborted) return;
+      setSubmittedSavedDetails(false);
+      setSubmitted(true);
     } catch {
+      if (controller.signal.aborted) return;
       setSubmitError("Network error — please try again.");
     } finally {
-      setIsSubmitting(false);
+      if (submitController.current === controller) {
+        submitController.current = null;
+        setIsSubmitting(false);
+      }
     }
   };
 

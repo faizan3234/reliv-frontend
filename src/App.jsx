@@ -39,10 +39,11 @@ import Advertise from "./pages/Advertise.jsx";
 import PayAd from "./pages/PayAd.jsx";
 import KioskAdPlayer from "./components/KioskAdPlayer.jsx";
 import { isPhoneExperience } from './utils/phoneExperience';
+import { readBrowserStorage } from './utils/browserStorage';
 
 export default function App() {
     const { pathname } = useLocation();
-    const isMedicineDispensingEnabled = localStorage.getItem('reliv_medicine_dispensing_enabled') !== 'false';
+    const isMedicineDispensingEnabled = readBrowserStorage('reliv_medicine_dispensing_enabled') !== 'false';
 
     // The mobile service hosts the one-time QR flow on port 5000 or customer web domain.
 

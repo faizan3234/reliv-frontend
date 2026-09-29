@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
-import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
+import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -299,12 +299,12 @@ export default function Report3() {
     }
   });
 
-  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
-  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
+  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : EMPTY_REPORT.patient;
+  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : EMPTY_REPORT.vitals;
   const [showHeightInfo, setShowHeightInfo] = useState(false);
 
   const userName = getFirstName(patient);
-  const scanCount = ((data?.history?.length || 0) > 0 ? data.history.length : MOCK_TEST_REPORT.history.length) + 1;
+  const scanCount = ((data?.history?.length || 0) > 0 ? data.history.length : EMPTY_REPORT.history.length) + 1;
   const isBaselineUnlocked = scanCount >= 2;
   const canCelebrate = scanCount >= 4;
 
@@ -404,7 +404,7 @@ export default function Report3() {
   const ageDiff = biologicalAge ? patient.age - biologicalAge : null;
   const isMale = patient?.gender?.toLowerCase() === "male";
 
-  const getMuscleStatus = (musclePct) => {
+  const getMuscleStatus = useCallback((musclePct) => {
     if (isMale) {
       if (musclePct < 30) return { status: "Low", comment: "Your muscle reserves are currently on the lower side, which can affect strength and metabolic stability." };
       if (musclePct < 33) return { status: "Below Average", comment: "Your muscle levels are slightly below the typical healthy range, but respond well to resistance activity." };
@@ -418,9 +418,9 @@ export default function Report3() {
       if (musclePct < 34) return { status: "Strong", comment: "Your muscle composition is stronger than average and supports efficient movement and recovery." };
       return { status: "Exceptional", comment: "Your muscle structure is highly developed for your age and supports long-term metabolic health." };
     }
-  };
+  }, [isMale]);
 
-  const getBodyFatStatus = (bodyFatPct) => {
+  const getBodyFatStatus = useCallback((bodyFatPct) => {
     if (isMale) {
       if (bodyFatPct < 8) return { status: "Very Low", comment: "Very low fat reserves may impact hormonal balance and recovery." };
       if (bodyFatPct < 12) return { status: "Lean", comment: "Your fat levels are lean and support athletic efficiency." };
@@ -434,7 +434,7 @@ export default function Report3() {
       if (bodyFatPct < 34) return { status: "Elevated", comment: "Your fat storage is slightly above the ideal range and may benefit from gradual lifestyle adjustments." };
       return { status: "High", comment: "Higher fat storage may place additional metabolic demand on your body." };
     }
-  };
+  }, [isMale]);
 
   const getVisceralFatStatus = (visceralFat) => {
     if (visceralFat <= 9) return { status: "Normal", comment: "Visceral fat levels are within a healthy range, reducing strain on internal organs." };
@@ -552,7 +552,7 @@ export default function Report3() {
     }
     
     return list.length > 0 ? list : ["Your first scan provides a solid foundation—see this profile evolve with new data and patterns in future scans."];
-  }, [metrics, scanCount]);
+  }, [metrics, scanCount, getMuscleStatus, getBodyFatStatus]);
 
   if (!isBaselineUnlocked) {
     return (

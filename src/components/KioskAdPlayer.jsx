@@ -117,6 +117,7 @@ export default function KioskAdPlayer() {
   }, [play, isHome, keypad, blocked, finish]);
 
   useEffect(() => {
+    if (!isHome || keypad || blocked) return;
     const activity = event => {
       if (play?.ready) {
         event.preventDefault(); event.stopImmediatePropagation();
@@ -141,7 +142,7 @@ export default function KioskAdPlayer() {
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('reliv_splash_overlay', overlay);
     };
-  }, [play, finish]);
+  }, [isHome, keypad, blocked, play, finish]);
 
   const close = useCallback(() => {
     activation.current?.abort(); activation.current = null;

@@ -6,22 +6,29 @@ let scriptLoadPromise = null;
  * Dynamically loads official Razorpay checkout.js script if not already present in DOM.
  */
 export function loadRazorpayScript() {
+  if (window.Razorpay) return Promise.resolve(true);
   if (scriptLoadPromise) return scriptLoadPromise;
 
-  scriptLoadPromise = new Promise((resolve, reject) => {
-    if (window.Razorpay) {
-      return resolve(true);
-    }
+  const loading = new Promise((resolve, reject) => {
     const script = document.createElement('script');
+    let settled = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      script.onload = null;
+      script.onerror = null;
+      if (error) { script.remove(); reject(error); }
+      else resolve(true);
+    };
+    const timer = setTimeout(() => finish(new Error('Payment checkout took too long to load. Check mobile data and retry; do not pay twice.')), 20000);
     script.src = RAZORPAY_SCRIPT_URL;
     script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => {
-      scriptLoadPromise = null;
-      reject(new Error('Failed to load Razorpay Checkout script. Check Internet connection.'));
-    };
+    script.onload = () => finish(window.Razorpay ? null : new Error('Payment checkout is unavailable. Please retry.'));
+    script.onerror = () => finish(new Error('Failed to load Razorpay Checkout script. Check Internet connection.'));
     document.body.appendChild(script);
   });
+  scriptLoadPromise = loading.catch(error => { scriptLoadPromise = null; throw error; });
 
   return scriptLoadPromise;
 }
@@ -45,6 +52,7 @@ export async function openRazorpayCheckout({
     throw new Error('Razorpay SDK is not available in browser window.');
   }
 
+  let completed = false;
   const options = {
     key: keyId,
     amount: amount, // in paise
@@ -62,6 +70,7 @@ export async function openRazorpayCheckout({
       color: '#f97316', // Reliv Orange
     },
     handler: function (response) {
+      if (completed) return;
       if (!response) {
         if (onError) {
           onError(new Error('Invalid Razorpay callback: empty response received.'));
@@ -86,6 +95,7 @@ export async function openRazorpayCheckout({
       }
 
       if (onSuccess) {
+        completed = true;
         onSuccess({
           orderId: orderId.trim(),
           paymentId: paymentId.trim(),
@@ -99,15 +109,16 @@ export async function openRazorpayCheckout({
     modal: {
       confirm_close: true,
       escape: false,
+      backdropclose: false,
       ondismiss: function () {
-        if (onDismiss) onDismiss();
+        if (!completed && onDismiss) onDismiss();
       },
     },
   };
 
   const rzp = new window.Razorpay(options);
   rzp.on('payment.failed', function (response) {
-    if (onError) {
+    if (!completed && onError) {
       onError(response.error || { message: 'Payment failed' });
     }
   });

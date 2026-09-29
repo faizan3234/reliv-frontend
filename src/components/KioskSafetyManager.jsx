@@ -1,3 +1,4 @@
+import { usesNativeScrolling } from '../utils/phoneExperience';
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -19,9 +20,7 @@ export default function KioskSafetyManager() {
   useEffect(() => {
     // Skip kiosk protections on user-phone routes and hidden admin tools
     if (
-      pathname.startsWith('/mobile-entry') ||
-      pathname === '/h' ||
-      pathname === '/admin' || pathname.startsWith('/admin-x7k9')
+      usesNativeScrolling(pathname)
     ) {
       return;
     }
