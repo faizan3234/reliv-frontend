@@ -1,7 +1,8 @@
 import React, { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { HealthProvider, useHealth, MOCK_TEST_REPORT } from '../src/context/HealthContext';
+import { HealthProvider, useHealth } from '../src/context/HealthContext';
+import { MOCK_TEST_REPORT } from './fixtures/health-report';
 import { SpeechProvider, useSpeech } from '../src/context/SpeechContext';
 import { VoiceAssistantProvider, useVoiceAssistant } from '../src/context/VoiceAssistantContext';
 import { useVoicePage } from '../src/hooks/useVoicePage';
@@ -491,7 +492,7 @@ async function run() {
   await act(async () => controls.navigate('/admin-audit'));
   assert(!document.querySelector('[aria-label="Mute speaker"]'), 'speech control hides on admin navigation without a hook-order crash');
   await act(async () => {
-    controls.health.loadMockReportData();
+    controls.health.update(MOCK_TEST_REPORT);
     controls.navigate('/report-1');
   });
   await flush();

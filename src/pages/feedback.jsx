@@ -1,5 +1,5 @@
 // src/pages/Feedback.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used by JSX member tags
 import VirtualKeyboard from '../components/VirtualKeyboard';
@@ -61,13 +61,13 @@ export default function Feedback() {
   const INACTIVITY_TIMEOUT = 60000; // 60 seconds
   const timerRef = useRef(null);
 
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     // Don't reset timer if feedback is already submitted - let user finish
     if (submitted) return;
     
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => navigate('/'), INACTIVITY_TIMEOUT);
-  };
+  }, [submitted, navigate]);
 
   // Stop timer when feedback is submitted
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function Feedback() {
       document.removeEventListener('scroll', handleActivity);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [submitted]);
+  }, [submitted, resetTimer]);
 
   useEffect(() => {
     if (showKeyboard) {

@@ -1,6 +1,6 @@
 // src/pages/Report2.jsx
 import React, { useMemo, useEffect, useRef, useCallback, useState } from "react";
-import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
+import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useNavigate, useLocation } from "react-router-dom";
 import * as bodyComposition from "../utils/bodyComposition";
@@ -909,8 +909,8 @@ const Report2 = () => {
     }
   });
 
-  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
-  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
+  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : EMPTY_REPORT.patient;
+  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : EMPTY_REPORT.vitals;
   
   const userName = getFirstName(patient);
   const confettiShownRef = useRef(false);
@@ -921,7 +921,7 @@ const Report2 = () => {
       if (!vitals || !patient) return null;
 
     // SCAN COUNT CALCULATION
-    const history = (data?.history && data.history.length > 0) ? data.history : MOCK_TEST_REPORT.history;
+    const history = (data?.history && data.history.length > 0) ? data.history : EMPTY_REPORT.history;
     const scanCount = history.length || 1;
     const confidenceStage = getConfidenceStage(scanCount);
 
@@ -1166,7 +1166,7 @@ const Report2 = () => {
       muscleControl: assessMuscleControl(vitals, patient, history, scanCount),
       idealBodyWeight: assessIdealBodyWeight(vitals, patient, history, scanCount)
     };
-  }, [vitals, patient, data.history]);
+  }, [vitals, patient, data.history, scanCount]);
   
   const weightControl = controlMetrics?.weightControl || {};
   const fatControl = controlMetrics?.fatControl || {};

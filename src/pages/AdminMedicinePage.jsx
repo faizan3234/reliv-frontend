@@ -38,12 +38,17 @@ export default function AdminMedicinePage() {
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const submittingRef = useRef(false);
+  const loginController = useRef(null);
+  const inventoryController = useRef(null);
   const toastTimerRef = useRef(null);
 
   useEffect(() => {
     const expire = () => { setIsAuthenticated(false); setLoginError('Please sign in again.'); };
     window.addEventListener('reliv_admin_expired', expire);
-    return () => { window.removeEventListener('reliv_admin_expired', expire); clearTimeout(toastTimerRef.current); };
+    return () => {
+      window.removeEventListener('reliv_admin_expired', expire); clearTimeout(toastTimerRef.current);
+      loginController.current?.abort(); inventoryController.current?.abort();
+    };
   }, []);
 
   // Inventory State
@@ -83,21 +88,25 @@ export default function AdminMedicinePage() {
 
   // ── 1. Fetch Inventory ───────────────────────────────────────────────────
   const fetchMedicines = useCallback(async () => {
+    inventoryController.current?.abort();
+    const controller = new AbortController(); inventoryController.current = controller;
     setIsLoading(true);
     try {
       const res = await adminFetch(`${API_BASE}/api/kits?t=${Date.now()}`, {
         cache: "no-store",
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error(`Failed to load medicines (HTTP ${res.status})`);
       const data = await res.json();
       const list = Array.isArray(data) ? data : data.kits;
       if (!Array.isArray(list)) throw new Error('The inventory response is invalid. Please refresh.');
-      setMedicines(list);
+      if (!controller.signal.aborted) setMedicines(list);
     } catch (err) {
+      if (controller.signal.aborted) return;
       console.error("[AdminMedicinePage] Fetch error:", err);
       showToast(err.message || "Failed to load medicines", "error");
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) setIsLoading(false);
     }
   }, []);
 
@@ -110,30 +119,35 @@ export default function AdminMedicinePage() {
   // ── 2. Login Handler ─────────────────────────────────────────────────────
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (isLoggingIn || !passwordInput || !emailInput.trim()) return;
+    if (loginController.current || !passwordInput || !emailInput.trim()) return;
+    const controller = new AbortController(); loginController.current = controller;
 
     setIsLoggingIn(true);
     setLoginError("");
 
     try {
         const res = await adminFetch(`${API_BASE}/api/check-login`, {
+          signal: controller.signal,
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: emailInput.trim(), password: passwordInput }),
         });
         const data = await res.json();
+        if (controller.signal.aborted) return;
         if (!res.ok || data.ok !== true) throw new Error(data.message || 'Invalid admin email or password.');
         saveAdminSession(data);
         setIsAuthenticated(true);
         setPasswordInput("");
     } catch (error) {
-      setLoginError(error.message || "Login failed. Please check the connection to the kiosk.");
+      if (!controller.signal.aborted) setLoginError(error.message || "Login failed. Please check the connection to the kiosk.");
     } finally {
-      setIsLoggingIn(false);
+      if (loginController.current === controller) loginController.current = null;
+      if (!controller.signal.aborted) setIsLoggingIn(false);
     }
   };
 
   const handleLogout = () => {
+    loginController.current?.abort(); inventoryController.current?.abort();
     void adminFetch(`${API_BASE}/api/admin/logout`, { method: 'POST' }).catch(() => {});
     setIsAuthenticated(false);
     clearAdminSession();

@@ -52,7 +52,7 @@ const BodyComposition = () => {
   useEffect(() => {
     const t = setTimeout(() => speak("body-composition"), 400);
     return () => { clearTimeout(t); stop(); };
-  }, []);
+  }, [speak, stop]);
   const [weight, setWeight]                 = useState(null);
   const [height, setHeight]                 = useState(null);
   const [impedance, setImpedance]           = useState(null);
@@ -349,7 +349,7 @@ const BodyComposition = () => {
       const t = setTimeout(() => navigate("/health-checkup"), 2000);
       return () => clearTimeout(t);
     }
-  }, [measurementState, height, weight]);
+  }, [measurementState, height, weight, navigate, stop]);
   const canProceed = measurementState === "completed" && height && weight;
 
   // ─── RENDER ──────────────────────────────────────────────────

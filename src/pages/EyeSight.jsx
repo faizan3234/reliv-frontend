@@ -1,3 +1,8 @@
+  const base = [
+    "E", "FP", "TOZ", "LPED", "PECFD", "EDFCZP",
+    "FELOPZD", "DEFPOTEC", "LEFODPCT", "TDPLTCEO",
+    "PEZOLCFD", "FDTCOPEL", "CLEPOTFD"
+  ];
 import React, { useEffect, useState } from "react";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import { useNavigate } from "react-router-dom";
@@ -175,11 +180,7 @@ export default function EyeSight() {
     return () => document.head.removeChild(style);
   }, []);
 
-  const base = [
-    "E", "FP", "TOZ", "LPED", "PECFD", "EDFCZP",
-    "FELOPZD", "DEFPOTEC", "LEFODPCT", "TDPLTCEO",
-    "PEZOLCFD", "FDTCOPEL", "CLEPOTFD"
-  ];
+
 
   const [lines, setLines] = useState([]);
   const [left, setLeft] = useState("");

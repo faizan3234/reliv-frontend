@@ -1,5 +1,5 @@
 //yoo/
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import mqtt from "mqtt";
 import Logo from "../components/Logo";
@@ -9,6 +9,7 @@ import temperatureImg from "../assets/temperature.png";
 import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
+import { requestJSON } from "../utils/request";
 import { API_BASE } from "../config/api";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { guidanceText } from "../voice/guidanceCopy";
@@ -70,36 +71,6 @@ const Splash = ({ onComplete }) => {
   );
 };
 
-// ── Fallback Temperature Logic ──
-function getFallbackTemperature() {
-  const now = Date.now();
-  const lastTempInfo = sessionStorage.getItem('last_temp_fallback');
-  let baseTemp;
-  if (lastTempInfo) {
-    try {
-      const { temp, time } = JSON.parse(lastTempInfo);
-      if (now - time < 30000) {
-        // within 30 seconds. Slight change: -0.1, 0, or +0.1
-        const change = (Math.random() * 0.2 - 0.1); 
-        baseTemp = temp + change;
-        // clamp to 98.0 - 99.1
-        baseTemp = Math.max(98.0, Math.min(99.1, baseTemp));
-      }
-    } catch { /* ignore parse errors */ }
-  }
-  
-  if (!baseTemp) {
-    // new random
-    baseTemp = 98.0 + Math.random() * (99.1 - 98.0);
-  }
-  
-  // round to 1 decimal
-  baseTemp = Math.round(baseTemp * 10) / 10;
-  
-  sessionStorage.setItem('last_temp_fallback', JSON.stringify({ temp: baseTemp, time: now }));
-  return baseTemp;
-}
-
 const BodyTemperaturePage = () => {
   const { stop: stopSpeech } = useSpeech();
   const [temperatureF, setTemperatureF] = useState(null);
@@ -121,7 +92,8 @@ const BodyTemperaturePage = () => {
   const hasReceivedData = useRef(false);
   const measurementStarted = useRef(false);
   const wifiCheckInterval = useRef(null);
-  const fallbackTimeout = useRef(null);
+  const completionController = useRef(null);
+  useEffect(() => () => completionController.current?.abort(), []);
   const autoProceedTriggered = useRef(false);
 
   const isFullyConnected = isMqttConnected && isWifiConnected;
@@ -218,6 +190,7 @@ const BodyTemperaturePage = () => {
             setMeasurementState("completed");
             setStatusMessage("Measurement Complete");
             hasReceivedData.current = true;
+            measurementStarted.current = false;
             if (measurementTimeout.current)
               clearTimeout(measurementTimeout.current);
           }
@@ -237,63 +210,24 @@ const BodyTemperaturePage = () => {
     client.on("offline", () => setIsMqttConnected(false));
 
     return () => {
-      client.end();
+      measurementStarted.current = false;
+      client.removeAllListeners();
+      client.end(true);
       if (measurementTimeout.current)
         clearTimeout(measurementTimeout.current);
-      if (fallbackTimeout.current)
-        clearTimeout(fallbackTimeout.current);
+
     };
   }, []);
 
-  // ── Countdown timer ──────────────────────────────────────
   useEffect(() => {
-    let timer;
-    if (measurementState === "measuring" && countdown > 25) { // 30 - 5 = 25
-      timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    } else if (countdown <= 25 && measurementState === "measuring") {
-      // Safety timeout at 5 seconds (User requested fallback 98.4 - 99.1 with memory)
-      if (import.meta.env.DEV) console.log("⏱️ 5s timeout reached - applying random fallback");
-      
-      const now = Date.now();
-      const lastTempStr = sessionStorage.getItem('lastRandomTemp');
-      const lastTimeStr = sessionStorage.getItem('lastRandomTempTime');
-      
-      let finalTemp;
-      if (lastTempStr && lastTimeStr && (now - parseInt(lastTimeStr, 10) < 30000)) {
-        // Within 30 seconds: same or slight change (+/- 0.1)
-        const lastTemp = parseFloat(lastTempStr);
-        const change = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
-        finalTemp = (lastTemp + (change * 0.1)).toFixed(1);
-        
-        // Keep in bounds
-        if (parseFloat(finalTemp) > 99.1) finalTemp = "99.1";
-        if (parseFloat(finalTemp) < 98.4) finalTemp = "98.4";
-      } else {
-        // Different random in range
-        finalTemp = (Math.random() * (99.1 - 98.4) + 98.4).toFixed(1);
-      }
-      
-      sessionStorage.setItem('lastRandomTemp', finalTemp);
-      sessionStorage.setItem('lastRandomTempTime', now.toString());
-      
-      setTemperatureF(parseFloat(finalTemp));
-      setMeasurementState("completed");
-      setStatusMessage("Measurement Complete (Fallback)");
-      hasReceivedData.current = true;
-      measurementStarted.current = false;
-      
-      if (measurementTimeout.current) {
-        clearTimeout(measurementTimeout.current);
-      }
-      if (fallbackTimeout.current) {
-        clearTimeout(fallbackTimeout.current);
-      }
-    }
+    if (measurementState !== 'measuring' || countdown <= 0) return;
+    const timer = setTimeout(() => setCountdown(value => value - 1), 1000);
     return () => clearTimeout(timer);
   }, [measurementState, countdown]);
 
   // ── Start measurement ────────────────────────────────────
   const startMeasurement = () => {
+    if (measurementStarted.current || completionController.current) return;
     if (!isFullyConnected || !mqttClient.current) {
       setMeasurementState("error");
       setStatusMessage("Device not connected — cannot start measurement");
@@ -314,6 +248,7 @@ const BodyTemperaturePage = () => {
       (err) => {
         if (err) {
           setMeasurementState("error");
+          measurementStarted.current = false;
           setStatusMessage("Failed to send command to sensor");
         } else if (import.meta.env.DEV) {
           console.log("✅ Temperature command sent");
@@ -321,28 +256,14 @@ const BodyTemperaturePage = () => {
       }
     );
 
-    // ── Fallback timeout (5 seconds) ──
-    if (fallbackTimeout.current) clearTimeout(fallbackTimeout.current);
-    fallbackTimeout.current = setTimeout(() => {
-      if (!hasReceivedData.current) {
-        if (import.meta.env.DEV) console.log("⏱️ Fallback timeout triggered (5s) - Using generated temp data");
-        const fallbackTemp = getFallbackTemperature();
-        setTemperatureF(fallbackTemp);
-        setMeasurementState("completed");
-        setStatusMessage("Measurement Complete");
-        hasReceivedData.current = true;
-        
-        if (measurementTimeout.current) clearTimeout(measurementTimeout.current);
-      }
-    }, 5000);
-
+    clearTimeout(measurementTimeout.current);
     measurementTimeout.current = setTimeout(() => {
-      if (!hasReceivedData.current) {
-        setMeasurementState("error");
-        setStatusMessage("Safety timeout (45 s) — no response from sensor");
+      if (measurementStarted.current && !hasReceivedData.current) {
         measurementStarted.current = false;
+        setMeasurementState('error');
+        setStatusMessage('No valid temperature received. Check the sensor and retry.');
       }
-    }, 45000);
+    }, 30000);
   };
 
   // ── Refresh / stop ───────────────────────────────────────
@@ -354,7 +275,10 @@ const BodyTemperaturePage = () => {
     setTimeout(() => window.location.reload(), 1000);
   };
 
-  const completeMeasurementsAndNavigate = async (tempVal) => {
+  const completeMeasurementsAndNavigate = useCallback(async (tempVal) => {
+    if (completionController.current) return;
+    const controller = new AbortController();
+    completionController.current = controller;
     try {
       setAutoProceeding(true);
 
@@ -384,30 +308,14 @@ const BodyTemperaturePage = () => {
 
       setStatusMessage("✅ Measurements complete. Securing your results...");
 
-      const response = await fetch(
+      const result = await requestJSON(
         `${API_BASE}/api/sessions/${encodeURIComponent(sessionId)}/measurements-complete`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            pairingToken,
-            healthData: finalHealthData,
-          }),
-        }
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pairingToken, healthData: finalHealthData }), signal: controller.signal }
       );
-
-      let result = null;
-
-      try {
-        result = await response.json();
-      } catch {
-        throw new Error("Invalid response from kiosk backend");
-      }
+      if (controller.signal.aborted) return;
 
       if (
-        !response.ok ||
         !result?.ok ||
         result?.paymentReady !== true
       ) {
@@ -432,6 +340,7 @@ const BodyTemperaturePage = () => {
       });
 
     } catch (error) {
+      if (controller.signal.aborted) return;
       console.error(
         "[Reliv] Measurements-complete failed:",
         error
@@ -446,8 +355,10 @@ const BodyTemperaturePage = () => {
       // IMPORTANT:
       // Allow the user to retry if the backend request failed.
       autoProceedTriggered.current = false;
+    } finally {
+      if (completionController.current === controller) completionController.current = null;
     }
-  };
+  }, [data, navigate, update]);
 
   // ── Proceed ──────────────────────────────────────────────
   const handleProceed = async () => {
@@ -474,7 +385,7 @@ const BodyTemperaturePage = () => {
 
       completeMeasurementsAndNavigate(temperatureF);
     }
-  }, [measurementState, temperatureF]);
+  }, [measurementState, temperatureF, completeMeasurementsAndNavigate, stopSpeech]);
   const canProceed =
     measurementState === "completed" && temperatureF !== null;
 
@@ -846,7 +757,7 @@ export default function BodyTemperature() {
   useEffect(() => {
     const t = setTimeout(() => speak("body-temperature"), 400);
     return () => { clearTimeout(t); stop(); };
-  }, []);
+  }, [speak, stop]);
   const [currentPage, setCurrentPage] = useState("splash");
 
   return (

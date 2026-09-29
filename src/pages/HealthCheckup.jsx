@@ -90,6 +90,8 @@ const BloodPressurePage = () => {
   const mqttClient = useRef(null);
   const measurementTimeout = useRef(null);
   const hasReceivedData = useRef(false);
+  const measurementStarted = useRef(false);
+  const retryInterval = useRef(null);
   const wifiCheckInterval = useRef(null);
   const autoProceedTriggered = useRef(false);
 
@@ -120,15 +122,8 @@ const BloodPressurePage = () => {
     };
 
     checkWiFi();
-    window.addEventListener('online', () => {
-      console.log("✅ WiFi Connected");
-      setIsWifiConnected(true);
-    });
-    window.addEventListener('offline', () => {
-      console.log("❌ WiFi Disconnected");
-      setIsWifiConnected(false);
-      setDeviceStatus("WiFi Disconnected");
-    });
+    window.addEventListener('online', checkWiFi);
+    window.addEventListener('offline', checkWiFi);
 
     wifiCheckInterval.current = setInterval(checkWiFi, 5000);
 
@@ -206,15 +201,18 @@ const BloodPressurePage = () => {
             // Expected format: {"systolic": 120, "diastolic": 80, "bpm": 72}
             const data = JSON.parse(payload);
             
-            if (data.systolic && data.diastolic && data.bpm) {
+            if (Number.isFinite(Number(data.systolic)) && Number(data.systolic) > 0 &&
+                Number.isFinite(Number(data.diastolic)) && Number(data.diastolic) > 0 &&
+                Number.isFinite(Number(data.bpm)) && Number(data.bpm) > 0) {
               // Prevent duplicate data during same measurement
-              if (hasReceivedData.current && measurementState === "measuring") {
+              if (!measurementStarted.current || hasReceivedData.current) {
                 if (import.meta.env.DEV) console.log("⚠️ Duplicate BP data received, ignoring");
                 return;
               }
 
               if (import.meta.env.DEV) console.log(`✅ BP Data Received: ${data.systolic}/${data.diastolic} mmHg, ${data.bpm} BPM`);
               
+              measurementStarted.current = false;
               // Check if values are abnormal
               if (isAbnormalBP(data.systolic, data.diastolic)) {
                 console.log("⚠️ Abnormal BP values detected, showing retry screen");
@@ -227,7 +225,8 @@ const BloodPressurePage = () => {
                 
                 // Start retry countdown
                 let countdown = 10;
-                const retryTimer = setInterval(() => {
+                clearInterval(retryInterval.current);
+                const retryTimer = retryInterval.current = setInterval(() => {
                   countdown--;
                   setRetryCountdown(countdown);
                   if (countdown <= 0) {
@@ -237,8 +236,8 @@ const BloodPressurePage = () => {
                   }
                 }, 1000);
               } else {
-                setSystolic(data.systolic);
-                setDiastolic(data.diastolic);
+                setSystolic(Number(data.systolic));
+                setDiastolic(Number(data.diastolic));
                 hasReceivedData.current = true;
                 setMeasurementState("completed");
                 setStatusMessage("Measurement complete!");
@@ -250,10 +249,13 @@ const BloodPressurePage = () => {
               }
             }
           } else if (topic === "kiosk/status") {
+            if (!measurementStarted.current) return;
             // Handle status messages (errors, progress updates, etc.)
             setStatusMessage(sanitizeError(payload));
             
             if (payload.includes("Error") || payload.includes("Invalid")) {
+              measurementStarted.current = false;
+              clearTimeout(measurementTimeout.current);
               setMeasurementState("error");
             }
           }
@@ -280,9 +282,12 @@ const BloodPressurePage = () => {
     connectMQTT();
 
     return () => {
+      measurementStarted.current = false;
+      clearInterval(retryInterval.current);
       if (mqttClient.current) {
         console.log("🔌 Disconnecting MQTT for BP...");
-        mqttClient.current.end();
+        mqttClient.current.removeAllListeners();
+        mqttClient.current.end(true);
       }
       if (measurementTimeout.current) {
         clearTimeout(measurementTimeout.current);
@@ -312,6 +317,7 @@ const BloodPressurePage = () => {
 
   // Start BP measurement
   const startMeasurement = () => {
+    if (measurementStarted.current) return;
     if (!isFullyConnected) {
       setStatusMessage("Cannot measure: WiFi or MQTT disconnected");
       return;
@@ -319,6 +325,8 @@ const BloodPressurePage = () => {
 
     console.log("🩺 Starting BP measurement...");
     setMeasurementState("measuring");
+    measurementStarted.current = true;
+    clearTimeout(measurementTimeout.current);
     setCountdown(120);
     setSystolic(null);
     setDiastolic(null);
@@ -330,6 +338,9 @@ const BloodPressurePage = () => {
       mqttClient.current.publish("kiosk/command", "bp", { qos: 2 }, (err) => {
         if (err) {
           console.error("❌ Failed to publish BP command:", err);
+          measurementStarted.current = false;
+          setMeasurementState('error');
+          setStatusMessage('Could not start the sensor. Please retry.');
         } else {
           console.log("📤 Published 'bp' command to kiosk/command (QoS 2)");
         }
@@ -341,6 +352,7 @@ const BloodPressurePage = () => {
       if (!hasReceivedData.current) {
         console.log("⚠️ BP measurement timeout (150s)");
         setMeasurementState("error");
+        measurementStarted.current = false;
         setStatusMessage("Measurement timeout (150s). Please try again.");
       }
     }, 150000);
@@ -364,6 +376,8 @@ const BloodPressurePage = () => {
     setMeasurementState("idle");
     setSystolic(null);
     setDiastolic(null);
+    measurementStarted.current = true;
+    clearTimeout(measurementTimeout.current);
     setCountdown(120);
     hasReceivedData.current = false;
     setStatusMessage("Ready to begin measurement");
@@ -384,13 +398,13 @@ const BloodPressurePage = () => {
       stopSpeech();
       // Save to context immediately
       update({
-        vitals: { ...data.vitals, systolic, diastolic },
+        vitals: { systolic, diastolic },
       });
       // Navigate after brief delay so user sees confirmation
       const t = setTimeout(() => navigate("/oxygen-pulse"), 2000);
       return () => clearTimeout(t);
     }
-  }, [measurementState, systolic, diastolic]);
+  }, [measurementState, systolic, diastolic, navigate, stopSpeech, update]);
 
   // Abnormal BP detection — outside these ranges = retry with meditating girl video
   // Tuned for Indian population: covers hypertension (common) + thin young women
@@ -828,7 +842,7 @@ export default function HealthCheckup() {
   useEffect(() => {
     const t = setTimeout(() => speak("health-checkup"), 400);
     return () => { clearTimeout(t); stop(); };
-  }, []);
+  }, [speak, stop]);
   const [currentPage, setCurrentPage] = useState("splash");
 
   const showBPPage = () => setCurrentPage("bp");

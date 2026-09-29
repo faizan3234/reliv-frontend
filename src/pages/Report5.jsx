@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
+import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
 import Logo from "../components/Logo";
@@ -443,15 +443,15 @@ export default function Report5() {
     }
   });
 
-  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
-  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
+  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : EMPTY_REPORT.patient;
+  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : EMPTY_REPORT.vitals;
 
   const userName = getFirstName(patient);
   const [showChallengePrompt, setShowChallengePrompt] = useState(false);
 
   // Compute body score for challenge prompt
   const bodyScore = useMemo(() => {
-    if (!vitals?.weight || !patient?.age || !patient?.gender || !vitals?.height || !vitals?.impedance) return 89;
+    if (!vitals?.weight || !patient?.age || !patient?.gender || !vitals?.height || !vitals?.impedance) return null;
     const sex = patient.gender.toLowerCase() === "male" ? 1 : 0;
     return Math.round(bodyCompositionUtils.calc_body_score(vitals.weight, vitals.height, sex, patient.age, vitals.impedance));
   }, [vitals, patient]);
@@ -633,12 +633,12 @@ export default function Report5() {
   }, [vitals, patient]);
 
   // Status functions
-  const getBPStatus = () => {
+  const getBPStatus = useCallback(() => {
     if (!systolic || !diastolic) return { status: "N/A", color: "#888888", text: "Not recorded" };
     if (systolic < 120 && diastolic < 80) return { status: "Optimal", color: "#22c55e", text: "Your blood pressure readings fall within a healthy range across recent measurements." };
     if (systolic < 130 && diastolic < 85) return { status: "Normal", color: "#3b82f6", text: "Blood pressure is within normal range." };
     return { status: "Needs Attention", color: "#ef4444", text: "Blood pressure readings show mild elevation and should be observed over time." };
-  };
+  }, [systolic, diastolic]);
 
   const getOxygenStatus = () => {
     if (!oxygen) return { status: "N/A", color: "#888888", text: "Not recorded" };
@@ -715,7 +715,7 @@ export default function Report5() {
     }
 
     return list.slice(0, Math.min(scanCount, 6));
-  }, [scanCount, oxygen, bpm, systolic, metrics]);
+  }, [scanCount, oxygen, bpm, systolic, metrics, history, vitals?.systolic]);
 
   // Final narrative summary
   const narrativeSummary = useMemo(() => {
@@ -726,7 +726,7 @@ export default function Report5() {
     const strongestArea = metrics && metrics.musclePct > 35 ? "muscle composition" : "cardiovascular stability";
 
     return `Based on seven confirmed scans, your health profile reflects ${overallTrend} with particular strength in ${strongestArea}. Your vital stability and body composition patterns suggest balanced physiological function, with no indicators requiring immediate attention. This report is generated from repeated observations, increasing confidence in its accuracy.`;
-  }, [scanCount, metrics]);
+  }, [scanCount, metrics, getBPStatus]);
 
   // NEW: Integration Metrics (scan-wise unlocking)
   const integrationMetrics = useMemo(() => {

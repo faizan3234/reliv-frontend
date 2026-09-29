@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { useHealth, MOCK_TEST_REPORT } from "../context/HealthContext";
+import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -21,6 +21,7 @@ import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
 import { API_BASE } from "../config/api";
+import { requestJSON } from "../utils/request";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -348,21 +349,24 @@ export default function Report4() {
     }
   });
 
-  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : MOCK_TEST_REPORT.patient;
-  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : MOCK_TEST_REPORT.vitals;
+  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : EMPTY_REPORT.patient;
+  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : EMPTY_REPORT.vitals;
   const [history, setHistory] = useState([]);
 
   const userName = getFirstName(patient);
 
   useEffect(() => {
     if (!patient?.email) return;
-    fetch(`${API_BASE}/api/reports/history/${encodeURIComponent(patient.email)}`)
-      .then((r) => r.json())
-      .then((h) => setHistory(Array.isArray(h) && h.length > 0 ? h : MOCK_TEST_REPORT.history))
-      .catch(() => setHistory(MOCK_TEST_REPORT.history));
+    const controller = new AbortController();
+    requestJSON(`${API_BASE}/api/reports/history/${encodeURIComponent(patient.email)}`, { signal: controller.signal })
+      .then((h) => {
+        if (!controller.signal.aborted) setHistory(Array.isArray(h) ? h.filter(row => row && typeof row === 'object') : EMPTY_REPORT.history);
+      })
+      .catch(() => { if (!controller.signal.aborted) setHistory(EMPTY_REPORT.history); });
+    return () => controller.abort();
   }, [patient?.email]);
 
-  const scanCount = ((data?.history?.length || 0) > 0 ? data.history.length : MOCK_TEST_REPORT.history.length) + 1;
+  const scanCount = ((data?.history?.length || 0) > 0 ? data.history.length : EMPTY_REPORT.history.length) + 1;
 
   // Unlock rules
   const unlocks = {

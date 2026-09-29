@@ -82,29 +82,6 @@ export default function Checkout() {
     }
   });
   
-  // Dynamic total kits bought counter
-  const [totalKitsBought, setTotalKitsBought] = useState(() => {
-    try {
-      const saved = localStorage.getItem('reliv_total_kits_bought');
-      const savedValue = saved ? parseInt(saved, 10) : 11;
-      // Reset if value is unreasonably high (old data) - new kiosk should start fresh
-      if (savedValue > 100) {
-        localStorage.setItem('reliv_total_kits_bought', '11');
-        return 11;
-      }
-      return savedValue;
-    } catch {
-      return 11;
-    }
-  });
-  
-  // Increment counter on mount (each payment page visit)
-  useEffect(() => {
-    const newCount = totalKitsBought + Math.floor(Math.random() * 3) + 1; // Increment by 1-3
-    setTotalKitsBought(newCount);
-    localStorage.setItem('reliv_total_kits_bought', newCount.toString());
-  }, []); // Only on mount
-  
   // Fetch all kits on mount
   const fetchKits = async () => {
     setKitsLoading(true);
@@ -922,8 +899,8 @@ export default function Checkout() {
                   <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-teal-500 rounded-full border-2 border-white flex items-center justify-center text-xs shadow-sm">🧑‍🔬</div>
                 </div>
                 <div className="flex-grow">
-                  <p className="text-gray-900 text-sm font-medium">{totalKitsBought.toLocaleString()} students</p>
-                  <p className="text-gray-500 text-xs">bought kits so far</p>
+                  <p className="text-gray-900 text-sm font-medium">Everyday essentials</p>
+                  <p className="text-gray-500 text-xs">Choose the kit you need</p>
                 </div>
                 <div className="flex items-center gap-0.5">
                   {[1,2,3,4,5].map(i => (

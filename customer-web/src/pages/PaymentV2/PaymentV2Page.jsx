@@ -452,7 +452,7 @@ export function PaymentV2Page({ sessionStore }) {
   };
 
   // Helper for human-readable amount in Rupees
-  const displayRupees = orderData?.amount ? (orderData.amount / 100).toFixed(0) : '0';
+  const displayRupees = orderData?.amount ? (orderData.amount / 100).toFixed(2) : '0';
   const normalizedServiceType = String(orderData?.serviceType || state.serviceType || 'HEALTH_CHECKUP')
     .trim()
     .toUpperCase();
@@ -690,7 +690,7 @@ export function PaymentV2Page({ sessionStore }) {
               {receiptError && (
                 <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-0.5">
                   <p className="text-xs text-red-600 font-semibold">{receiptError}</p>
-                  <p className="text-[11px] text-slate-500">Your payment is safe. Check your email and tap Retry.</p>
+                  <p className="text-[11px] text-slate-500">Your payment remains verified. Retry email delivery after resolving the message above; do not pay again.</p>
                 </div>
               )}
 

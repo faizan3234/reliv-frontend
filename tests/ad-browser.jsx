@@ -6,6 +6,8 @@ import { SpeechProvider, useSpeech } from '../src/context/SpeechContext';
 import { VoiceAssistantProvider } from '../src/context/VoiceAssistantContext';
 import KioskAdPlayer from '../src/components/KioskAdPlayer';
 import Advertise from '../src/pages/Advertise';
+import KioskGuardian from '../src/components/KioskGuardian';
+import KioskSafetyManager from '../src/components/KioskSafetyManager';
 import PayAd from '../src/pages/PayAd';
 import '../src/i18n';
 
@@ -138,7 +140,15 @@ async function run() {
   }
   intervalSeconds = 5;
   playlist = [];
-  await mount(<Advertise />, '/advertise');
+  await mount(<><KioskGuardian /><KioskSafetyManager /><KioskAdPlayer /><Advertise /></>, '/advertise');
+  await act(async () => {
+    document.querySelector('.ads-header').dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    document.querySelector('.ads-header').click();
+    window.dispatchEvent(new Event('touchstart'));
+    document.dispatchEvent(new Event('scroll'));
+  });
+  assert(pathname === '/advertise' && document.querySelector('.reliv-ads-portal'), 'background taps and scrolling keep the phone booking open');
+  assert(![...scheduled.values()].some(timer => timer.ms === 120000), 'phone booking has no kiosk automatic exit timer');
   await click('Continue to Creative');
   const input = document.querySelector('input[type="file"]');
   Object.defineProperty(input, 'files', { configurable: true, value: [new File(['synthetic image'], 'ad.png', { type: 'image/png' })] });
@@ -164,6 +174,7 @@ async function run() {
   const apiCallsBeforeRestore = calls.length;
   await mount(<Advertise />, '/advertise', JSON.stringify(saved));
   assert(document.querySelector('.ads-pay-link')?.href === saved.paymentUrl, 'returning to the saved page restores the actual payment destination');
+  assert(!findButton('Back to review'), 'restored saved booking cannot accidentally create a second campaign');
   assert(calls.slice(apiCallsBeforeRestore).every(call => !call.url.includes('/api/ads/')), 'saved payment handoff requires no connection to the Pi');
 
   window.history.replaceState({}, '', '/pay?campaign=FORGED&amt=1&code=5829');

@@ -101,7 +101,7 @@ const Splash = () => {
     if (savedLang) {
       i18n.changeLanguage(savedLang);
     }
-  }, []);
+  }, [cancelStalePaymentSession, resetHealth, update]);
 
   useVoicePage({
     guidanceKey: showTerms ? 'terms' : 'language',
