@@ -80,7 +80,6 @@ const BodyTemperaturePage = () => {
   const [statusMessage, setStatusMessage] = useState("Ready to begin measurement");
   const [deviceStatus, setDeviceStatus] = useState("Connecting...");
   const [isMqttConnected, setIsMqttConnected] = useState(false);
-  const [isWifiConnected, setIsWifiConnected] = useState(false);
 
   const [autoProceeding, setAutoProceeding] = useState(false);
 
@@ -91,12 +90,12 @@ const BodyTemperaturePage = () => {
   const measurementTimeout = useRef(null);
   const hasReceivedData = useRef(false);
   const measurementStarted = useRef(false);
-  const wifiCheckInterval = useRef(null);
   const completionController = useRef(null);
   useEffect(() => () => completionController.current?.abort(), []);
   const autoProceedTriggered = useRef(false);
 
-  const isFullyConnected = isMqttConnected && isWifiConnected;
+  // Local MQTT reachability is authoritative; the Pi intentionally has no Internet.
+  const isFullyConnected = isMqttConnected;
 
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
@@ -110,34 +109,9 @@ const BodyTemperaturePage = () => {
         : measurementState === 'error' ? 'measurementError' : 'temperature', selectedLang)),
   });
 
-  // ── WiFi connectivity check ──────────────────────────────
   useEffect(() => {
-    const checkWiFi = () => setIsWifiConnected(navigator.onLine);
-    checkWiFi();
-    const onOnline = () => setIsWifiConnected(true);
-    const onOffline = () => {
-      setIsWifiConnected(false);
-      setDeviceStatus("WiFi Disconnected");
-    };
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    wifiCheckInterval.current = setInterval(checkWiFi, 5000);
-    return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-      if (wifiCheckInterval.current) clearInterval(wifiCheckInterval.current);
-    };
-  }, []);
-
-  // ── Update device status label ───────────────────────────
-  useEffect(() => {
-    if (isMqttConnected && isWifiConnected)
-      setDeviceStatus("Connected (Signal Strong)");
-    else if (!isWifiConnected && !isMqttConnected)
-      setDeviceStatus("WiFi & MQTT Disconnected");
-    else if (!isWifiConnected) setDeviceStatus("WiFi Disconnected");
-    else setDeviceStatus("MQTT Disconnected");
-  }, [isMqttConnected, isWifiConnected]);
+    setDeviceStatus(isMqttConnected ? "Local connection ready" : "Reconnecting to local broker...");
+  }, [isMqttConnected]);
 
   // ── MQTT Connection ──────────────────────────────────────
   useEffect(() => {
@@ -214,7 +188,15 @@ const BodyTemperaturePage = () => {
       setIsMqttConnected(false);
       setDeviceStatus("Reconnecting...");
     });
-    client.on("close", () => setIsMqttConnected(false));
+    client.on("close", () => {
+      setIsMqttConnected(false);
+      if (measurementStarted.current) {
+        measurementStarted.current = false;
+        clearTimeout(measurementTimeout.current);
+        setMeasurementState("error");
+        setStatusMessage("Local connection lost. Reconnect and retry measurement.");
+      }
+    });
     client.on("offline", () => setIsMqttConnected(false));
 
     return () => {
@@ -236,7 +218,7 @@ const BodyTemperaturePage = () => {
   // ── Start measurement ────────────────────────────────────
   const startMeasurement = () => {
     if (measurementStarted.current || completionController.current) return;
-    if (!isFullyConnected || !mqttClient.current) {
+    if (!isFullyConnected || !mqttClient.current?.connected) {
       setMeasurementState("error");
       setStatusMessage("Device not connected — cannot start measurement");
       return;
@@ -511,12 +493,12 @@ const BodyTemperaturePage = () => {
               <div className="flex items-center gap-2 ml-2 text-xs">
                 <span
                   className={`px-2 py-1 rounded-full ${
-                    isWifiConnected
+                    isMqttConnected
                       ? "bg-green-100 text-green-700"
                       : "bg-red-100 text-red-700"
                   }`}
                 >
-                  WiFi
+                  Local link
                 </span>
                 <span
                   className={`px-2 py-1 rounded-full ${
