@@ -42,15 +42,18 @@ The backend helper also maps old localhost:1883 to the AP address.
 
 ## ESP32
 
-The backend patch contains firmware/RelivLocalSensors. Open its .ino in Arduino
-IDE with local_config.h alongside it. Fill the Wi-Fi password locally; MQTT
+The backend patch contains firmware/RelivLocalSensors. Copy local_config.example.h
+to local_config.h alongside its .ino and open in Arduino IDE. Fill the Wi-Fi password locally; MQTT
 username and password stay empty. Confirm the exact board before using GPIO8/9
 and UART2. Set measured MOUNT_HEIGHT_CM; zero disables height. Select your actual
 board, upload, and monitor at115200 baud. BP UART is9600 and expects ASCII
 SYS,DIA,PULSE plus newline. BP is armed by `bp`, but cuff activation uses its own
 button until the actual manufacturer's start protocol is provided.
-The earlier supplied sketch compiled on the user's setup; this repository copy
-has not been flashed or hardware-verified here.
+This repository copy has not been compiled with an Arduino toolchain, flashed,
+or hardware-verified here. Install PubSubClient, Adafruit MLX90614, Adafruit
+VL53L0X and SparkFun MAX3010x libraries and their dependencies. Oxygen timeout
+is 55 seconds, before the UI's 60-second deadline. This is a sensor adapter,
+not replacement firmware for the dispensing controller.
 
 ## Test the actual UI without sensors
 
@@ -83,3 +86,10 @@ Still requires on-site testing: real AP association, broker listeners/firewall,
 Chromium WebSocket connection, physical sensors and calibration. Existing shared
 sensor topics have no measurement IDs; use only one active measurement UI.
 No payment, ad activation or dispensing protocol is changed by this MQTT patch.
+
+Local kiosk API calls also ignore stale VITE_BACKEND_URL cloud values and use
+the local host on port 5000. Only the existing phone payment bridge stays online.
+The Pi does not need internet for MQTT, media playback, inventory or SQLite.
+The anonymous broker trusts devices on the kiosk Wi-Fi; do not forward ports
+1883/9001 to the internet. Restrict access to trusted devices or plan coordinated
+authentication/ACL changes across all three clients for a hostile network.

@@ -168,13 +168,21 @@ const BodyTemperaturePage = () => {
       client.subscribe("kiosk/sensor/temperature", { qos: 1 });
     });
 
-    client.on("message", (topic, message) => {
+    client.on("message", (topic, message, packet) => {
+      if (packet?.retain) return; // Never display a previous patient's retained reading.
       const payload = message.toString();
       if (import.meta.env.DEV)
         console.log(`📨 [Temp] ${topic}:`, payload);
 
       if (topic === "kiosk/status") {
-        if (measurementStarted.current) setStatusMessage(payload);
+        if (measurementStarted.current) {
+          setStatusMessage(payload);
+          if (/error|timeout/i.test(payload)) {
+            measurementStarted.current = false;
+            clearTimeout(measurementTimeout.current);
+            setMeasurementState("error");
+          }
+        }
       }
 
       if (topic === "kiosk/sensor/temperature") {

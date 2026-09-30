@@ -164,7 +164,8 @@ const BodyComposition = () => {
       });
     });
 
-    client.on("message", (topic, message) => {
+    client.on("message", (topic, message, packet) => {
+      if (packet?.retain) return; // Never display a previous patient's retained reading.
       const msg = message.toString();
       console.log(`📩 [${topic}] ${msg}`);
 
