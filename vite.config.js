@@ -10,6 +10,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    // Load kiosk styles with index.html, not as a fallible lazy-route preload.
+    cssCodeSplit: false,
+    manifest: true,
     sourcemap: false,
     minify: 'esbuild',
     chunkSizeWarningLimit: 1500,
