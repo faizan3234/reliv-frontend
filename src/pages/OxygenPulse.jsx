@@ -80,7 +80,6 @@ const OxygenPulsePage = () => {
   const [statusMessage, setStatusMessage] = useState("Ready to begin measurement");
   const [deviceStatus, setDeviceStatus] = useState("Connecting...");
   const [isMqttConnected, setIsMqttConnected] = useState(false);
-  const [isWifiConnected, setIsWifiConnected] = useState(false);
   const { data, update } = useHealth();
   const navigate = useNavigate();
   
@@ -90,7 +89,6 @@ const OxygenPulsePage = () => {
   const measurementTimeout = useRef(null);
   const hasReceivedData = useRef(false);
   const measurementStarted = useRef(false); // Guard: ignore retained MQTT data
-  const wifiCheckInterval = useRef(null);
 
   const autoProceedTriggered = useRef(false);
 
@@ -106,53 +104,12 @@ const OxygenPulsePage = () => {
         : measurementState === 'error' ? 'measurementError' : 'oxygen', selectedLang)),
   });
 
-  // Derived state: both must be connected
-  const isFullyConnected = isMqttConnected && isWifiConnected;
+  // Local MQTT reachability is authoritative; the Pi intentionally has no Internet.
+  const isFullyConnected = isMqttConnected;
 
-  // WiFi connectivity check
   useEffect(() => {
-    const checkWiFi = () => {
-      // Check if browser is online
-      if (navigator.onLine) {
-        setIsWifiConnected(true);
-      } else {
-        setIsWifiConnected(false);
-        setDeviceStatus("WiFi Disconnected");
-      }
-    };
-
-    // Initial check
-    checkWiFi();
-
-    // Listen to online/offline events
-    window.addEventListener('online', checkWiFi);
-
-    window.addEventListener('offline', checkWiFi);
-
-    // Periodic check every 5 seconds
-    wifiCheckInterval.current = setInterval(checkWiFi, 5000);
-
-    return () => {
-      window.removeEventListener('online', checkWiFi);
-      window.removeEventListener('offline', checkWiFi);
-      if (wifiCheckInterval.current) {
-        clearInterval(wifiCheckInterval.current);
-      }
-    };
-  }, []);
-
-  // Update device status based on both connections
-  useEffect(() => {
-    if (isMqttConnected && isWifiConnected) {
-      setDeviceStatus("Connected (Signal Strong)");
-    } else if (!isWifiConnected && !isMqttConnected) {
-      setDeviceStatus("WiFi & MQTT Disconnected");
-    } else if (!isWifiConnected) {
-      setDeviceStatus("WiFi Disconnected");
-    } else if (!isMqttConnected) {
-      setDeviceStatus("MQTT Disconnected");
-    }
-  }, [isMqttConnected, isWifiConnected]);
+    setDeviceStatus(isMqttConnected ? "Local connection ready" : "Reconnecting to local broker...");
+  }, [isMqttConnected]);
 
   // MQTT Connection Setup
   useEffect(() => {
@@ -169,7 +126,7 @@ const OxygenPulsePage = () => {
         });
 
         mqttClient.current.on("connect", () => {
-          if (import.meta.env.DEV) console.log("✅ MQTT Connected to HiveMQ Cloud");
+          if (import.meta.env.DEV) console.log("✅ MQTT connected to configured broker");
           setIsMqttConnected(true);
           
           // Subscribe to topics with QoS 1 for reliable delivery
@@ -304,16 +261,10 @@ const OxygenPulsePage = () => {
 
   const triggerOxygen = () => {
     if (measurementStarted.current) return;
-    // Check both WiFi and MQTT connection
-    if (!isFullyConnected) {
+    // Check the local MQTT connection, independent of Internet access.
+    if (!isFullyConnected || !mqttClient.current?.connected) {
       setMeasurementState("error");
-      if (!isWifiConnected && !isMqttConnected) {
-        setStatusMessage("WiFi and MQTT disconnected - Cannot start measurement");
-      } else if (!isWifiConnected) {
-        setStatusMessage("WiFi disconnected - Cannot start measurement");
-      } else if (!isMqttConnected) {
-        setStatusMessage("MQTT disconnected - Cannot start measurement");
-      }
+      setStatusMessage("Local broker disconnected. Waiting to reconnect.");
       return;
     }
 
@@ -567,8 +518,8 @@ const OxygenPulsePage = () => {
               </span>
               {/* Real-time indicators */}
               <div className="flex items-center gap-2 ml-2 text-xs">
-                <span className={`px-2 py-1 rounded-full ${isWifiConnected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                  WiFi
+                <span className={`px-2 py-1 rounded-full ${isMqttConnected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                  Local link
                 </span>
                 <span className={`px-2 py-1 rounded-full ${isMqttConnected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                   MQTT
