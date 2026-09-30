@@ -8,6 +8,7 @@ import { parsePaymentVoice } from '../voice/paymentVoice';
 import { parseReportLanguageChoice } from '../voice/reportVoice';
 import { guidanceText, ROUTE_GUIDANCE, isGuidedRoute } from '../voice/guidanceCopy';
 import { GuidanceTimer } from '../voice/guidanceTimer';
+import { readBrowserStorage, writeBrowserStorage } from '../utils/browserStorage';
 
 const VoiceAssistantContext = createContext(null);
 
@@ -88,14 +89,14 @@ export const VoiceAssistantProvider = ({ children }) => {
   };
 
   const voiceClientIdRef = useRef(
-    localStorage.getItem('relivVoiceClientId') || generateId()
+    readBrowserStorage('relivVoiceClientId') || generateId()
   );
   
   const reconnectGenerationRef = useRef(0);
   const manualCloseRef = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem('relivVoiceClientId', voiceClientIdRef.current);
+    writeBrowserStorage('relivVoiceClientId', voiceClientIdRef.current);
   }, []);
 
   // Listen for AEC signals from SpeechContext

@@ -105,7 +105,10 @@ export function SpeechProvider({ children }) {
   
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [voiceSettings, setVoiceSettings] = useState(DEFAULT_VOICE_SETTINGS);
-  const [muted, setMuted] = useState(() => localStorage.getItem("reliv_muted") === "true");
+  const [muted, setMuted] = useState(() => {
+    try { return localStorage.getItem("reliv_muted") === "true"; }
+    catch { return false; }
+  });
   const [volume, setVolume] = useState(1);
   const speakingRef = useRef(false);
   const playbackRequestRef = useRef(0);
@@ -386,7 +389,8 @@ export function SpeechProvider({ children }) {
     setMuted((prev) => {
       if (!prev) stop();
       const nextMuted = !prev;
-      localStorage.setItem("reliv_muted", String(nextMuted));
+      try { localStorage.setItem("reliv_muted", String(nextMuted)); }
+      catch { /* Muting must still work when browser storage is unavailable. */ }
       return nextMuted;
     });
   }, [stop]);
