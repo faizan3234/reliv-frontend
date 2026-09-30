@@ -49,7 +49,7 @@ async function click(pattern, twice = false) {
   await act(async () => { el.click(); if (twice) el.click(); });
   await flush();
 }
-async function emit(client, topic, value) { await act(async () => client.emit('message', topic, typeof value === 'string' ? value : JSON.stringify(value))); await flush(); }
+async function emit(client, topic, value, packet = {}) { await act(async () => client.emit('message', topic, typeof value === 'string' ? value : JSON.stringify(value), packet)); await flush(); }
 async function run() {
   localStorage.setItem('reliv_session_id', 'KSK-SENSOR-TEST');
   localStorage.setItem('reliv_pairing_token', 'synthetic-pairing-token');
@@ -58,6 +58,8 @@ async function run() {
   assert(!document.getElementById('app').textContent.includes('Measurement Complete!'), 'retained oxygen packet cannot complete an unstarted measurement');
   await click(/Measure Oxygen/, true);
   assert(client.published.filter(([, command]) => command === 'oxygen').length === 1, 'double tap sends one oxygen command');
+  await emit(client, 'kiosk/sensor/oxygen', { oxygen: 98, bpm: 72 }, { retain: true });
+  assert(!document.getElementById('app').textContent.includes('Measurement Complete!'), 'retained oxygen cannot complete an active measurement');
   await emit(client, 'kiosk/sensor/oxygen', { oxygen: 98 });
   await emit(client, 'kiosk/status', 'Complete');
   await tick(60000);
@@ -72,10 +74,15 @@ async function run() {
   assert(oxygenClient.closed, 'navigation closes the oxygen MQTT client');
   await click(/Measure Temperature/, true);
   assert(client.published.filter(([, command]) => command === 'temperature').length === 1, 'double tap sends one temperature command');
+  await emit(client, 'kiosk/sensor/temperature', { temperature_f: 98.4 }, { retain: true });
+  assert(!document.getElementById('app').textContent.includes('Measurement Complete!'), 'retained temperature cannot complete an active measurement');
   await emit(client, 'kiosk/sensor/temperature', { temperature_f: 'invalid' });
   await tick(30000);
   assert(document.getElementById('app').textContent.includes('No valid temperature'), 'missing temperature times out without a synthetic reading');
   await click(/Try Again/);
+  await emit(client, 'kiosk/status', 'Error: Temperature sensor missing.');
+  await click(/Try Again/);
+  assert(client.published.filter(([, command]) => command === 'temperature').length === 3, 'temperature sensor error immediately permits retry');
   await emit(client, 'kiosk/sensor/temperature', { temperature_f: 98.4 });
   assert(document.getElementById('app').textContent.includes('Measurement Complete!'), 'temperature accepts a real reading after retry');
   await emit(client, 'kiosk/sensor/temperature', { temperature_f: 99.1 });

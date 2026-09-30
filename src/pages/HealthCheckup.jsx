@@ -192,7 +192,8 @@ const BloodPressurePage = () => {
         });
       });
 
-      mqttClient.current.on("message", (topic, message) => {
+      mqttClient.current.on("message", (topic, message, packet) => {
+      if (packet?.retain) return; // Never display a previous patient's retained reading.
         const payload = message.toString();
         if (import.meta.env.DEV) console.log(`📨 MQTT Message [${topic}]: ${payload}`);
 
