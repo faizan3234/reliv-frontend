@@ -8,6 +8,7 @@ import { useHealth } from "../context/HealthContext";
 import CampusLeaderboard from "../components/CampusLeaderboard";
 import { AnimatePresence } from "framer-motion";
 import { API_BASE } from "../config/api";
+import { readBrowserStorage, writeBrowserStorage } from '../utils/browserStorage';
 import i18n from "i18next";
 
 const Splash = () => {
@@ -49,7 +50,7 @@ const Splash = () => {
     }
     setErrorMessage("");
     i18n.changeLanguage(langCode);
-    localStorage.setItem("appLanguage", langCode);
+    writeBrowserStorage("appLanguage", langCode);
     update({ language: langCode });
     navigate("/customer-details");
     return true;
@@ -93,7 +94,7 @@ const Splash = () => {
   // But preserve the selected UI language so going back doesn't look weird
   useEffect(() => {
     cancelStalePaymentSession();
-    const savedLang = localStorage.getItem("appLanguage");
+    const savedLang = readBrowserStorage("appLanguage");
     resetHealth();
     // Force backend ASR to Auto for new session
     update({ language: 'auto' });

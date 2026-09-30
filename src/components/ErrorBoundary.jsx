@@ -1,4 +1,5 @@
 import React from "react";
+import { recoveryUrl } from '../utils/recoveryUrl';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -7,8 +8,8 @@ export default class ErrorBoundary extends React.Component {
     this._autoRecoverTimer = null;
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMessage: String(error?.message || 'Unknown startup error').slice(0, 600) };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -25,13 +26,13 @@ export default class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     clearTimeout(this._autoRecoverTimer);
-    window.location.reload();
+    window.location.replace(recoveryUrl(window.location.href));
   };
 
   handleGoHome = () => {
     clearTimeout(this._autoRecoverTimer);
-    this.setState({ hasError: false });
-    window.location.href = "/";
+    // Do not remount the failed subtree before the browser navigates.
+    window.location.replace(recoveryUrl(window.location.href, true));
   };
 
   render() {
@@ -47,6 +48,10 @@ export default class ErrorBoundary extends React.Component {
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Something went wrong</h1>
             <p className="text-gray-500 mb-8">Please reload this screen to try again. If you already paid, do not pay again; ask the kiosk administrator for help.</p>
             <div className="space-y-3">
+              <details className="text-left text-sm break-words text-gray-600 mb-4">
+                <summary className="cursor-pointer py-2">Error details for administrator</summary>
+                <p>{this.state.errorMessage}</p>
+              </details>
               <button
                 onClick={this.handleReset}
                 className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3.5 font-semibold text-white shadow-md hover:shadow-lg transition-all"
