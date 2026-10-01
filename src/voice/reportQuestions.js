@@ -57,3 +57,22 @@ export function answerReportQuestion(question, data, language = 'en') {
   const before = topic.other ? `${earlier[topic.field]}/${earlier[topic.other]}` : earlier[topic.field];
   return `${copy.previous(before, formatted, topic.unit)} ${String(before) === String(formatted) ? copy.unchanged : copy.advice}`;
 }
+
+export const measurementNames = {
+  en: { height:'Height', weight:'Weight', systolic:'Systolic pressure', diastolic:'Diastolic pressure', oxygen:'Oxygen', bpm:'Pulse', temperature:'Temperature', bmi:'BMI (calculated)' },
+  hi: { height:'लंबाई', weight:'वज़न', systolic:'ऊपरी रक्तचाप', diastolic:'निचला रक्तचाप', oxygen:'ऑक्सीजन', bpm:'नाड़ी', temperature:'तापमान', bmi:'बी एम आई (गणना)' },
+  bn: { height:'উচ্চতা', weight:'ওজন', systolic:'উপরের রক্তচাপ', diastolic:'নিচের রক্তচাপ', oxygen:'অক্সিজেন', bpm:'পালস', temperature:'তাপমাত্রা', bmi:'বি এম আই (হিসাব)' },
+};
+
+export function reportNarration(data, language = 'en') {
+  const lang = ['en','hi','bn'].includes(language) ? language : 'en';
+  const names = measurementNames[lang];
+  const intro = { en:'Here are your recorded measurements today.', hi:'आज दर्ज किए गए आपके माप ये हैं।', bn:'আজ নথিভুক্ত আপনার পরিমাপগুলি শুনুন।' }[lang];
+  const units = { en:['centimetres','kilograms','millimetres of mercury','millimetres of mercury','percent','beats per minute','degrees Fahrenheit'], hi:['सेंटीमीटर','किलोग्राम','मिलीमीटर मर्करी','मिलीमीटर मर्करी','प्रतिशत','प्रति मिनट','डिग्री फ़ारेनहाइट'], bn:['সেন্টিমিটার','কিলোগ্রাম','মিলিমিটার পারদ','মিলিমিটার পারদ','শতাংশ','প্রতি মিনিট','ডিগ্রি ফারেনহাইট'] }[lang];
+  const missing = { en:'not measured', hi:'माप नहीं मिला', bn:'পরিমাপ পাওয়া যায়নি' }[lang];
+  const lines = ['height','weight','systolic','diastolic','oxygen','bpm','temperature'].map((key,i) => {
+    const value = Number(data?.vitals?.[key]);
+    return `${names[key]}: ${Number.isFinite(value) && value > 0 ? `${value} ${units[i]}` : missing}.`;
+  });
+  return [intro, ...lines, translations[lang].next, translations[lang].advice].join(' ');
+}

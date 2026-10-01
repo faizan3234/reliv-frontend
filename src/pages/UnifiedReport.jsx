@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useHealth } from '../context/HealthContext';
 import { useSpeech } from '../context/SpeechContext';
 import { useVoicePage } from '../hooks/useVoicePage';
+import { readBrowserStorage, writeBrowserStorage } from '../utils/browserStorage';
+import { measurementNames } from '../voice/reportQuestions';
 import { answerReportQuestion } from '../voice/reportQuestions';
 
 const content = {
@@ -22,7 +24,7 @@ export default function UnifiedReport() {
   const navigate = useNavigate();
   const { data, resetHealth } = useHealth();
   const { speakText, stop } = useSpeech();
-  const [language, setLanguage] = useState(() => sessionStorage.getItem('reliv_report_speech_lang') || data.language || 'en');
+  const [language, setLanguage] = useState(() => readBrowserStorage('reliv_report_speech_lang', 'sessionStorage') || data.language || 'en');
   const words = content[language] || content.en;
   const history = Array.isArray(data.history) ? data.history : [];
   const previous = history.slice(0,-1).reverse();
@@ -42,10 +44,10 @@ export default function UnifiedReport() {
   }, [navigate, resetHealth, stop]);
   const selectLanguage = code => {
     setLanguage(code);
-    sessionStorage.setItem('reliv_report_speech_lang', code);
+    writeBrowserStorage('reliv_report_speech_lang', code, 'sessionStorage');
     window.dispatchEvent(new CustomEvent('reliv_report_language_change', { detail:code }));
     stop();
-    speakText(answerReportQuestion('my health report', data, code), { langHint:code });
+
   };
   const comparisons = fields.map(field => {
     const current = field.keys.map(key => Number(data.vitals?.[key]));
@@ -58,13 +60,13 @@ export default function UnifiedReport() {
         <h2 className="text-2xl font-bold">{words.heading}</h2>
         <p className="mt-2 text-slate-600">{history.length > 1 ? words.direction : words.noHistory}</p>
         {history.length > 1 && <div className="mt-5 grid gap-3 md:grid-cols-2">{comparisons.map(field => <div key={field.name} className="rounded-2xl bg-orange-50 p-4">
-          <h3 className="font-semibold">{field.name}</h3>
+          <h3 className="font-semibold">{(measurementNames[language] || measurementNames.en)[field.keys[0]]}</h3>
           {!field.available ? <p className="mt-2 text-slate-600">{words.noData}</p> : <><p className="mt-2 text-lg font-bold">{field.current.join('/')} {field.unit}</p>
           {field.earlier && <p className="text-sm text-slate-600">{field.earlier.join('/')} → {field.current.join('/')} {field.unit} · {field.current[0] === field.earlier[0] ? words.equal : field.current[0] > field.earlier[0] ? words.higher : words.lower}</p>}</>}
         </div>)}</div>}
       </section>
       <section className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-bold">{words.next}</h2><p className="mt-3 text-slate-700">{words.nextText}</p><p className="mt-3 text-slate-600">{words.safety}</p></section>
-      <section className="rounded-3xl bg-orange-50 p-6"><p className="font-semibold">{words.language}</p><div className="mt-3 flex gap-3">{[['en','English'],['hi','हिंदी'],['bn','বাংলা']].map(([code,label]) => <button key={code} type="button" onClick={() => selectLanguage(code)} className={`min-h-12 rounded-xl px-5 font-bold ${language === code ? 'bg-orange-600 text-white' : 'bg-white text-orange-800'}`}>{label}</button>)}</div><p className="mt-3 text-sm text-slate-700">{words.advice}</p></section>
+      <section className="rounded-3xl bg-orange-50 p-6"><p className="font-semibold">{words.language}</p><div className="mt-3 flex flex-wrap gap-3">{[['en','English'],['hi','हिंदी'],['bn','বাংলা']].map(([code,label]) => <button key={code} type="button" onClick={() => selectLanguage(code)} className={`min-h-12 rounded-xl px-5 font-bold ${language === code ? 'bg-orange-600 text-white' : 'bg-white text-orange-800'}`}>{label}</button>)}</div><p className="mt-3 text-sm text-slate-700">{words.advice}</p></section>
       <button type="button" onClick={() => { stop(); resetHealth(); navigate('/feedback', { replace:true }); }} className="w-full min-h-16 rounded-2xl bg-orange-600 px-6 text-xl font-bold text-white active:scale-[.99]">{words.finish}</button>
     </div>
   </main>;

@@ -883,7 +883,6 @@ export default function PaymentGate() {
                 className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 border-2 border-orange-300 active:scale-98 transition-all flex items-center justify-between shadow-sm cursor-pointer text-left"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🇮🇳</span>
                   <div>
                     <h3 className="font-extrabold text-slate-900 text-base">हिंदी (Hindi)</h3>
                     <p className="text-[11px] text-slate-600">सरल हिंदी में रिपोर्ट सुनें</p>
@@ -900,7 +899,6 @@ export default function PaymentGate() {
                 className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 border-2 border-indigo-200 active:scale-98 transition-all flex items-center justify-between shadow-sm cursor-pointer text-left"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🇬🇧</span>
                   <div>
                     <h3 className="font-extrabold text-slate-900 text-base">English</h3>
                     <p className="text-[11px] text-slate-600">Listen in simple plain English</p>
@@ -917,7 +915,6 @@ export default function PaymentGate() {
                 className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 border-2 border-emerald-300 active:scale-98 transition-all flex items-center justify-between shadow-sm cursor-pointer text-left"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🇧🇩</span>
                   <div>
                     <h3 className="font-extrabold text-slate-900 text-base">বাংলা (Bengali)</h3>
                     <p className="text-[11px] text-slate-600">সহজ বাংলায় রিপোর্ট শুনুন</p>
