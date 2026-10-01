@@ -120,11 +120,12 @@ window.fetch = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : {};
   requests.push({ url: String(url), body });
   if (String(url).endsWith('/api/create-qr-session')) return { ok: true, status: 200, json: async () => ({ sessionId: 'KSK-BROWSER', pairingToken: 'browser-token' }) };
-  if (pendingCustomer && String(url).endsWith('/customer')) await pendingCustomer;
+  if (pendingCustomer && String(url).endsWith('/health-profile')) await pendingCustomer;
   if (pendingService && String(url).endsWith('/service')) await pendingService;
-  if (rejectCustomer && String(url).endsWith('/customer')) return { ok: false, status: 500, json: async () => ({ error: 'Test save failed' }) };
+  if (rejectCustomer && String(url).endsWith('/health-profile')) return { ok: false, status: 500, json: async () => ({ error: 'Test save failed' }) };
   if (rejectService && String(url).endsWith('/service')) return { ok: false, status: 409, json: async () => ({ error: 'Session cannot change service' }) };
   if (String(url).endsWith('/api/kits')) return { ok: true, status: 200, json: async () => ({ kits: [] }) };
+  if (String(url).endsWith('/health-profile')) return { ok: true, status: 200, json: async () => ({ ok: true, accessToken: 'a'.repeat(64), customerData: body.mode === 'returning' ? {name:body.name, age:40, gender:'female', email:''} : {name:body.name, age:body.age, gender:body.gender, email:body.email} }) };
   return { ok: true, status: 200, json: async () => ({ success: true, ok: true, reportId: 'RPT-TEST', data: [], history: [] }) };
 };
 // eslint-disable-next-line react-refresh/only-export-components
@@ -182,6 +183,7 @@ async function keyPress(key) {
   });
 }
 async function fillCustomer() {
+  await act(async () => [...document.querySelectorAll('#app button')].find(el => el.textContent.includes('First time here')).click());
   await act(async () => document.querySelector('input[name="name"]').click());
   for (const key of 'namita shah') await keyPress(key === ' ' ? '{space}' : key);
   await keyPress('{close}');
@@ -192,6 +194,9 @@ async function fillCustomer() {
   const age = [...document.querySelectorAll('span')].find(el => el.textContent === '22');
   await act(async () => age.click());
   for (const key of ['{bksp}', '{bksp}', '4', '0', '{close}']) await keyPress(key);
+  for (const pad of document.querySelectorAll('[aria-label="PIN keypad"]')) {
+    for (const digit of '123456') await act(async () => pad.querySelector(`[aria-label="Digit ${digit}"]`).click());
+  }
   await flush();
 }
 async function selectService(label) {
@@ -446,21 +451,32 @@ async function run() {
     requests.length = 0;
     await mount('/customer-details');
     for (const word of ['my name is Namita Shah', 'haan', 'forty', 'female', 'next']) await say(word);
-    assert(document.querySelector('input[name="name"]').value === '', 'voice cannot fill name or auto-submit details');
+    assert(!document.querySelector('input[name="name"]') && controls.path === '/customer-details', 'voice cannot select a private profile or auto-submit details');
     await fillCustomer();
     await click('Proceed →');
     assert(controls.path === '/two-options', 'touch-entered details proceed to service selection');
-    const saved = requests.find(request => request.url.endsWith('/customer'));
-    assert(saved.body.customerData.name === 'namita shah', 'touch keyboard preserves the entered name');
-    assert(saved.body.customerData.age === 40 && saved.body.customerData.gender === 'female', 'touch submission includes age and gender');
+    const saved = requests.find(request => request.url.endsWith('/health-profile'));
+    assert(saved.body.name === 'namita shah', 'touch keyboard preserves the entered name');
+    assert(saved.body.age === 40 && saved.body.gender === 'female' && saved.body.pin === '123456', 'touch submission includes demographics and private PIN');
     assert(saved.body.pairingToken === 'browser-token', 'customer request includes authoritative pairing token');
     assert(requests.filter(request => request.url.endsWith('create-qr-session')).length === 1, 'customer flow creates one session');
     for (const word of ['health checkup', 'medicine dispensing', 'yes', 'switch']) await say(word);
     assert(controls.path === '/two-options', 'speech cannot select, switch, or confirm a service');
     await selectService(service);
     assert(controls.path === destination, 'touch service reaches ' + destination);
-    assert(requests.findIndex(request => request.url.endsWith('/customer')) < requests.findIndex(request => request.url.endsWith('/service')), 'customer is saved before selecting service');
+    assert(requests.findIndex(request => request.url.endsWith('/health-profile')) < requests.findIndex(request => request.url.endsWith('/service')), 'customer is saved before selecting service');
   }
+  requests.length = 0;
+  await mount('/customer-details');
+  await click('I have visited beforeAdd this scan to your progress');
+  assert(!document.querySelector('#customer-email') && document.querySelectorAll('[aria-label="PIN keypad"]').length === 1, 'returning visitor has a short name and PIN form');
+  await act(async () => document.querySelector('input[name="name"]').click());
+  for (const key of 'namita shah') await keyPress(key === ' ' ? '{space}' : key);
+  await keyPress('{close}');
+  for (const digit of '123456') await act(async () => document.querySelector('[aria-label="PIN keypad"]').querySelector(`[aria-label="Digit ${digit}"]`).click());
+  await click('Proceed →');
+  assert(controls.path === '/two-options' && controls.health.data.patient.age === 40, 'returning visitor restores server verified demographics');
+  assert(requests.find(request => request.url.endsWith('/health-profile')).body.mode === 'returning', 'returning visitor requests a PIN verified profile');
   rejectCustomer = true;
   await mount('/customer-details');
   await fillCustomer(); await click('Proceed →');

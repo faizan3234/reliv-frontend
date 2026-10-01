@@ -43,6 +43,8 @@ export const VoiceAssistantProvider = ({ children }) => {
   const listeningPausedRef = useRef(false);
   const backendMessageHandlerRef = useRef(null);
   const recentRelivSpeechRef = useRef([]);
+  const reportAskRef = useRef(false);
+  const reportAskTimersRef = useRef([]);
   const lastPongRef = useRef(Date.now());
 
   currentPathRef.current = location.pathname;
@@ -64,6 +66,32 @@ export const VoiceAssistantProvider = ({ children }) => {
       ws.current.send(JSON.stringify(payload));
     }
   }, []);
+
+  // A deliberate touch interrupts report narration, then opens one short
+  // listening window. Never listen to the loudspeaker while Reliv is talking.
+  useEffect(() => {
+    const start = () => {
+      if (!/^\/report-[1-5]$/.test(currentPathRef.current)) return;
+      reportAskTimersRef.current.forEach(clearTimeout);
+      stop();
+      reportAskRef.current = true;
+      const timer = setTimeout(() => {
+        if (reportAskRef.current && /^\/report-[1-5]$/.test(currentPathRef.current)) sendToBackend({ type: 'SET_CONTEXT', page: currentPathRef.current,
+          expecting: 'report_question', vocabulary_hints: ['blood pressure','oxygen','pulse','temperature','weight','next visit','बी पी','ऑक्सीजन','रक्तচাপ','অক্সিজেন'] });
+      }, 400);
+      const expiry = setTimeout(() => {
+        reportAskRef.current = false;
+        if (/^\/report-[1-5]$/.test(currentPathRef.current)) sendToBackend({ type: 'SET_CONTEXT', page: currentPathRef.current, expecting: 'help', vocabulary_hints: HELP_HINTS });
+      }, 20000);
+      reportAskTimersRef.current = [timer, expiry];
+    };
+    window.addEventListener('reliv_report_ask_start', start);
+    return () => {
+      window.removeEventListener('reliv_report_ask_start', start);
+      reportAskTimersRef.current.forEach(clearTimeout);
+      reportAskRef.current = false;
+    };
+  }, [location.pathname, sendToBackend, stop]);
 
   const setRelivSpeaking = useCallback((active) => {
     sendToBackend({ type: 'SET_RELIV_SPEAKING', active });
@@ -377,6 +405,12 @@ export const VoiceAssistantProvider = ({ children }) => {
   };
 
   const processTranscript = (text) => {
+    if (reportAskRef.current && /^\/report-[1-5]$/.test(currentPathRef.current)) {
+      reportAskRef.current = false;
+      window.dispatchEvent(new CustomEvent('reliv_report_question', { detail: text }));
+      sendToBackend({ type: 'SET_CONTEXT', page: currentPathRef.current, expecting: 'help', vocabulary_hints: HELP_HINTS });
+      return true;
+    }
     if (isHelpRequest(text)) {
       resetIdleTimer();
       guideCurrentPage(text);

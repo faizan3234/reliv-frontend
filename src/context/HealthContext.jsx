@@ -60,7 +60,8 @@ export function HealthProvider({ children }) {
         sessionId: parsed.sessionId || localStorage.getItem("reliv_session_id") || "",
         patient: { ...defaultData.patient, ...parsed.patient },
         vitals: { ...defaultData.vitals, ...parsed.vitals },
-        history: Array.isArray(parsed.history) ? parsed.history : [],
+        // Private historical readings live only in memory during this visit.
+        history: [],
       };
     } catch {
       return defaultData;
@@ -69,7 +70,7 @@ export function HealthProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem("healthData", JSON.stringify(data));
+      localStorage.setItem("healthData", JSON.stringify({ ...data, history: [] }));
     } catch { /* Storage may be unavailable. */ }
   }, [data]);
 
@@ -83,7 +84,7 @@ export function HealthProvider({ children }) {
         vitals: { ...prev.vitals, ...(partial?.vitals || {}) },
       };
       try {
-        localStorage.setItem("healthData", JSON.stringify(next));
+        localStorage.setItem("healthData", JSON.stringify({ ...next, history: [] }));
         if (partial?.sessionId) {
           localStorage.setItem("reliv_session_id", next.sessionId);
         }

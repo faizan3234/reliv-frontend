@@ -11,13 +11,38 @@ import { API_BASE } from "../config/api";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { guidanceText } from "../voice/guidanceCopy";
-import { ensureKioskSession, saveKioskCustomer } from "../utils/kioskSession";
+import { ensureKioskSession, saveKioskCustomer, saveKioskHealthProfile } from "../utils/kioskSession";
+
+const PROFILE_COPY = {
+  en: { new: 'First time here', returning: 'I have visited before', medicine: 'Only buying medicine', firstHint: 'Start your first health journey', returnHint: 'Add this scan to your progress', medicineHint: 'Continue without a health profile', pin: 'Your private 6-digit PIN', confirm: 'Enter PIN again', privacy: 'Remember this PIN. It keeps your past scans private on this kiosk.', wrong: 'PINs must match.', select: 'Choose First time here or I have visited before. If you only need medicine, tap Only buying medicine.', pinHelp: 'Enter the private six digit PIN you chose on your first visit.' },
+  hi: { new: 'पहली बार आए हैं', returning: 'पहले आ चुके हैं', medicine: 'केवल दवा खरीदें', firstHint: 'अपनी पहली जाँच शुरू करें', returnHint: 'आज की जाँच को पिछली जाँच से जोड़ें', medicineHint: 'स्वास्थ्य प्रोफ़ाइल के बिना आगे बढ़ें', pin: 'आपका निजी 6 अंकों का PIN', confirm: 'PIN फिर डालें', privacy: 'यह PIN याद रखें। इससे आपकी पुरानी जाँच निजी रहती हैं।', wrong: 'दोनों PIN एक जैसे होने चाहिए।', select: 'पहली बार आए हैं या पहले आ चुके हैं, चुनें। केवल दवा चाहिए तो केवल दवा खरीदें दबाएँ।', pinHelp: 'पहली जाँच में बनाया गया अपना निजी छह अंकों का PIN डालें।' },
+  bn: { new: 'প্রথমবার এসেছেন', returning: 'আগেও এসেছেন', medicine: 'শুধু ওষুধ কিনব', firstHint: 'প্রথম স্বাস্থ্য পরীক্ষা শুরু করুন', returnHint: 'আজকের পরীক্ষার সঙ্গে আগেরটি মিলিয়ে দেখুন', medicineHint: 'স্বাস্থ্য প্রোফাইল ছাড়াই এগোন', pin: 'আপনার ব্যক্তিগত ৬ সংখ্যার PIN', confirm: 'PIN আবার লিখুন', privacy: 'PIN মনে রাখুন। এটি আপনার আগের পরীক্ষার তথ্য সুরক্ষিত রাখে।', wrong: 'দুটি PIN একই হতে হবে।', select: 'প্রথমবার এসেছেন, না আগেও এসেছেন, বেছে নিন। শুধু ওষুধ লাগলে ওষুধের বোতাম চাপুন।', pinHelp: 'প্রথম পরীক্ষার সময় বেছে নেওয়া ব্যক্তিগত ছয় সংখ্যার PIN লিখুন।' },
+};
+
+function PinPad({ label, value, onChange }) {
+  return <div className="space-y-2">
+    <p className="text-base font-semibold text-slate-800">{label}</p>
+    <div aria-label={label} className="flex justify-center gap-2 rounded-2xl bg-slate-100 p-3">
+      {Array.from({ length: 6 }, (_, index) => <span key={index} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-xl font-bold text-orange-600">{index < value.length ? '•' : '·'}</span>)}
+    </div>
+    <div className="grid grid-cols-3 gap-2" aria-label="PIN keypad">
+      {[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map((digit, index) => digit === ''
+        ? <span key={index} />
+        : <button key={index} type="button" aria-label={digit === '⌫' ? 'Delete last digit' : `Digit ${digit}`} onClick={() => onChange(digit === '⌫' ? value.slice(0,-1) : (value + digit).slice(0,6))}
+            className="min-h-12 rounded-xl bg-white text-xl font-semibold text-slate-800 shadow-sm active:bg-orange-100">{digit}</button>)}
+    </div>
+  </div>;
+}
 
 export default function CustomerDetails() {
   const navigate = useNavigate();
   const { t: translateUI } = useTranslation();
   const { data: healthData, update } = useHealth();
   const selectedLang = healthData?.language || 'en';
+  const copy = PROFILE_COPY[selectedLang] || PROFILE_COPY.en;
+  const [mode, setMode] = useState(null);
+  const [pin, setPin] = useState('');
+  const [pinAgain, setPinAgain] = useState('');
   const { speakText } = useSpeech();
 
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -109,25 +134,26 @@ export default function CustomerDetails() {
   const isAgeValid = !isNaN(ageNum) && ageNum >= 1 && ageNum <= 120;
   const isGenderValid = Boolean(form.gender);
   const isEmailValid = !form.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-  const isFormValid = isNameValid && isAgeValid && isGenderValid && isEmailValid;
+  const isFormValid = isNameValid && (mode === 'medicine' || (pin.length === 6 && (mode === 'returning' || pin === pinAgain))) && (mode === 'returning' || (isAgeValid && isGenderValid && isEmailValid));
 
   // All details are entered by touch. Speech only describes the next step.
   const guidanceKey = isSubmitting ? 'saving' : submitError ? 'detailsError'
     : keyboardVisible ? (activeInputName === 'age' ? 'detailsAge' : 'detailsName')
-    : !isNameValid ? 'detailsName' : !isGenderValid ? 'detailsGender'
+    : !mode ? 'detailsReady' : !isNameValid ? 'detailsName' : mode === 'returning' ? 'detailsReady' : !isGenderValid ? 'detailsGender'
     : !isAgeValid ? 'detailsAge' : 'detailsReady';
+  const speechPrompt = !mode ? copy.select : mode === 'returning' && isNameValid ? copy.pinHelp : guidanceText(guidanceKey, selectedLang);
   useVoicePage({
     guidanceKey,
     idleEnabled: !isSubmitting,
-    onHelp: () => speakText(guidanceText(guidanceKey, selectedLang)),
+    onHelp: () => speakText(speechPrompt),
   });
 
   // Wait for a field/keyboard transition rather than interrupting each keystroke.
   useEffect(() => {
     if (isSubmitting) return;
-    const timer = setTimeout(() => speakText(guidanceText(guidanceKey, selectedLang)), 450);
+    const timer = setTimeout(() => speakText(speechPrompt), 450);
     return () => clearTimeout(timer);
-  }, [guidanceKey, isSubmitting, selectedLang, speakText]);
+  }, [speechPrompt, isSubmitting, speakText]);
 
   useEffect(() => {
     let active = true;
@@ -146,18 +172,17 @@ export default function CustomerDetails() {
       age: Number(values.age),
       gender: values.gender,
     };
-    if (submittingRef.current || !isEmailValid || patient.name.length < 2 ||
-        !Number.isInteger(patient.age) || patient.age < 1 || patient.age > 120 ||
-        !["male", "female", "other"].includes(patient.gender)) return;
+    if (submittingRef.current || !isFormValid) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
     setSubmitError("");
     closeKeyboard();
     try {
-      const { sessionId } = await saveKioskCustomer(API_BASE, patient);
+      const result = mode === 'medicine' ? await saveKioskCustomer(API_BASE, patient) : await saveKioskHealthProfile(API_BASE, { ...patient, mode, pin });
+      const { sessionId } = result;
       if (!mountedRef.current) return;
-      update({ sessionId, patient });
+      update({ sessionId, patient: result.customerData || patient });
       navigate("/two-options", { state: { sessionId } });
     } catch (error) {
       if (mountedRef.current) setSubmitError(error.message || "Could not save your details. Please retry.");
@@ -202,8 +227,21 @@ export default function CustomerDetails() {
           </p>
         </div>
 
+        {!mode && <div className="grid gap-4" aria-label="Choose your visit">
+          <button type="button" onClick={() => setMode('new')} className="min-h-28 rounded-3xl bg-orange-500 p-6 text-left text-white shadow-xl active:scale-[.99]">
+            <span className="block text-2xl font-bold">{copy.new}</span><span>{copy.firstHint}</span>
+          </button>
+          <button type="button" onClick={() => setMode('returning')} className="min-h-28 rounded-3xl border-2 border-orange-400 bg-white p-6 text-left text-slate-900 shadow-md active:scale-[.99]">
+            <span className="block text-2xl font-bold">{copy.returning}</span><span>{copy.returnHint}</span>
+          </button>
+          <button type="button" onClick={() => setMode('medicine')} className="min-h-20 rounded-3xl border border-slate-200 bg-white p-5 text-left text-slate-800 active:scale-[.99]">
+            <span className="block text-xl font-bold">{copy.medicine}</span><span>{copy.medicineHint}</span>
+          </button>
+        </div>}
+
         {/* Form Container Card - Glassmorphism, No borders */}
-        <div className="bg-white/70 backdrop-blur-2xl rounded-[2.5rem] p-10 sm:p-12 shadow-2xl shadow-indigo-100/50 space-y-10 border border-white">
+        {mode && <div className="bg-white/70 backdrop-blur-2xl rounded-[2.5rem] p-6 sm:p-10 shadow-2xl shadow-indigo-100/50 space-y-6 border border-white">
+          <button type="button" onClick={() => { setMode(null); setPin(''); setPinAgain(''); setSubmitError(''); }} className="text-orange-700 underline">← {copy.new} / {copy.returning}</button>
           <div className="flex flex-col gap-5">
             {/* 1. Name Field */}
             <div className="space-y-2">
@@ -237,7 +275,7 @@ export default function CustomerDetails() {
               </div>
             </div>
 
-            {/* 2. Age Stepper Field */}
+            {mode !== 'returning' && <>{/* 2. Age Stepper Field */}
             <div className="space-y-2">
               <label className="flex items-center gap-3 text-sm font-bold text-slate-700 ml-2">
                 <Calendar size={22} className="text-orange-500" />
@@ -275,11 +313,11 @@ export default function CustomerDetails() {
                   <Plus size={28} className="stroke-[2.5]" />
                 </button>
               </div>
-            </div>
+            </div></>}
           </div>
 
           {/* 3. Gender Selection Field */}
-          <div className="space-y-2">
+          {mode !== 'returning' && <div className="space-y-2">
             <label className="flex items-center gap-3 text-sm font-bold text-slate-700 ml-2">
               <Users size={22} className="text-orange-500" />
               <span>{translateUI('gender')}</span>
@@ -309,17 +347,22 @@ export default function CustomerDetails() {
                 );
               })}
             </div>
-          </div>
+          </div>}
 
-          <div className="space-y-2">
+          {mode !== 'returning' && <div className="space-y-2">
             <label htmlFor="customer-email" className="block text-sm font-bold text-slate-700">Email (optional)</label>
             <input id="customer-email" type="email" maxLength={254} value={form.email}
               onFocus={() => openKeyboard('email')}
               onChange={event => setForm(prev => ({ ...prev, email: event.target.value }))}
               className="w-full rounded-2xl border border-slate-300 p-4 text-lg" placeholder="you@example.com" />
-            <p className="text-sm text-slate-600">Use the same email on each visit to link your visit count on this kiosk. You can continue without email.</p>
+            <p className="text-sm text-slate-600">Optional for delivery. Health visits are linked privately by your name and PIN.</p>
             {!isEmailValid && <p role="alert" className="text-red-700">Enter a valid email or leave it empty.</p>}
-          </div>
+          </div>}
+
+          {mode !== 'medicine' && <PinPad label={copy.pin} value={pin} onChange={setPin} />}
+          {mode === 'new' && <><PinPad label={copy.confirm} value={pinAgain} onChange={setPinAgain} />
+            <p className="text-sm text-slate-700">{copy.privacy}</p>
+            {pinAgain.length === 6 && pin !== pinAgain && <p role="alert" className="text-red-700">{copy.wrong}</p>}</>}
 
           {submitError && <p role="alert" className="text-sm text-red-700">{submitError}</p>}
           {/* Continue Button */}
@@ -337,7 +380,7 @@ export default function CustomerDetails() {
               <span>{isSubmitting ? 'Saving...' : translateUI('proceed')}</span>
             </button>
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Virtual Keyboard */}

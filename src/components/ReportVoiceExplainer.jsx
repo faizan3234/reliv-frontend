@@ -106,6 +106,7 @@ export default function ReportVoiceExplainer({
               type="button"
               onClick={() => {
                 if (onLanguageChange) onLanguageChange(code);
+                window.dispatchEvent(new CustomEvent('reliv_report_language_change', { detail: code }));
               }}
               className={`px-2 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 lang === code

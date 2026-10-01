@@ -2311,12 +2311,11 @@ export default function Report5() {
           <div style={{ fontSize: "13px", color: "#64748b" }}>
             {scanCount < 7 ? (
               <>
-                <strong>{scanCount}</strong> of <strong>7</strong> scans completed •{" "}
-                <strong>{Math.round((scanCount / 7) * 112)}</strong> of <strong>112</strong> data points collected
+                <strong>{scanCount}</strong> completed visit{scanCount === 1 ? '' : 's'} • Comparisons use only available measurements
               </>
             ) : (
               <>
-                ✨ All <strong>7 scans</strong> complete • Full <strong>112+ data points</strong> integrated •{" "}
+                ✨ <strong>{scanCount} visits</strong> completed • Available measurements compared •{" "}
                 <span style={{ color: "#22c55e", fontWeight: "600" }}>Current report available</span>
               </>
             )}

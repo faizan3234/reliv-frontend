@@ -18,12 +18,7 @@ import Feedback from "./pages/feedback.jsx";
 import KioskGuardian from "./components/KioskGuardian.jsx";
 import KioskSafetyManager from "./components/KioskSafetyManager.jsx";
 
-// Import your new Report pages
-import Report1 from "./pages/Report1.jsx";
-import Report2 from "./pages/Report2.jsx";
-import Report3 from "./pages/Report3.jsx";
-import Report4 from "./pages/Report4.jsx";
-import Report5 from "./pages/Report5.jsx";
+import UnifiedReport from "./pages/UnifiedReport.jsx";
 import Team from "./pages/Team.jsx";
 import WellnessRecommendations from "./pages/WellnessRecommendations.jsx";
 import MobileEntry from "./pages/MobileEntry.jsx";
@@ -80,7 +75,7 @@ export default function KioskApp() {
             path="/report-1"
             element={
               <ProtectedReportRoute>
-                <Report1 />
+                <UnifiedReport />
               </ProtectedReportRoute>
             }
           />
@@ -88,7 +83,7 @@ export default function KioskApp() {
             path="/report-2"
             element={
               <ProtectedReportRoute>
-                <Report2 />
+                <UnifiedReport />
               </ProtectedReportRoute>
             }
           />
@@ -96,7 +91,7 @@ export default function KioskApp() {
             path="/report-3"
             element={
               <ProtectedReportRoute>
-                <Report3 />
+                <UnifiedReport />
               </ProtectedReportRoute>
             }
           />
@@ -104,7 +99,7 @@ export default function KioskApp() {
             path="/report-4"
             element={
               <ProtectedReportRoute>
-                <Report4 />
+                <UnifiedReport />
               </ProtectedReportRoute>
             }
           />
@@ -112,7 +107,7 @@ export default function KioskApp() {
             path="/report-5"
             element={
               <ProtectedReportRoute>
-                <Report5 />
+                <UnifiedReport />
               </ProtectedReportRoute>
             }
           />
