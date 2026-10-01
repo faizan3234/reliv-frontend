@@ -1,3 +1,4 @@
+import { getScanCount } from '../utils/reportSnapshot';
 import { containsPhrase, normalizeVoiceText } from './voicePageProfiles.js';
 
 // ── 200+ INTENT LISTS FOR REPORT LANGUAGE SELECTION ──────────────────────────
@@ -469,7 +470,7 @@ export function getReport1Speech(healthData, language = 'en') {
   const score = Math.round(Number(healthData?.bodyScore || vitals?.bodyScore || 75));
   const age = Number(patient?.age) || 25;
   const metabolicAge = Math.round(Number(healthData?.metabolicAge || vitals?.metabolicAge || age));
-  const scanCount = (Array.isArray(healthData?.history) ? healthData.history.length : 0) + 1;
+  const scanCount = getScanCount(healthData);
 
   if (language === 'hi') {
     let text = `अरे वाह ${name}! सुनिए, आपकी सेहत की रिपोर्ट आ गई है। `;
@@ -630,7 +631,7 @@ export function getReport2Speech(healthData, language = 'en') {
  * Report 3: Deep Metrics & Progress Insights (Bones, Protein, Water)
  */
 export function getReport3Speech(healthData, language = 'en') {
-  const scanCount = (Array.isArray(healthData?.history) ? healthData.history.length : 0) + 1;
+  const scanCount = getScanCount(healthData);
 
   if (language === 'hi') {
     let text = `यहाँ देखिए आपके शरीर के मज़बूत खंभे और अंदरूनी मरम्मत का काम! `;
@@ -677,11 +678,12 @@ export function getReport3Speech(healthData, language = 'en') {
  * Report 4: Vitals (Blood Pressure, Oxygen, Pulse, Temperature, Eyesight)
  */
 export function getReport4Speech(healthData, language = 'en') {
+  if (!healthData?.history?.length) return getReport5Speech(healthData, language);
   const vitals = healthData?.vitals || {};
-  const sys = vitals.bpSystolic ? Math.round(Number(vitals.bpSystolic)) : null;
-  const dia = vitals.bpDiastolic ? Math.round(Number(vitals.bpDiastolic)) : null;
+  const sys = (vitals.systolic ?? vitals.bpSystolic) ? Math.round(Number((vitals.systolic ?? vitals.bpSystolic))) : null;
+  const dia = (vitals.diastolic ?? vitals.bpDiastolic) ? Math.round(Number((vitals.diastolic ?? vitals.bpDiastolic))) : null;
   const spo2 = vitals.oxygen ? Math.round(Number(vitals.oxygen)) : null;
-  const pulse = vitals.pulse ? Math.round(Number(vitals.pulse)) : null;
+  const pulse = (vitals.bpm ?? vitals.pulse) ? Math.round(Number((vitals.bpm ?? vitals.pulse))) : null;
   const temp = vitals.temperature ? Number(vitals.temperature).toFixed(1) : null;
 
   if (language === 'hi') {
@@ -748,22 +750,8 @@ export function getReport4Speech(healthData, language = 'en') {
  * Report 5: Actionable Daily Habits & Full Report Download
  */
 export function getReport5Speech(healthData, language = 'en') {
-  const patient = healthData?.patient || {};
-  const name = patient?.name ? patient.name.split(' ')[0] : (language === 'hi' ? 'दोस्त' : language === 'bn' ? 'বন্ধু' : 'Friend');
-
-  if (language === 'hi') {
-    return `सुनिए ${name}, यहाँ आपकी पूरी सेहत का निचोड़ और तीन सबसे आसान आदतें हैं! ` +
-      `कोई कड़वी दवाई नहीं, बस तीन काम रोज़ कीजिए: पहला, रोज़ 2 से 3 लीटर साफ़ पानी पीजिए। दूसरा, रात को 7 घंटे की सुकून भरी नींद लीजिए। और तीसरा, रोज़ 20 मिनट के लिए ताज़ी हवा में टहलिए। ` +
-      `स्क्रीन पर जो क्यूआर कोड दिख रहा है, उसे अपने फोन कैमरे से स्कैन कर लीजिए ताकि यह आसान रिपोर्ट आपके फोन पर हमेशा सुरक्षित रहे। आप इसे अपने परिवार और दोस्तों को भी दिखा सकते हैं। हमेशा स्वस्थ रहिए और मुस्कुराते रहिए!`;
-  }
-
-  if (language === 'bn') {
-    return `শুনুন ${name}, এখানে আপনার সম্পূর্ণ পরীক্ষার সারসংক্ষেপ আর তিনটি সবচেয়ে সহজ দৈনন্দিন অভ্যাস রয়েছে! ` +
-      `কোনো তেঁতো ওষুধ নয়, শুধু তিনটি সহজ কাজ: এক, দিনে আড়াই থেকে তিন লিটার জল খান। দুই, রাতে ৭ ঘণ্টা নিশ্চিন্তে ঘুমান। আর তিন, প্রতিদিন ২০ মিনিট খোলা বাতাসে হাঁটুন। ` +
-      `স্ক্রিনের কিউআর কোডটি আপনার ফোনের ক্যামেরা দিয়ে স্ক্যান করে নিন, যাতে সম্পূর্ণ সহজ রিপোর্টটি আপনার ফোনেই থেকে যায়। ভালো থাকুন, সুস্থ থাকুন আর হাসিখুশি থাকুন!`;
-  }
-
-  return `Hey ${name}, here is your whole wellness summary and three simple daily habits! ` +
-    `No complicated medicine, just three cheerful routines: drink 2 to 3 liters of fresh water, enjoy 7 hours of peaceful sleep, and take a 20-minute breezy walk every day. ` +
-    `Scan the QR code on screen with your phone camera to keep this entire plain-language report right in your pocket. You can also share it with family. Stay healthy, vibrant, and keep smiling!`;
+  const name = healthData?.patient?.name?.split(' ')[0] || '';
+  if (language === 'hi') return `${name}, आपकी उपलब्ध रीडिंग इसी स्क्रीन पर हैं। फोन या वाई-फाई से जुड़ना आवश्यक नहीं है। जो जाँच नहीं हुई है, उसे मापा नहीं गया दिखाया जाएगा।`;
+  if (language === 'bn') return `${name}, আপনার মাপা ফলাফল এই স্ক্রিনে রয়েছে। ফোন বা ওয়াই-ফাই সংযোগের প্রয়োজন নেই। যে পরীক্ষা হয়নি, সেটি মাপা হয়নি হিসেবে দেখানো হবে।`;
+  return `${name}, your available measurements are on this screen. No phone scan or Wi-Fi reconnection is needed. Unavailable readings are marked as not measured.`;
 }

@@ -55,7 +55,6 @@ const BodyComposition = () => {
   }, [speak, stop]);
   const [weight, setWeight]                 = useState(null);
   const [height, setHeight]                 = useState(null);
-  const [impedance, setImpedance]           = useState(null);
   const [measurementState, setMeasurementState] = useState("idle");
   // idle | measuring | completed | error
   const [countdown, setCountdown]           = useState(COUNTDOWN_SECONDS);
@@ -79,6 +78,7 @@ const BodyComposition = () => {
   const timeoutRef         = useRef(null);
   const hasHeight          = useRef(false);
   const hasWeight          = useRef(false);
+  const readingsRef = useRef({ height: null, weight: null, impedance: null });
   const measurementStarted = useRef(false); // Guard: ignore retained/stale MQTT data before user clicks Start
   const autoProceedTriggered = useRef(false);
   // Always-current refs — lets MQTT useEffect ([] deps) call latest logic
@@ -93,8 +93,8 @@ const BodyComposition = () => {
       update({
         vitals: {
           height:    parseFloat(heightVal),
-          weight:    parseFloat(weight),
-          impedance: parseFloat(impedance) || 500,
+          weight:    Number(readingsRef.current.weight),
+          impedance: readingsRef.current.impedance,
         },
       });
       setMeasurementState("completed");
@@ -111,9 +111,9 @@ const BodyComposition = () => {
       // Both arrived — auto-save to context immediately so report pages have data
       update({
         vitals: {
-          height:    parseFloat(height),
+          height:    Number(readingsRef.current.height),
           weight:    parseFloat(weightVal),
-          impedance: parseFloat(impedance) || 500,
+          impedance: readingsRef.current.impedance,
         },
       });
       setMeasurementState("completed");
@@ -195,6 +195,7 @@ const BodyComposition = () => {
             console.log(`📏 Height received: ${heightVal} cm`);
             console.log(`   TOF: ${parsed.tof_cm} cm | US: ${parsed.us_cm} cm | confidence: ${parsed.confidence}`);
 
+            readingsRef.current.height = Number(heightVal);
             setHeight(heightVal);
             hasHeight.current = true;
             // Call via ref — uses latest render's logic (safe on re-measure)
@@ -250,11 +251,13 @@ const BodyComposition = () => {
       const res = await fetch(`${PI_WEIGHT_URL}/api/weight`);
       if (!res.ok) return;
       const data = await res.json();
-      if (data.weight && parseFloat(data.weight) > 0) {
+      if (measurementStarted.current && !hasWeight.current && Number.isFinite(Number(data.weight)) && Number(data.weight) > 0) {
         const w = parseFloat(data.weight).toFixed(1);
         console.log(`⚖️ Weight received: ${w} kg`);
+        const impedanceValue = Number(data.impedance);
+        readingsRef.current.weight = Number(w);
+        readingsRef.current.impedance = Number.isFinite(impedanceValue) && impedanceValue > 0 ? impedanceValue : null;
         setWeight(w);
-        setImpedance(data.impedance || 500);
         hasWeight.current = true;
         onWeightReceivedRef.current?.(w);
       }
@@ -280,10 +283,10 @@ const BodyComposition = () => {
     }
 
     // Reset all state
+    readingsRef.current = { height: null, weight: null, impedance: null };
     setMeasurementState("measuring");
     setHeight(null);
     setWeight(null);
-    setImpedance(null);
     setCountdown(COUNTDOWN_SECONDS);
     hasHeight.current = false;
     hasWeight.current = false;
@@ -326,9 +329,9 @@ const BodyComposition = () => {
       // Update context with confirmed final values (auto-save may have already done this)
       update({
         vitals: {
-          height:    parseFloat(height),
-          weight:    parseFloat(weight),
-          impedance: parseFloat(impedance) || 500,
+          height:    Number(readingsRef.current.height),
+          weight:    Number(readingsRef.current.weight),
+          impedance: readingsRef.current.impedance,
         },
       });
       console.log(`✅ Proceeding with Height=${height} cm, Weight=${weight} kg`);

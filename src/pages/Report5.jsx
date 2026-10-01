@@ -1,11 +1,10 @@
+import { getScanCount, reportMeasurements } from '../utils/reportSnapshot';
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
 import Logo from "../components/Logo";
-import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
-import { useReportDelivery } from "../hooks/useReportDelivery";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
@@ -435,16 +434,16 @@ export default function Report5() {
   useVoicePage({
     onHelp: () => {
       const helpText = reportSpeechLanguage === 'hi'
-        ? "यहाँ आपका पूरा 7 दिनों का प्लान और क्यूआर कोड है। फोन से स्कैन करके पूरी रिपोर्ट सुरक्षित कीजिए।"
+        ? "अपने नतीजे इसी स्क्रीन पर देखें। फोन से स्कैन करना ज़रूरी नहीं है।"
         : reportSpeechLanguage === 'bn'
-        ? "এখানে আপনার সম্পূর্ণ ৭ দিনের স্বাস্থ্য পরামর্শ এবং কিউআর কোড রয়েছে। ফোনে স্ক্যান করে রিপোর্টটি সেভ করুন।"
-        : "Here is your 7-day action plan and report QR code. Scan the QR with your phone to take the full report home.";
+        ? "এই স্ক্রিনে আপনার ফলাফল দেখুন। ফোন দিয়ে স্ক্যান করার প্রয়োজন নেই।"
+        : "Review your results on this screen. No Wi-Fi connection or phone scan is needed.";
       speakText(helpText, { langHint: reportSpeechLanguage });
     }
   });
 
-  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : EMPTY_REPORT.patient;
-  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : EMPTY_REPORT.vitals;
+  const patient = data?.patient || EMPTY_REPORT.patient;
+  const vitals = data?.vitals || EMPTY_REPORT.vitals;
 
   const userName = getFirstName(patient);
   const [showChallengePrompt, setShowChallengePrompt] = useState(false);
@@ -484,26 +483,14 @@ export default function Report5() {
     navigate('/');
   };
 
-  const [history, setHistory] = useState([]);
+  const history = data.history || EMPTY_REPORT.history;
   const [ecoStats, setEcoStats] = useState(null);
-  // Never use another historical report (or a placeholder) as this patient's session.
-  const currentSessionId = data?.sessionId || data?.patient?.sessionId || '';
-  const delivery = useReportDelivery(currentSessionId);
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const [inactivityTimer, setInactivityTimer] = useState(120);
 
   const confettiRef = useRef(false);
   const inactivityIntervalRef = useRef(null);
   const reportContainerRef = useRef(null);
-
-  // Fetch history
-  useEffect(() => {
-    if (!patient?.email) return;
-    fetch(`${API_BASE}/api/reports/history/${encodeURIComponent(patient.email)}`)
-      .then((res) => res.json())
-      .then((data) => setHistory(Array.isArray(data) ? data : []))
-      .catch(() => setHistory([]));
-  }, [patient?.email]);
 
   // Fetch eco stats
   useEffect(() => {
@@ -579,17 +566,17 @@ export default function Report5() {
     }
   }, [inactivityTimer]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const scanCount = data.history?.length || 1;
+  const scanCount = getScanCount(data);
 
   // Unlock rules
   const unlock = {
     vitalsTable: scanCount >= 1,
-    basicInsights: scanCount >= 2,
-    compositionSummary: scanCount >= 3,
-    trendLanguage: scanCount >= 4,
-    confidenceMeter: scanCount >= 5,
-    doctorTone: scanCount >= 6,
-    fullNarrative: scanCount >= 7,
+    basicInsights: true,
+    compositionSummary: true,
+    trendLanguage: history.length >= 3,
+    confidenceMeter: false,
+    doctorTone: false,
+    fullNarrative: history.length >= 6,
   };
 
   // Strict mapping to avoid any weird rounding fractional issues
@@ -667,7 +654,7 @@ export default function Report5() {
   // Progressive insights
   const insights = useMemo(() => {
     const list = [];
-    if (scanCount < 2) return list;
+    if (scanCount < 2 || !history.length) return list;
 
     if (oxygen >= 95) list.push("Oxygen delivery appears efficient and consistent");
     if (bpm >= 60 && bpm <= 80) list.push("Heart rate reflects balanced autonomic response");
@@ -719,14 +706,14 @@ export default function Report5() {
 
   // Final narrative summary
   const narrativeSummary = useMemo(() => {
-    if (scanCount < 7) return "Complete your 7-scan cycle for a full narrative summary based on repeated observations.";
+    if (scanCount < 7 || history.length < 6) return "Your current readings are available. A visit count alone cannot establish stability or a long-term health trend.";
 
     const bpStatus = getBPStatus();
     const overallTrend = bpStatus.status === "Optimal" ? "stable cardiovascular and metabolic balance" : "generally stable vitals with areas to observe over time";
     const strongestArea = metrics && metrics.musclePct > 35 ? "muscle composition" : "cardiovascular stability";
 
     return `Based on seven confirmed scans, your health profile reflects ${overallTrend} with particular strength in ${strongestArea}. Your vital stability and body composition patterns suggest balanced physiological function, with no indicators requiring immediate attention. This report is generated from repeated observations, increasing confidence in its accuracy.`;
-  }, [scanCount, metrics, getBPStatus]);
+  }, [scanCount, metrics, getBPStatus, history.length]);
 
   // NEW: Integration Metrics (scan-wise unlocking)
   const integrationMetrics = useMemo(() => {
@@ -801,7 +788,7 @@ export default function Report5() {
   }, [scanCount]);
 
   // Check for missing health data after refresh
-  const healthDataMissing = !data || !data.patient?.email || !data.vitals?.systolic;
+  const healthDataMissing = !data || !reportMeasurements(data.vitals).some(reading => reading.value !== null);
 
   return (
     <div style={{ 
@@ -832,26 +819,10 @@ export default function Report5() {
           </div>
         )}
         
-        {/* Header with Logo and QR Code */}
+        {/* Header with logo */}
         <div style={{ position: "relative", textAlign: "center", marginBottom: "60px", minHeight: "180px" }}>
           <Logo size="text-6xl" />
-          {delivery.ready && (
-            <div style={{ position: "absolute", right: 0, top: 0, background: "#ffffff", padding: "10px", borderRadius: "16px", border: "2px solid #e2e8f0", boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
-              <QRCodeCanvas
-                value={delivery.downloadUrl}
-                size={160}
-                level="M"
-                marginSize={4}
-                fgColor="#000000"
-                bgColor="#FFFFFF"
-                style={{ imageRendering: "pixelated", display: "block" }}
-                title="Download this session's report"
-              />
-              <div style={{ fontSize: "11px", color: "#666666", marginTop: "8px", textAlign: "center", maxWidth: "160px", fontWeight: "600" }}>
-                Scan with any phone camera to download report
-              </div>
-            </div>
-          )}
+
         </div>
 
         <ReportVoiceExplainer
@@ -899,7 +870,7 @@ export default function Report5() {
             Your Comprehensive Health Report
           </h1>
           <p style={{ fontSize: "18px", color: "#555555", maxWidth: "800px", margin: "0 auto" }}>
-            A comprehensive assessment based on {scanCount} scan{scanCount !== 1 ? "s" : ""}, combining vital signs, body composition, and trend analysis
+            Current measurements and calculated estimates • Visit {scanCount}
           </p>
           {scanCount < 7 && (
             <div style={{ marginTop: "16px", padding: "12px 24px", background: "#fef3c7", border: "2px solid #fbbf24", borderRadius: "12px", display: "inline-block" }}>
@@ -908,15 +879,15 @@ export default function Report5() {
                 {scanCount === 2 && "🔄 Pattern Recognition — Detecting early trends"}
                 {scanCount === 3 && "📈 Composition Analysis — Body metrics now visible"}
                 {scanCount === 4 && "🎯 Trend Confirmation — Changes becoming clear"}
-                {scanCount === 5 && "✨ Confidence Building — High accuracy achieved"}
-                {scanCount === 6 && "🏥 Clinical Validation — Doctor-grade insights ready"}
+                {scanCount === 5 && "Five visits recorded"}
+                {scanCount === 6 && "Six visits recorded"}
               </span>
             </div>
           )}
           {scanCount >= 7 && (
             <div style={{ marginTop: "16px", padding: "14px 28px", background: "#d1fae5", border: "2px solid #6ee7b7", borderRadius: "12px", display: "inline-block" }}>
               <span style={{ fontSize: "16px", fontWeight: "700", color: "#065f46" }}>
-                ✅ Complete Health Profile — 7-Scan Certification Achieved
+                Seven visits recorded — current measurements shown
               </span>
             </div>
           )}
@@ -2262,11 +2233,11 @@ export default function Report5() {
           >
             <div style={{ fontSize: "48px", marginBottom: "16px" }}>🏆</div>
             <h2 style={{ fontSize: "28px", fontWeight: "900", color: "#ffffff", marginBottom: "12px" }}>
-              7-Scan Health Certification
+              Seven-visit milestone
             </h2>
             <p style={{ fontSize: "16px", color: "#ffffff", marginBottom: "16px" }}>
               Your health profile has been confirmed through seven independent observations,
-              achieving {Math.min(Math.round((scanCount / 7) * 100), 100)}% data confidence.
+              This visit count is not a measure of clinical accuracy.
             </p>
             <div style={{ display: "flex", justifyContent: "center", gap: "24px", flexWrap: "wrap", marginTop: "20px" }}>
               <div style={{ background: "rgba(255,255,255,0.2)", padding: "12px 20px", borderRadius: "12px", backdropFilter: "blur(10px)" }}>
@@ -2291,9 +2262,9 @@ export default function Report5() {
         {/* Completion Note */}
         <div style={{ fontSize: "14px", fontStyle: "italic", color: "#777777", textAlign: "center", marginTop: "40px" }}>
           {scanCount >= 7 ? (
-            <span style={{ color: "#22c55e", fontSize: "16px", fontWeight: "600" }}>✅ Complete Health Assessment — Medical-Grade Report Ready</span>
+            <span style={{ color: "#22c55e", fontSize: "16px", fontWeight: "600" }}>Current report available</span>
           ) : (
-            <span style={{ color: "#f59e0b" }}>⚠️ Partial Assessment - Complete {7 - scanCount} more scan{7 - scanCount !== 1 ? "s" : ""} for full analysis</span>
+            <span style={{ color: "#f59e0b" }}>Current measurements are available from the first scan</span>
           )}
         </div>
 
@@ -2346,7 +2317,7 @@ export default function Report5() {
             ) : (
               <>
                 ✨ All <strong>7 scans</strong> complete • Full <strong>112+ data points</strong> integrated •{" "}
-                <span style={{ color: "#22c55e", fontWeight: "600" }}>Medical-Grade Report Active</span>
+                <span style={{ color: "#22c55e", fontWeight: "600" }}>Current report available</span>
               </>
             )}
           </div>
@@ -2367,24 +2338,6 @@ export default function Report5() {
                 marginBottom: "32px",
               }}
             >
-              <button
-                onClick={delivery.prepare}
-                disabled={delivery.busy}
-                style={{
-                  background: "#22c55e",
-                  color: "white",
-                  fontWeight: "600",
-                  fontSize: "16px",
-                  padding: "14px 32px",
-                  borderRadius: "9999px",
-                  border: "none",
-                  cursor: delivery.busy ? "not-allowed" : "pointer",
-                  opacity: delivery.busy ? 0.6 : 1,
-                }}
-              >
-                {delivery.busy ? "Preparing..." : "📱 Get Report on Phone"}
-              </button>
-
               <button
                 onClick={handleReadAloud}
                 style={{
@@ -2453,8 +2406,6 @@ export default function Report5() {
             </motion.div>
           </>
 
-        {delivery.error && <p role="alert" className="text-center text-red-700">{delivery.error}</p>}
-        {delivery.ready && <p role="status" className="text-center text-green-700">Report ready. Scan the QR above on the kiosk Wi-Fi. This does not confirm email delivery.</p>}
 
         {/* Challenge a Friend / Couple modal */}
         <ChallengePrompt

@@ -1,3 +1,4 @@
+import { getScanCount } from '../utils/reportSnapshot';
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { Line } from "react-chartjs-2";
@@ -20,8 +21,6 @@ import { getReport4Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
-import { API_BASE } from "../config/api";
-import { requestJSON } from "../utils/request";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -349,24 +348,14 @@ export default function Report4() {
     }
   });
 
-  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : EMPTY_REPORT.patient;
-  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : EMPTY_REPORT.vitals;
-  const [history, setHistory] = useState([]);
+  const patient = data?.patient || EMPTY_REPORT.patient;
+  const vitals = data?.vitals || EMPTY_REPORT.vitals;
+  const history = data.history || EMPTY_REPORT.history;
 
   const userName = getFirstName(patient);
 
-  useEffect(() => {
-    if (!patient?.email) return;
-    const controller = new AbortController();
-    requestJSON(`${API_BASE}/api/reports/history/${encodeURIComponent(patient.email)}`, { signal: controller.signal })
-      .then((h) => {
-        if (!controller.signal.aborted) setHistory(Array.isArray(h) ? h.filter(row => row && typeof row === 'object') : EMPTY_REPORT.history);
-      })
-      .catch(() => { if (!controller.signal.aborted) setHistory(EMPTY_REPORT.history); });
-    return () => controller.abort();
-  }, [patient?.email]);
 
-  const scanCount = ((data?.history?.length || 0) > 0 ? data.history.length : EMPTY_REPORT.history.length) + 1;
+  const scanCount = getScanCount(data);
 
   // Unlock rules
   const unlocks = {
@@ -677,6 +666,14 @@ export default function Report4() {
     if (scanCount < 7) return "Long-term summary unlocks after scan 7";
     return "All features unlocked";
   };
+
+  // A visit count cannot substitute for authorized historical measurements.
+  if (!history.length) return <div className="min-h-[40vh] bg-white px-6 py-10 text-center">
+    <Logo size="text-4xl" />
+    <h1 className="mt-6 text-3xl font-bold">Your measurement timeline</h1>
+    <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">Your current readings are shown above. Earlier readings are not loaded for this session, so a comparison cannot be calculated. Your report is still available from the first visit.</p>
+    <button className="mt-6 rounded-2xl bg-orange-500 px-8 py-4 font-semibold text-white" onClick={() => navigate('/report-5')}>Continue to summary →</button>
+  </div>;
 
   // LOCKED STATE (Scan 1)
   if (!unlocks.graphVisible) {

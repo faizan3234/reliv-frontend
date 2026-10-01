@@ -1,3 +1,4 @@
+import { getScanCount } from '../utils/reportSnapshot';
 // src/pages/Report2.jsx
 import React, { useMemo, useEffect, useRef, useCallback, useState } from "react";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
@@ -909,8 +910,8 @@ const Report2 = () => {
     }
   });
 
-  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : EMPTY_REPORT.patient;
-  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : EMPTY_REPORT.vitals;
+  const patient = data?.patient || EMPTY_REPORT.patient;
+  const vitals = data?.vitals || EMPTY_REPORT.vitals;
   
   const userName = getFirstName(patient);
   const confettiShownRef = useRef(false);
@@ -922,7 +923,7 @@ const Report2 = () => {
 
     // SCAN COUNT CALCULATION
     const history = (data?.history && data.history.length > 0) ? data.history : EMPTY_REPORT.history;
-    const scanCount = history.length || 1;
+    const scanCount = getScanCount(data);
     const confidenceStage = getConfidenceStage(scanCount);
 
 
@@ -1111,7 +1112,7 @@ const Report2 = () => {
   }, [data, vitals, patient]);
 
   const systems = systemsData || [];
-  const scanCount = data.history?.length || 1;
+  const scanCount = getScanCount(data);
   const badges = getBadges(scanCount);
   const trustMessage = getTrustMessage(scanCount);
 

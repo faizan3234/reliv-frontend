@@ -1,3 +1,4 @@
+import { getScanCount } from '../utils/reportSnapshot';
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
@@ -299,13 +300,12 @@ export default function Report3() {
     }
   });
 
-  const patient = (data?.patient?.name && data?.patient?.age) ? data.patient : EMPTY_REPORT.patient;
-  const vitals = (data?.vitals?.weight && data?.vitals?.height) ? data.vitals : EMPTY_REPORT.vitals;
+  const patient = data?.patient || EMPTY_REPORT.patient;
+  const vitals = data?.vitals || EMPTY_REPORT.vitals;
   const [showHeightInfo, setShowHeightInfo] = useState(false);
 
   const userName = getFirstName(patient);
-  const scanCount = ((data?.history?.length || 0) > 0 ? data.history.length : EMPTY_REPORT.history.length) + 1;
-  const isBaselineUnlocked = scanCount >= 2;
+  const scanCount = getScanCount(data);
   const canCelebrate = scanCount >= 4;
 
   const confidenceStage =
@@ -554,12 +554,12 @@ export default function Report3() {
     return list.length > 0 ? list : ["Your first scan provides a solid foundation—see this profile evolve with new data and patterns in future scans."];
   }, [metrics, scanCount, getMuscleStatus, getBodyFatStatus]);
 
-  if (!isBaselineUnlocked) {
+  if (!metrics) {
     return (
       <div style={{ minHeight: "100vh", height: "auto", width: "100%", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container touch-pan-y">
         <Logo size="text-4xl" />
         <div style={{ textAlign: "center", fontSize: "24px", color: "#666666", margin: "80px 0", fontStyle: "italic", maxWidth: "600px" }}>
-          Body Composition Profile unlocks after your 2nd scan. Keep scanning to reveal insights about your muscle mass, body fat, and metabolic age.
+          Your measured values are available above. This scan does not contain the inputs needed for detailed body-composition estimates. More visits alone cannot supply a missing scale measurement.
         </div>
         <button
           onClick={() => navigate("/report-4")}
