@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { API_BASE } from "../config/api";
 import { clearKioskSession } from "../utils/kioskSession";
 
 // Missing measurements must stay missing, never be replaced by a demo patient.
@@ -74,30 +73,6 @@ export function HealthProvider({ children }) {
     } catch { /* Storage may be unavailable. */ }
   }, [data]);
 
-  useEffect(() => {
-    if (!data.patient?.email) return;
-    const email = data.patient.email;
-    let active = true;
-    fetch(`${API_BASE}/api/reports/history/${encodeURIComponent(email)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('History fetch failed');
-        return res.json();
-      })
-      .then((history) => {
-        if (!active) return;
-        setData((prev) => {
-          if (prev.patient.email !== email) return prev;
-          const next = { ...prev, history: Array.isArray(history) ? history : [] };
-          try {
-            localStorage.setItem("healthData", JSON.stringify(next));
-          } catch { /* Storage may be unavailable. */ }
-          return next;
-        });
-      })
-      .catch(() => {});
-    return () => { active = false; };
-  }, [data.patient?.email]);
-
   const update = useCallback((partial) => {
     setData((prev) => {
       const next = {
@@ -125,32 +100,21 @@ export function HealthProvider({ children }) {
     setData(defaultData);
   }, []);
 
-  const refreshHistory = async () => {
-    if (!data.patient?.email) return;
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/reports/history/${encodeURIComponent(data.patient.email)}`
-      );
-      if (!res.ok) throw new Error('History refresh failed');
-      const history = await res.json();
-      setData((prev) => {
-        if (prev.patient.email !== data.patient.email) return prev;
-        const next = {
-          ...prev,
-          history: Array.isArray(history) ? history : [],
-        };
-        try {
-          localStorage.setItem("healthData", JSON.stringify(next));
-        } catch { /* Storage may be unavailable. */ }
-        return next;
-      });
-    } catch (e) {
-      console.error("Failed to refresh history:", e);
-    }
-  };
+  // Only the authorized report endpoint may replace report identity/readings.
+  const hydrateReport = useCallback((report) => {
+    setData(prev => ({
+      ...defaultData,
+      language: prev.language,
+      reportSpeechLanguage: prev.reportSpeechLanguage,
+      ...report,
+      patient: { ...defaultData.patient, ...report.patient },
+      vitals: { ...defaultData.vitals, ...report.vitals },
+      history: Array.isArray(report.history) ? report.history : [],
+    }));
+  }, []);
 
   return (
-    <HealthContext.Provider value={{ data, update, resetHealth, refreshHistory }}>
+    <HealthContext.Provider value={{ data, update, resetHealth, hydrateReport }}>
       {children}
     </HealthContext.Provider>
   );

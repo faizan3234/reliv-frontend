@@ -1,3 +1,4 @@
+import { getScanCount } from '../utils/reportSnapshot';
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useLocation, useNavigate } from "react-router-dom";
@@ -11,7 +12,6 @@ import { getReport1Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 import ChallengeComparison from "../components/ChallengeComparison";
 import { supabase } from "../config/supabase";
-import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { API_BASE } from "../config/api";
 
 // Helper: Extract first name from email or name field
@@ -167,15 +167,12 @@ const Report1 = () => {
   const userName =
     getFirstName(patient);
 
-  const scanCount =
-    (Array.isArray(healthData?.history)
-      ? healthData.history.length
-      : 0) + 1;
+  const scanCount = getScanCount(healthData);
 
   // Leaderboard opt-in state
-  const [lbPrompt, setLbPrompt] = useState("idle"); // idle | qr | done | skipped | not_qualified
+  const [lbPrompt, setLbPrompt] = useState("idle"); // idle | saved | done | skipped | not_qualified
   const [lbSessionId] = useState(() => `lb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-  const QR_BASE = import.meta.env.VITE_CUSTOMER_WEB_URL || import.meta.env.VITE_QR_BASE_URL || "https://reliv7.vercel.app";
+
 
   // Challenge state
   const [showChallenge, setShowChallenge] = useState(false);
@@ -710,13 +707,13 @@ const Report1 = () => {
                             photo_path: null,
                           }, { onConflict: "email" });
 
-                          setLbPrompt("qr");
+                          setLbPrompt("saved");
                         } catch (err) {
                           console.error("Leaderboard save error:", err);
-                          setLbPrompt("qr");
+                          setLbPrompt("saved");
                         }
                       } else {
-                        setLbPrompt("qr");
+                        setLbPrompt("saved");
                       }
                     }}
                     className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-6 py-3 rounded-xl text-sm"
@@ -754,34 +751,17 @@ const Report1 = () => {
               </motion.div>
             )}
 
-            {/* ── QR Code for Photo Upload ── */}
-            {lbPrompt === "qr" && (
+            {/* ── Leaderboard confirmation ── */}
+            {lbPrompt === "saved" && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="w-full max-w-md mt-6 bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-lg"
               >
                 <h3 className="text-gray-900 text-lg font-bold mb-1">
-                  📸 Add Your Photo
+                  Leaderboard entry
                 </h3>
-                <p className="text-gray-500 text-sm mb-4">
-                  Scan this QR with your phone to upload a photo for the leaderboard
-                </p>
-                <div className="bg-white rounded-2xl p-4 inline-block mb-4 border border-gray-200 shadow-sm">
-                  <QRCodeCanvas
-                    value={`${QR_BASE}/photo-upload?sid=${lbSessionId}&name=${encodeURIComponent(userName)}`}
-                    size={220}
-                    level="M"
-                    marginSize={4}
-                    fgColor="#000000"
-                    bgColor="#FFFFFF"
-                    style={{
-                      imageRendering: "pixelated",
-                      display: "block",
-                      margin: "0 auto",
-                    }}
-                  />
-                </div>
+                <p className="text-gray-500 text-sm mb-4">Continue to the next section of your report.</p>
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => setLbPrompt("done")}
@@ -793,7 +773,7 @@ const Report1 = () => {
                     onClick={() => setLbPrompt("done")}
                     className="bg-gray-100 text-gray-500 font-medium px-6 py-2.5 rounded-xl text-sm border border-gray-200"
                   >
-                    Skip photo
+                    Continue
                   </button>
                 </div>
               </motion.div>

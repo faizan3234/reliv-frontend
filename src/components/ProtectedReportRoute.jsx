@@ -4,21 +4,22 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { requestJSON } from "../utils/request";
+import ReportMeasurements from "./ReportMeasurements";
 import { readBrowserStorage } from '../utils/browserStorage';
 
 const ProtectedReportRoute = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { update } = useHealth();
+  const { hydrateReport } = useHealth();
 
-  // Keep the latest update() without making the authorization
+  // Keep the latest snapshot hydration callback without making the authorization
   // fetch rerun every time HealthContext renders.
-  const updateRef = useRef(update);
+  const updateRef = useRef(hydrateReport);
 
   useEffect(() => {
-    updateRef.current = update;
-  }, [update]);
+    updateRef.current = hydrateReport;
+  }, [hydrateReport]);
 
   const [status, setStatus] = useState("LOADING");
   // LOADING | AUTHORIZED | DENIED
@@ -164,7 +165,7 @@ const ProtectedReportRoute = ({ children }) => {
     );
   }
 
-  return children;
+  return <><ReportMeasurements />{children}</>;
 };
 
 export default ProtectedReportRoute;

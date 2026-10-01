@@ -27,7 +27,7 @@ window.clearTimeout = id => { timers.delete(id); nativeClearTimeout(id); };
 window.speechSynthesis = { cancel() {}, getVoices: () => [], addEventListener() {}, removeEventListener() {}, speak() {} };
 window.WebSocket = class { static OPEN = 1; readyState = 0; send() {} close() { this.readyState = 3; } };
 const requests = [];
-window.fetch = async (url) => { requests.push(String(url)); return { ok: true, status: 200, json: async () => (String(url).endsWith("/api/weight") ? { weight: 65.4, impedance: 500 } : { ok: true, paymentReady: true }) }; };
+window.fetch = async (url) => { requests.push(String(url)); return { ok: true, status: 200, json: async () => (String(url).endsWith("/api/weight") ? { weight: 65.4, impedance: null } : { ok: true, paymentReady: true }) }; };
 function assert(ok, message) { if (!ok) throw new Error(message); checks.push('PASS ' + message); output.textContent = checks.join('\n'); }
 async function flush() { await act(async () => new Promise(resolve => nativeSetTimeout(resolve, 10))); }
 async function tick(ms) {
@@ -68,6 +68,9 @@ async function run() {
   assert(client.published.some(([, command]) => command === 'height'), 'height command sent with browser offline');
   await emit(client, 'kiosk/sensor/height', { height_cm: 172.3 });
   assert(document.getElementById('app').textContent.includes('172.3') && document.getElementById('app').textContent.includes('65.4'), 'height MQTT and weight API readings both display offline');
+  const savedBody = JSON.parse(localStorage.getItem('healthData')).vitals;
+  assert(savedBody.height === 172.3 && savedBody.weight === 65.4, 'height and weight persist together for the paid report snapshot');
+  assert(savedBody.impedance === null, 'missing impedance is not replaced by a synthetic value');
   client = await mount(OxygenPulse);
   await checkConnection(client, /Measure Oxygen/);
   await emit(client, 'kiosk/sensor/oxygen', { oxygen: 98, bpm: 72 });

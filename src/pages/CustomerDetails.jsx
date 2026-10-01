@@ -25,12 +25,14 @@ export default function CustomerDetails() {
 
   const [form, setForm] = useState({
     name: "",
+    email: "",
     age: "22",
     gender: "",
   });
 
   const [keyboardInputs, setKeyboardInputs] = useState({
     name: "",
+    email: "",
     age: "22",
   });
 
@@ -47,9 +49,10 @@ export default function CustomerDetails() {
   useEffect(() => {
     setKeyboardInputs({
       name: form.name,
+      email: form.email,
       age: form.age,
     });
-  }, [form.name, form.age]);
+  }, [form.name, form.age, form.email]);
 
   // Handle on-screen keyboard input changes
   const handleKeyboardChange = useCallback((inputName, value) => {
@@ -105,7 +108,8 @@ export default function CustomerDetails() {
   const isNameValid = form.name.trim().length >= 2;
   const isAgeValid = !isNaN(ageNum) && ageNum >= 1 && ageNum <= 120;
   const isGenderValid = Boolean(form.gender);
-  const isFormValid = isNameValid && isAgeValid && isGenderValid;
+  const isEmailValid = !form.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const isFormValid = isNameValid && isAgeValid && isGenderValid && isEmailValid;
 
   // All details are entered by touch. Speech only describes the next step.
   const guidanceKey = isSubmitting ? 'saving' : submitError ? 'detailsError'
@@ -138,10 +142,11 @@ export default function CustomerDetails() {
   const handleProceed = async (values = form) => {
     const patient = {
       name: values.name.trim(),
+      email: values.email.trim().toLowerCase(),
       age: Number(values.age),
       gender: values.gender,
     };
-    if (submittingRef.current || patient.name.length < 2 ||
+    if (submittingRef.current || !isEmailValid || patient.name.length < 2 ||
         !Number.isInteger(patient.age) || patient.age < 1 || patient.age > 120 ||
         !["male", "female", "other"].includes(patient.gender)) return;
 
@@ -304,6 +309,16 @@ export default function CustomerDetails() {
                 );
               })}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="customer-email" className="block text-sm font-bold text-slate-700">Email (optional)</label>
+            <input id="customer-email" type="email" maxLength={254} value={form.email}
+              onFocus={() => openKeyboard('email')}
+              onChange={event => setForm(prev => ({ ...prev, email: event.target.value }))}
+              className="w-full rounded-2xl border border-slate-300 p-4 text-lg" placeholder="you@example.com" />
+            <p className="text-sm text-slate-600">Use the same email on each visit to link your visit count on this kiosk. You can continue without email.</p>
+            {!isEmailValid && <p role="alert" className="text-red-700">Enter a valid email or leave it empty.</p>}
           </div>
 
           {submitError && <p role="alert" className="text-sm text-red-700">{submitError}</p>}
