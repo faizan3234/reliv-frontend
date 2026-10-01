@@ -10,8 +10,16 @@ import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { guidanceText } from "../voice/guidanceCopy";
 import { getMqttConfig } from "../config/mqtt";
+import { API_BASE } from "../config/api";
 
-const PI_WEIGHT_URL = import.meta.env.VITE_PI_WEIGHT_URL || "http://localhost:5001";
+// Keep the weight reader on the local Pi. An explicit VITE_PI_WEIGHT_URL is
+// useful for development; on the kiosk, resolve to the current Pi host so a
+// phone/laptop hostname or localhost cannot accidentally point at itself.
+const PI_WEIGHT_URL = (import.meta.env.VITE_PI_WEIGHT_URL || (
+  typeof window !== "undefined" && window.location?.hostname
+    ? `http://${window.location.hostname}:5000`
+    : API_BASE
+)).replace(/\/+$/, "");
 
 // ─────────────────────────────────────────────────────────────
 //  MQTT TOPICS
@@ -60,6 +68,7 @@ const BodyComposition = () => {
   const [countdown, setCountdown]           = useState(COUNTDOWN_SECONDS);
   const [statusMessage, setStatusMessage]   = useState("Ready to begin measurement.");
   const [mqttConnected, setMqttConnected]   = useState(false);
+  const [weightServiceStatus, setWeightServiceStatus] = useState("waiting");
   const [autoProceeding, setAutoProceeding] = useState(false);
 
   const navigate = useNavigate();
@@ -74,6 +83,10 @@ const BodyComposition = () => {
   });
 
   const clientRef          = useRef(null);
+  const weightStreamRef    = useRef(null);
+  const weightPollRef      = useRef(null);
+  const weightRetryRef     = useRef(null);
+  const weightRequestRef   = useRef(null);
   const countdownRef       = useRef(null);
   const timeoutRef         = useRef(null);
   const hasHeight          = useRef(false);
@@ -85,6 +98,7 @@ const BodyComposition = () => {
   // without stale closure on re-measure
   const onHeightReceivedRef = useRef(null);
   const onWeightReceivedRef = useRef(null);
+  const onLiveWeightRef = useRef(null);
 
   // Updated every render so MQTT handler always uses current state/functions
   onHeightReceivedRef.current = (heightVal) => {
@@ -98,7 +112,7 @@ const BodyComposition = () => {
         },
       });
       setMeasurementState("completed");
-      setStatusMessage(`✅ Height: ${heightVal} cm  |  Weight: ${weight} kg`);
+      setStatusMessage(`✅ Height: ${heightVal} cm  |  Weight: ${readingsRef.current.weight} kg`);
       if (countdownRef.current) clearInterval(countdownRef.current);
       if (timeoutRef.current)   clearTimeout(timeoutRef.current);
     } else {
@@ -117,12 +131,34 @@ const BodyComposition = () => {
         },
       });
       setMeasurementState("completed");
-      setStatusMessage(`✅ Height: ${height} cm  |  Weight: ${weightVal} kg`);
+      setStatusMessage(`✅ Height: ${readingsRef.current.height} cm  |  Weight: ${weightVal} kg`);
       if (countdownRef.current) clearInterval(countdownRef.current);
       if (timeoutRef.current)   clearTimeout(timeoutRef.current);
     } else {
       setStatusMessage(`Weight recorded: ${weightVal} kg. Height sensor still measuring...`);
     }
+  };
+
+  // The BLE service can push a reading before the next polling tick. Keep the
+  // callback in a ref so the long-lived EventSource never captures stale
+  // measurement state from an earlier render.
+  onLiveWeightRef.current = (payload) => {
+    const status = String(payload?.status || "waiting");
+    setWeightServiceStatus(status);
+    if (!measurementStarted.current || hasWeight.current) return;
+
+    const numericWeight = Number(payload?.weight);
+    if (!Number.isFinite(numericWeight) || numericWeight <= 0) return;
+
+    const weightValue = numericWeight.toFixed(1);
+    console.log(`⚖️ Weight received from local BLE service: ${weightValue} kg`);
+    readingsRef.current.weight = Number(weightValue);
+    // Keep the legacy context field explicitly empty. The local weight
+    // reader does not manufacture impedance and the report never displays it.
+    readingsRef.current.impedance = null;
+    setWeight(weightValue);
+    hasWeight.current = true;
+    onWeightReceivedRef.current?.(weightValue);
   };
 
   // ─── MQTT CONNECT ────────────────────────────────────────────
@@ -245,35 +281,89 @@ const BodyComposition = () => {
     }
   };
 
-  // ─── WEIGHT POLL (BLE via Pi backend) ────────────────────────
+  // ─── WEIGHT STREAM + FALLBACK POLL (Pi-local BLE service) ─────
   const fetchWeight = async () => {
+    weightRequestRef.current?.abort();
+    const controller = new AbortController();
+    weightRequestRef.current = controller;
     try {
-      const res = await fetch(`${PI_WEIGHT_URL}/api/weight`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (measurementStarted.current && !hasWeight.current && Number.isFinite(Number(data.weight)) && Number(data.weight) > 0) {
-        const w = parseFloat(data.weight).toFixed(1);
-        console.log(`⚖️ Weight received: ${w} kg`);
-        const impedanceValue = Number(data.impedance);
-        readingsRef.current.weight = Number(w);
-        readingsRef.current.impedance = Number.isFinite(impedanceValue) && impedanceValue > 0 ? impedanceValue : null;
-        setWeight(w);
-        hasWeight.current = true;
-        onWeightReceivedRef.current?.(w);
-      }
-    } catch (e) {
-      console.error("❌ Weight fetch failed:", e);
+      const res = await fetch(`${PI_WEIGHT_URL}/api/weight`, { signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      onLiveWeightRef.current?.(await res.json());
+    } catch (error) {
+      if (error?.name !== "AbortError") setWeightServiceStatus("offline");
+    } finally {
+      if (weightRequestRef.current === controller) weightRequestRef.current = null;
     }
   };
 
-  // Poll weight every second while measuring
+  const resetWeightSnapshot = async () => {
+    try {
+      await fetch(`${PI_WEIGHT_URL}/api/weight/reset`, { method: "POST" });
+    } catch {
+      // The stream/poll will recover when the local service returns.
+    }
+  };
+
+  // EventSource gives immediate updates. Older Chromium builds and test
+  // harnesses fall back to a bounded poll; all timers and sockets are closed
+  // on navigation so idle pages cannot accumulate work.
   useEffect(() => {
-    if (measurementState !== "measuring") return;
-    const interval = setInterval(() => {
-      if (!hasWeight.current) fetchWeight();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [measurementState]);
+    let disposed = false;
+    const startFallbackPoll = () => {
+      if (disposed || weightPollRef.current) return;
+      void fetchWeight();
+      weightPollRef.current = setInterval(() => {
+        if (!hasWeight.current) void fetchWeight();
+      }, 1000);
+    };
+    const openStream = () => {
+      if (disposed || typeof EventSource === "undefined") {
+        startFallbackPoll();
+        return;
+      }
+      const stream = new EventSource(`${PI_WEIGHT_URL}/api/weight/stream`);
+      weightStreamRef.current = stream;
+      stream.onopen = () => setWeightServiceStatus("scanning");
+      stream.onmessage = (event) => {
+        try {
+          onLiveWeightRef.current?.(JSON.parse(event.data));
+        } catch {
+          setWeightServiceStatus("error");
+        }
+      };
+      stream.onerror = () => {
+        if (disposed) return;
+        setWeightServiceStatus("offline");
+        stream.close();
+        weightStreamRef.current = null;
+        startFallbackPoll();
+        if (!weightRetryRef.current) {
+          weightRetryRef.current = setTimeout(() => {
+            weightRetryRef.current = null;
+            if (weightPollRef.current) {
+              clearInterval(weightPollRef.current);
+              weightPollRef.current = null;
+            }
+            openStream();
+          }, 5000);
+        }
+      };
+    };
+
+    void resetWeightSnapshot();
+    openStream();
+    return () => {
+      disposed = true;
+      weightRequestRef.current?.abort();
+      if (weightStreamRef.current) weightStreamRef.current.close();
+      weightStreamRef.current = null;
+      if (weightPollRef.current) clearInterval(weightPollRef.current);
+      if (weightRetryRef.current) clearTimeout(weightRetryRef.current);
+      weightPollRef.current = null;
+      weightRetryRef.current = null;
+    };
+  }, []);
 
   // ─── START MEASUREMENT ────────────────────────────────────────
   const startMeasurement = () => {
@@ -291,6 +381,7 @@ const BodyComposition = () => {
     hasHeight.current = false;
     hasWeight.current = false;
     measurementStarted.current = true;
+    autoProceedTriggered.current = false;
     setStatusMessage("Starting height measurement... Stand straight and look forward.");
 
     // ONE command → both TOF and Ultrasonic sensors start simultaneously on their boards
@@ -312,8 +403,11 @@ const BodyComposition = () => {
       clearTimers();
     }, (COUNTDOWN_SECONDS + 10) * 1000);
 
-    // Start weight polling immediately
-    fetchWeight();
+    // Clear any previous customer's cached value. The always-on BLE stream
+    // will deliver the next valid advertisement without another button press.
+    void resetWeightSnapshot().then(() => {
+      if (measurementStarted.current && !hasWeight.current) void fetchWeight();
+    });
   };
 
   // ─── STOP / REFRESH ──────────────────────────────────────────
@@ -395,6 +489,9 @@ const BodyComposition = () => {
               </span>
               <span className={`px-2 py-1 rounded-full text-xs ${mqttConnected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                 MQTT
+              </span>
+              <span className={`px-2 py-1 rounded-full text-xs ${weightServiceStatus === "connected" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                Weight {weightServiceStatus === "connected" ? "ready" : "waiting"}
               </span>
             </div>
           </div>
