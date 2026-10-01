@@ -6,6 +6,7 @@ import { useHealth } from "../context/HealthContext";
 import { requestJSON } from "../utils/request";
 import ReportMeasurements from "./ReportMeasurements";
 import { readBrowserStorage } from '../utils/browserStorage';
+import { readProfileAccess } from '../utils/kioskSession';
 
 const ProtectedReportRoute = ({ children }) => {
   const navigate = useNavigate();
@@ -55,6 +56,7 @@ const ProtectedReportRoute = ({ children }) => {
             method: "GET",
             headers: {
               Accept: "application/json",
+              ...(readProfileAccess(sessionId) ? { 'X-Reliv-Profile-Token': readProfileAccess(sessionId) } : {}),
             },
             cache: "no-store",
             signal: controller.signal,

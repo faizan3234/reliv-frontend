@@ -1,4 +1,4 @@
-import { getScanCount } from '../utils/reportSnapshot';
+import { getScanCount } from '../utils/reportSnapshot.js';
 import { containsPhrase, normalizeVoiceText } from './voicePageProfiles.js';
 
 // ── 200+ INTENT LISTS FOR REPORT LANGUAGE SELECTION ──────────────────────────

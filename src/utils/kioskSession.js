@@ -1,5 +1,6 @@
 const SESSION_KEY = "reliv_session_id";
 const TOKEN_KEY = "reliv_pairing_token";
+const PROFILE_ACCESS_KEY = "reliv_profile_access";
 const INVALID_IDS = new Set(["current", "default", "RELIV-001"]);
 let pendingCreation = null;
 let sessionGeneration = 0;
@@ -27,6 +28,24 @@ export function clearKioskSession() {
     storage.removeItem(SESSION_KEY);
     storage.removeItem(TOKEN_KEY);
   }
+  sessionStorage.removeItem(PROFILE_ACCESS_KEY);
+}
+
+export function readProfileAccess(sessionId) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(PROFILE_ACCESS_KEY) || 'null');
+    return saved?.sessionId === sessionId && /^[a-f0-9]{64}$/.test(saved?.token) ? saved.token : null;
+  } catch { return null; }
+}
+
+export async function saveKioskHealthProfile(base, details) {
+  const session = await ensureKioskSession(base);
+  const result = await post(base, `/api/sessions/${encodeURIComponent(session.sessionId)}/health-profile`, {
+    ...details, pairingToken: session.pairingToken,
+  });
+  if (!isCurrentKioskSession(session)) throw new Error('The kiosk session was reset. Please retry.');
+  sessionStorage.setItem(PROFILE_ACCESS_KEY, JSON.stringify({ sessionId: session.sessionId, token: result.accessToken }));
+  return { ...session, customerData: result.customerData };
 }
 
 export function storeKioskSession(data) {

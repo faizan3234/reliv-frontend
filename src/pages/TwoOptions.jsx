@@ -10,7 +10,7 @@ import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { dict } from "../config/TwoOptionsDict";
 import { guidanceText } from "../voice/guidanceCopy";
-import { readKioskSession, clearKioskSession, isCurrentKioskSession } from "../utils/kioskSession";
+import { readKioskSession, readProfileAccess, clearKioskSession, isCurrentKioskSession } from "../utils/kioskSession";
 
 export default function TwoOptions() {
   const navigate = useNavigate();
@@ -48,6 +48,10 @@ export default function TwoOptions() {
   }, [selectedLang]);
 
   const selectServiceAndContinue = async (serviceType, destination) => {
+    if (serviceType === 'HEALTH_CHECKUP' && !readProfileAccess(readKioskSession()?.sessionId)) {
+      navigate('/customer-details', { state: { healthProfileRequired: true } });
+      return;
+    }
     if (submittingRef.current) return;
     submittingRef.current = true;
     setIsSubmitting(true);

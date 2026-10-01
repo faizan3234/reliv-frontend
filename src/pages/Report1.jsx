@@ -1,4 +1,5 @@
 import { getScanCount } from '../utils/reportSnapshot';
+import { readProfileAccess } from '../utils/kioskSession';
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useLocation, useNavigate } from "react-router-dom";
@@ -96,7 +97,8 @@ const Report1 = () => {
           {
             method: "GET",
             headers: {
-              Accept: "application/json"
+              Accept: "application/json",
+              ...(readProfileAccess(currentSessionId) ? { 'X-Reliv-Profile-Token': readProfileAccess(currentSessionId) } : {})
             },
             cache: "no-store"
           }
