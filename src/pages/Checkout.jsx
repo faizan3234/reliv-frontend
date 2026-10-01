@@ -8,14 +8,12 @@ import TopEllipseBackground from "../components/TopEllipseBackground";
 import PrimaryButton from "../components/PrimaryButton";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { sanitizeError } from "../utils/errorSanitizer";
-import { usePageSpeech } from "../context/SpeechContext";
+import SpokenGuide from '../components/SpokenGuide';
+import { useHealth } from '../context/HealthContext';
+import { medicineGuide } from '../voice/medicineGuide';
 import { API_BASE } from "../config/api";
 import { requestJSON } from "../utils/request";
 import { getMedicineImageUrl, getKitId } from "./MedicineDispensing";
-
-// Department list for random social proof
-const DEPARTMENTS = ['IT', 'CSE', 'ML', 'AI', 'CSBS', 'AIML', 'ME', 'EE', 'CSE IOTCSBT', 'ECE', 'Data Science', 'Cyber Security'];
-const getRandomDept = () => DEPARTMENTS[Math.floor(Math.random() * DEPARTMENTS.length)];
 
 const getAvailableQuantity = (kit) => {
   if (!kit) return 0;
@@ -28,7 +26,9 @@ const getAvailableQuantity = (kit) => {
 
 // --- Extracted logic from robust backend-driven checkout ---
 export default function Checkout() {
-  usePageSpeech("checkout");
+  const { data: health } = useHealth();
+  const language = health.language || 'en';
+  const words = medicineGuide[language] || medicineGuide.en;
   const navigate = useNavigate();
   const location = useLocation();
   // Always get cart and state from navigation (from MedicineDispensing or PaymentGate)
@@ -118,8 +118,7 @@ export default function Checkout() {
     const sortedByMargin = availableKits
       .map(kit => ({
         ...kit,
-        margin: kitMargins[kit.id] || 0,
-        randomDept: getRandomDept() // Pre-assign random dept
+        margin: kitMargins[kit.id] || 0
       }))
       .sort((a, b) => b.margin - a.margin || b.price - a.price);
     
@@ -252,20 +251,7 @@ export default function Checkout() {
             Review Your Order
           </p>
         </header>
-        
-        {/* First Kiosk Launch Celebration */}
-        <div className="mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-100/50 rounded-full -mr-10 -mt-10"></div>
-          <div className="relative flex items-start gap-3">
-            <span className="text-xl">🎉</span>
-            <div>
-              <p className="text-gray-800 text-sm leading-relaxed">
-                <span className="font-semibold text-amber-700">Our First Kiosk - Celebration Pricing!</span> We're so happy to launch our very first kiosk that we're sharing our joy with you through special prices. 
-                <span className="text-gray-600">From <span className="font-bold text-gray-700">17th April</span>, these will move to market rates as we can't sustain these prices forever - but today, it's our gift to you for being here first! 💛</span>
-              </p>
-            </div>
-          </div>
-        </div>
+        <SpokenGuide text={words.chooseText} language={language} autoSpeak />
         
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Cart Items */}
@@ -400,23 +386,11 @@ export default function Checkout() {
               <div className="mt-8 bg-white border-2 border-gray-300 p-6">
                 <div className="mb-6 pb-4 border-b-2 border-gray-300">
                   <p className="text-sm uppercase tracking-widest text-gray-600 mb-2">You May Also Like</p>
-                  <h3 className="text-xl font-serif text-gray-900">Students Also Bought</h3>
+                  <h3 className="text-xl font-serif text-gray-900">Other Available Items</h3>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {recommendedKits.map((kit, index) => {
-                    // Generate unique random counts 1-8 for each kit (no duplicates)
-                    const usedCounts = new Set();
-                    let studentCount;
-                    do {
-                      studentCount = Math.floor(Math.random() * 8) + 1;
-                    } while (usedCounts.has(studentCount) && usedCounts.size < 8);
-                    usedCounts.add(studentCount);
-                    
-                    // Varied time phrases for genuine look
-                    const timePhrases = ['yesterday', 'today', 'on Monday', 'on Tuesday', 'last week', 'this morning', 'recently'];
-                    const timePhrase = timePhrases[index % timePhrases.length];
-                    
+                  {recommendedKits.map((kit) => {
                     return (
                       <div 
                         key={kit.id}
@@ -438,11 +412,6 @@ export default function Checkout() {
                             <p className="text-lg font-serif text-gray-900">₹{kit.price}</p>
                           </div>
                         </div>
-                        
-                        {/* Social Proof */}
-                        <p className="text-xs text-gray-600 mb-4 border-l-2 border-gray-300 pl-3">
-                          <span className="font-medium">{studentCount} {studentCount === 1 ? 'student' : 'students'}</span> from {kit.randomDept} bought this {timePhrase}
-                        </p>
                         
                         {/* Add Button */}
                         <button
@@ -562,7 +531,7 @@ export default function Checkout() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   <div>
-                    <p className="font-semibold text-sm text-gray-900">Instant Delivery</p>
+                    <p className="font-semibold text-sm text-gray-900">Kiosk Collection</p>
                     <p className="text-xs text-gray-600">Dispensed immediately at kiosk</p>
                   </div>
                 </div>
@@ -931,7 +900,7 @@ export default function Checkout() {
               </button>
               
               <p className="text-center text-gray-400 text-xs">
-                🔒 No hidden charges • ⚡ Instant dispense • 🏥 Medical grade
+                {words.title}
               </p>
             </div>
           </div>
@@ -951,7 +920,7 @@ export default function Checkout() {
               </p>
             </div>
             <div className="hidden sm:block text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-semibold">
-              Instant Dispensing at Kiosk
+              {words.title}
             </div>
           </div>
           <div className="flex items-center gap-3">

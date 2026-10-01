@@ -65,7 +65,7 @@ async function run() {
   privateAccess = true;
   await mount(Report5);
   assert(document.querySelector('[aria-label="Health screening report"]').textContent.includes('Visit 7'), 'linked seventh visit is shown from backend metadata');
-  assert(document.querySelectorAll('figure').length > 0 && document.querySelector('svg[aria-label^="Systolic BP:"]'), 'private multi-visit readings draw a graph');
+  assert(document.querySelectorAll('figure').length > 0 && document.querySelector('svg[aria-label^="Systolic pressure:"]'), 'private multi-visit readings draw a graph');
   assert(!document.querySelector('[aria-label="Health screening report"]').textContent.includes('impedance'), 'raw impedance is not displayed');
   assert(requests.some(request => request.token === 'a'.repeat(64)), 'private access token sent to the paid report endpoint');
   assert(!requests.some(request => request.url.includes('/reports/history/')), 'reports never request public email health history');

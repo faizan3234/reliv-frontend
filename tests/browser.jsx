@@ -73,7 +73,7 @@ class FakeAudio {
 window.Audio = FakeAudio;
 window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
 Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
-  getVoices: () => [{ lang: 'en-IN', localService: true }],
+  getVoices: () => ['en-IN','hi-IN','bn-IN'].map(lang => ({ lang, localService:true })),
   addEventListener() {}, removeEventListener() {},
   speak(utterance) {
     verifyGate('synthesis');

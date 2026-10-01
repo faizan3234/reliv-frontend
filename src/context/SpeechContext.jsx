@@ -223,10 +223,14 @@ export function SpeechProvider({ children }) {
         let audio = null;
         let usingSynthesis = false;
         let playbackTimeout = null;
+        let fetchController = null;
+        let objectUrl = null;
         const finish = (cancelled = false) => {
           if (finished) return;
           finished = true;
           clearTimeout(playbackTimeout);
+          fetchController?.abort();
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
           retryPlaybackRef.current = null;
           if (audio) audio.onended = audio.onerror = null;
           if (utterance) utterance.onend = utterance.onerror = null;
@@ -256,14 +260,51 @@ export function SpeechProvider({ children }) {
         const fail = (error) => {
           if (finished || requestId !== playbackRequestRef.current) return;
           finish(true);
+          playbackRequestRef.current += 1;
           audio?.pause();
           if (utterance) window.speechSynthesis?.cancel();
+          window.dispatchEvent(new CustomEvent('reliv_speech_error', { detail: targetLang }));
           callbacks.onError?.(error);
+        };
+        const playLocalAudio = async () => {
+          fetchController = new AbortController();
+          const timeout = setTimeout(() => fetchController.abort(), 18000);
+          try {
+            const response = await fetch(`${API_BASE}/api/speech/audio`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: safeText, language: targetLang }),
+              signal: fetchController.signal, cache: 'no-store',
+            });
+            if (!response.ok) throw new Error('Offline speech unavailable.');
+            const blob = await response.blob();
+            if (finished || requestId !== playbackRequestRef.current) return;
+            objectUrl = URL.createObjectURL(blob);
+            audio = new Audio(objectUrl);
+            audio.volume = volumeRef.current;
+            activeAudioRef.current = audio;
+            audio.onended = () => finish();
+            audio.onerror = () => fail(new Error('Offline speech playback failed.'));
+            const play = () => {
+              if (!begin()) return;
+              audio.play().catch(error => {
+                if (finished || requestId !== playbackRequestRef.current) return;
+                if (error.name === 'NotAllowedError') {
+                  clearTimeout(playbackTimeout); setSpeakerGate(false);
+                  retryPlaybackRef.current = play;
+                  window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
+                } else fail(error);
+              });
+            };
+            play();
+          } catch (error) { if (!finished) fail(error); }
+          finally { clearTimeout(timeout); }
         };
         const playSynthesis = () => {
           if (finished || requestId !== playbackRequestRef.current) return;
-          if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-            fail(new Error('No recording or browser speech voice is available.'));
+          const localVoices = window.speechSynthesis?.getVoices().filter(voice =>
+            voice.localService && voice.lang.toLowerCase().startsWith(targetLang)) || [];
+          if (!localVoices.length || !window.SpeechSynthesisUtterance) {
+            void playLocalAudio();
             return;
           }
           utterance = new window.SpeechSynthesisUtterance(safeText);
@@ -272,8 +313,6 @@ export function SpeechProvider({ children }) {
           const settings = { ...voiceSettingsRef.current, voicePreference: 'female', ...callbacks.voiceSettings };
           utterance.rate = settings.rate;
           utterance.pitch = settings.pitch;
-          const localVoices = window.speechSynthesis.getVoices().filter((voice) =>
-            voice.localService && voice.lang.toLowerCase().startsWith(targetLang));
           const preference = settings.voicePreference === 'male' ? /\b(male|david|james)\b/i
             : settings.voicePreference === 'female' ? /\b(female|samantha|zira|neerja|swara|tanishaa|jenny|susan|hazel)\b/i : null;
           const localVoice = localVoices.find((voice) => preference?.test(voice.name)) || localVoices[0];
@@ -285,6 +324,7 @@ export function SpeechProvider({ children }) {
               clearTimeout(playbackTimeout);
               setSpeakerGate(false);
               retryPlaybackRef.current = playSynthesis;
+              window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
             } else {
               fail(event);
             }
@@ -320,6 +360,7 @@ export function SpeechProvider({ children }) {
               clearTimeout(playbackTimeout);
               setSpeakerGate(false);
               retryPlaybackRef.current = playRecording;
+              window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
             } else {
               fallbackToSynthesis();
             }

@@ -1,5 +1,5 @@
 // src/pages/MedicineDispensing.jsx
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars -- used by JSX member tags
 import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft, Heart, ShieldCheck, Trash2 } from "lucide-react";
@@ -8,6 +8,11 @@ import PrimaryButton from "../components/PrimaryButton";
 import AuraBackground from "../components/AuraBackground";
 import "./RelivKiosk.css";
 import { API_BASE } from "../config/api";
+import SpokenGuide from '../components/SpokenGuide';
+import { useHealth } from '../context/HealthContext';
+import { medicineGuide } from '../voice/medicineGuide';
+import { requestJSON } from '../utils/request';
+import { readBrowserStorage, writeBrowserStorage } from '../utils/browserStorage';
 import { formatINR } from "../utils/currency";
 
 // Helper to resolve canonical medicine image URL (local Pi file or external URL)
@@ -79,24 +84,14 @@ const StockBadge = ({ quantity, expiryDate }) => {
 };
 
 // --- Customer Kit Card Component ---
-const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMostChosen }) => {
+const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart }) => {
   const available = getAvailableQuantity(kit);
-  const isOutOfStock = available <= 0 || (kit.expiryDate && new Date(kit.expiryDate) < new Date());
+  const isOutOfStock = available <= 0 || ((kit.expiryDate || kit.expiry_date) && new Date(kit.expiryDate || kit.expiry_date) < new Date());
 
   const kitId = getKitId(kit);
   const cartItem = cart?.find((item) => getKitId(item) === kitId);
   const cartQty = cartItem ? cartItem.cartQuantity : 0;
 
-  // Authentic social proof based on kit ID
-  const showSocialProof = useMemo(() => {
-    const seed = typeof kit.id === "number" ? kit.id : (kit.kit_id || "1").charCodeAt(0);
-    return seed % 10 === 2 || seed % 10 === 7;
-  }, [kit.id, kit.kit_id]);
-
-  const recentBuyers = useMemo(() => {
-    const seed = typeof kit.id === "number" ? kit.id : (kit.kit_id || "1").charCodeAt(0);
-    return ((seed * 3) % 4) + 2;
-  }, [kit.id, kit.kit_id]);
 
   return (
     <motion.div
@@ -120,34 +115,10 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMost
             Restocking soon
           </span>
         ) : (
-          <StockBadge quantity={available} expiryDate={kit.expiryDate} />
+          <StockBadge quantity={available} expiryDate={kit.expiryDate || kit.expiry_date} />
         )}
 
-        {!isOutOfStock && isMostChosen && (
-          <span
-            className="badge"
-            style={{
-              background: "linear-gradient(135deg, #7c3aed, #a855f7)",
-              fontSize: "11px",
-              padding: "4px 8px",
-            }}
-          >
-            ★ Most Chosen
-          </span>
-        )}
 
-        {!isOutOfStock && showSocialProof && !isMostChosen && (
-          <span
-            className="badge"
-            style={{
-              background: "linear-gradient(135deg, #059669, #10B981)",
-              fontSize: "11px",
-              padding: "4px 8px",
-            }}
-          >
-            {recentBuyers} bought today
-          </span>
-        )}
       </div>
 
       {/* Image */}
@@ -166,7 +137,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMost
       {/* Price & Cart Actions */}
       <div className="price-row">
         <div className="price-stack">
-          <span className="mrp-price">{formatINR(Math.round(kit.price * 1.25))}</span>
+
           <span className="price">{formatINR(kit.price)}</span>
         </div>
 
@@ -227,7 +198,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, isMost
 // ═════════════════════════════════════════════════════════════════════════
 export default function MedicineDispensing() {
   const isMedicineDispensingEnabled =
-    localStorage.getItem("reliv_medicine_dispensing_enabled") !== "false";
+    readBrowserStorage("reliv_medicine_dispensing_enabled") !== "false";
 
   if (!isMedicineDispensingEnabled) {
     return (
@@ -247,6 +218,12 @@ export default function MedicineDispensing() {
 }
 
 function EnabledMedicineDispensing() {
+  const { data: health } = useHealth();
+  const language = health.language || 'en';
+  const words = medicineGuide[language] || medicineGuide.en;
+  const [loadError, setLoadError] = useState('');
+  const [checking, setChecking] = useState(false);
+  const checkoutRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { fromPaymentGate, cart: cartFromPrevPage } = location.state || {};
@@ -257,19 +234,17 @@ function EnabledMedicineDispensing() {
   // Fetch Inventory from Kiosk Backend
   const fetchKits = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/kits?t=${Date.now()}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) throw new Error("Failed to fetch medical kits");
-      const data = await response.json();
+      setLoadError('');
+      const data = await requestJSON(`${API_BASE}/api/kits`, { cache: "no-store", timeoutMs:8000 });
       const kits = Array.isArray(data) ? data : data.kits || [];
       setMedicalKits(kits);
     } catch (err) {
-      if (import.meta.env.DEV) console.error("Error loading kits:", err);
+      setLoadError(words.offlineText);
+      if (import.meta.env.DEV) console.warn('Inventory unavailable', err.message);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [words.offlineText]);
 
   useEffect(() => {
     fetchKits();
@@ -286,7 +261,7 @@ function EnabledMedicineDispensing() {
   }, [cartFromPrevPage]);
 
   useEffect(() => {
-    sessionStorage.setItem("reliv_cart", JSON.stringify(cart));
+    writeBrowserStorage("reliv_cart", JSON.stringify(cart), "sessionStorage");
   }, [cart]);
 
   // Cart operations with normalized IDs and robust removal
@@ -358,18 +333,18 @@ function EnabledMedicineDispensing() {
 
   // Re-verify inventory and navigate to CHECKOUT (not payment directly)
   const handleCheckout = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || checkoutRef.current) return;
+    checkoutRef.current = true; setChecking(true); setLoadError('');
     try {
-      const response = await fetch(`${API_BASE}/api/kits`, { cache: "no-store" });
-      if (response.ok) {
-        const latestKits = await response.json();
+      const latestKits = await requestJSON(`${API_BASE}/api/kits`, { cache: "no-store", timeoutMs:8000 });
+      {
         const kitList = Array.isArray(latestKits) ? latestKits : latestKits.kits || [];
 
         const validCart = cart
           .filter((cartItem) => {
             const itemKitId = getKitId(cartItem);
             const kit = kitList.find((k) => getKitId(k) === itemKitId);
-            return kit && getAvailableQuantity(kit) >= (cartItem.cartQuantity || 1);
+            return kit && getAvailableQuantity(kit) >= (cartItem.cartQuantity || 1) && (!(kit.expiryDate || kit.expiry_date) || new Date(kit.expiryDate || kit.expiry_date) >= new Date());
           })
           .map((cartItem) => {
             const itemKitId = getKitId(cartItem);
@@ -405,9 +380,8 @@ function EnabledMedicineDispensing() {
       }
     } catch (err) {
       if (import.meta.env.DEV) console.warn("Failed to re-verify inventory before checkout:", err);
-    }
-    // Fallback if re-verification fails
-    navigate("/checkout", { state: { cart, totalPrice, fromPaymentGate } });
+      setLoadError(words.offlineText);
+    } finally { checkoutRef.current = false; setChecking(false); }
   };
 
   if (isLoading) {
@@ -444,8 +418,9 @@ function EnabledMedicineDispensing() {
         {/* Header Branding */}
         <header className="kiosk-header">
           <Logo />
-          <h2>WELLNESS PRODUCTS</h2>
-          <p>Tap items to add to your order. Instant dispensing.</p>
+          <h2>{words.choose}</h2>
+          <SpokenGuide text={words.chooseText} language={language} autoSpeak />
+          {loadError && <div role="alert"><p>{loadError}</p><button type="button" onClick={fetchKits}>{words.retry}</button></div>}
         </header>
 
         {/* 3-by-3 Product Grid (3 kits top row, 3 kits bottom row) */}
@@ -458,7 +433,6 @@ function EnabledMedicineDispensing() {
               onUpdateQty={handleUpdateQuantity}
               onRemoveFromCart={handleRemoveFromCart}
               cart={cart}
-              isMostChosen={index === 0}
             />
           ))}
         </main>
@@ -536,7 +510,7 @@ function EnabledMedicineDispensing() {
                         <p className="luxury-item-meta">
                           <span>SANITIZED</span>
                           <span aria-hidden="true" style={{ margin: "0 4px" }}>•</span>
-                          <span>INSTANT</span>
+                          <span>{words.title}</span>
                         </p>
                       </div>
                     </div>
@@ -590,6 +564,7 @@ function EnabledMedicineDispensing() {
               <div className="luxury-cart-footer">
                 <PrimaryButton
                   onClick={handleCheckout}
+                  disabled={checking || Boolean(loadError)}
                   className="luxury-pay-btn"
                 >
                   <span>Proceed to Checkout ({formatINR(totalPrice)})</span>
