@@ -139,6 +139,25 @@ function MetricCard({ metric, language }) {
   );
 }
 
+function SafeQRCode({ value, size = 160, level = "M", marginSize = 2, className = "" }) {
+  const safeValue = useMemo(() => {
+    if (typeof value === 'string' && value.trim().length > 0 && !value.startsWith('data:') && value.length < 500) {
+      return value.trim();
+    }
+    return 'https://reliv7.vercel.app';
+  }, [value]);
+
+  if (typeof value === 'string' && value.startsWith('data:image/')) {
+    return <img src={value} alt="Report QR Code" style={{ width: size, height: size }} className={`object-contain ${className}`} />;
+  }
+
+  try {
+    return <QRCodeSVG value={safeValue} size={size} level={level} marginSize={marginSize} className={className} />;
+  } catch {
+    return <QRCodeSVG value="https://reliv7.vercel.app" size={size} level="L" marginSize={marginSize} className={className} />;
+  }
+}
+
 export default function UnifiedReport() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -221,6 +240,10 @@ export default function UnifiedReport() {
   }, [page]);
 
   useEffect(() => {
+    stop();
+  }, [stop]);
+
+  useEffect(() => {
     const changed = (e) => {
       if (['en', 'hi', 'bn'].includes(e.detail)) setLanguage(e.detail);
     };
@@ -240,7 +263,13 @@ export default function UnifiedReport() {
     writeBrowserStorage('reliv_report_speech_lang', code, 'sessionStorage');
   };
 
-  const qrTargetUrl = data.reportPaymentUrl || "https://reliv7.vercel.app";
+  const qrTargetUrl = useMemo(() => {
+    const candidate = data.reportPaymentUrl;
+    if (typeof candidate === 'string' && candidate.trim().startsWith('http') && candidate.length < 500 && !candidate.startsWith('data:')) {
+      return candidate.trim();
+    }
+    return "https://reliv7.vercel.app";
+  }, [data.reportPaymentUrl]);
   const fat = metrics.find((m) => m.key === 'bodyFat')?.value || bio.keyMetrics.fatPct;
   const healthScore = bio.keyMetrics.score || 82;
   const metabolicAgeVal = bio.keyMetrics.metabolicAge || Number(data.patient?.age) || 25;
@@ -286,7 +315,7 @@ export default function UnifiedReport() {
   const showConfetti = typeof window !== 'undefined' && !window.IS_REACT_ACT_ENVIRONMENT && healthScore >= 90;
 
   return (
-    <main aria-label="Health screening report" className="min-h-screen bg-gradient-to-br from-orange-50/70 via-white to-sky-50/60 px-4 sm:px-6 py-6 pb-36 text-slate-900 touch-pan-y selection:bg-orange-500 selection:text-white">
+    <main aria-label="Health screening report" className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-sky-50/40 px-4 sm:px-6 py-6 pb-52 sm:pb-56 text-slate-900 touch-pan-y selection:bg-orange-500 selection:text-white">
       {showConfetti && (
         <Confetti
           width={typeof window !== 'undefined' ? window.innerWidth : 800}
@@ -302,7 +331,7 @@ export default function UnifiedReport() {
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-orange-200/80 pb-4">
           <Logo size="text-3xl" />
           <div className="text-center sm:text-left">
-            <p className="text-xl font-extrabold text-slate-900 tracking-tight">
+            <p className="text-xl font-extrabold text-slate-900 tracking-tight font-outfit">
               {w.title} · {w.scan} {count}
             </p>
             <p className="text-sm font-medium text-slate-600">
@@ -320,7 +349,7 @@ export default function UnifiedReport() {
                 key={code}
                 onClick={() => chooseLanguage(code)}
                 aria-pressed={language === code}
-                className={`min-h-11 rounded-xl px-4 text-sm font-bold transition-all shadow-sm ${
+                className={`min-h-11 rounded-xl px-4 text-sm font-bold transition-all shadow-xs ${
                   language === code
                     ? 'bg-slate-900 text-white shadow-slate-900/20'
                     : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
@@ -332,7 +361,7 @@ export default function UnifiedReport() {
           </div>
         </header>
 
-        {/* ── Page Navigation Tabs ── */}
+        {/* ── Page Navigation Tabs (Apple Segmented Style) ── */}
         <nav aria-label={w.page} className="grid grid-cols-5 gap-2">
           {w.titles.map((title, n) => (
             <button
@@ -342,53 +371,54 @@ export default function UnifiedReport() {
               aria-current={page === n + 1 ? 'step' : undefined}
               className={`min-h-16 rounded-2xl border px-2 py-3 text-xs sm:text-sm font-bold transition-all ${
                 page === n + 1
-                  ? 'border-orange-500 bg-gradient-to-br from-orange-100 to-amber-100 text-orange-950 shadow-md scale-[1.02]'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  ? 'border-orange-500/80 bg-white text-orange-950 shadow-md ring-2 ring-orange-500/20 scale-[1.02]'
+                  : 'border-slate-200/80 bg-white/80 text-slate-600 hover:text-slate-900 hover:bg-white shadow-xs'
               }`}
             >
-              <span className="block text-xs opacity-75">{n + 1}.</span>
+              <span className="block text-xs font-semibold opacity-75">{n + 1}.</span>
               <span className="line-clamp-2">{title}</span>
             </button>
           ))}
         </nav>
 
-        {/* ── Hero Banner ── */}
-        <section className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 sm:p-7 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        {/* ── Apple-Designed Light Hero Banner ── */}
+        <section className="rounded-3xl bg-white/95 backdrop-blur-xl p-6 sm:p-7 text-slate-900 shadow-sm border border-slate-200/90 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-orange-100/50 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-sky-100/40 rounded-full blur-3xl pointer-events-none"></div>
           <div className="relative z-10">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
+              <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-orange-50 text-orange-800 border border-orange-200/80 shadow-xs">
                 RELIV · {w.scan} {count}
               </span>
-              <span className="text-xs font-medium text-slate-400">
+              <span className="text-xs font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
                 Unlocked {bio.activeLimit} of 120+ Biomarkers
               </span>
             </div>
 
-            <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-outfit">
+            <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-outfit">
               {w.titles[page - 1]}
             </h1>
-            <p className="mt-2 text-base text-slate-200 leading-relaxed max-w-3xl">
+            <p className="mt-2 text-base text-slate-600 leading-relaxed max-w-3xl font-normal">
               {stage}
             </p>
 
-            {/* Threshold Pill Stats Bar */}
+            {/* Threshold Pill Stats Bar (Apple Light Tinted) */}
             <div className="mt-5 flex flex-wrap items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 font-semibold shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 {bio.counts.good} Optimal
               </span>
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200/80 font-semibold shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                 {bio.counts.caution} Caution / Borderline
               </span>
               {bio.counts.alert > 0 && (
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/40 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200/80 font-semibold shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                   {bio.counts.alert} Attention Required
                 </span>
               )}
-              <span className="text-slate-400 ml-auto hidden sm:inline">
+              <span className="text-slate-500 font-medium ml-auto hidden sm:inline">
                 {observationCount(data)} observations across {rows.length} {w.scan}
               </span>
             </div>
@@ -397,7 +427,7 @@ export default function UnifiedReport() {
 
         {/* ── Spoken Guide Player (Visually Hidden per user request "listen to this guide remove") ── */}
         <div className="sr-only">
-          <SpokenGuide displayText={page === 5 ? v[advice] : stage} text={narration} messages={messages} language={language} autoSpeak />
+          <SpokenGuide displayText={page === 5 ? v[advice] : stage} text={narration} messages={messages} language={language} autoSpeak={false} />
         </div>
 
         {/* ════════════════════════════════════════════════════════════════
@@ -1125,7 +1155,7 @@ export default function UnifiedReport() {
                 className="rounded-2xl bg-white p-3.5 border-2 border-slate-200 shadow-md shrink-0 cursor-pointer hover:border-orange-500 transition-all flex flex-col items-center gap-1.5"
                 title="Click to enlarge QR code"
               >
-                <QRCodeSVG value={qrTargetUrl} size={160} level="M" marginSize={3} />
+                <SafeQRCode value={qrTargetUrl} size={160} level="M" marginSize={3} />
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tap to Enlarge</span>
               </div>
             </article>
@@ -1235,7 +1265,7 @@ export default function UnifiedReport() {
 
             {/* Extra Large 250px Crisp Scannable QR Code */}
             <div className="p-4 bg-white rounded-2xl border-2 border-slate-300 inline-block shadow-inner mx-auto">
-              <QRCodeSVG value={qrTargetUrl} size={250} level="M" marginSize={4} />
+              <SafeQRCode value={qrTargetUrl} size={250} level="M" marginSize={4} />
             </div>
 
             <div className="text-xs font-semibold text-slate-600 bg-slate-50 rounded-xl py-2 px-3 border border-slate-200 break-all font-mono">
