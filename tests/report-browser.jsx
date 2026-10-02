@@ -32,18 +32,18 @@ async function run(){
   await mount(p);assert([...document.querySelectorAll('h1')].at(-1).textContent===reportCopy.en.titles[p-1],`direct report ${p} opens its distinct screen`);
   assert(!document.body.textContent.includes('Previous Person'),'stale patient is cleared');
   assert(document.body.textContent.includes('Scan 1'),'first visit is labelled scan one');
-  if(p===1)assert(document.body.textContent.includes('not available'),'no invented metabolic age');
-  if(p===2)assert(document.body.textContent.includes('172.3 cm')&&document.body.textContent.includes('98 %'),'today page includes actual measured values');
-  if(p===3)assert(document.querySelectorAll('figure circle').length===1,'first scan has one graph point');
-  if(p===4)assert(document.querySelectorAll('figure rect').length===1,'first scan has one comparison bar');
+  if(p===1)assert(document.body.textContent.includes('cannot measure them reliably'),'no invented metabolic age');
+  if(p===2)assert(document.querySelector('[data-metric=height]').textContent.includes('172.3')&&document.querySelector('[data-metric=oxygen]').textContent.includes('98'),'today page includes actual measured values');
+  if(p===3)assert(document.querySelectorAll('figure circle').length===6,'first scan has one point for each of six coloured measurements');
+  if(p===4)assert(document.querySelectorAll('figure rect').length===6,'first scan has one bar for each of six measurements');
   const before=played.length;await click('Listen to this guide');assert(played.length>=before+2&&played[before].startsWith('/assets/audio/en/'),'recorded page and scan explanation play without speech engine');
-  assert(document.body.textContent.includes('Voice is unavailable'),'missing dynamic voice engine is explained rather than claimed audible');
+  assert(!requests.some(x=>x.url.endsWith('/api/speech/audio')),'all report explanations and values are bundled for offline playback');
  }
  await mount(1);for(let p=2;p<=5;p++){await click('Next page →');assert([...document.querySelectorAll('h1')].at(-1).textContent===reportCopy.en.titles[p-1],`Next opens screen ${p}`);}
  for(const [code,label,listen] of [['hi','हिंदी','यह निर्देश सुनें'],['bn','বাংলা','এই নির্দেশ শুনুন']]){await click(label);await click(listen);assert(played.some(url=>url.startsWith(`/assets/audio/${code}/`)),code+' recorded narration plays');assert([...document.querySelectorAll('h1')].at(-1).textContent===reportCopy[code].titles[4],code+' report labels translated');}
  paid.healthData.scanCount=7;paid.healthData.history=Array.from({length:7},(_,i)=>({systolic:114+i,oxygen:i===3?null:98,createdAt:`2026-10-0${i+1}`}));
- await mount(3);assert(document.querySelectorAll('figure circle').length===7,'seventh scan draws seven real readings');await click('Oxygen');assert(document.querySelectorAll('figure circle').length===6,'missing reading leaves a gap');
- await mount(4);assert(document.querySelectorAll('figure rect').length===7,'seventh scan has seven bars');
+ await mount(3);assert(document.querySelectorAll('figure circle').length===13,'overview draws all available readings with a real gap');await click('Oxygen');assert(document.querySelectorAll('figure circle').length===6,'missing reading leaves a gap');
+ await mount(4);assert(document.querySelectorAll('figure rect').length===13,'seventh scan has all available comparison bars');
  assert(chartScans({scanCount:105,history:Array(100).fill({oxygen:98})})[0].scan===99,'recent chart keeps lifetime scan numbering');
  assert(requests.some(x=>x.token==='a'.repeat(64)),'private token protects history requests');
  assert(!requests.some(x=>x.url.includes('/reports/history/')),'no public email history lookup');

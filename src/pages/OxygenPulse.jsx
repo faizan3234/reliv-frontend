@@ -1,3 +1,4 @@
+import SpokenGuide from '../components/SpokenGuide';
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import mqtt from "mqtt";
@@ -372,6 +373,7 @@ const OxygenPulsePage = () => {
 
   return (
     <div className="vital-screen relative w-full bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] scrollable-container font-sans flex flex-col">
+      <div className="px-6"><SpokenGuide text={guidanceText("oxygen", selectedLang)} language={selectedLang || "en"} autoSpeak /></div>
       {/* Enhanced Styles */}
       <style>{`
         @keyframes waveform {
@@ -718,11 +720,6 @@ const OxygenPulsePage = () => {
  */
 // OxygenPulse page — MQTT integrated, image sized to fit circle
 export default function OxygenPulse() {
-  const { speak, stop } = useSpeech();
-  useEffect(() => {
-    const t = setTimeout(() => speak("oxygen-pulse"), 400);
-    return () => { clearTimeout(t); stop(); };
-  }, [speak, stop]);
   const [currentPage, setCurrentPage] = useState("splash");
 
   const showOxygenPage = () => setCurrentPage("oxygen");

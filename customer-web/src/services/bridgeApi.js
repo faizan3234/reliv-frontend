@@ -216,7 +216,7 @@ export async function emailPaymentReceipt({ requestId, email }) {
  * PAYMENT V2: Generate and email the paid HEALTH_CHECKUP report.
  * The email is supplied on the phone after payment; it is not kiosk customer data.
  */
-export async function emailHealthReport({ requestId, email }) {
+export async function emailHealthReport({ requestId, email, storyCard }) {
   if (!requestId || !email) {
     throw new Error('requestId and email are required to send the health report.');
   }
@@ -230,6 +230,7 @@ export async function emailHealthReport({ requestId, email }) {
       body: JSON.stringify({
         requestId: String(requestId).trim(),
         email: String(email).trim(),
+        storyCard,
       }),
     });
 

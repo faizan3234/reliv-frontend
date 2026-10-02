@@ -1,3 +1,4 @@
+import SpokenGuide from '../components/SpokenGuide';
 // src/pages/BodyComposition.jsx//---jio
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -55,12 +56,7 @@ const isInternalMessage = (msg) => {
 const COUNTDOWN_SECONDS = 120;
 
 const BodyComposition = () => {
-  const { speak, stop, speakText } = useSpeech();
-  // Speak instruction on mount
-  useEffect(() => {
-    const t = setTimeout(() => speak("body-composition"), 400);
-    return () => { clearTimeout(t); stop(); };
-  }, [speak, stop]);
+  const { stop, speakText } = useSpeech();
   const [weight, setWeight]                 = useState(null);
   const [height, setHeight]                 = useState(null);
   const [measurementState, setMeasurementState] = useState("idle");
@@ -453,6 +449,7 @@ const BodyComposition = () => {
   // ─── RENDER ──────────────────────────────────────────────────
   return (
     <div className="vital-screen relative w-full min-h-screen h-auto bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] scrollable-container touch-pan-y font-sans flex flex-col">
+      <div className="px-6"><SpokenGuide text={guidanceText("scale", healthData?.language)} language={healthData?.language || "en"} autoSpeak /></div>
       {/* Back button */}
       <header className="flex-shrink-0 flex items-center p-5">
         <button

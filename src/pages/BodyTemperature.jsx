@@ -1,3 +1,4 @@
+import SpokenGuide from '../components/SpokenGuide';
 //yoo/
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -397,6 +398,7 @@ const BodyTemperaturePage = () => {
 
   return (
     <div className="vital-screen relative w-full bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] scrollable-container font-sans flex flex-col">
+      <div className="px-6"><SpokenGuide text={guidanceText("temperature", selectedLang)} language={selectedLang || "en"} autoSpeak /></div>
       {/* ── Animations ── */}
       <style>{`
         @keyframes pulse-ring {
@@ -743,11 +745,6 @@ const BodyTemperaturePage = () => {
 };
 
 export default function BodyTemperature() {
-  const { speak, stop } = useSpeech();
-  useEffect(() => {
-    const t = setTimeout(() => speak("body-temperature"), 400);
-    return () => { clearTimeout(t); stop(); };
-  }, [speak, stop]);
   const [currentPage, setCurrentPage] = useState("splash");
 
   return (

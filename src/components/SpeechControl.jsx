@@ -33,7 +33,7 @@ export default function SpeechControl({ className = "" }) {
   return (
     <div
       ref={panelRef}
-      className={`fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-2 ${className}`}
+      className={`fixed ${pathname.startsWith('/report-') ? 'bottom-28' : 'bottom-6'} right-6 z-[9999] flex flex-col items-end gap-2 ${className}`}
     >
       {/* Volume slider panel */}
       {expanded && (

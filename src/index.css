@@ -1,6 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@font-face { font-family: 'Reliv devanagari'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/noto-sans-devanagari-devanagari-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Reliv devanagari'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/noto-sans-devanagari-devanagari-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Reliv bengali'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/noto-sans-bengali-bengali-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Reliv bengali'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/noto-sans-bengali-bengali-700-normal.woff2') format('woff2'); }
+
 
 /* ============================================
    KIOSK TOUCH SCROLLING FIX
@@ -215,7 +220,7 @@ button, a, input, select, textarea, [onclick], [role="button"] {
   background: white;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', 'Reliv devanagari', 'Reliv bengali', sans-serif;
   font-size: 16px;
   font-weight: 600;
   color: #374151;

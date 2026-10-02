@@ -2,9 +2,10 @@
 export default {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
+    "./customer-web/src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
-    extend: {      keyframes: {
+    extend: { fontFamily: { sans: ['DM Sans', 'Reliv devanagari', 'Reliv bengali', 'sans-serif'] }, keyframes: {
         fadeIn: {
           "0%": { opacity: 0 },
           "100%": { opacity: 1 },

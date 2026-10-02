@@ -178,6 +178,7 @@ export function SpeechProvider({ children }) {
       if (activeAudioRef.current) {
           activeAudioRef.current.onended = null;
           activeAudioRef.current.onerror = null;
+          activeAudioRef.current.ontimeupdate = activeAudioRef.current.onloadedmetadata = null;
           activeAudioRef.current.pause();
           activeAudioRef.current.currentTime = 0;
           activeAudioRef.current = null;
@@ -236,7 +237,7 @@ export function SpeechProvider({ children }) {
           fetchController?.abort();
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           retryPlaybackRef.current = null;
-          if (audio) audio.onended = audio.onerror = null;
+          if (audio) audio.onended = audio.onerror = audio.ontimeupdate = audio.onloadedmetadata = null;
           if (utterance) utterance.onend = utterance.onerror = null;
           if (requestId === playbackRequestRef.current) {
             setSpeakerGate(false);
@@ -345,18 +346,26 @@ export function SpeechProvider({ children }) {
           }
         };
 
-        if (callbacks.preferSynthesis || !manifest?.[safeText]) {
+        const entry = manifest?.[safeText];
+        const recording = typeof entry === 'string' ? { file: entry } : entry?.[targetLang];
+        if (callbacks.preferSynthesis || !recording) {
           playSynthesis();
           return;
         }
-        audio = new Audio(`/assets/audio/${targetLang}/${manifest[safeText]}`);
+        audio = new Audio(`/assets/audio/${targetLang}/${recording.file}`);
+        if (Number.isFinite(recording.start) && Number.isFinite(recording.end)) {
+          audio.onloadedmetadata = () => { if (!finished) audio.currentTime = recording.start; };
+          audio.ontimeupdate = () => {
+            if (!finished && audio.currentTime >= recording.end) { audio.pause(); finish(); }
+          };
+        }
         audio.volume = volumeRef.current;
         activeAudioRef.current = audio;
         audio.onended = () => finish();
         const fallbackToSynthesis = () => {
           if (finished || usingSynthesis || requestId !== playbackRequestRef.current) return;
           usingSynthesis = true;
-          audio.onended = audio.onerror = null;
+          audio.onended = audio.onerror = audio.ontimeupdate = audio.onloadedmetadata = null;
           audio.pause();
           activeAudioRef.current = null;
           playSynthesis();
@@ -424,6 +433,7 @@ export function SpeechProvider({ children }) {
       const interactionPrompts = {
         'choose-language': GUIDANCE.language, 'customer-details': GUIDANCE.detailsName,
         'two-options': GUIDANCE.service, 'body-composition': GUIDANCE.scale,
+        'health-checkup': GUIDANCE.bloodPressure, 'oxygen-pulse': GUIDANCE.oxygen, 'body-temperature': GUIDANCE.temperature,
       };
       const pageConfig = interactionPrompts[pageKey] || configRef.current[pageKey] || DEFAULT_CONFIG[pageKey];
       let textToSpeak = "";
