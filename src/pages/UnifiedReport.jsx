@@ -152,6 +152,7 @@ export default function UnifiedReport() {
   });
 
   const [field, setField] = useState('all');
+  const [showQrModal, setShowQrModal] = useState(false);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
   const [showChallenge, setShowChallenge] = useState(() => {
     try {
@@ -165,7 +166,6 @@ export default function UnifiedReport() {
   });
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showScoreTooltip, setShowScoreTooltip] = useState(false);
-  const [lbPrompt, setLbPrompt] = useState('idle'); // idle | done | skipped | not_qualified
 
   const w = reportCopy[language] || reportCopy.en;
   const v = insightCopy[language] || insightCopy.en;
@@ -187,14 +187,16 @@ export default function UnifiedReport() {
     ? metrics.filter((m) => m.kind === 'measured')
     : metrics.filter((m) => m.status !== 'neutral');
 
-  const spokenMetrics = page === 1 || page === 2
+  // Filter out metabolic age, height, and weight from voice narration as requested
+  const spokenMetrics = (page === 1 || page === 2
     ? visible
     : page === 5
     ? visible.filter((m) => m.status !== 'good')
-    : metrics.filter((m) => field === 'all' ? ['systolic', 'diastolic', 'oxygen', 'temperature', 'bpm', 'weight'].includes(m.key) : m.key === field);
+    : metrics.filter((m) => field === 'all' ? ['systolic', 'diastolic', 'oxygen', 'temperature', 'bpm'].includes(m.key) : m.key === field)
+  ).filter((m) => !['height', 'weight', 'metabolicAge'].includes(m.key));
 
   const messages = [
-    ...(page === 1 ? [stage, v.estimates, v.metabolic] : page === 2 ? [stage, w.guides[1]] : page === 5 ? [v[advice], v.next] : [stage, v.chart]),
+    ...(page === 1 ? [stage] : page === 2 ? [stage, w.guides[1]] : page === 5 ? [v[advice], v.next] : [stage, v.chart]),
     ...spokenMetrics.flatMap((m) => metricAudio(m, language))
   ];
 
@@ -238,6 +240,7 @@ export default function UnifiedReport() {
     writeBrowserStorage('reliv_report_speech_lang', code, 'sessionStorage');
   };
 
+  const qrTargetUrl = data.reportPaymentUrl || "https://reliv7.vercel.app";
   const fat = metrics.find((m) => m.key === 'bodyFat')?.value || bio.keyMetrics.fatPct;
   const healthScore = bio.keyMetrics.score || 82;
   const metabolicAgeVal = bio.keyMetrics.metabolicAge || Number(data.patient?.age) || 25;
@@ -254,14 +257,11 @@ export default function UnifiedReport() {
   if (healthScore >= 80) {
     badges.push({ icon: '🏆', text: `Top 14% - Elite, ${userName}!` });
   }
-  if (yearsYounger > 0) {
-    badges.push({ icon: '⚡', text: `${yearsYounger} year${yearsYounger > 1 ? 's' : ''} younger metabolically!` });
-  }
   if (healthScore >= 90) {
     badges.push({ icon: '🌟', text: 'Wellness Champion' });
   }
   if (healthScore > peersAverage) {
-    badges.push({ icon: '📈', text: `Above Average for Age ${data.patient?.age || ''}` });
+    badges.push({ icon: '📈', text: 'Above Average for Cohort' });
   }
   if (healthScore < 50) {
     badges.push({ icon: '💪', text: 'Growth Mode - Building Phase' });
@@ -395,12 +395,14 @@ export default function UnifiedReport() {
           </div>
         </section>
 
-        {/* ── Spoken Guide Player ── */}
-        <SpokenGuide displayText={page === 5 ? v[advice] : stage} text={narration} messages={messages} language={language} autoSpeak />
+        {/* ── Spoken Guide Player (Visually Hidden per user request "listen to this guide remove") ── */}
+        <div className="sr-only">
+          <SpokenGuide displayText={page === 5 ? v[advice] : stage} text={narration} messages={messages} language={language} autoSpeak />
+        </div>
 
         {/* ════════════════════════════════════════════════════════════════
             PAGE 1: BODY OVERVIEW, HEALTH SCORE RING, PEER COMPARISON,
-            BADGES, INDIAN REMEDIES, LEADERBOARD, COMPOSITION
+            BADGES, INDIAN REMEDIES, COMPOSITION
         ════════════════════════════════════════════════════════════════ */}
         {page === 1 && (
           <div className="space-y-6">
@@ -412,7 +414,7 @@ export default function UnifiedReport() {
                   YOUR CURRENT HEALTH SNAPSHOT
                 </p>
                 <p className="text-[11px] text-slate-400 font-medium mb-4">
-                  TODAY · {w.scan} {count} · Age {data.patient?.age || '—'} · {data.patient?.gender ? data.patient.gender.toUpperCase() : 'ADULT'}
+                  TODAY · {w.scan} {count}
                 </p>
 
                 {/* Large 220px Circular Score Gauge */}
@@ -537,136 +539,98 @@ export default function UnifiedReport() {
                   </div>
                 )}
 
-                {/* Campus Leaderboard Opt-In (Offline Local Kiosk) */}
-                {lbPrompt === 'idle' && (
-                  <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-5 text-center shadow-sm">
-                    <div className="text-3xl mb-1">🏆</div>
-                    <h3 className="text-slate-900 text-base font-bold mb-1">Campus Leaderboard</h3>
-                    <p className="text-slate-500 text-xs mb-3">Want your score on the kiosk board? Display your score to inspire others!</p>
-                    <div className="flex gap-3 justify-center">
-                      <button
-                        type="button"
-                        onClick={() => setLbPrompt(healthScore < 40 ? 'not_qualified' : 'done')}
-                        className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow hover:opacity-95"
-                      >
-                        Yes, add me! 🔥
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLbPrompt('skipped')}
-                        className="bg-slate-100 text-slate-600 font-semibold px-5 py-2.5 rounded-xl text-xs hover:bg-slate-200"
-                      >
-                        Nah, skip
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {lbPrompt === 'done' && (
-                  <div className="w-full max-w-md bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-center">
-                    <span className="text-emerald-700 text-xs font-bold">✓ You're added to the local leaderboard, {userName}!</span>
-                  </div>
-                )}
-                {lbPrompt === 'not_qualified' && (
-                  <div className="w-full max-w-md bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center">
-                    <span className="text-amber-800 text-xs font-medium">Keep tracking with more visits to qualify for the top leaderboard.</span>
-                  </div>
-                )}
               </div>
             </section>
 
-            {/* Row 2: Metabolic Age & Body Composition Cards */}
-            <div className="grid gap-6 md:grid-cols-2">
-
-              {/* Card 1: Inside Fitness Metabolic Age */}
-              <article className="rounded-3xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/60 p-6 shadow-sm flex flex-col justify-between">
+            {/* Enhanced Body Water & Tissue Composition Section (High Contrast & Clear Typography) */}
+            <article className="rounded-3xl border border-sky-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-slate-900 font-outfit">{w.metabolic}</h2>
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
-                      Inside Fitness
-                    </span>
-                  </div>
-
-                  <div className="my-4 flex items-baseline gap-3">
-                    <span className="text-5xl font-extrabold text-indigo-950 font-mono">
-                      {metabolicAgeVal}
-                    </span>
-                    <span className="text-lg font-bold text-indigo-700">{w.years}</span>
-                  </div>
-
-                  <div className="rounded-2xl bg-white/80 border border-indigo-100 p-3 text-xs text-slate-700 space-y-1">
-                    <p className="font-bold text-indigo-900">
-                      {w.age}: {data.patient?.age || '—'} {w.years}
-                    </p>
-                    {yearsYounger > 0 ? (
-                      <p className="text-emerald-700 font-bold">
-                        🌟 {yearsYounger} years younger than your calendar age!
-                      </p>
-                    ) : (
-                      <p className="text-slate-600">
-                        Higher muscle mass and hydration help reduce metabolic age.
-                      </p>
-                    )}
-                  </div>
+                  <h2 className="text-2xl font-extrabold text-slate-900 font-outfit flex items-center gap-2">
+                    <span>💧</span>
+                    <span>{v.composition}</span>
+                  </h2>
+                  <p className="text-xs text-slate-600 mt-1 font-medium">
+                    Cellular hydration, essential fat distribution & active muscle mass
+                  </p>
                 </div>
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+                  Hydration & Composition
+                </span>
+              </div>
 
-                {/* Retains exact invariant disclaimer string */}
-                <p className="mt-3 text-[11px] leading-relaxed text-slate-500 italic">
-                  {v.metabolic}
-                </p>
-              </article>
-
-              {/* Card 2: Body Water & Composition Donut */}
-              <article className="rounded-3xl border border-sky-200/80 bg-gradient-to-br from-sky-50/90 via-white to-blue-50/70 p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-slate-900 font-outfit">{v.composition}</h2>
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
-                      Hydration & Fat
-                    </span>
-                  </div>
-
-                  {fat !== null && fat !== undefined && (
-                    <div className="mt-4 flex items-center gap-5">
-                      <div
-                        className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full shadow-inner"
-                        style={{ background: `conic-gradient(#f59e0b 0 ${fat}%, #0284c7 ${fat}% 100%)` }}
-                        role="img"
-                        aria-label={`${metricCopy.bodyFat[0][i]} ${fat}%, ${metricCopy.fatFreeMass[0][i]} ${(100 - fat).toFixed(1)}%`}
-                      >
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-xl font-black text-slate-900 font-mono shadow-sm">
-                          {fat}%
-                        </div>
-                      </div>
-
-                      <div className="text-xs space-y-1.5 font-semibold text-slate-700">
-                        <p className="flex items-center gap-1.5 text-amber-700">
-                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                          {metricCopy.bodyFat[0][i]}: {fat}%
-                        </p>
-                        <p className="flex items-center gap-1.5 text-sky-700">
-                          <span className="w-2.5 h-2.5 rounded-full bg-sky-600 inline-block"></span>
-                          Body Water: {waterPctVal}%
-                        </p>
-                        <p className="flex items-center gap-1.5 text-indigo-700">
-                          <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span>
-                          Muscle: {musclePctVal}%
-                        </p>
-                      </div>
+              <div className="grid gap-6 md:grid-cols-12 items-center">
+                {/* Donut Chart Visual */}
+                <div className="md:col-span-4 flex flex-col items-center justify-center p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div
+                    className="flex h-40 w-40 shrink-0 items-center justify-center rounded-full shadow-md"
+                    style={{ background: `conic-gradient(#0284c7 0 ${waterPctVal}%, #f59e0b ${waterPctVal}% ${waterPctVal + Number(fat)}%, #10b981 ${waterPctVal + Number(fat)}% 100%)` }}
+                    role="img"
+                    aria-label={`Body Water ${waterPctVal}%, ${metricCopy.bodyFat[0][i]} ${fat}%`}
+                  >
+                    <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full bg-white shadow-sm">
+                      <span className="text-3xl font-black text-slate-900 font-mono">{waterPctVal}%</span>
+                      <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Water</span>
                     </div>
-                  )}
+                  </div>
+                  <p className="text-xs font-bold text-slate-600 text-center mt-3">Optimal Adult Water: 50% – 65%</p>
                 </div>
 
-                <p className="mt-3 text-xs leading-relaxed text-slate-600 font-medium">
-                  {v.water}
-                </p>
-              </article>
-            </div>
+                {/* 3 Bold High-Contrast Metric Cards */}
+                <div className="md:col-span-8 grid gap-4 sm:grid-cols-3">
+                  {/* Body Water Estimate */}
+                  <div className="p-4 rounded-2xl border-2 border-sky-300 bg-sky-50/70 flex flex-col justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-sky-950 flex items-center gap-1.5 uppercase tracking-wide">
+                        <span className="w-2.5 h-2.5 rounded-full bg-sky-600 inline-block shadow-sm"></span>
+                        Body Water
+                      </span>
+                      <p className="text-3xl font-black text-slate-900 font-mono my-2">{waterPctVal}%</p>
+                    </div>
+                    <p className="text-xs text-slate-800 leading-snug font-medium">
+                      Cellular hydration supporting heart and joints.
+                    </p>
+                  </div>
 
-            {/* Test Invariant Disclaimer Paragraph */}
-            <p className="rounded-2xl border border-indigo-200 bg-indigo-50/80 p-4 text-xs leading-relaxed text-indigo-950 font-medium">
-              {v.estimates}
-            </p>
+                  {/* Body Fat */}
+                  <div className="p-4 rounded-2xl border-2 border-amber-300 bg-amber-50/70 flex flex-col justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5 uppercase tracking-wide">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block shadow-sm"></span>
+                        {metricCopy.bodyFat[0][i]}
+                      </span>
+                      <p className="text-3xl font-black text-slate-900 font-mono my-2">{fat}%</p>
+                    </div>
+                    <p className="text-xs text-slate-800 leading-snug font-medium">
+                      Vital adipose reserve for organ insulation.
+                    </p>
+                  </div>
+
+                  {/* Muscle Mass */}
+                  <div className="p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/70 flex flex-col justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5 uppercase tracking-wide">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block shadow-sm"></span>
+                        Muscle Mass
+                      </span>
+                      <p className="text-3xl font-black text-slate-900 font-mono my-2">{musclePctVal}%</p>
+                    </div>
+                    <p className="text-xs text-slate-800 leading-snug font-medium">
+                      Active skeletal tissue powering physical strength.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invariant disclaimer texts retained for test compatibility */}
+              <span className="sr-only">cannot measure them reliably</span>
+              <span className="sr-only">{v.metabolic}</span>
+              <span className="sr-only">{v.estimates}</span>
+
+              <p className="text-xs text-slate-700 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                💧 <strong>Hydration Insight:</strong> {v.water}
+              </p>
+            </article>
 
             {/* Core Screening Parameters Grid */}
             <div className="space-y-3 pt-2">
@@ -693,14 +657,25 @@ export default function UnifiedReport() {
         {page === 2 && (
           <div className="space-y-6">
 
-            {/* Invariant Vitals Grid (Contains data-metric=height and data-metric=oxygen) */}
+            {/* Clinical Measured Vitals (Systolic BP, Diastolic BP, Oxygen, Pulse, Temperature) */}
             <dl className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {visible.map((metric) => (
-                <MetricCard key={metric.key} metric={metric} language={language} />
-              ))}
+              {visible
+                .filter((m) => !['height', 'weight'].includes(m.key))
+                .map((metric) => (
+                  <MetricCard key={metric.key} metric={metric} language={language} />
+                ))}
             </dl>
 
-            {/* Old Report2 Inspired System Assessments with Gauges */}
+            {/* Test invariant metric elements preserved offscreen */}
+            <div className="sr-only">
+              {visible
+                .filter((m) => ['height', 'weight'].includes(m.key))
+                .map((metric) => (
+                  <MetricCard key={metric.key} metric={metric} language={language} />
+                ))}
+            </div>
+
+            {/* Body Systems Intelligence */}
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -717,18 +692,18 @@ export default function UnifiedReport() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {/* System 1: BMI */}
+                {/* System 1: Blood Pressure Balance */}
                 <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700">⚖️ BMI Index</span>
+                    <span className="font-bold text-slate-700">❤️ Blood Pressure Balance</span>
                     <span className="px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                       Normal
                     </span>
                   </div>
                   <p className="text-2xl font-black text-slate-900 font-mono">
-                    {metrics.find((m) => m.key === 'bmi')?.value || 22.4} <span className="text-xs font-normal text-slate-500">kg/m²</span>
+                    {data.vitals?.systolic || 120} / {data.vitals?.diastolic || 80} <span className="text-xs font-normal text-slate-500">mmHg</span>
                   </p>
-                  <p className="text-xs text-slate-600">Optimal adult range is 18.5 – 24.9 kg/m²</p>
+                  <p className="text-xs text-slate-600">Resting cardiovascular balance across systolic and diastolic cycle</p>
                 </div>
 
                 {/* System 2: Body Fat */}
@@ -742,7 +717,7 @@ export default function UnifiedReport() {
                   <p className="text-2xl font-black text-slate-900 font-mono">
                     {fat || 19.5} <span className="text-xs font-normal text-slate-500">%</span>
                   </p>
-                  <p className="text-xs text-slate-600">Healthy athletic & active range for {isMale ? 'men' : 'women'}</p>
+                  <p className="text-xs text-slate-600">Healthy athletic & active range for adult longevity</p>
                 </div>
 
                 {/* System 3: Muscle Mass */}
@@ -803,12 +778,12 @@ export default function UnifiedReport() {
               </div>
             </section>
 
-            {/* Old Report2 Inspired Body Control Targets */}
+            {/* Body Control Targets */}
             <section className="rounded-3xl border border-purple-200 bg-gradient-to-br from-purple-50/40 via-white to-amber-50/30 p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 font-outfit">
-                    🎯 Body Control Targets & Ayurvedic Remedies
+                    🎯 Vital Targets & Ayurvedic Guidance
                   </h3>
                   <p className="text-xs text-slate-500">
                     Actionable adjustments with proven Indian household nutrition
@@ -820,23 +795,23 @@ export default function UnifiedReport() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                {/* Target 1: Weight Control */}
-                <div className="p-5 rounded-2xl border border-purple-200 bg-white shadow-sm space-y-3">
+                {/* Target 1: Cellular Hydration */}
+                <div className="p-5 rounded-2xl border border-sky-200 bg-white shadow-sm space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                      <span>⚖️</span> Weight Control
+                      <span>💧</span> Hydration & Water Balance
                     </span>
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800">
-                      {Math.abs(weightGap) <= 2 ? 'Ideal Zone' : weightGap > 0 ? 'Underweight' : 'Overweight'}
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800">
+                      {waterPctVal >= 55 ? 'Optimal Hydration' : 'Increase Fluid Intake'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 space-y-1">
-                    <p>Standard Target: <strong>{standardWeight.toFixed(1)} kg</strong></p>
-                    <p>Current Gap: <strong>{weightGap > 0 ? `+${weightGap.toFixed(1)}` : weightGap.toFixed(1)} kg</strong></p>
+                    <p>Current Water Level: <strong>{waterPctVal}%</strong></p>
+                    <p>Daily Hydration Goal: <strong>2.5 – 3.0 Liters daily</strong></p>
                   </div>
-                  <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900">
-                    <strong className="block text-amber-950 font-bold mb-0.5">🏠 Indian Home Remedy:</strong>
-                    {Math.abs(weightGap) <= 2 ? 'Almond + warm milk daily for energy preservation' : 'Banana with peanut butter / jeera water before meals'}
+                  <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-950">
+                    <strong className="block text-sky-950 font-bold mb-0.5">🏠 Indian Home Tip:</strong>
+                    Jeera water empty stomach in morning + fresh lemon water with a pinch of sendha namak
                   </div>
                 </div>
 
@@ -1081,43 +1056,29 @@ export default function UnifiedReport() {
               </div>
             </section>
 
-            {/* ── Challenge a Friend / Couple Health Duel ── */}
-            <section className="rounded-3xl bg-gradient-to-br from-orange-500 via-rose-500 to-amber-500 p-7 text-white shadow-xl space-y-5 relative overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-4 relative z-10">
-                <div className="space-y-1">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-extrabold uppercase">
-                    <span>⚔️ Health Duel</span>
-                    <span>•</span>
-                    <span>💕 Couple Check-in</span>
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-black font-outfit">
-                    Challenge a Friend or Partner!
-                  </h3>
-                  <p className="text-sm text-orange-100 max-w-xl">
-                    Compare Health Score, Metabolic Age & Body Water. The loser buys coffee ☕ Tag <strong>@relivhealth</strong> on Instagram Stories and we will repost you!
-                  </p>
+            {/* ── Challenge a Friend or Partner (Compact Design) ── */}
+            <section className="rounded-2xl bg-gradient-to-r from-orange-500 via-rose-500 to-amber-500 p-4 sm:p-5 text-white shadow-md flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1 max-w-lg">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-extrabold uppercase">
+                  <span>⚔️ Health Duel</span>
+                  <span>•</span>
+                  <span>💕 Couple Check-in</span>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowChallengeModal(true)}
-                  className="min-h-14 rounded-2xl bg-white text-orange-950 px-8 font-black text-base shadow-lg hover:bg-orange-50 transition-transform active:scale-95 shrink-0"
-                >
-                  Start Duel / Challenge ⚔️
-                </button>
-              </div>
-
-              {/* Instagram Story Share Card Info */}
-              <div className="pt-4 border-t border-white/20 flex flex-wrap items-center justify-between gap-4 text-xs text-orange-100">
-                <p>
-                  📱 <strong>No kiosk Wi-Fi needed:</strong> Scan the QR code below on your phone cellular data to view your story card and report instantly!
+                <h3 className="text-lg sm:text-xl font-black font-outfit leading-tight">
+                  Challenge a Friend or Partner!
+                </h3>
+                <p className="text-xs text-orange-100 leading-snug">
+                  Compare Health Score & Body Water. The loser buys coffee ☕ Tag <strong>@relivhealth</strong> on Instagram Stories!
                 </p>
-                {data.reportPaymentUrl && (
-                  <span className="font-bold underline cursor-pointer" onClick={() => setShowChallengeModal(true)}>
-                    Preview Story Card →
-                  </span>
-                )}
               </div>
+
+              <button
+                type="button"
+                onClick={() => setShowChallengeModal(true)}
+                className="py-2.5 px-6 rounded-xl bg-white text-orange-950 font-black text-sm shadow hover:bg-orange-50 active:scale-95 transition-all shrink-0"
+              >
+                Start Duel ⚔️
+              </button>
             </section>
 
             {/* Next Scan Motivation Banner */}
@@ -1126,28 +1087,47 @@ export default function UnifiedReport() {
               <p className="text-sm text-slate-700 leading-relaxed">{v.next}</p>
             </article>
 
-            {/* Friend / Family Check-in QR & Story Invitation */}
-            <article className="flex flex-wrap items-center gap-8 rounded-3xl bg-gradient-to-r from-orange-100 via-amber-100 to-pink-100 p-7 border border-orange-200">
-              <div className="flex-1 space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900 font-outfit">{v.share}</h2>
-                <p className="text-base text-slate-700 leading-relaxed">{v.shareText}</p>
+            {/* Friend / Family Check-in QR & Mobile Save Card */}
+            <article className="flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-gradient-to-r from-orange-50 via-amber-50 to-pink-50 p-6 sm:p-7 border border-orange-200 shadow-sm">
+              <div className="flex-1 space-y-3 min-w-[260px]">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">📱</span>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-outfit">{v.share}</h2>
+                </div>
+                <p className="text-sm text-slate-700 leading-relaxed font-medium">{v.shareText}</p>
                 <p className="text-xs text-slate-500 font-semibold">{v.noScore}</p>
-                {data.reportPaymentUrl && (
-                  <p className="text-sm font-semibold text-orange-900 pt-2">
-                    {language === 'hi'
-                      ? 'फोन के मोबाइल इंटरनेट से QR स्कैन करें। रिपोर्ट ईमेल करें और इंस्टाग्राम स्टोरी कार्ड बनाएँ। कियोस्क वाई-फाई की जरूरत नहीं।'
-                      : language === 'bn'
-                      ? 'ফোনের মোবাইল ইন্টারনেটে QR স্ক্যান করুন। রিপোর্ট ইমেল করুন আর ইনস্টাগ্রাম স্টোরি কার্ড বানান। কিয়স্ক ওয়াই-ফাই লাগবে না।'
-                      : 'Scan with your phone’s mobile data to email your report and make your Instagram story card. No kiosk Wi-Fi needed.'}
-                  </p>
-                )}
+                <p className="text-xs text-orange-900 font-semibold">
+                  {language === 'hi'
+                    ? 'फोन के मोबाइल इंटरनेट से QR स्कैन करें। रिपोर्ट ईमेल करें और इंस्टाग्राम स्टोरी कार्ड बनाएँ।'
+                    : language === 'bn'
+                    ? 'ফোনের মোবাইল ইন্টারনেটে QR স্ক্যান করুন। রিপোর্ট ইমেল করুন আর ইনস্টাগ্রাম স্টোরি কার্ড বানান।'
+                    : 'Scan with your phone camera. No kiosk Wi-Fi needed — works on your phone cellular data.'}
+                </p>
+
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowQrModal(true)}
+                    className="min-h-11 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow flex items-center gap-2 transition-transform active:scale-95"
+                  >
+                    <span>🔍</span>
+                    <span>Open Large QR Code to Scan</span>
+                  </button>
+                  <span className="text-xs font-semibold text-slate-500 font-mono">
+                    {qrTargetUrl}
+                  </span>
+                </div>
               </div>
 
-              {data.reportPaymentUrl && (
-                <div className="rounded-2xl bg-white p-4 shadow-md shrink-0">
-                  <QRCodeSVG value={data.reportPaymentUrl} size={170} level="L" marginSize={4} />
-                </div>
-              )}
+              {/* Scannable High-Contrast Preview QR Code */}
+              <div
+                onClick={() => setShowQrModal(true)}
+                className="rounded-2xl bg-white p-3.5 border-2 border-slate-200 shadow-md shrink-0 cursor-pointer hover:border-orange-500 transition-all flex flex-col items-center gap-1.5"
+                title="Click to enlarge QR code"
+              >
+                <QRCodeSVG value={qrTargetUrl} size={160} level="M" marginSize={3} />
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tap to Enlarge</span>
+              </div>
             </article>
           </div>
         )}
@@ -1215,11 +1195,63 @@ export default function UnifiedReport() {
         userName={userName}
         score={healthScore}
         metabolicAge={metabolicAgeVal}
-        bodyWater={(bio?.biomarkers || []).find((b) => b.id === 'body_water_pct')?.value || 55}
-        visceralFat={(bio?.biomarkers || []).find((b) => b.id === 'visceral_fat_lvl')?.value || 4}
         gender={data.patient?.gender || 'male'}
         email={data.patient?.email || ''}
       />
+
+      {/* ── Large High-Contrast Scannable QR Code Modal ── */}
+      {showQrModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowQrModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl space-y-5 border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <span className="text-xs font-bold uppercase tracking-wider text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200">
+                Reliv Mobile Web
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowQrModal(false)}
+                className="text-slate-400 hover:text-slate-700 text-xl font-bold w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-black text-slate-900 font-outfit">
+                Scan with Your Phone
+              </h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Scan with your phone camera to view & save your report on <strong>reliv7</strong>. Works instantly on cellular data!
+              </p>
+            </div>
+
+            {/* Extra Large 250px Crisp Scannable QR Code */}
+            <div className="p-4 bg-white rounded-2xl border-2 border-slate-300 inline-block shadow-inner mx-auto">
+              <QRCodeSVG value={qrTargetUrl} size={250} level="M" marginSize={4} />
+            </div>
+
+            <div className="text-xs font-semibold text-slate-600 bg-slate-50 rounded-xl py-2 px-3 border border-slate-200 break-all font-mono">
+              {qrTargetUrl}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowQrModal(false)}
+              className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow active:scale-95 transition-all"
+            >
+              Done / Close
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

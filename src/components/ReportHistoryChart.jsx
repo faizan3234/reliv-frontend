@@ -1,7 +1,7 @@
 // src/components/ReportHistoryChart.jsx
-// Premium Multi-Series Physiological Tracking Chart
-// Red (Blood Pressure), Blue (Oxygen), Green (Temperature), Purple (Pulse), Teal (Weight)
-// Supports multi-metric concurrent overview & single-metric focused isolation
+// Premium Multi-Series Physiological Tracking Chart (All-in-One Graph)
+// Blood Pressure (Red/Orange), Oxygen (Blue), Temperature (Green), Pulse (Purple), Weight (Teal)
+// Unified multi-metric canvas for full physiological correlation & single-metric focused zoom
 
 import React from 'react';
 import { metricCopy, insightCopy, languageIndex } from '../voice/insightCopy';
@@ -20,228 +20,271 @@ export default function ReportHistoryChart({ data, field, language = 'en', bars 
 
   // Specific clinical palette
   const distinctColours = {
-    systolic: '#dc2626',    // Vibrant Red (BP Systolic)
-    diastolic: '#ea580c',   // Orange-Red (BP Diastolic)
-    oxygen: '#2563eb',      // Ocean Blue (Oxygen)
-    temperature: '#16a34a', // Emerald Green (Temperature)
-    bpm: '#9333ea',         // Royal Purple (Pulse)
-    weight: '#0891b2',      // Cyan/Teal (Weight)
-    bmi: '#c026d3',
+    systolic: '#ef4444',    // Red (BP Systolic)
+    diastolic: '#f97316',   // Orange (BP Diastolic)
+    oxygen: '#0284c7',      // Ocean Blue (Oxygen)
+    temperature: '#10b981', // Emerald Green (Temperature)
+    bpm: '#8b5cf6',         // Royal Purple (Pulse)
+    weight: '#06b6d4',      // Teal (Weight)
+    bmi: '#ec4899',
     bodyFat: '#d97706',
     bodyWater: '#0284c7',
     restingEnergy: '#7c3aed',
   };
 
+  // Find all valid non-zero values across the displayed keys
+  const allValues = [];
+  keys.forEach((key) => {
+    rows.forEach((r) => {
+      const val = Number(r[key]);
+      if (val > 0) allValues.push(val);
+    });
+  });
+
+  // Calculate dynamic or calibrated bounds
+  const hasValues = allValues.length > 0;
+  const minVal = hasValues ? Math.min(...allValues) : 0;
+  const maxVal = hasValues ? Math.max(...allValues) : 100;
+
+  // Single metric mode gets custom tight bounds; all-in-one gets calibrated physiological span
+  const min = bars ? 0 : keys.length === 1 ? Math.max(0, minVal * 0.9) : Math.min(40, minVal * 0.95);
+  const max = keys.length === 1
+    ? (maxVal === minVal ? maxVal * 1.2 : maxVal * 1.1)
+    : Math.max(160, maxVal * 1.05);
+
+  const chartW = 860;
+  const chartH = 240;
+  const plotLeft = 65;
+  const plotRight = 810;
+  const plotTop = 40;
+  const plotBottom = 280;
+
+  const x = (n) => rows.length <= 1 ? (plotLeft + plotRight) / 2 : plotLeft + (n * (plotRight - plotLeft)) / (rows.length - 1);
+  const y = (val) => plotBottom - ((val - min) / Math.max(0.1, max - min)) * (plotBottom - plotTop);
+
+  // Group bar sizing
+  const barGroupWidth = 60;
+  const activeKeyCount = keys.length;
+  const barWidth = Math.max(6, Math.min(18, Math.floor((barGroupWidth - (activeKeyCount - 1) * 3) / activeKeyCount)));
+  const barGap = 3;
+
   return (
-    <figure className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-5">
+    <figure className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm transition-all duration-300">
+      {/* Header with Title and Unified Multi-Series Legend */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-5">
         <div>
-          <figcaption className="text-xl font-bold text-slate-900 tracking-tight">
+          <figcaption className="text-xl font-extrabold text-slate-900 tracking-tight font-outfit">
             {v.chart}
           </figcaption>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {bars ? 'Comparative scan-by-scan bar distribution' : 'Longitudinal physiological trend trajectory'}
+          <p className="text-xs text-slate-500 mt-1">
+            {bars ? 'Unified scan-by-scan comparative vitals distribution' : 'All-in-one longitudinal physiological trajectory'}
           </p>
         </div>
 
         {/* Multi-series Visual Legend */}
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-red-50 text-red-700 border border-red-200">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shadow-sm"></span>
-            BP (Red)
-          </span>
-          <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block shadow-sm"></span>
-            Oxygen (Blue)
-          </span>
-          <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block shadow-sm"></span>
-            Temp (Green)
-          </span>
-          <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block shadow-sm"></span>
-            Pulse (Purple)
-          </span>
-          <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-cyan-50 text-cyan-700 border border-cyan-200">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-600 inline-block shadow-sm"></span>
-            Weight (Teal)
-          </span>
+        <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+          {keys.map((key) => {
+            const clr = distinctColours[key] || metricColours[key] || '#64748b';
+            const c = metricCopy[key] || [[key], [''], ''];
+            return (
+              <span
+                key={key}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1 bg-slate-50 border shadow-xs"
+                style={{ borderColor: `${clr}40`, color: clr }}
+              >
+                <span className="w-2.5 h-2.5 rounded-full inline-block shadow-sm" style={{ backgroundColor: clr }}></span>
+                <span>{c[0][i]}</span>
+                <span className="text-[10px] opacity-75 font-normal">({c[2]})</span>
+              </span>
+            );
+          })}
         </div>
       </div>
 
-      <div className="space-y-4">
-        {keys.map((key) => {
-          const valid = rows.filter((r) => Number(r[key]) > 0);
-          const c = metricCopy[key] || [[key, key, key], ['Metric'], ''];
-          const colour = distinctColours[key] || metricColours[key] || '#0f766e';
-
-          if (!valid.length) {
+      {/* Unified Single SVG Chart Canvas */}
+      <div className="relative rounded-2xl bg-gradient-to-b from-slate-50/40 via-white to-slate-50/20 p-2 sm:p-4 border border-slate-100 overflow-hidden">
+        <svg
+          viewBox={`0 0 ${chartW} 330`}
+          className="w-full select-none"
+          role="img"
+          aria-label={keys.map((k) => metricCopy[k]?.[0]?.[i] || k).join(', ')}
+        >
+          {/* Subtle Gridlines & Scale Values */}
+          {[0, 0.25, 0.5, 0.75, 1].map((f) => {
+            const yLine = plotBottom - f * (plotBottom - plotTop);
+            const valLabel = Math.round(min + f * (max - min));
             return (
-              <div key={key} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500 text-center">
-                <span className="font-semibold text-slate-700">{c[0][i]}</span> · {w.missing}
-              </div>
+              <g key={f}>
+                <line
+                  x1={plotLeft - 10}
+                  y1={yLine}
+                  x2={plotRight + 20}
+                  y2={yLine}
+                  stroke="#e2e8f0"
+                  strokeDasharray="4 4"
+                  strokeWidth="1"
+                />
+                <text
+                  x={plotLeft - 18}
+                  y={yLine + 4}
+                  textAnchor="end"
+                  fontSize="12"
+                  fontWeight="600"
+                  fill="#94a3b8"
+                  fontFamily="monospace"
+                >
+                  {valLabel}
+                </text>
+              </g>
             );
-          }
+          })}
 
-          const rawValues = valid.map((r) => Number(r[key]));
-          const minVal = Math.min(...rawValues);
-          const maxVal = Math.max(...rawValues);
-          const min = bars ? 0 : Math.max(0, minVal * 0.9);
-          const max = maxVal === minVal ? maxVal * 1.2 : maxVal * 1.1;
+          {/* If Line Chart: Plot multi-series lines first */}
+          {!bars && keys.map((key) => {
+            const clr = distinctColours[key] || metricColours[key] || '#64748b';
+            // Connect contiguous valid scans with lines
+            return (
+              <g key={`lines-${key}`}>
+                {rows.map((r, n) => {
+                  if (n === 0) return null;
+                  const prevVal = Number(rows[n - 1][key]);
+                  const currVal = Number(r[key]);
+                  if (prevVal > 0 && currVal > 0) {
+                    return (
+                      <line
+                        key={`seg-${r.scan}`}
+                        x1={x(n - 1)}
+                        y1={y(prevVal)}
+                        x2={x(n)}
+                        y2={y(currVal)}
+                        stroke={clr}
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        className="transition-all"
+                      />
+                    );
+                  }
+                  return null;
+                })}
+              </g>
+            );
+          })}
 
-          const x = (n) => 80 + (n * 680) / Math.max(1, rows.length - 1);
-          const y = (val) => 138 - ((val - min) / Math.max(0.1, max - min)) * 100;
-          const currentVal = rawValues[rawValues.length - 1];
+          {/* Plot Data Elements: Circles for lines, Rects for bars */}
+          {bars ? (
+            // GROUPED BAR CHART: side-by-side rects for each scan
+            rows.map((r, n) => {
+              const scanCenterX = x(n);
+              const totalW = keys.length * barWidth + (keys.length - 1) * barGap;
+              const startX = scanCenterX - totalW / 2;
+
+              return (
+                <g key={`scan-bar-${r.scan}`}>
+                  {keys.map((key, kIdx) => {
+                    const val = Number(r[key]);
+                    if (!(val > 0)) return null;
+                    const clr = distinctColours[key] || metricColours[key] || '#64748b';
+                    const bx = startX + kIdx * (barWidth + barGap);
+                    const by = y(val);
+                    const bh = Math.max(4, plotBottom - by);
+
+                    return (
+                      <rect
+                        key={`bar-${key}-${r.scan}`}
+                        x={bx}
+                        y={by}
+                        width={barWidth}
+                        height={bh}
+                        rx="4"
+                        fill={clr}
+                        className="transition-all duration-300 hover:brightness-110"
+                      />
+                    );
+                  })}
+                </g>
+              );
+            })
+          ) : (
+            // MULTI-SERIES LINE CHART: Circles for all valid points
+            keys.map((key) => {
+              const clr = distinctColours[key] || metricColours[key] || '#64748b';
+              return (
+                <g key={`pts-${key}`}>
+                  {rows.map((r, n) => {
+                    const val = Number(r[key]);
+                    if (!(val > 0)) return null;
+                    const cx = x(n);
+                    const cy = y(val);
+
+                    return (
+                      <g key={`pt-${key}-${r.scan}`} className="cursor-pointer group">
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r="6"
+                          fill={clr}
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          className="shadow-sm transition-transform group-hover:scale-125"
+                        />
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })
+          )}
+
+          {/* X-Axis Scan Labels & Baseline Line */}
+          <line
+            x1={plotLeft - 10}
+            y1={plotBottom}
+            x2={plotRight + 20}
+            y2={plotBottom}
+            stroke="#cbd5e1"
+            strokeWidth="1.5"
+          />
+
+          {rows.map((r, n) => (
+            <text
+              key={`xlabel-${r.scan}`}
+              x={x(n)}
+              y={plotBottom + 26}
+              textAnchor="middle"
+              fontSize="13"
+              fontWeight="700"
+              fill="#475569"
+            >
+              {w.scan} {r.scan}
+            </text>
+          ))}
+        </svg>
+      </div>
+
+      {/* Latest Values Summary Row */}
+      <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {keys.map((key) => {
+          const clr = distinctColours[key] || metricColours[key] || '#64748b';
+          const c = metricCopy[key] || [[key], [''], ''];
+          const valid = rows.filter((r) => Number(r[key]) > 0);
+          const latestVal = valid.length > 0 ? valid[valid.length - 1][key] : null;
 
           return (
             <div
               key={key}
-              className="rounded-2xl border bg-gradient-to-b from-white to-slate-50/50 p-4 transition-all hover:shadow-sm"
-              style={{ borderColor: `${colour}25` }}
+              className="p-3 rounded-2xl border bg-slate-50/60 flex flex-col justify-between"
+              style={{ borderColor: `${clr}30` }}
             >
-              {/* Metric Card Header */}
-              <div className="flex items-center justify-between pb-2 mb-1 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colour }}></span>
-                  <span className="font-bold text-base text-slate-800 tracking-tight">{c[0][i]}</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                    {c[2]}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="text-slate-500">Latest:</span>
-                  <span className="font-extrabold text-sm" style={{ color: colour }}>
-                    {currentVal} {c[2]}
-                  </span>
-                </div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: clr }}></span>
+                <span className="text-xs font-bold text-slate-700 truncate">{c[0][i]}</span>
               </div>
-
-              {/* Chart SVG */}
-              <svg
-                viewBox="0 0 850 175"
-                className="w-full select-none"
-                role="img"
-                aria-label={`${c[0][i]}: ${valid.map((r) => `${w.scan} ${r.scan}: ${r[key]} ${c[2]}`).join(', ')}`}
-              >
-                <defs>
-                  <linearGradient id={`grad-${key}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor={colour} stopOpacity="0.18" />
-                    <stop offset="100%" stopColor={colour} stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Horizontal reference gridlines & scale values */}
-                {[0, 0.5, 1].map((f) => (
-                  <g key={f}>
-                    <line
-                      x1="60"
-                      y1={138 - f * 100}
-                      x2="790"
-                      y2={138 - f * 100}
-                      stroke="#e2e8f0"
-                      strokeDasharray="4 4"
-                      strokeWidth="1"
-                    />
-                    <text
-                      x="50"
-                      y={143 - f * 100}
-                      textAnchor="end"
-                      fontSize="12"
-                      fontWeight="500"
-                      fill="#94a3b8"
-                    >
-                      {Number((min + f * (max - min)).toFixed(1))}
-                    </text>
-                  </g>
-                ))}
-
-                {/* Area under curve for lines */}
-                {!bars && valid.length > 1 && (
-                  <path
-                    d={`M ${x(rows.findIndex((r) => Number(r[key]) > 0))} 138 ` +
-                      rows.map((r, n) => (Number(r[key]) > 0 ? `L ${x(n)} ${y(r[key])}` : '')).join(' ') +
-                      ` L ${x(rows.findLastIndex((r) => Number(r[key]) > 0))} 138 Z`}
-                    fill={`url(#grad-${key})`}
-                  />
-                )}
-
-                {/* Bars or Line with Circles */}
-                {rows.map((r, n) =>
-                  Number(r[key]) > 0 ? (
-                    <g key={r.scan} className="group">
-                      {bars ? (
-                        <rect
-                          x={x(n) - 18}
-                          y={y(r[key])}
-                          width="36"
-                          height={Math.max(4, 138 - y(r[key]))}
-                          rx="6"
-                          fill={colour}
-                          className="transition-all duration-300 hover:brightness-110"
-                        />
-                      ) : (
-                        <>
-                          {n > 0 && Number(rows[n - 1][key]) > 0 && (
-                            <line
-                              x1={x(n - 1)}
-                              y1={y(rows[n - 1][key])}
-                              x2={x(n)}
-                              y2={y(r[key])}
-                              stroke={colour}
-                              strokeWidth="3.5"
-                              strokeLinecap="round"
-                            />
-                          )}
-                          <circle
-                            cx={x(n)}
-                            cy={y(r[key])}
-                            r="6"
-                            fill={colour}
-                            stroke="#ffffff"
-                            strokeWidth="2.5"
-                            className="shadow-sm"
-                          />
-                        </>
-                      )}
-
-                      {/* Value tag above point/bar */}
-                      <text
-                        x={x(n)}
-                        y={y(r[key]) - 12}
-                        textAnchor="middle"
-                        fontSize="14"
-                        fontWeight="700"
-                        fill="#0f172a"
-                      >
-                        {r[key]}
-                      </text>
-
-                      {/* X-Axis Scan Label */}
-                      <text
-                        x={x(n)}
-                        y="163"
-                        textAnchor="middle"
-                        fontSize="13"
-                        fontWeight="600"
-                        fill="#64748b"
-                      >
-                        {w.scan} {r.scan}
-                      </text>
-                    </g>
-                  ) : (
-                    <text
-                      key={r.scan}
-                      x={x(n)}
-                      y="163"
-                      textAnchor="middle"
-                      fontSize="12"
-                      fill="#cbd5e1"
-                    >
-                      {r.scan}: —
-                    </text>
-                  )
-                )}
-              </svg>
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-extrabold font-mono" style={{ color: clr }}>
+                  {latestVal !== null ? latestVal : '—'}
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400">{c[2]}</span>
+              </div>
             </div>
           );
         })}

@@ -3,10 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { guidanceText } from "../voice/guidanceCopy";
 import { useHealth } from "../context/HealthContext";
-import CampusLeaderboard from "../components/CampusLeaderboard";
-import { AnimatePresence } from "framer-motion";
+import { guidanceText } from "../voice/guidanceCopy";
 import { API_BASE } from "../config/api";
 import { readBrowserStorage, writeBrowserStorage } from '../utils/browserStorage';
 import i18n from "i18next";
@@ -71,24 +69,12 @@ const Splash = () => {
     }
   }, []);
 
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('reliv_splash_overlay', { detail: showTerms || showLeaderboard }));
+    window.dispatchEvent(new CustomEvent('reliv_splash_overlay', { detail: showTerms }));
     return () => {
       window.dispatchEvent(new CustomEvent('reliv_splash_overlay', { detail: false }));
     };
-  }, [showTerms, showLeaderboard]);
-  const lbHideTimer = useRef(null);
-
-  const hideLeaderboard = useCallback(() => {
-    clearTimeout(lbHideTimer.current);
-    stop();
-    setShowLeaderboard(false);
-  }, [stop]);
-
-  const handleLeaderboardVisible = useCallback(() => {
-    speak("leaderboard");
-  }, [speak]);
+  }, [showTerms]);
 
   // Reset any stale customer session on home/splash mount
   // But preserve the selected UI language so going back doesn't look weird
@@ -106,9 +92,8 @@ const Splash = () => {
 
   useVoicePage({
     guidanceKey: showTerms ? 'terms' : 'language',
-    idleEnabled: !showLeaderboard,
+    idleEnabled: true,
     onHelp: () => {
-      if (showLeaderboard) hideLeaderboard();
       if (!healthData?.language || healthData.language === 'auto') {
         speakChained([
           { text: "Hello, welcome to Reliv.", langHint: "en" },
@@ -121,10 +106,10 @@ const Splash = () => {
     },
   });
 
-  // The shared idle coordinator owns repeats; welcome/promotional timers must
-  // not interrupt help requests or instructions while a customer is touching.
+  // Repeating welcome voice on splash screen:
+  // Voice repeats greeting every 20 seconds so walk-by pedestrians hear the welcome
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const playGreeting = () => {
       if (!healthData?.language || healthData.language === 'auto') {
         speakChained([
           { text: "Hello, welcome to Reliv.", langHint: "en" },
@@ -134,8 +119,16 @@ const Splash = () => {
       } else {
         speakText(guidanceText('language', healthData?.language));
       }
-    }, 500);
-    return () => { clearTimeout(timer); stop(); };
+    };
+
+    const initialTimer = setTimeout(playGreeting, 500);
+    const intervalTimer = setInterval(playGreeting, 20000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(intervalTimer);
+      stop();
+    };
   }, [speakChained, speakText, stop, healthData?.language]);
 
   // The idle screen remains the original splash between paid ads.
@@ -164,23 +157,6 @@ const Splash = () => {
 
   return (
     <>
-      {/* Leaderboard rotation overlay — tap anywhere to dismiss instantly */}
-      <AnimatePresence>
-        {showLeaderboard && (
-          <div
-            onClick={() => {
-              hideLeaderboard();
-            }}
-            style={{
-              position: "fixed", inset: 0, zIndex: 9999,
-              cursor: "pointer", background: "transparent",
-            }}
-          >
-            <CampusLeaderboard overlay={true} onVisible={handleLeaderboardVisible} />
-          </div>
-        )}
-      </AnimatePresence>
-
       <div className="min-h-[100dvh] h-auto bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container touch-pan-y">
         <div className="w-full min-h-[100dvh] relative overflow-x-hidden overflow-y-visible">
 
