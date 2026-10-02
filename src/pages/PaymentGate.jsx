@@ -7,17 +7,19 @@ import TopEllipseBackground from "../components/TopEllipseBackground";
 import { useHealth } from "../context/HealthContext";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
+import { medicineGuide } from "../voice/medicineGuide";
+import { paymentValue } from "../voice/entryGuide";
 import { dict } from "../config/PaymentDict";
 import { API_BASE } from "../config/api";
 import { requestJSON } from "../utils/request";
 import { getPaymentQrConfig, paymentQrError } from "../utils/paymentQr";
 import { CheckCircle2, AlertCircle, RefreshCw, Lock, ArrowLeft, ShieldAlert, Clock, Home, QrCode, Sparkles } from "lucide-react";
 
-const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // Allow the full phone-payment window.
+
 const EMPTY_CART = Object.freeze([]);
 
 export default function PaymentGate() {
-  const { speak, speakText } = useSpeech();
+  const { speak, speakText, speakChained } = useSpeech();
   const navigate = useNavigate();
   const location = useLocation();
   const { data: healthData, update: updateHealth } = useHealth();
@@ -79,7 +81,7 @@ export default function PaymentGate() {
   const navigationTimerRef = useRef(null);
   const deadlineRef = useRef(0);
   const expiryTimerRef = useRef(null);
-  const inactivityTimerRef = useRef(null);
+
 
   useEffect(() => {
     const controller = new AbortController();
@@ -101,26 +103,8 @@ export default function PaymentGate() {
     }, delay);
   }, [navigate]);
 
-  // ── 1. Inactivity Timer ──────────────────────────────────────────────────
-  const resetInactivityTimer = useCallback(() => {
-    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-    inactivityTimerRef.current = setTimeout(() => {
-      window.location.href = "/";
-    }, INACTIVITY_TIMEOUT);
-  }, []);
-
-  useEffect(() => {
-    const events = ["click", "touchstart", "keydown"];
-    const handleActivity = () => resetInactivityTimer();
-
-    events.forEach((ev) => window.addEventListener(ev, handleActivity));
-    resetInactivityTimer();
-
-    return () => {
-      events.forEach((ev) => window.removeEventListener(ev, handleActivity));
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-    };
-  }, [resetInactivityTimer]);
+  // Shared IdleReturn allows ten minutes plus a visible warning.
+  const resetInactivityTimer = useCallback(() => {}, []);
 
   const paymentCanInteract = ['QR_READY', 'WRONG_CODE'].includes(uiState) &&
     Boolean(requestId && paymentUrl) && !isCancelling;
@@ -209,9 +193,9 @@ export default function PaymentGate() {
   // question follows seven quiet seconds after this guidance finishes.
   useEffect(() => {
     if (!paymentCanInteract || step !== 'WAITING_PAYMENT') return;
-    const timer = setTimeout(() => speakText(t('qr_mentor')), 400);
+    const timer = setTimeout(() => speakChained([...(needsReport ? [{text:paymentValue[selectedLang] || paymentValue.en,langHint:selectedLang}] : []), {text:t('qr_mentor'),langHint:selectedLang}]), 400);
     return () => clearTimeout(timer);
-  }, [requestId, paymentCanInteract, step, speakText, t]);
+  }, [requestId, paymentCanInteract, step, speakChained, t, needsReport, selectedLang]);
 
   // ── 2. Create Fresh Payment Request on Local Pi ───────────────────────────
   const createNewPaymentRequest = useCallback(async () => {
@@ -943,7 +927,7 @@ export default function PaymentGate() {
             {/* Curiosity Hook */}
             <div className="w-full max-w-[440px] p-2.5 sm:p-3 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-slate-800 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
               <Sparkles className="w-4 h-4 text-orange-600 shrink-0" />
-              <span>We found key insights worth knowing about your results. Unlock your full plain-language report below.</span>
+              <span>{needsReport ? (paymentValue[selectedLang] || paymentValue.en) : (medicineGuide[selectedLang] || medicineGuide.en).chooseText}</span>
             </div>
 
             {/* Top Title & Price Pill */}

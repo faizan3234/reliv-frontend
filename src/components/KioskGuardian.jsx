@@ -25,12 +25,10 @@ export default function KioskGuardian() {
   const navigate = useNavigate();
   const location = useLocation();
   const originalWindowOpen = useRef(null);
-  const inactivityTimer = useRef(null);
+
 
   useEffect(() => {
     const currentPath = location.pathname;
-    const HOME_PATH = "/";
-    const INACTIVITY_TIMEOUT = 120000; // 120 seconds
 
     // Skip ALL kiosk protections on /mobile-entry and /h — those pages run on user phones
     if (usesNativeScrolling(currentPath)) {
@@ -38,10 +36,7 @@ export default function KioskGuardian() {
       return;
     }
     
-    // Pages where inactivity timer should be disabled
-    // /payment manages its own smarter timer (pauses during Razorpay modal)
-    const noTimerPages = ['/order-success', '/report-1', '/report-2', '/report-3', '/report-4', '/report-5', '/payment'];
-    const disableTimer = currentPath === HOME_PATH || noTimerPages.some(page => currentPath.startsWith(page));
+
     
     console.log('[KioskGuardian] 🔒 KIOSK MODE ACTIVE on:', currentPath);
 
@@ -275,26 +270,6 @@ export default function KioskGuardian() {
       }
     };
 
-    // ========== 9. INACTIVITY TIMER ==========
-    const resetInactivityTimer = () => {
-      if (inactivityTimer.current) {
-        clearTimeout(inactivityTimer.current);
-      }
-      
-      if (!disableTimer) {
-        inactivityTimer.current = setTimeout(() => {
-          console.log('[KioskGuardian] ⏰ Inactivity timeout - returning home');
-          // Clear patient data to prevent leaking to the next kiosk user
-          try { localStorage.removeItem('healthData'); } catch { /* Storage may be unavailable. */ }
-          window.location.href = HOME_PATH;
-        }, INACTIVITY_TIMEOUT);
-      }
-    };
-
-    const handleUserActivity = () => {
-      resetInactivityTimer();
-    };
-
     // ========== 10. ATTEMPT FULLSCREEN (for production kiosk) ==========
     const attemptFullscreen = () => {
       // Only try fullscreen on production domains
@@ -342,19 +317,11 @@ export default function KioskGuardian() {
     // Browser navigation
     window.addEventListener("beforeunload", handleBeforeUnload);
     
-    // Inactivity detection
-    document.addEventListener("mousemove", handleUserActivity, { passive: true });
-    document.addEventListener("mousedown", handleUserActivity, { passive: true });
-    document.addEventListener("keydown", handleUserActivity, { passive: true });
-    document.addEventListener("touchstart", handleUserActivity, { passive: true });
-    document.addEventListener("scroll", handleUserActivity, { passive: true });
-    
     // Fullscreen on first interaction
     document.addEventListener('click', handleFirstInteraction, { once: true });
     document.addEventListener('touchstart', handleFirstInteraction, { once: true });
     
-    // Start inactivity timer
-    resetInactivityTimer();
+    // IdleReturn owns the warning and private-data cleanup.
     
     console.log('[KioskGuardian] 🔒 All protections ACTIVE');
 
@@ -389,19 +356,12 @@ export default function KioskGuardian() {
       window.removeEventListener("gesturestart", handleGestureStart);
       window.removeEventListener("gesturechange", handleGestureStart);
       
-      document.removeEventListener("mousemove", handleUserActivity);
-      document.removeEventListener("mousedown", handleUserActivity);
-      document.removeEventListener("keydown", handleUserActivity);
-      document.removeEventListener("touchstart", handleUserActivity);
-      document.removeEventListener("scroll", handleUserActivity);
       
       document.removeEventListener('click', handleFirstInteraction);
       document.removeEventListener('touchstart', handleFirstInteraction);
       
       // Clear inactivity timer
-      if (inactivityTimer.current) {
-        clearTimeout(inactivityTimer.current);
-      }
+
       
       console.log('[KioskGuardian] 🔓 Protections deactivated');
     };

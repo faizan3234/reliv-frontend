@@ -67,7 +67,14 @@ async function run(){
   assert(speechRequests.at(-1).language==='bn','Bengali text stays Bengali at local speech service');
   rejectAudio=true;await click('এই নির্দেশ শুনুন');
   assert(document.body.textContent.includes('আওয়াজ পাওয়া যাচ্ছে না')&&document.body.textContent.includes('৯৮'),'audio failure leaves visible localized explanation');
-  rejectAudio=false;holdSpeech=true;await click('এই নির্দেশ শুনুন');
+  rejectAudio=false;
+  window.speechSynthesis.getVoices=()=>[{lang:'bn-IN',localService:true}];
+  window.speechSynthesis.speak=utterance=>queueMicrotask(()=>utterance.onerror?.({error:'synthesis-failed'}));
+  const requestsBefore=speechRequests.length;
+  await click('এই নির্দেশ শুনুন');
+  assert(speechRequests.length===requestsBefore+1,'installed but broken browser voice falls back to local WAV');
+  window.speechSynthesis.getVoices=()=>[];
+  holdSpeech=true;await click('এই নির্দেশ শুনুন');
   const before=played.length;
   await click('কথা থামান');
   await act(async()=>deferred());await flush();

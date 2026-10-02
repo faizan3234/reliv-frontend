@@ -17,7 +17,7 @@ const Keyboard = KeyboardModule.default || KeyboardModule;
  * appear broken: the library kept its own buffer that diverged from the parent
  * after each re-render. Now there is only one buffer — the parent's state.
  */
-const VirtualKeyboard = ({ inputName, inputs, onChange, onClose }) => {
+const VirtualKeyboard = ({ inputName, inputs, onChange, onClose, compact = false, language = 'en' }) => {
   const keyboard = useRef();
   const [layoutName, setLayoutName] = useState('default');
 
@@ -46,7 +46,8 @@ const VirtualKeyboard = ({ inputName, inputs, onChange, onClose }) => {
       onClose();
       return;
     }
-    if (button === '{enter}' || button === '{tab}') return;
+    if (button === '{enter}') { onClose(); return; }
+    if (button === '{tab}') return;
 
     // Use refs — always the freshest value even during rapid keypresses
     const activeInput = inputNameRef.current;
@@ -76,6 +77,8 @@ const VirtualKeyboard = ({ inputName, inputs, onChange, onClose }) => {
     ],
   };
 
+  const nameLayout = { default: ['q w e r t y u i o p', 'a s d f g h j k l', '{shift} z x c v b n m {bksp}', '{space} {close}'], shift: ['Q W E R T Y U I O P', 'A S D F G H J K L', '{shift} Z X C V B N M {bksp}', '{space} {close}'] };
+  const done = {en:'Done',hi:'पूरा हुआ',bn:'হয়েছে'}[language] || 'Done';
   const fullLayout = {
     default: [
       '` 1 2 3 4 5 6 7 8 9 0 - = {bksp}',
@@ -94,13 +97,13 @@ const VirtualKeyboard = ({ inputName, inputs, onChange, onClose }) => {
   };
 
   const numericDisplay = {
-    '{close}': '✓ Done',
+    '{close}': done,
     '{bksp}': '⌫',
-    '{enter}': '↵',
+    '{enter}': done,
   };
 
   const fullDisplay = {
-    '{close}': 'Hide Keyboard',
+    '{close}': done,
     '{bksp}': '⌫ Backspace',
     '{enter}': '↵ Enter',
     '{shift}': '⇧ Shift',
@@ -115,7 +118,7 @@ const VirtualKeyboard = ({ inputName, inputs, onChange, onClose }) => {
         keyboardRef={(r) => (keyboard.current = r)}
         layoutName={isNumericInput ? 'default' : layoutName}
         onKeyPress={handleKeyPress}
-        layout={isNumericInput ? numericLayout : fullLayout}
+        layout={isNumericInput ? numericLayout : compact ? nameLayout : fullLayout}
         display={isNumericInput ? numericDisplay : fullDisplay}
         theme={isNumericInput ? 'hg-theme-default numeric-theme' : 'hg-theme-default'}
         /* Intentionally omitted: inputName, inputs, onChange

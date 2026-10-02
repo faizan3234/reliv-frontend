@@ -115,6 +115,7 @@ export function SpeechProvider({ children }) {
   const configRef = useRef(config);
   const voiceSettingsRef = useRef(voiceSettings);
   const audioManifestRef = useRef(null);
+  const manifestReadyRef = useRef(Promise.resolve());
   const activeAudioRef = useRef(null);
   const cancelPlaybackRef = useRef(null);
   const retryPlaybackRef = useRef(null);
@@ -155,8 +156,8 @@ export function SpeechProvider({ children }) {
         }
       } catch { /* Offline defaults remain available. */ }
     })();
-    // Recordings must load even if the optional configuration service stalls.
-    (async () => {
+    // Wait for bundled recordings before falling back to a potentially absent voice engine.
+    manifestReadyRef.current = (async () => {
       try {
         const res = await fetch('/assets/audio/manifest.json', { signal: controller.signal });
         if (res.ok) {
@@ -225,10 +226,13 @@ export function SpeechProvider({ children }) {
         let playbackTimeout = null;
         let fetchController = null;
         let objectUrl = null;
+        let voiceStartTimer = null;
+        let localFallbackStarted = false;
         const finish = (cancelled = false) => {
           if (finished) return;
           finished = true;
           clearTimeout(playbackTimeout);
+          clearTimeout(voiceStartTimer);
           fetchController?.abort();
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           retryPlaybackRef.current = null;
@@ -267,6 +271,10 @@ export function SpeechProvider({ children }) {
           callbacks.onError?.(error);
         };
         const playLocalAudio = async () => {
+          if (finished || localFallbackStarted) return;
+          localFallbackStarted = true;
+          clearTimeout(voiceStartTimer);
+          if (utterance) { utterance.onend = utterance.onerror = null; window.speechSynthesis?.cancel(); }
           fetchController = new AbortController();
           const timeout = setTimeout(() => fetchController.abort(), 18000);
           try {
@@ -317,6 +325,7 @@ export function SpeechProvider({ children }) {
             : settings.voicePreference === 'female' ? /\b(female|samantha|zira|neerja|swara|tanishaa|jenny|susan|hazel)\b/i : null;
           const localVoice = localVoices.find((voice) => preference?.test(voice.name)) || localVoices[0];
           if (localVoice) utterance.voice = localVoice;
+          utterance.onstart = () => clearTimeout(voiceStartTimer);
           utterance.onend = () => finish();
           utterance.onerror = (event) => {
             if (finished || requestId !== playbackRequestRef.current) return;
@@ -326,12 +335,13 @@ export function SpeechProvider({ children }) {
               retryPlaybackRef.current = playSynthesis;
               window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
             } else {
-              fail(event);
+              void playLocalAudio();
             }
           };
           if (begin()) {
+            voiceStartTimer = setTimeout(() => { void playLocalAudio(); }, 3500);
             try { window.speechSynthesis.speak(utterance); }
-            catch (error) { fail(error); }
+            catch { void playLocalAudio(); }
           }
         };
 
@@ -377,6 +387,7 @@ export function SpeechProvider({ children }) {
       if (!text || muted || adSpeechBlocksRef.current.size) return;
       const requestId = ++playbackRequestRef.current;
       await stopActivePlayback();
+      await manifestReadyRef.current;
       if (requestId !== playbackRequestRef.current) return;
       return speakViaSynthesis(text, requestId, callbacks?.langHint || selectedLang, callbacks);
     },
@@ -388,6 +399,7 @@ export function SpeechProvider({ children }) {
       if (!messages || messages.length === 0 || muted || adSpeechBlocksRef.current.size) return;
       const requestId = ++playbackRequestRef.current;
       await stopActivePlayback();
+      await manifestReadyRef.current;
       if (requestId !== playbackRequestRef.current) return;
 
       for (let i = 0; i < messages.length; i++) {
@@ -406,6 +418,7 @@ export function SpeechProvider({ children }) {
       if (muted || adSpeechBlocksRef.current.size) return;
       const requestId = ++playbackRequestRef.current;
       await stopActivePlayback();
+      await manifestReadyRef.current;
       if (requestId !== playbackRequestRef.current) return;
 
       const interactionPrompts = {

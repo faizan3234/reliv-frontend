@@ -7,7 +7,6 @@ import { SpeechProvider, useSpeech } from '../src/context/SpeechContext';
 import { VoiceAssistantProvider, useVoiceAssistant } from '../src/context/VoiceAssistantContext';
 import { useVoicePage } from '../src/hooks/useVoicePage';
 import { HELP_HINTS } from '../src/voice/helpIntent';
-import { guidanceText } from '../src/voice/guidanceCopy';
 import { dict as paymentCopy } from '../src/config/PaymentDict';
 import CustomerDetails from '../src/pages/CustomerDetails';
 import TwoOptions from '../src/pages/TwoOptions';
@@ -183,20 +182,17 @@ async function keyPress(key) {
   });
 }
 async function fillCustomer() {
-  await act(async () => [...document.querySelectorAll('#app button')].find(el => el.textContent.includes('First time here')).click());
+  await act(async () => [...document.querySelectorAll('#app button')].find(el => el.textContent.includes('My first health check')).click());
   await act(async () => document.querySelector('input[name="name"]').click());
   for (const key of 'namita shah') await keyPress(key === ' ' ? '{space}' : key);
   await keyPress('{close}');
-  await flush(480);
-  assert(events.filter(([kind]) => kind === 'spoken').at(-1)?.[1] === guidanceText('detailsGender'), 'closing the name keyboard guides the user to gender: ' + JSON.stringify({ name: document.querySelector('input[name="name"]').value, spoken: events.filter(([kind]) => kind === 'spoken').at(-1), keyboard: !!document.querySelector('[data-skbtn]') }));
-  await click('👩Female');
-  // Age is deliberately changed from its default via the actual numeric keyboard.
-  const age = [...document.querySelectorAll('span')].find(el => el.textContent === '22');
-  await act(async () => age.click());
-  for (const key of ['{bksp}', '{bksp}', '4', '0', '{close}']) await keyPress(key);
-  for (const pad of document.querySelectorAll('[aria-label="PIN keypad"]')) {
-    for (const digit of '123456') await act(async () => pad.querySelector(`[aria-label="Digit ${digit}"]`).click());
-  }
+  await click('Continue →');
+  assert(!document.querySelector('#customer-email'), 'onboarding never requests an email');
+  await act(async () => document.querySelector('#visitor-age').click());
+  for (const key of ['4','0','{close}']) await keyPress(key);
+  await click('Female'); await click('Continue →');
+  assert(document.querySelectorAll('[aria-label="PIN keypad"]').length === 1, 'new visitor creates one PIN without duplicate confirmation');
+  for (const digit of '123456') await act(async () => document.querySelector(`[aria-label="Digit ${digit}"]`).click());
   await flush();
 }
 async function selectService(label) {
@@ -453,7 +449,7 @@ async function run() {
     for (const word of ['my name is Namita Shah', 'haan', 'forty', 'female', 'next']) await say(word);
     assert(!document.querySelector('input[name="name"]') && controls.path === '/customer-details', 'voice cannot select a private profile or auto-submit details');
     await fillCustomer();
-    await click('Proceed →');
+    await click('Start my visit →');
     assert(controls.path === '/two-options', 'touch-entered details proceed to service selection');
     const saved = requests.find(request => request.url.endsWith('/health-profile'));
     assert(saved.body.name === 'namita shah', 'touch keyboard preserves the entered name');
@@ -468,22 +464,23 @@ async function run() {
   }
   requests.length = 0;
   await mount('/customer-details');
-  await click('I have visited beforeAdd this scan to your progress');
-  assert(!document.querySelector('#customer-email') && document.querySelectorAll('[aria-label="PIN keypad"]').length === 1, 'returning visitor has a short name and PIN form');
+  await click('I have checked here beforeUse your name and PIN');
+  assert(!document.querySelector('#customer-email') && !!document.querySelector('#visitor-name'), 'returning visitor has a short name and PIN form');
   await act(async () => document.querySelector('input[name="name"]').click());
   for (const key of 'namita shah') await keyPress(key === ' ' ? '{space}' : key);
   await keyPress('{close}');
+  await click('Continue →');
   for (const digit of '123456') await act(async () => document.querySelector('[aria-label="PIN keypad"]').querySelector(`[aria-label="Digit ${digit}"]`).click());
-  await click('Proceed →');
+  await click('Start my visit →');
   assert(controls.path === '/two-options' && controls.health.data.patient.age === 40, 'returning visitor restores server verified demographics');
   assert(requests.find(request => request.url.endsWith('/health-profile')).body.mode === 'returning', 'returning visitor requests a PIN verified profile');
   rejectCustomer = true;
   await mount('/customer-details');
-  await fillCustomer(); await click('Proceed →');
+  await fillCustomer(); await click('Start my visit →');
   assert(controls.path === '/customer-details', 'failed customer save does not navigate');
-  assert(document.querySelector('[role="alert"]')?.textContent === 'Test save failed', 'save failure is visible and retryable');
+  assert(document.querySelector('[role="alert"]')?.textContent.includes('Could not continue'), 'save failure is visible and retryable');
   rejectCustomer = false;
-  await click('Proceed →');
+  await click('Start my visit →');
   assert(controls.path === '/two-options', 'customer save can be retried by touch');
   rejectService = true; await selectService('Medicine Dispensing');
   assert(controls.path === '/two-options', '409 service rejection cannot navigate to an unselected service');
@@ -499,7 +496,7 @@ async function run() {
   let releaseCustomer;
   pendingCustomer = new Promise(resolve => { releaseCustomer = resolve; });
   await mount('/customer-details');
-  await fillCustomer(); await click('Proceed →');
+  await fillCustomer(); await click('Start my visit →');
   await act(async () => { controls.navigate('/choose-language'); controls.health.resetHealth(); });
   await act(async () => releaseCustomer());
   await flush();

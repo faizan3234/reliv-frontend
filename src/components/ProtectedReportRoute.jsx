@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { requestJSON } from "../utils/request";
-import ReportMeasurements from "./ReportMeasurements";
 import { readBrowserStorage } from '../utils/browserStorage';
 import { readProfileAccess } from '../utils/kioskSession';
 
@@ -167,7 +166,7 @@ const ProtectedReportRoute = ({ children }) => {
     );
   }
 
-  return <><ReportMeasurements />{children}</>;
+  return children;
 };
 
 export default ProtectedReportRoute;
