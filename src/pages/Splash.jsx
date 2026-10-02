@@ -92,7 +92,7 @@ const Splash = () => {
 
   useVoicePage({
     guidanceKey: showTerms ? 'terms' : 'language',
-    idleEnabled: true,
+    idleEnabled: false,
     onHelp: () => {
       if (!healthData?.language || healthData.language === 'auto') {
         speakChained([
@@ -107,26 +107,47 @@ const Splash = () => {
   });
 
   // Repeating welcome voice on splash screen:
-  // Voice repeats greeting every 20 seconds so walk-by pedestrians hear the welcome
+  // Starts with an initial 7-second gap (not instantly),
+  // and maintains a 7-second gap after playback finishes before repeating.
   useEffect(() => {
-    const playGreeting = () => {
-      if (!healthData?.language || healthData.language === 'auto') {
-        speakChained([
-          { text: "Hello, welcome to Reliv.", langHint: "en" },
-          { text: "Reliv mein aapka swagat hai.", langHint: "hi" },
-          { text: "Main aapko English, Hindi ya Bengali mein guide kar sakti hoon. Apni language choose kijiye, ya seedha mujhe boliye — main aapke saath step by step rahungi.", langHint: "hi" }
-        ]);
-      } else {
-        speakText(guidanceText('language', healthData?.language));
+    let active = true;
+    let timer = null;
+
+    const runGreetingLoop = async () => {
+      // 1. Initial 7-second peaceful gap when arriving on the splash page (not instantly)
+      await new Promise((resolve) => {
+        timer = setTimeout(resolve, 7000);
+      });
+
+      while (active) {
+        try {
+          if (!healthData?.language || healthData.language === 'auto') {
+            await speakChained([
+              { text: "Hello, welcome to Reliv.", langHint: "en" },
+              { text: "Reliv mein aapka swagat hai.", langHint: "hi" },
+              { text: "Main aapko English, Hindi ya Bengali mein guide kar sakti hoon. Apni language choose kijiye, ya seedha mujhe boliye — main aapke saath step by step rahungi.", langHint: "hi" }
+            ]);
+          } else {
+            await speakText(guidanceText('language', healthData?.language));
+          }
+        } catch {
+          // Playback interrupted
+        }
+
+        if (!active) break;
+
+        // 2. Exactly 7 seconds gap between completion and the next repetition
+        await new Promise((resolve) => {
+          timer = setTimeout(resolve, 7000);
+        });
       }
     };
 
-    const initialTimer = setTimeout(playGreeting, 500);
-    const intervalTimer = setInterval(playGreeting, 20000);
+    runGreetingLoop();
 
     return () => {
-      clearTimeout(initialTimer);
-      clearInterval(intervalTimer);
+      active = false;
+      if (timer) clearTimeout(timer);
       stop();
     };
   }, [speakChained, speakText, stop, healthData?.language]);
