@@ -23,10 +23,12 @@ export default function IdleReturn(){
   if(pathname==='/'||pathname==='/order-success'||pathname.startsWith('/admin')||usesNativeScrolling(pathname))return undefined;
   const limit=pathname==='/payment'?600000:pathname.startsWith('/report-')?240000:120000;
   const activity=()=>{if(Date.now()-last.current>=limit)return;last.current=Date.now();setRemaining(null);};
+  const narration=e=>{if(pathname.startsWith('/report-')&&e.detail===true)activity();};
+  window.addEventListener('reliv_speaking',narration);
   const events=['pointerdown','keydown','touchstart','scroll'];
   events.forEach(e=>window.addEventListener(e,activity,{passive:true,capture:true}));
   const interval=setInterval(()=>{const elapsed=Date.now()-last.current;if(elapsed>=limit+30000)finish();else setRemaining(elapsed>=limit?Math.ceil((limit+30000-elapsed)/1000):null);},1000);
-  return()=>{clearInterval(interval);events.forEach(e=>window.removeEventListener(e,activity,true));};
+  return()=>{window.removeEventListener('reliv_speaking',narration);clearInterval(interval);events.forEach(e=>window.removeEventListener(e,activity,true));};
  },[pathname,finish]);
  if(remaining===null)return null;
  return <div role="dialog" aria-modal="true" aria-label={w.stay} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/70 p-8"><div className="max-w-2xl rounded-3xl bg-white p-8"><p className="text-center text-5xl font-bold">{remaining}</p><SpokenGuide text={w.prompt} language={language} autoSpeak/><div className="flex gap-4"><button type="button" onClick={()=>{stop();last.current=Date.now();setRemaining(null);}} className="min-h-16 flex-1 rounded-xl bg-teal-800 px-5 text-xl font-bold text-white">{w.stay}</button><button type="button" onClick={finish} className="min-h-16 rounded-xl border px-5 font-bold">{w.end}</button></div></div></div>;

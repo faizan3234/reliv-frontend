@@ -11,6 +11,7 @@ export function savePendingVerification(data) {
 
   try {
     const payload = {
+      encryptedPackage: data.encryptedPackage || '',
       requestId: data.requestId || '',
       orderId: String(data.orderId).trim(),
       paymentId: String(data.paymentId).trim(),
@@ -22,6 +23,7 @@ export function savePendingVerification(data) {
     const serialized = JSON.stringify(payload);
     if (window.localStorage) {
       window.localStorage.setItem(PENDING_VERIFICATION_KEY, serialized);
+      window.localStorage.setItem(PENDING_VERIFICATION_KEY + ':' + payload.requestId, serialized);
     }
     if (window.sessionStorage) {
       window.sessionStorage.setItem(PENDING_VERIFICATION_KEY, serialized);
@@ -34,18 +36,23 @@ export function savePendingVerification(data) {
 /**
  * Retrieves valid pending payment verification data from localStorage/sessionStorage.
  */
-export function getPendingVerification() {
+export function getPendingVerification(requestId) {
   if (typeof window === 'undefined') return null;
 
   try {
     const raw =
+      (requestId && window.localStorage?.getItem(PENDING_VERIFICATION_KEY + ':' + requestId)) ||
       (window.localStorage && window.localStorage.getItem(PENDING_VERIFICATION_KEY)) ||
       (window.sessionStorage && window.sessionStorage.getItem(PENDING_VERIFICATION_KEY));
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
+    // Archive a legacy callback before a different QR can replace the global slot.
+    if (parsed?.requestId && parsed?.orderId && parsed?.paymentId && parsed?.signature) {
+      window.localStorage?.setItem(PENDING_VERIFICATION_KEY + ':' + parsed.requestId, raw);
+    }
     if (
-      parsed &&
+      parsed && (!requestId || parsed.requestId === requestId) &&
       typeof parsed.orderId === 'string' &&
       parsed.orderId.trim().length > 0 &&
       typeof parsed.paymentId === 'string' &&
@@ -69,11 +76,14 @@ export function getPendingVerification() {
 /**
  * Clears pending verification state after successful confirmation code reveal.
  */
-export function clearPendingVerification() {
+export function clearPendingVerification(requestId) {
   if (typeof window === 'undefined') return;
   try {
-    if (window.localStorage) window.localStorage.removeItem(PENDING_VERIFICATION_KEY);
-    if (window.sessionStorage) window.sessionStorage.removeItem(PENDING_VERIFICATION_KEY);
+    if (requestId) window.localStorage?.removeItem(PENDING_VERIFICATION_KEY + ':' + requestId);
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      const saved = JSON.parse(storage?.getItem(PENDING_VERIFICATION_KEY) || 'null');
+      if (!requestId || saved?.requestId === requestId) storage?.removeItem(PENDING_VERIFICATION_KEY);
+    }
   } catch (e) {
     console.warn('[Session] Failed to clear pending verification:', e);
   }
@@ -104,6 +114,7 @@ export function savePaymentRecovery(data) {
     const serialized = JSON.stringify(payload);
     if (window.localStorage) {
       window.localStorage.setItem(RECOVERY_STORAGE_KEY, serialized);
+      if (payload.encryptedPackage) window.localStorage.setItem(RECOVERY_STORAGE_KEY + ':' + payload.encryptedPackage, serialized);
     }
     if (window.sessionStorage) {
       window.sessionStorage.setItem(RECOVERY_STORAGE_KEY, serialized);
@@ -116,17 +127,18 @@ export function savePaymentRecovery(data) {
 /**
  * Retrieves payment recovery session from localStorage/sessionStorage.
  */
-export function getPaymentRecovery() {
+export function getPaymentRecovery(encryptedPackage) {
   if (typeof window === 'undefined') return null;
 
   try {
     const raw =
+      (encryptedPackage && window.localStorage?.getItem(RECOVERY_STORAGE_KEY + ':' + encryptedPackage)) ||
       (window.localStorage && window.localStorage.getItem(RECOVERY_STORAGE_KEY)) ||
       (window.sessionStorage && window.sessionStorage.getItem(RECOVERY_STORAGE_KEY));
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
-    if (parsed && (parsed.encryptedPackage || parsed.requestId || parsed.orderId)) {
+    if (parsed && (!encryptedPackage || parsed.encryptedPackage === encryptedPackage) && (parsed.encryptedPackage || parsed.requestId || parsed.orderId)) {
       return parsed;
     }
   } catch (e) {
@@ -138,11 +150,14 @@ export function getPaymentRecovery() {
 /**
  * Clears persistent payment recovery session from localStorage/sessionStorage.
  */
-export function clearPaymentRecovery() {
+export function clearPaymentRecovery(encryptedPackage) {
   if (typeof window === 'undefined') return;
   try {
-    if (window.localStorage) window.localStorage.removeItem(RECOVERY_STORAGE_KEY);
-    if (window.sessionStorage) window.sessionStorage.removeItem(RECOVERY_STORAGE_KEY);
+    if (encryptedPackage) window.localStorage?.removeItem(RECOVERY_STORAGE_KEY + ':' + encryptedPackage);
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      const saved = JSON.parse(storage?.getItem(RECOVERY_STORAGE_KEY) || 'null');
+      if (!encryptedPackage || saved?.encryptedPackage === encryptedPackage) storage?.removeItem(RECOVERY_STORAGE_KEY);
+    }
   } catch (e) {
     console.warn('[Session] Failed to clear payment recovery session:', e);
   }

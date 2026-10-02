@@ -31,6 +31,7 @@ dom.window.HTMLCanvasElement.prototype.getContext = function (type) {
   if (type !== '2d') return null;
   return {
     canvas: this,
+    createLinearGradient() { return { addColorStop() {} }; },
     clearRect() {}, fillRect() {}, beginPath() {}, closePath() {},
     moveTo() {}, lineTo() {}, arc() {}, ellipse() {}, fill() {}, stroke() {},
     save() {}, restore() {}, translate() {}, rotate() {}, scale() {},

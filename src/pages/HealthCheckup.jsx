@@ -1,3 +1,4 @@
+import SpokenGuide from '../components/SpokenGuide';
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import mqtt from "mqtt";
@@ -505,6 +506,7 @@ const BloodPressurePage = () => {
 
   return (
     <div className="vital-screen relative w-full bg-gradient-to-br from-[#FFEEE5] via-[#FFF5F0] to-[#FFE8DC] scrollable-container font-sans flex flex-col">
+      <div className="px-6"><SpokenGuide text={guidanceText("bloodPressure", selectedLang)} language={selectedLang || "en"} autoSpeak /></div>
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -813,11 +815,6 @@ const BloodPressurePage = () => {
 };
 
 export default function HealthCheckup() {
-  const { speak, stop } = useSpeech();
-  useEffect(() => {
-    const t = setTimeout(() => speak("health-checkup"), 400);
-    return () => { clearTimeout(t); stop(); };
-  }, [speak, stop]);
   const [currentPage, setCurrentPage] = useState("splash");
 
   const showBPPage = () => setCurrentPage("bp");

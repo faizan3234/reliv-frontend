@@ -1,3 +1,4 @@
+import { CheckinCard } from '../../components/CheckinCard';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   createPaymentV2Order,
@@ -22,10 +23,14 @@ import { Logo } from '../../components/Logo';
 import { CheckCircle2, Lock, AlertCircle, RefreshCw, Mail, ShieldCheck } from 'lucide-react';
 
 export function PaymentV2Page({ sessionStore }) {
+  const pkg = sessionStore.state.encryptedPackage || extractPaymentPackage() || '';
+  return <PaymentAttempt key={pkg} sessionStore={sessionStore} />;
+}
+function PaymentAttempt({ sessionStore }) {
   const { state, updateState, resetSession } = sessionStore;
 
   // Extract encrypted package from state, URL hash, or persistent recovery storage
-  const recoverySession = getPaymentRecovery();
+  const recoverySession = getPaymentRecovery(state.encryptedPackage || extractPaymentPackage());
   const encryptedPackage = state.encryptedPackage || extractPaymentPackage() || recoverySession?.encryptedPackage;
 
   const [loadingState, setLoadingState] = useState('INIT'); // 'INIT' | 'ORDER_READY' | 'PAYING' | 'VERIFYING' | 'SUCCESS' | 'ERROR' | 'IDLE'
@@ -35,6 +40,7 @@ export function PaymentV2Page({ sessionStore }) {
   const [activeRequestId, setActiveRequestId] = useState('');
 
   // Receipt state: 'idle' | 'sending' | 'sent' | 'already_sent' | 'error'
+  const [storyCard, setStoryCard] = useState(null);
   const [receiptEmail, setReceiptEmail] = useState('');
   const [receiptStatus, setReceiptStatus] = useState('idle');
   const [receiptError, setReceiptError] = useState('');
@@ -47,9 +53,14 @@ export function PaymentV2Page({ sessionStore }) {
   const checkoutOpenRef = useRef(false);
   const emailSendingRef = useRef(false);
 
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const isCurrent = useCallback(() => mounted.current && (!extractPaymentPackage() || extractPaymentPackage() === encryptedPackage), [encryptedPackage]);
+
   // Core verification execution function that uses a normalized payload
   const runVerification = useCallback(
     async (payload) => {
+      if (!isCurrent()) return;
       setLoadingState('VERIFYING');
       setErrorMessage('');
 
@@ -65,14 +76,16 @@ export function PaymentV2Page({ sessionStore }) {
           signature: payload.signature,
         });
 
+        if (!isCurrent()) return;
+        if (verifyRes.requestId && verifyRes.requestId !== payload.requestId) throw new Error('Payment request mismatch. Scan your current QR again.');
         const code = String(verifyRes.confirmationCode || '').trim();
         if (verifyRes.paid === true && /^\d{4}$/.test(code)) {
           if (verifyRes.requestId) {
             setActiveRequestId(verifyRes.requestId);
           }
           // Success: Clear temporary recovery state only AFTER confirmation code is received
-          clearPendingVerification();
-          clearPaymentRecovery();
+          clearPendingVerification(payload.requestId);
+          clearPaymentRecovery(encryptedPackage);
           setConfirmationCode(code);
           setOrderData((prev) => ({
             ...(prev || {}),
@@ -88,83 +101,39 @@ export function PaymentV2Page({ sessionStore }) {
           throw new Error('Confirmation code was not returned by the payment service.');
         }
       } catch (verifyErr) {
+        if (!isCurrent()) return;
         console.error('[PaymentV2] Verification error:', verifyErr.message || verifyErr);
         // Do NOT clear pending verification here so user can retry without paying again
         setErrorMessage(verifyErr.message || 'Payment verification could not be completed.');
         setLoadingState('ERROR');
       }
     },
-    [updateState]
+    [updateState, encryptedPackage, isCurrent]
   );
 
   // Authoritative State Sync with Oracle Payment Bridge
   const syncWithOracle = useCallback(async () => {
-    if (isSyncingRef.current || checkoutOpenRef.current) return;
+    if (!isCurrent() || isSyncingRef.current || checkoutOpenRef.current) return;
     isSyncingRef.current = true;
 
     try {
-      // 1. Check if there is an unverified callback from Razorpay in localStorage
-      const pending = getPendingVerification();
+      // Resolve the scanned package FIRST. Stored payment callbacks are only
+      // eligible after the bridge has established this package's request ID.
+      const activePackage = encryptedPackage;
+      if (!activePackage) { setLoadingState('IDLE'); return; }
+      setLoadingState('INIT');
+      setErrorMessage('');
+      const order = await createPaymentV2Order({ encryptedPackage: activePackage });
+      if (!isCurrent()) return;
+      if (!order.requestId) throw new Error('The payment service returned no request ID.');
+      setActiveRequestId(order.requestId);
+      setOrderData(order);
+      const pending = getPendingVerification(order.requestId);
       if (pending) {
-        if (pending.requestId) {
-          setActiveRequestId(pending.requestId);
-        }
-        if (pending.amount) {
-          setOrderData((prev) => prev || {
-            orderId: pending.orderId,
-            amount: pending.amount,
-            requestId: pending.requestId,
-            serviceType: pending.serviceType,
-          });
-        }
+        if (pending.orderId !== order.orderId) throw new Error('Payment order mismatch. Please contact support; do not pay again.');
         await runVerification(pending);
         return;
       }
-
-      // 2. Check if we have an active requestId to attempt direct Oracle reconciliation
-      const currentReqId = activeRequestId || getPaymentRecovery()?.requestId;
-      if (currentReqId) {
-        try {
-          const recoverRes = await recoverPaymentV2({ requestId: currentReqId });
-          if (recoverRes.paid === true && /^\d{4}$/.test(String(recoverRes.confirmationCode || ''))) {
-            setActiveRequestId(recoverRes.requestId || currentReqId);
-            setOrderData((prev) => ({
-              ...(prev || {}),
-              requestId: recoverRes.requestId || currentReqId,
-              orderId: recoverRes.orderId || prev?.orderId,
-              amount: recoverRes.amount ?? prev?.amount,
-              currency: recoverRes.currency || prev?.currency || 'INR',
-              serviceType: recoverRes.serviceType || prev?.serviceType || 'HEALTH_CHECKUP',
-            }));
-            clearPendingVerification();
-            clearPaymentRecovery();
-            setConfirmationCode(String(recoverRes.confirmationCode));
-            setLoadingState('SUCCESS');
-            return;
-          }
-        } catch (recoverErr) {
-          // If order not found or pending, proceed with normal package flow
-          console.log('[PaymentV2] Direct recovery check non-fatal:', recoverErr.message);
-        }
-      }
-
-      // 3. Check if we have an encrypted payment package to check / initialize
-      const activePackage = encryptedPackage || extractPaymentPackage() || getPaymentRecovery()?.encryptedPackage;
-      if (!activePackage) {
-        setLoadingState('IDLE');
-        return;
-      }
-
-      setLoadingState('INIT');
-      setErrorMessage('');
-
-      // Query Oracle for authoritative state (idempotent order check/creation)
-      const order = await createPaymentV2Order({ encryptedPackage: activePackage });
-
-      if (order.requestId) {
-        setActiveRequestId(order.requestId);
-      }
-      setOrderData(order);
 
       // 4. If Oracle indicates this request is already PAID, NEVER launch Razorpay!
       if (order.paid === true || order.raw?.paid === true || order.raw?.status === 'PAID') {
@@ -173,8 +142,8 @@ export function PaymentV2Page({ sessionStore }) {
         // Check if confirmation code is already returned
         const returnedCode = String(order.confirmationCode || order.raw?.confirmationCode || '').trim();
         if (/^\d{4}$/.test(returnedCode)) {
-          clearPendingVerification();
-          clearPaymentRecovery();
+          clearPendingVerification(order.requestId);
+          clearPaymentRecovery(encryptedPackage);
           setConfirmationCode(returnedCode);
           setLoadingState('SUCCESS');
           return;
@@ -184,9 +153,11 @@ export function PaymentV2Page({ sessionStore }) {
         if (order.requestId) {
           try {
             const recoverRes = await recoverPaymentV2({ requestId: order.requestId });
+            if (!isCurrent()) return;
+            if (recoverRes.requestId && recoverRes.requestId !== order.requestId) throw new Error('Payment request mismatch.');
             if (recoverRes.paid === true && /^\d{4}$/.test(String(recoverRes.confirmationCode || ''))) {
-              clearPendingVerification();
-              clearPaymentRecovery();
+              clearPendingVerification(order.requestId);
+              clearPaymentRecovery(encryptedPackage);
               setConfirmationCode(String(recoverRes.confirmationCode));
               setLoadingState('SUCCESS');
               return;
@@ -216,6 +187,7 @@ export function PaymentV2Page({ sessionStore }) {
 
       setLoadingState('ORDER_READY');
     } catch (err) {
+      if (!isCurrent()) return;
       console.error('[PaymentV2] Oracle sync error:', err.message || err);
 
       const isExpired =
@@ -223,8 +195,8 @@ export function PaymentV2Page({ sessionStore }) {
         String(err.message || '').toLowerCase().includes('expired');
 
       if (isExpired) {
-        clearPaymentRecovery();
-        clearPendingVerification();
+        clearPaymentRecovery(encryptedPackage);
+        // Keep pending proof for support/recovery even when the QR expires; never erase a payment callback.
         setErrorMessage('This payment request has expired. Please refresh the QR on the kiosk.');
       } else {
         setErrorMessage(err.message || 'Unable to prepare payment. Please check your connection or scan the kiosk QR again.');
@@ -233,7 +205,7 @@ export function PaymentV2Page({ sessionStore }) {
     } finally {
       isSyncingRef.current = false;
     }
-  }, [encryptedPackage, runVerification, activeRequestId]);
+  }, [encryptedPackage, runVerification, isCurrent]);
 
   // Automatic Resume Triggers: visibilitychange, focus, pageshow, and app mount
   useEffect(() => {
@@ -313,7 +285,12 @@ export function PaymentV2Page({ sessionStore }) {
             return;
           }
 
+          if (orderId.trim() !== orderData.orderId) {
+            if (isCurrent()) { setErrorMessage('Payment order mismatch. Do not pay again.'); setLoadingState('ERROR'); }
+            return;
+          }
           const normalizedPayload = {
+            encryptedPackage,
             requestId: orderData.requestId || activeRequestId || '',
             orderId: orderId.trim(),
             paymentId: paymentId.trim(),
@@ -325,14 +302,17 @@ export function PaymentV2Page({ sessionStore }) {
           // CRITICAL: Persist to persistent localStorage BEFORE making Oracle verify HTTP request
           savePendingVerification(normalizedPayload);
 
-          // Execute verification
+          // Preserve callback proof after navigation, but never reveal it on a new QR.
+          if (!isCurrent()) return;
           await runVerification(normalizedPayload);
         },
         onDismiss: () => {
+          if (!isCurrent()) return;
           checkoutOpenRef.current = false;
           setLoadingState('ORDER_READY');
         },
         onError: (err) => {
+          if (!isCurrent()) return;
           checkoutOpenRef.current = false;
           console.error('[PaymentV2] Razorpay error:', err.message || err.description || err);
           setErrorMessage(err.description || err.message || 'Payment was declined or cancelled.');
@@ -349,15 +329,6 @@ export function PaymentV2Page({ sessionStore }) {
 
   // Try Again Handler: NEVER creates a duplicate payment if payment was already made
   const handleRetry = async () => {
-    const pending = getPendingVerification();
-
-    // If payment already succeeded at Razorpay, retry ONLY Oracle verification
-    if (pending) {
-      await runVerification(pending);
-      return;
-    }
-
-    // Otherwise, perform full authoritative sync with Oracle
     await syncWithOracle();
   };
 
@@ -389,6 +360,7 @@ export function PaymentV2Page({ sessionStore }) {
         const result = await emailHealthReport({
           requestId: currentRequestId,
           email: emailToSend,
+          storyCard,
         });
 
         setReportDownloadToken(result.downloadToken || '');
@@ -445,8 +417,8 @@ export function PaymentV2Page({ sessionStore }) {
   };
 
   const handleDone = () => {
-    clearPendingVerification();
-    clearPaymentRecovery();
+    clearPendingVerification(activeRequestId || orderData?.requestId);
+    clearPaymentRecovery(encryptedPackage);
     resetSession();
     window.location.href = window.location.origin + window.location.pathname;
   };
@@ -467,7 +439,7 @@ export function PaymentV2Page({ sessionStore }) {
     : 'Medicine Kit Purchase';
 
   // IDLE STATE (Direct open without #p or saved session)
-  if (!encryptedPackage && loadingState === 'IDLE' && !getPendingVerification() && !getPaymentRecovery()) {
+  if (!encryptedPackage && loadingState === 'IDLE') {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="text-center space-y-2">
@@ -537,7 +509,7 @@ export function PaymentV2Page({ sessionStore }) {
 
   // ERROR STATE
   if (loadingState === 'ERROR') {
-    const hasPendingPayment = Boolean(getPendingVerification());
+    const hasPendingPayment = Boolean(activeRequestId && getPendingVerification(activeRequestId));
 
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
@@ -655,6 +627,7 @@ export function PaymentV2Page({ sessionStore }) {
           )}
         </div>
 
+        {isHealthCheckup && <CheckinCard onChange={setStoryCard} />}
         {/* Directly Underneath: Payment Receipt Section */}
         <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
           <div className="text-center space-y-0.5">

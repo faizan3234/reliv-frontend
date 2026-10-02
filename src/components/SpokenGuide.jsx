@@ -6,7 +6,7 @@ const copy = {
   hi: { listen:'यह निर्देश सुनें', stop:'आवाज़ रोकें', mute:'आवाज़ बंद है। पहले आवाज़ चालू करें।', unmute:'आवाज़ चालू करें', quiet:'आवाज़ का स्तर शून्य है।', volume:'आवाज़ बढ़ाएँ', error:'आवाज़ उपलब्ध नहीं है। नीचे पढ़ें या कर्मचारी से मदद लें।', blocked:'आवाज़ के लिए सुनें बटन दबाएँ।', speaking:'बोल रहे हैं…', ready:'सुनें दबाएँ। कभी भी रोक सकते हैं या फिर सुन सकते हैं।' },
   bn: { listen:'এই নির্দেশ শুনুন', stop:'কথা থামান', mute:'শব্দ বন্ধ আছে। আগে শব্দ চালু করুন।', unmute:'শব্দ চালু করুন', quiet:'শব্দের মাত্রা শূন্য।', volume:'শব্দ বাড়ান', error:'আওয়াজ পাওয়া যাচ্ছে না। নিচের লেখা পড়ুন অথবা কর্মীর সাহায্য নিন।', blocked:'শব্দ শুনতে শুনুন বোতাম চাপুন।', speaking:'বলা হচ্ছে…', ready:'শুনুন চাপুন। যে কোনও সময় থামাতে বা আবার শুনতে পারেন।' },
 };
-export default function SpokenGuide({ text, language = 'en', autoSpeak = false, messages }) {
+export default function SpokenGuide({ text, language = 'en', autoSpeak = false, messages, displayText }) {
   const { speakText, speakChained, stop, muted, toggleMute, volume, setVolume } = useSpeech();
   const [status, setStatus] = useState('ready');
   const [caption, setCaption] = useState('');
@@ -47,6 +47,6 @@ export default function SpokenGuide({ text, language = 'en', autoSpeak = false, 
       {volume === 0 && <button type="button" onClick={() => setVolume(1)} className="min-h-12 rounded-xl bg-white px-4 font-bold">{w.volume}</button>}
     </div>
     <p role="status" className="mt-3 text-sm text-slate-700">{muted ? w.mute : volume === 0 ? w.quiet : w[status]}</p>
-    <p className="mt-3 whitespace-pre-line text-lg leading-relaxed text-slate-900">{caption || text}</p>
+    <p className="mt-3 whitespace-pre-line text-lg leading-relaxed text-slate-900">{caption || displayText || text}</p>
   </aside>;
 }

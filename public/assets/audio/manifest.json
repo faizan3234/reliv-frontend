@@ -361,5 +361,5635 @@
   "কিয়স্ক সব জিনিস দেওয়ার বিষয়টি নিশ্চিত করেছে। ট্রে দেখে আপনার অর্ডার নিন। কোনও জিনিস না থাকলে কর্মীর সাহায্য নিন।": "e47710bdc1c02f4278c330524e1266d5.mp3",
   "এই কিয়স্কে অর্ডার পাওয়া যায়নি। আবার টাকা দেওয়ার আগে কর্মীর সাহায্য নিন।": "7b4bcdccd839ef01f02fc92dd3943902.mp3",
   "জিনিস দেওয়া হয়েছে কি না নিশ্চিত করা যাচ্ছে না। এখানে থেকে আবার অবস্থা দেখুন। আবার টাকা দেবেন না।": "031e3dec746170b9d1d3653e9c9e29b6.mp3",
-  "ডেলিভারি নিশ্চিত করা যায়নি। কর্মীকে ট্রে ও অর্ডার দেখতে বলুন। আবার টাকা দেবেন না বা নতুন অর্ডার করবেন না।": "b526f61b6117c1673c9b53a353fb46fe.mp3"
+  "ডেলিভারি নিশ্চিত করা যায়নি। কর্মীকে ট্রে ও অর্ডার দেখতে বলুন। আবার টাকা দেবেন না বা নতুন অর্ডার করবেন না।": "b526f61b6117c1673c9b53a353fb46fe.mp3",
+  "0": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 6.516,
+      "end": 8.388
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 6.708,
+      "end": 8.58
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 6.516,
+      "end": 8.388
+    }
+  },
+  "1": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 8.688,
+      "end": 10.56
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 8.88,
+      "end": 10.752
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 8.688,
+      "end": 10.56
+    }
+  },
+  "2": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 10.86,
+      "end": 12.732
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 11.052,
+      "end": 12.924
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 10.86,
+      "end": 12.732
+    }
+  },
+  "3": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 13.032,
+      "end": 14.904
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 13.224,
+      "end": 15.096
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 13.032,
+      "end": 14.904
+    }
+  },
+  "4": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 15.204,
+      "end": 17.076
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 15.396,
+      "end": 17.268
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 15.204,
+      "end": 17.076
+    }
+  },
+  "5": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 17.376,
+      "end": 19.248
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 17.568,
+      "end": 19.44
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 17.376,
+      "end": 19.248
+    }
+  },
+  "6": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 19.548,
+      "end": 21.42
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 19.74,
+      "end": 21.612
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 19.548,
+      "end": 21.42
+    }
+  },
+  "7": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 21.72,
+      "end": 23.592
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 21.912,
+      "end": 23.784
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 21.72,
+      "end": 23.592
+    }
+  },
+  "8": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 23.892,
+      "end": 25.764
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 24.084,
+      "end": 25.956
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 23.892,
+      "end": 25.764
+    }
+  },
+  "9": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 26.064,
+      "end": 27.936
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 26.256,
+      "end": 28.128
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 26.064,
+      "end": 27.936
+    }
+  },
+  "10": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 28.236,
+      "end": 30.108
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 28.428,
+      "end": 30.3
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 28.236,
+      "end": 30.108
+    }
+  },
+  "11": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 30.408,
+      "end": 32.28
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 30.6,
+      "end": 32.472
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 30.408,
+      "end": 32.28
+    }
+  },
+  "12": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 32.58,
+      "end": 34.452
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 32.772,
+      "end": 34.644
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 32.58,
+      "end": 34.452
+    }
+  },
+  "13": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 34.752,
+      "end": 36.624
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 34.944,
+      "end": 36.816
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 34.752,
+      "end": 36.624
+    }
+  },
+  "14": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 36.924,
+      "end": 38.796
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 37.116,
+      "end": 38.988
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 36.924,
+      "end": 38.796
+    }
+  },
+  "15": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 39.096,
+      "end": 40.968
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 39.288,
+      "end": 41.16
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 39.096,
+      "end": 40.968
+    }
+  },
+  "16": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 41.268,
+      "end": 43.14
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 41.46,
+      "end": 43.38
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 41.268,
+      "end": 43.14
+    }
+  },
+  "17": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 43.44,
+      "end": 45.336
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 43.68,
+      "end": 45.552
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 43.44,
+      "end": 45.312
+    }
+  },
+  "18": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 45.636,
+      "end": 47.508
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 45.852,
+      "end": 47.724
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 45.612,
+      "end": 47.484
+    }
+  },
+  "19": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 47.808,
+      "end": 49.68
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 48.024,
+      "end": 49.944
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 47.784,
+      "end": 49.656
+    }
+  },
+  "20": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 49.98,
+      "end": 51.852
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 50.244,
+      "end": 52.212
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 49.956,
+      "end": 51.828
+    }
+  },
+  "21": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 52.152,
+      "end": 54.072
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 52.512,
+      "end": 54.528
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 52.128,
+      "end": 54.0
+    }
+  },
+  "22": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 54.372,
+      "end": 56.244
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 54.828,
+      "end": 56.7
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 54.3,
+      "end": 56.172
+    }
+  },
+  "23": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 56.544,
+      "end": 58.44
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 57.0,
+      "end": 58.872
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 56.472,
+      "end": 58.344
+    }
+  },
+  "24": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 58.74,
+      "end": 60.636
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 59.172,
+      "end": 61.332
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 58.644,
+      "end": 60.516
+    }
+  },
+  "25": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 60.936,
+      "end": 62.976
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 61.632,
+      "end": 63.696
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 60.816,
+      "end": 62.688
+    }
+  },
+  "26": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 63.276,
+      "end": 65.244
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 63.996,
+      "end": 66.06
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 62.988,
+      "end": 64.86
+    }
+  },
+  "27": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 65.544,
+      "end": 67.56
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 66.36,
+      "end": 68.496
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 65.16,
+      "end": 67.032
+    }
+  },
+  "28": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 67.86,
+      "end": 69.804
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 68.796,
+      "end": 70.812
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 67.332,
+      "end": 69.204
+    }
+  },
+  "29": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 70.104,
+      "end": 72.048
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 71.112,
+      "end": 73.104
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 69.504,
+      "end": 71.376
+    }
+  },
+  "30": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 72.348,
+      "end": 74.22
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 73.404,
+      "end": 75.276
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 71.676,
+      "end": 73.548
+    }
+  },
+  "31": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 74.52,
+      "end": 76.416
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 75.576,
+      "end": 77.616
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 73.848,
+      "end": 75.72
+    }
+  },
+  "32": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 76.716,
+      "end": 78.588
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 77.916,
+      "end": 80.028
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 76.02,
+      "end": 77.892
+    }
+  },
+  "33": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 78.888,
+      "end": 80.832
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 80.328,
+      "end": 82.344
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 78.192,
+      "end": 80.064
+    }
+  },
+  "34": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 81.132,
+      "end": 83.028
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 82.644,
+      "end": 84.804
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 80.364,
+      "end": 82.236
+    }
+  },
+  "35": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 83.328,
+      "end": 85.368
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 85.104,
+      "end": 87.144
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 82.536,
+      "end": 84.408
+    }
+  },
+  "36": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 85.668,
+      "end": 87.684
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 87.444,
+      "end": 89.532
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 84.708,
+      "end": 86.58
+    }
+  },
+  "37": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 87.984,
+      "end": 90.0
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 89.832,
+      "end": 91.896
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 86.88,
+      "end": 88.8
+    }
+  },
+  "38": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 90.3,
+      "end": 92.196
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 92.196,
+      "end": 94.14
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 89.1,
+      "end": 90.972
+    }
+  },
+  "39": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 92.496,
+      "end": 94.44
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 94.44,
+      "end": 96.576
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 91.272,
+      "end": 93.216
+    }
+  },
+  "40": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 94.74,
+      "end": 96.612
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 96.876,
+      "end": 98.916
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 93.516,
+      "end": 95.388
+    }
+  },
+  "41": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 96.912,
+      "end": 98.904
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 99.216,
+      "end": 101.4
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 95.688,
+      "end": 97.56
+    }
+  },
+  "42": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 99.204,
+      "end": 101.076
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 101.7,
+      "end": 103.716
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 97.86,
+      "end": 99.732
+    }
+  },
+  "43": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 101.376,
+      "end": 103.368
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 104.016,
+      "end": 106.2
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 100.032,
+      "end": 101.904
+    }
+  },
+  "44": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 103.668,
+      "end": 105.66
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 106.5,
+      "end": 108.612
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 102.204,
+      "end": 104.172
+    }
+  },
+  "45": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 105.96,
+      "end": 108.12
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 108.912,
+      "end": 111.168
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 104.472,
+      "end": 106.344
+    }
+  },
+  "46": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 108.42,
+      "end": 110.484
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 111.468,
+      "end": 113.58
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 106.644,
+      "end": 108.516
+    }
+  },
+  "47": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 110.784,
+      "end": 112.848
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 113.88,
+      "end": 116.16
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 108.816,
+      "end": 110.808
+    }
+  },
+  "48": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 113.148,
+      "end": 115.092
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 116.46,
+      "end": 118.62
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 111.108,
+      "end": 113.004
+    }
+  },
+  "49": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 115.392,
+      "end": 117.408
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 118.92,
+      "end": 120.936
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 113.304,
+      "end": 115.32
+    }
+  },
+  "50": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 117.708,
+      "end": 119.58
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 121.236,
+      "end": 123.252
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 115.62,
+      "end": 117.492
+    }
+  },
+  "51": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 119.88,
+      "end": 121.896
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 123.552,
+      "end": 125.424
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 117.792,
+      "end": 119.664
+    }
+  },
+  "52": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 122.196,
+      "end": 124.116
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 125.724,
+      "end": 127.596
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 119.964,
+      "end": 121.836
+    }
+  },
+  "53": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 124.416,
+      "end": 126.48
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 127.896,
+      "end": 129.768
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 122.136,
+      "end": 124.008
+    }
+  },
+  "54": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 126.78,
+      "end": 128.796
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 130.068,
+      "end": 131.94
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 124.308,
+      "end": 126.18
+    }
+  },
+  "55": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 129.096,
+      "end": 131.232
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 132.24,
+      "end": 134.112
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 126.48,
+      "end": 128.352
+    }
+  },
+  "56": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 131.532,
+      "end": 133.644
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 134.412,
+      "end": 136.284
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 128.652,
+      "end": 130.524
+    }
+  },
+  "57": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 133.944,
+      "end": 136.08
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 136.584,
+      "end": 138.624
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 130.824,
+      "end": 132.696
+    }
+  },
+  "58": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 136.38,
+      "end": 138.372
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 138.924,
+      "end": 140.82
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 132.996,
+      "end": 134.868
+    }
+  },
+  "59": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 138.672,
+      "end": 140.688
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 141.12,
+      "end": 142.992
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 135.168,
+      "end": 137.04
+    }
+  },
+  "60": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 140.988,
+      "end": 142.86
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 143.292,
+      "end": 145.164
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 137.34,
+      "end": 139.212
+    }
+  },
+  "61": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 143.16,
+      "end": 145.152
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 145.464,
+      "end": 147.336
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 139.512,
+      "end": 141.384
+    }
+  },
+  "62": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 145.452,
+      "end": 147.444
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 147.636,
+      "end": 149.604
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 141.684,
+      "end": 143.556
+    }
+  },
+  "63": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 147.744,
+      "end": 149.832
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 149.904,
+      "end": 151.848
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 143.856,
+      "end": 145.728
+    }
+  },
+  "64": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 150.132,
+      "end": 152.172
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 152.148,
+      "end": 154.068
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 146.028,
+      "end": 147.9
+    }
+  },
+  "65": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 152.472,
+      "end": 154.632
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 154.368,
+      "end": 156.264
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 148.2,
+      "end": 150.072
+    }
+  },
+  "66": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 154.932,
+      "end": 157.116
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 156.564,
+      "end": 158.484
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 150.372,
+      "end": 152.244
+    }
+  },
+  "67": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 157.416,
+      "end": 159.552
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 158.784,
+      "end": 160.776
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 152.544,
+      "end": 154.416
+    }
+  },
+  "68": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 159.852,
+      "end": 161.916
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 161.076,
+      "end": 162.948
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 154.716,
+      "end": 156.588
+    }
+  },
+  "69": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 162.216,
+      "end": 164.328
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 163.248,
+      "end": 165.12
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 156.888,
+      "end": 158.76
+    }
+  },
+  "70": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 164.628,
+      "end": 166.5
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 165.42,
+      "end": 167.292
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 159.06,
+      "end": 160.932
+    }
+  },
+  "71": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 166.8,
+      "end": 168.864
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 167.592,
+      "end": 169.464
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 161.232,
+      "end": 163.104
+    }
+  },
+  "72": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 169.164,
+      "end": 171.156
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 169.764,
+      "end": 171.66
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 163.404,
+      "end": 165.276
+    }
+  },
+  "73": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 171.456,
+      "end": 173.544
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 171.96,
+      "end": 173.832
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 165.576,
+      "end": 167.448
+    }
+  },
+  "74": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 173.844,
+      "end": 175.884
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 174.132,
+      "end": 176.148
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 167.748,
+      "end": 169.62
+    }
+  },
+  "75": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 176.184,
+      "end": 178.344
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 176.448,
+      "end": 178.44
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 169.92,
+      "end": 171.792
+    }
+  },
+  "76": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 178.644,
+      "end": 180.804
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 178.74,
+      "end": 180.612
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 172.092,
+      "end": 173.964
+    }
+  },
+  "77": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 181.104,
+      "end": 183.288
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 180.912,
+      "end": 182.952
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 174.264,
+      "end": 176.136
+    }
+  },
+  "78": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 183.588,
+      "end": 185.628
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 183.252,
+      "end": 185.148
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 176.436,
+      "end": 178.308
+    }
+  },
+  "79": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 185.928,
+      "end": 187.992
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 185.448,
+      "end": 187.32
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 178.608,
+      "end": 180.48
+    }
+  },
+  "80": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 188.292,
+      "end": 190.164
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 187.62,
+      "end": 189.492
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 180.78,
+      "end": 182.652
+    }
+  },
+  "81": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 190.464,
+      "end": 192.384
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 189.792,
+      "end": 191.712
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 182.952,
+      "end": 184.824
+    }
+  },
+  "82": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 192.684,
+      "end": 194.556
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 192.012,
+      "end": 193.908
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 185.124,
+      "end": 186.996
+    }
+  },
+  "83": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 194.856,
+      "end": 196.776
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 194.208,
+      "end": 196.08
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 187.296,
+      "end": 189.168
+    }
+  },
+  "84": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 197.076,
+      "end": 198.972
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 196.38,
+      "end": 198.372
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 189.468,
+      "end": 191.34
+    }
+  },
+  "85": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 199.272,
+      "end": 201.288
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 198.672,
+      "end": 200.616
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 191.64,
+      "end": 193.512
+    }
+  },
+  "86": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 201.588,
+      "end": 203.604
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 200.916,
+      "end": 202.908
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 193.812,
+      "end": 195.684
+    }
+  },
+  "87": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 203.904,
+      "end": 205.896
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 203.208,
+      "end": 205.272
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 195.984,
+      "end": 197.856
+    }
+  },
+  "88": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 206.196,
+      "end": 208.068
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 205.572,
+      "end": 207.492
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 198.156,
+      "end": 200.028
+    }
+  },
+  "89": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 208.368,
+      "end": 210.36
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 207.792,
+      "end": 209.712
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 200.328,
+      "end": 202.2
+    }
+  },
+  "90": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 210.66,
+      "end": 212.532
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 210.012,
+      "end": 211.884
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 202.5,
+      "end": 204.372
+    }
+  },
+  "91": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 212.832,
+      "end": 214.824
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 212.184,
+      "end": 214.128
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 204.672,
+      "end": 206.544
+    }
+  },
+  "92": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 215.124,
+      "end": 217.044
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 214.428,
+      "end": 216.3
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 206.844,
+      "end": 208.716
+    }
+  },
+  "93": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 217.344,
+      "end": 219.36
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 216.6,
+      "end": 218.496
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 209.016,
+      "end": 210.888
+    }
+  },
+  "94": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 219.66,
+      "end": 221.628
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 218.796,
+      "end": 220.812
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 211.188,
+      "end": 213.06
+    }
+  },
+  "95": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 221.928,
+      "end": 224.064
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 221.112,
+      "end": 223.032
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 213.36,
+      "end": 215.232
+    }
+  },
+  "96": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 224.364,
+      "end": 226.452
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 223.332,
+      "end": 225.228
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 215.532,
+      "end": 217.404
+    }
+  },
+  "97": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 226.752,
+      "end": 228.888
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 225.528,
+      "end": 227.592
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 217.704,
+      "end": 219.696
+    }
+  },
+  "98": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 229.188,
+      "end": 231.228
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 227.892,
+      "end": 229.836
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 219.996,
+      "end": 221.868
+    }
+  },
+  "99": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 231.528,
+      "end": 233.568
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 230.136,
+      "end": 232.152
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 222.168,
+      "end": 224.04
+    }
+  },
+  "100": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 233.868,
+      "end": 235.812
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 232.452,
+      "end": 234.324
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 224.34,
+      "end": 226.212
+    }
+  },
+  "101": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 236.112,
+      "end": 238.416
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 234.624,
+      "end": 236.808
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 226.512,
+      "end": 228.384
+    }
+  },
+  "102": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 238.716,
+      "end": 240.9
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 237.108,
+      "end": 239.364
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 228.684,
+      "end": 230.556
+    }
+  },
+  "103": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 241.2,
+      "end": 243.528
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 239.664,
+      "end": 241.92
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 230.856,
+      "end": 232.728
+    }
+  },
+  "104": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 243.828,
+      "end": 246.156
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 242.22,
+      "end": 244.5
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 233.028,
+      "end": 234.9
+    }
+  },
+  "105": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 246.456,
+      "end": 248.88
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 244.8,
+      "end": 247.224
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 235.2,
+      "end": 237.12
+    }
+  },
+  "106": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 249.18,
+      "end": 251.484
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 247.524,
+      "end": 249.732
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 237.42,
+      "end": 239.292
+    }
+  },
+  "107": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 251.784,
+      "end": 254.256
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 250.032,
+      "end": 252.36
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 239.592,
+      "end": 241.488
+    }
+  },
+  "108": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 254.556,
+      "end": 256.884
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 252.66,
+      "end": 254.94
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 241.788,
+      "end": 243.66
+    }
+  },
+  "109": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 257.184,
+      "end": 259.56
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 255.24,
+      "end": 257.352
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 243.96,
+      "end": 245.832
+    }
+  },
+  "110": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 259.86,
+      "end": 262.212
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 257.652,
+      "end": 260.052
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 246.132,
+      "end": 248.004
+    }
+  },
+  "111": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 262.512,
+      "end": 264.984
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 260.352,
+      "end": 262.704
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 248.304,
+      "end": 250.344
+    }
+  },
+  "112": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 265.284,
+      "end": 267.66
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 263.004,
+      "end": 265.308
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 250.644,
+      "end": 252.516
+    }
+  },
+  "113": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 267.96,
+      "end": 270.456
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 265.608,
+      "end": 267.888
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 252.816,
+      "end": 254.688
+    }
+  },
+  "114": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 270.756,
+      "end": 273.252
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 268.188,
+      "end": 270.588
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 254.988,
+      "end": 257.004
+    }
+  },
+  "115": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 273.552,
+      "end": 276.12
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 270.888,
+      "end": 273.312
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 257.304,
+      "end": 259.344
+    }
+  },
+  "116": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 276.42,
+      "end": 278.988
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 273.612,
+      "end": 275.916
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 259.644,
+      "end": 261.54
+    }
+  },
+  "117": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 279.288,
+      "end": 281.904
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 276.216,
+      "end": 278.592
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 261.84,
+      "end": 263.856
+    }
+  },
+  "118": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 282.204,
+      "end": 284.628
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 278.892,
+      "end": 281.364
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 264.156,
+      "end": 266.172
+    }
+  },
+  "119": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 284.928,
+      "end": 287.496
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 281.664,
+      "end": 284.208
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 266.472,
+      "end": 268.512
+    }
+  },
+  "120": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 287.796,
+      "end": 290.196
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 284.508,
+      "end": 286.884
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 268.812,
+      "end": 270.684
+    }
+  },
+  "121": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 290.496,
+      "end": 293.16
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 287.184,
+      "end": 289.728
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 270.984,
+      "end": 273.096
+    }
+  },
+  "122": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 293.46,
+      "end": 296.028
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 290.028,
+      "end": 292.356
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 273.396,
+      "end": 275.412
+    }
+  },
+  "123": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 296.328,
+      "end": 299.064
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 292.656,
+      "end": 295.176
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 275.712,
+      "end": 277.656
+    }
+  },
+  "124": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 299.364,
+      "end": 302.004
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 295.476,
+      "end": 298.044
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 277.956,
+      "end": 280.092
+    }
+  },
+  "125": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 302.304,
+      "end": 305.064
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 298.344,
+      "end": 300.96
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 280.392,
+      "end": 282.432
+    }
+  },
+  "126": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 305.364,
+      "end": 308.028
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 301.26,
+      "end": 303.876
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 282.732,
+      "end": 284.892
+    }
+  },
+  "127": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 308.328,
+      "end": 311.136
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 304.176,
+      "end": 306.816
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 285.192,
+      "end": 287.304
+    }
+  },
+  "128": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 311.436,
+      "end": 314.172
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 307.116,
+      "end": 309.732
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 287.604,
+      "end": 289.62
+    }
+  },
+  "129": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 314.472,
+      "end": 317.184
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 310.032,
+      "end": 312.648
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 289.92,
+      "end": 292.2
+    }
+  },
+  "130": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 317.484,
+      "end": 319.86
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 312.948,
+      "end": 315.396
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 292.5,
+      "end": 294.54
+    }
+  },
+  "131": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 320.16,
+      "end": 322.872
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 315.696,
+      "end": 318.24
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 294.84,
+      "end": 297.096
+    }
+  },
+  "132": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 323.172,
+      "end": 325.788
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 318.54,
+      "end": 321.132
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 297.396,
+      "end": 299.484
+    }
+  },
+  "133": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 326.088,
+      "end": 328.824
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 321.432,
+      "end": 324.024
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 299.784,
+      "end": 301.92
+    }
+  },
+  "134": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 329.124,
+      "end": 331.812
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 324.324,
+      "end": 327.036
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 302.22,
+      "end": 304.428
+    }
+  },
+  "135": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 332.112,
+      "end": 334.92
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 327.336,
+      "end": 329.952
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 304.728,
+      "end": 306.864
+    }
+  },
+  "136": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 335.22,
+      "end": 337.932
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 330.252,
+      "end": 332.94
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 307.164,
+      "end": 309.3
+    }
+  },
+  "137": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 338.232,
+      "end": 340.968
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 333.24,
+      "end": 335.856
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 309.6,
+      "end": 311.88
+    }
+  },
+  "138": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 341.268,
+      "end": 344.004
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 336.156,
+      "end": 338.724
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 312.18,
+      "end": 314.316
+    }
+  },
+  "139": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 344.304,
+      "end": 347.016
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 339.024,
+      "end": 341.784
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 314.616,
+      "end": 317.064
+    }
+  },
+  "140": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 347.316,
+      "end": 349.764
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 342.084,
+      "end": 344.628
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 317.364,
+      "end": 319.524
+    }
+  },
+  "141": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 350.064,
+      "end": 352.8
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 344.928,
+      "end": 347.64
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 319.824,
+      "end": 322.176
+    }
+  },
+  "142": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 353.1,
+      "end": 355.716
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 347.94,
+      "end": 350.532
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 322.476,
+      "end": 324.732
+    }
+  },
+  "143": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 356.016,
+      "end": 358.8
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 350.832,
+      "end": 353.616
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 325.032,
+      "end": 327.312
+    }
+  },
+  "144": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 359.1,
+      "end": 361.836
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 353.916,
+      "end": 356.556
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 327.612,
+      "end": 330.012
+    }
+  },
+  "145": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 362.136,
+      "end": 364.968
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 356.856,
+      "end": 359.616
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 330.312,
+      "end": 332.64
+    }
+  },
+  "146": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 365.268,
+      "end": 367.98
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 359.916,
+      "end": 362.604
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 332.94,
+      "end": 335.268
+    }
+  },
+  "147": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 368.28,
+      "end": 371.064
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 362.904,
+      "end": 365.64
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 335.568,
+      "end": 337.968
+    }
+  },
+  "148": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 371.364,
+      "end": 374.1
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 365.94,
+      "end": 368.676
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 338.268,
+      "end": 340.62
+    }
+  },
+  "149": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 374.4,
+      "end": 377.136
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 368.976,
+      "end": 371.592
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 340.92,
+      "end": 343.392
+    }
+  },
+  "150": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 377.436,
+      "end": 379.956
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 371.892,
+      "end": 373.812
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 343.692,
+      "end": 345.828
+    }
+  },
+  "151": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 380.256,
+      "end": 383.064
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 374.112,
+      "end": 376.656
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 346.128,
+      "end": 348.24
+    }
+  },
+  "152": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 383.364,
+      "end": 386.052
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 376.956,
+      "end": 379.284
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 348.54,
+      "end": 350.652
+    }
+  },
+  "153": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 386.352,
+      "end": 389.16
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 379.584,
+      "end": 381.912
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 350.952,
+      "end": 353.112
+    }
+  },
+  "154": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 389.46,
+      "end": 392.22
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 382.212,
+      "end": 384.564
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 353.412,
+      "end": 355.5
+    }
+  },
+  "155": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 392.52,
+      "end": 395.376
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 384.864,
+      "end": 387.216
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 355.8,
+      "end": 358.008
+    }
+  },
+  "156": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 395.676,
+      "end": 398.388
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 387.516,
+      "end": 389.94
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 358.308,
+      "end": 360.516
+    }
+  },
+  "157": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 398.688,
+      "end": 401.496
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 390.24,
+      "end": 392.784
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 360.816,
+      "end": 362.976
+    }
+  },
+  "158": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 401.796,
+      "end": 404.652
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 393.084,
+      "end": 395.652
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 363.276,
+      "end": 365.364
+    }
+  },
+  "159": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 404.952,
+      "end": 407.736
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 395.952,
+      "end": 398.328
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 365.664,
+      "end": 367.872
+    }
+  },
+  "160": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 408.036,
+      "end": 410.484
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 398.628,
+      "end": 401.004
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 368.172,
+      "end": 370.044
+    }
+  },
+  "161": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 410.784,
+      "end": 413.568
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 401.304,
+      "end": 403.656
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 370.344,
+      "end": 372.504
+    }
+  },
+  "162": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 413.868,
+      "end": 416.532
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 403.956,
+      "end": 406.308
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 372.804,
+      "end": 374.916
+    }
+  },
+  "163": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 416.832,
+      "end": 419.664
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 406.608,
+      "end": 409.032
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 375.216,
+      "end": 377.328
+    }
+  },
+  "164": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 419.964,
+      "end": 422.772
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 409.332,
+      "end": 411.804
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 377.628,
+      "end": 379.884
+    }
+  },
+  "165": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 423.072,
+      "end": 425.904
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 412.104,
+      "end": 414.6
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 380.184,
+      "end": 382.296
+    }
+  },
+  "166": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 426.204,
+      "end": 428.964
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 414.9,
+      "end": 417.396
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 382.596,
+      "end": 384.732
+    }
+  },
+  "167": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 429.264,
+      "end": 432.12
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 417.696,
+      "end": 420.144
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 385.032,
+      "end": 387.264
+    }
+  },
+  "168": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 432.42,
+      "end": 435.18
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 420.444,
+      "end": 422.892
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 387.564,
+      "end": 389.724
+    }
+  },
+  "169": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 435.48,
+      "end": 438.24
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 423.192,
+      "end": 425.664
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 390.024,
+      "end": 392.352
+    }
+  },
+  "170": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 438.54,
+      "end": 441.012
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 425.964,
+      "end": 428.268
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 392.652,
+      "end": 394.668
+    }
+  },
+  "171": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 441.312,
+      "end": 444.12
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 428.568,
+      "end": 430.992
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 394.968,
+      "end": 397.128
+    }
+  },
+  "172": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 444.42,
+      "end": 447.108
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 431.292,
+      "end": 433.692
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 397.428,
+      "end": 399.588
+    }
+  },
+  "173": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 447.408,
+      "end": 450.24
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 433.992,
+      "end": 436.392
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 399.888,
+      "end": 401.976
+    }
+  },
+  "174": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 450.54,
+      "end": 453.324
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 436.692,
+      "end": 439.188
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 402.276,
+      "end": 404.388
+    }
+  },
+  "175": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 453.624,
+      "end": 456.48
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 439.488,
+      "end": 441.984
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 404.688,
+      "end": 406.872
+    }
+  },
+  "176": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 456.78,
+      "end": 459.588
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 442.284,
+      "end": 444.732
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 407.172,
+      "end": 409.332
+    }
+  },
+  "177": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 459.888,
+      "end": 462.768
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 445.032,
+      "end": 447.504
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 409.632,
+      "end": 411.816
+    }
+  },
+  "178": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 463.068,
+      "end": 465.9
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 447.804,
+      "end": 450.372
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 412.116,
+      "end": 414.252
+    }
+  },
+  "179": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 466.2,
+      "end": 469.032
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 450.672,
+      "end": 453.168
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 414.552,
+      "end": 416.76
+    }
+  },
+  "180": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 469.332,
+      "end": 471.684
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 453.468,
+      "end": 455.82
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 417.06,
+      "end": 418.98
+    }
+  },
+  "181": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 471.984,
+      "end": 474.648
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 456.12,
+      "end": 458.712
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 419.28,
+      "end": 421.416
+    }
+  },
+  "182": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 474.948,
+      "end": 477.444
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 459.012,
+      "end": 461.436
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 421.716,
+      "end": 423.828
+    }
+  },
+  "183": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 477.744,
+      "end": 480.432
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 461.736,
+      "end": 464.16
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 424.128,
+      "end": 426.216
+    }
+  },
+  "184": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 480.732,
+      "end": 483.396
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 464.46,
+      "end": 467.052
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 426.516,
+      "end": 428.652
+    }
+  },
+  "185": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 483.696,
+      "end": 486.432
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 467.352,
+      "end": 469.8
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 428.952,
+      "end": 431.112
+    }
+  },
+  "186": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 486.732,
+      "end": 489.372
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 470.1,
+      "end": 472.62
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 431.412,
+      "end": 433.548
+    }
+  },
+  "187": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 489.672,
+      "end": 492.384
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 472.92,
+      "end": 475.488
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 433.848,
+      "end": 435.984
+    }
+  },
+  "188": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 492.684,
+      "end": 495.372
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 475.788,
+      "end": 478.38
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 436.284,
+      "end": 438.396
+    }
+  },
+  "189": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 495.672,
+      "end": 498.336
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 478.68,
+      "end": 481.128
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 438.696,
+      "end": 441.024
+    }
+  },
+  "190": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 498.636,
+      "end": 501.084
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 481.428,
+      "end": 483.708
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 441.324,
+      "end": 443.34
+    }
+  },
+  "191": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 501.384,
+      "end": 504.12
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 484.008,
+      "end": 486.552
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 443.64,
+      "end": 445.992
+    }
+  },
+  "192": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 504.42,
+      "end": 507.108
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 486.852,
+      "end": 489.18
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 446.292,
+      "end": 448.548
+    }
+  },
+  "193": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 507.408,
+      "end": 510.144
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 489.48,
+      "end": 491.904
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 448.848,
+      "end": 451.104
+    }
+  },
+  "194": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 510.444,
+      "end": 513.204
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 492.204,
+      "end": 494.796
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 451.404,
+      "end": 453.708
+    }
+  },
+  "195": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 513.504,
+      "end": 516.36
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 495.096,
+      "end": 497.592
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 454.008,
+      "end": 456.36
+    }
+  },
+  "196": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 516.66,
+      "end": 519.348
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 497.892,
+      "end": 500.388
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 456.66,
+      "end": 458.964
+    }
+  },
+  "197": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 519.648,
+      "end": 522.456
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 500.688,
+      "end": 503.232
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 459.264,
+      "end": 461.664
+    }
+  },
+  "198": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 522.756,
+      "end": 525.588
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 503.532,
+      "end": 506.124
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 461.964,
+      "end": 464.244
+    }
+  },
+  "199": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 525.888,
+      "end": 528.672
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 506.424,
+      "end": 508.944
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 464.544,
+      "end": 466.848
+    }
+  },
+  "200": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 528.972,
+      "end": 530.844
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 509.244,
+      "end": 511.14
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 467.148,
+      "end": 469.02
+    }
+  },
+  "201": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 531.144,
+      "end": 533.328
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 511.44,
+      "end": 513.72
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 469.32,
+      "end": 471.24
+    }
+  },
+  "202": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 533.628,
+      "end": 535.764
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 514.02,
+      "end": 516.3
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 471.54,
+      "end": 473.412
+    }
+  },
+  "203": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 536.064,
+      "end": 538.272
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 516.6,
+      "end": 518.856
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 473.712,
+      "end": 475.584
+    }
+  },
+  "204": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 538.572,
+      "end": 540.852
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 519.156,
+      "end": 521.508
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 475.884,
+      "end": 477.804
+    }
+  },
+  "205": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 541.152,
+      "end": 543.504
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 521.808,
+      "end": 524.304
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 478.104,
+      "end": 480.072
+    }
+  },
+  "206": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 543.804,
+      "end": 546.036
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 524.604,
+      "end": 526.884
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 480.372,
+      "end": 482.292
+    }
+  },
+  "207": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 546.336,
+      "end": 548.664
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 527.184,
+      "end": 529.656
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 482.592,
+      "end": 484.536
+    }
+  },
+  "208": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 548.964,
+      "end": 551.22
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 529.956,
+      "end": 532.284
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 484.836,
+      "end": 486.708
+    }
+  },
+  "209": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 551.52,
+      "end": 553.8
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 532.584,
+      "end": 534.744
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 487.008,
+      "end": 488.88
+    }
+  },
+  "210": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 554.1,
+      "end": 556.332
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 535.044,
+      "end": 537.492
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 489.18,
+      "end": 491.052
+    }
+  },
+  "211": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 556.632,
+      "end": 559.032
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 537.792,
+      "end": 540.216
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 491.352,
+      "end": 493.44
+    }
+  },
+  "212": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 559.332,
+      "end": 561.612
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 540.516,
+      "end": 542.844
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 493.74,
+      "end": 495.66
+    }
+  },
+  "213": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 561.912,
+      "end": 564.312
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 543.144,
+      "end": 545.472
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 495.96,
+      "end": 497.88
+    }
+  },
+  "214": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 564.612,
+      "end": 567.012
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 545.772,
+      "end": 548.196
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 498.18,
+      "end": 500.268
+    }
+  },
+  "215": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 567.312,
+      "end": 569.736
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 548.496,
+      "end": 550.968
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 500.568,
+      "end": 502.704
+    }
+  },
+  "216": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 570.036,
+      "end": 572.508
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 551.268,
+      "end": 553.62
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 503.004,
+      "end": 504.948
+    }
+  },
+  "217": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 572.808,
+      "end": 575.28
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 553.92,
+      "end": 556.344
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 505.248,
+      "end": 507.336
+    }
+  },
+  "218": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 575.58,
+      "end": 577.908
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 556.644,
+      "end": 559.212
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 507.636,
+      "end": 509.772
+    }
+  },
+  "219": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 578.208,
+      "end": 580.68
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 559.512,
+      "end": 562.104
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 510.072,
+      "end": 512.16
+    }
+  },
+  "220": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 580.98,
+      "end": 583.26
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 562.404,
+      "end": 564.852
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 512.46,
+      "end": 514.38
+    }
+  },
+  "221": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 583.56,
+      "end": 586.128
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 565.152,
+      "end": 567.72
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 514.68,
+      "end": 516.816
+    }
+  },
+  "222": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 586.428,
+      "end": 588.876
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 568.02,
+      "end": 570.396
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 517.116,
+      "end": 519.156
+    }
+  },
+  "223": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 589.176,
+      "end": 591.816
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 570.696,
+      "end": 573.24
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 519.456,
+      "end": 521.496
+    }
+  },
+  "224": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 592.116,
+      "end": 594.66
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 573.54,
+      "end": 576.156
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 521.796,
+      "end": 523.98
+    }
+  },
+  "225": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 594.96,
+      "end": 597.576
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 576.456,
+      "end": 579.072
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 524.28,
+      "end": 526.416
+    }
+  },
+  "226": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 597.876,
+      "end": 600.444
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 579.372,
+      "end": 582.036
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 526.716,
+      "end": 528.948
+    }
+  },
+  "227": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 600.744,
+      "end": 603.408
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 582.336,
+      "end": 585.072
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 529.248,
+      "end": 531.408
+    }
+  },
+  "228": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 603.708,
+      "end": 606.348
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 585.372,
+      "end": 588.06
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 531.708,
+      "end": 533.844
+    }
+  },
+  "229": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 606.648,
+      "end": 609.24
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 588.36,
+      "end": 591.0
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 534.144,
+      "end": 536.472
+    }
+  },
+  "230": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 609.54,
+      "end": 611.82
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 591.3,
+      "end": 593.724
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 536.772,
+      "end": 538.836
+    }
+  },
+  "231": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 612.12,
+      "end": 614.688
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 594.024,
+      "end": 596.592
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 539.136,
+      "end": 541.464
+    }
+  },
+  "232": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 614.988,
+      "end": 617.508
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 596.892,
+      "end": 599.508
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 541.764,
+      "end": 543.924
+    }
+  },
+  "233": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 617.808,
+      "end": 620.4
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 599.808,
+      "end": 602.4
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 544.224,
+      "end": 546.432
+    }
+  },
+  "234": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 620.7,
+      "end": 623.244
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 602.7,
+      "end": 605.436
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 546.732,
+      "end": 549.012
+    }
+  },
+  "235": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 623.544,
+      "end": 626.232
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 605.736,
+      "end": 608.352
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 549.312,
+      "end": 551.52
+    }
+  },
+  "236": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 626.532,
+      "end": 629.22
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 608.652,
+      "end": 611.388
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 551.82,
+      "end": 554.028
+    }
+  },
+  "237": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 629.52,
+      "end": 632.184
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 611.688,
+      "end": 614.352
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 554.328,
+      "end": 556.68
+    }
+  },
+  "238": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 632.484,
+      "end": 635.1
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 614.652,
+      "end": 617.268
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 556.98,
+      "end": 559.236
+    }
+  },
+  "239": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 635.4,
+      "end": 637.992
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 617.568,
+      "end": 620.376
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 559.536,
+      "end": 562.008
+    }
+  },
+  "240": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 638.292,
+      "end": 640.62
+    },
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 620.676,
+      "end": 623.244
+    },
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 562.308,
+      "end": 564.492
+    }
+  },
+  "centimetres": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 640.92,
+      "end": 643.128
+    }
+  },
+  "kilograms": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 643.428,
+      "end": 645.348
+    }
+  },
+  "millimetres of mercury": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 645.648,
+      "end": 648.384
+    }
+  },
+  "beats per minute": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 648.684,
+      "end": 650.916
+    }
+  },
+  "percent": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 651.216,
+      "end": 653.088
+    }
+  },
+  "degrees Fahrenheit": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 653.388,
+      "end": 655.956
+    }
+  },
+  "kilograms per square metre": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 656.256,
+      "end": 659.232
+    }
+  },
+  "square metres": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 659.532,
+      "end": 661.764
+    }
+  },
+  "kilocalories per day": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 662.064,
+      "end": 664.728
+    }
+  },
+  "litres": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 665.028,
+      "end": 666.9
+    }
+  },
+  "point": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 667.2,
+      "end": 669.072
+    }
+  },
+  "All measurements": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 669.372,
+      "end": 671.556
+    }
+  },
+  "Measured": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 671.856,
+      "end": 673.728
+    }
+  },
+  "Calculated": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 674.028,
+      "end": 675.948
+    }
+  },
+  "Population estimate": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 676.248,
+      "end": 678.816
+    }
+  },
+  "Information": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 679.116,
+      "end": 681.108
+    }
+  },
+  "Within reference": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 681.408,
+      "end": 683.544
+    }
+  },
+  "Check / repeat": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 683.844,
+      "end": 685.836
+    }
+  },
+  "Needs review": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 686.136,
+      "end": 688.176
+    }
+  },
+  "Get medical help": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 688.476,
+      "end": 690.9
+    }
+  },
+  "Not available": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 691.2,
+      "end": 693.408
+    }
+  },
+  "Adult screening reference": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 693.708,
+      "end": 696.516
+    }
+  },
+  "recorded observations": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 696.816,
+      "end": 699.504
+    }
+  },
+  "available values today": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 699.804,
+      "end": 702.54
+    }
+  },
+  "Body estimates use height, weight, age and the male/female equation selected in your profile. They are not sensor measurements. They may be inaccurate during pregnancy, illness, fluid changes or for athletes. Do not use them to decide how much to drink or eat.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 702.84,
+      "end": 724.536
+    }
+  },
+  "Metabolic age and visceral fat need a validated assessment. This kiosk cannot measure them reliably. Resting energy below estimates energy used at rest, not a calorie target.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 724.836,
+      "end": 740.268
+    }
+  },
+  "Each colour has its own scale and unit. Compare the same row across scans. Tap a measurement to see it alone.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 740.568,
+      "end": 750.552
+    }
+  },
+  "Estimated body composition": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 750.852,
+      "end": 753.876
+    }
+  },
+  "Water is part of fat-free mass. Do not add these percentages together.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 754.176,
+      "end": 761.088
+    }
+  },
+  "Some readings are within the adult screening reference. This does not rule out illness. Keep the habits that work for you.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 761.388,
+      "end": 771.564
+    }
+  },
+  "One or more readings need a recheck. Sit quietly, repeat with the device positioned correctly, and discuss persistent changes with a clinician.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 771.864,
+      "end": 783.36
+    }
+  },
+  "A reading needs prompt medical attention. If you have chest pain, trouble breathing, fainting, new weakness or confusion, get emergency help now. Do not wait for another paid scan.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 783.66,
+      "end": 798.996
+    }
+  },
+  "Your next scan adds a comparison of the same measurements. Similar timing and conditions make changes easier to understand. Repeating a scan does not create new sensor measurements or guarantee better health.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 799.296,
+      "end": 815.472
+    }
+  },
+  "Your recorded values are read next.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 815.772,
+      "end": 819.228
+    }
+  },
+  "Your plan for today": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 819.528,
+      "end": 821.928
+    }
+  },
+  "Check in together": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 822.228,
+      "end": 824.436
+    }
+  },
+  "Invite a friend or partner to their own private check-in. Compare consistency, not who has a healthier body. Sharing is optional.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 824.736,
+      "end": 836.016
+    }
+  },
+  "There is no validated overall health score from these measurements.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 836.316,
+      "end": 841.452
+    }
+  },
+  "Height": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 841.752,
+      "end": 843.624
+    }
+  },
+  "How tall you are.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 843.924,
+      "end": 846.228
+    }
+  },
+  "Weight": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 846.528,
+      "end": 848.4
+    }
+  },
+  "Your measured body weight.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 848.7,
+      "end": 851.388
+    }
+  },
+  "Systolic pressure": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 851.688,
+      "end": 854.088
+    }
+  },
+  "Pressure when your heart pumps.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 854.388,
+      "end": 857.34
+    }
+  },
+  "Diastolic pressure": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 857.64,
+      "end": 860.208
+    }
+  },
+  "Pressure between heartbeats.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 860.508,
+      "end": 863.364
+    }
+  },
+  "Pulse": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 863.664,
+      "end": 865.536
+    }
+  },
+  "Heartbeats in one minute.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 865.836,
+      "end": 868.524
+    }
+  },
+  "Oxygen": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 868.824,
+      "end": 870.696
+    }
+  },
+  "Estimated oxygen in your blood. Movement and cold fingers affect the reading.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 870.996,
+      "end": 878.1
+    }
+  },
+  "Temperature": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 878.4,
+      "end": 880.272
+    }
+  },
+  "Body temperature at the sensor site.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 880.572,
+      "end": 884.172
+    }
+  },
+  "Body mass index": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 884.472,
+      "end": 886.992
+    }
+  },
+  "Weight relative to height. It does not directly measure body fat.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 887.292,
+      "end": 893.724
+    }
+  },
+  "Body surface area": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 894.024,
+      "end": 896.688
+    }
+  },
+  "Skin surface area calculated from height and weight.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 896.988,
+      "end": 901.644
+    }
+  },
+  "Resting energy": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 901.944,
+      "end": 904.224
+    }
+  },
+  "Estimated energy used at rest, not your daily food target.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 904.524,
+      "end": 909.9
+    }
+  },
+  "Body fat estimate": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 910.2,
+      "end": 912.72
+    }
+  },
+  "A formula estimate, not a body-fat sensor result.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 913.02,
+      "end": 917.82
+    }
+  },
+  "Fat mass estimate": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 918.12,
+      "end": 920.616
+    }
+  },
+  "Estimated weight of body fat.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 920.916,
+      "end": 924.132
+    }
+  },
+  "Fat-free mass estimate": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 924.432,
+      "end": 927.168
+    }
+  },
+  "Includes water, organs and bone. Not muscle alone.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 927.468,
+      "end": 933.372
+    }
+  },
+  "Fat-free mass index": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 933.672,
+      "end": 936.312
+    }
+  },
+  "Estimated fat-free weight relative to height.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 936.612,
+      "end": 940.524
+    }
+  },
+  "Body water estimate": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 940.824,
+      "end": 943.464
+    }
+  },
+  "Estimated water in the body. Cannot diagnose dehydration.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 943.764,
+      "end": 949.812
+    }
+  },
+  "Body water share": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 950.112,
+      "end": 952.536
+    }
+  },
+  "Estimated water share, not a drinking target.": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 952.836,
+      "end": 957.204
+    }
+  },
+  "सेंटीमीटर": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 623.544,
+      "end": 625.728
+    }
+  },
+  "किलो": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 626.028,
+      "end": 627.9
+    }
+  },
+  "मिलीमीटर मरकरी": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 628.2,
+      "end": 630.744
+    }
+  },
+  "धड़कन प्रति मिनट": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 631.044,
+      "end": 633.612
+    }
+  },
+  "प्रतिशत": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 633.912,
+      "end": 635.928
+    }
+  },
+  "डिग्री फारेनहाइट": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 636.228,
+      "end": 638.796
+    }
+  },
+  "किलो प्रति वर्ग मीटर": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 639.096,
+      "end": 641.856
+    }
+  },
+  "वर्ग मीटर": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 642.156,
+      "end": 644.292
+    }
+  },
+  "किलो कैलोरी प्रति दिन": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 644.592,
+      "end": 647.544
+    }
+  },
+  "लीटर": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 647.844,
+      "end": 649.716
+    }
+  },
+  "दशमलव": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 650.016,
+      "end": 652.056
+    }
+  },
+  "सभी माप साथ देखें": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 652.356,
+      "end": 655.5
+    }
+  },
+  "डिवाइस से मापा": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 655.8,
+      "end": 658.272
+    }
+  },
+  "हिसाब से निकला": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 658.572,
+      "end": 660.996
+    }
+  },
+  "फॉर्मूले से अनुमान": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 661.296,
+      "end": 664.152
+    }
+  },
+  "जानकारी": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 664.452,
+      "end": 666.444
+    }
+  },
+  "सामान्य रेंज में": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 666.744,
+      "end": 669.192
+    }
+  },
+  "दोबारा जाँचें": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 669.492,
+      "end": 671.94
+    }
+  },
+  "डॉक्टर से बात करें": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 672.24,
+      "end": 675.072
+    }
+  },
+  "मेडिकल मदद लें": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 675.372,
+      "end": 677.676
+    }
+  },
+  "उपलब्ध नहीं": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 677.976,
+      "end": 680.16
+    }
+  },
+  "बड़ों के लिए जाँच की रेंज": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 680.46,
+      "end": 683.628
+    }
+  },
+  "दर्ज किए गए माप": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 683.928,
+      "end": 686.52
+    }
+  },
+  "आज की उपलब्ध जानकारी": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 686.82,
+      "end": 689.844
+    }
+  },
+  "ये अनुमान आपकी लंबाई, वजन, उम्र और प्रोफाइल में चुने गए पुरुष या महिला के फॉर्मूले से निकले हैं। सेंसर ने इन्हें नहीं मापा है। प्रेग्नेंसी, बीमारी, पानी की मात्रा बदलने या एथलीट होने पर ये गलत हो सकते हैं। इनसे खाने या पानी पीने की मात्रा तय न करें।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 690.144,
+      "end": 714.12
+    }
+  },
+  "मेटाबॉलिक उम्र यानी शरीर की एनर्जी को उम्र से जोड़कर लगाया गया अनुमान। अंदर के फैट और इस उम्र को यह मशीन भरोसे से नहीं बता सकती। नीचे आराम के समय लगने वाली एनर्जी का अनुमान है, खाने का टारगेट नहीं।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 714.42,
+      "end": 734.124
+    }
+  },
+  "हर रंग की अपनी रेंज और यूनिट है। एक ही लाइन को पिछली जाँच से मिलाइए। कोई एक माप देखना हो तो उसका बटन दबाइए।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 734.424,
+      "end": 746.568
+    }
+  },
+  "शरीर में फैट और पानी का अनुमान": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 746.868,
+      "end": 750.66
+    }
+  },
+  "पानी बिना फैट वाले हिस्से में भी होता है। इन प्रतिशतों को आपस में जोड़ना सही नहीं है।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 750.96,
+      "end": 759.24
+    }
+  },
+  "कुछ रीडिंग सामान्य रेंज में हैं। इसका मतलब यह नहीं कि हर बीमारी खारिज हो गई। अच्छी आदतें जारी रखें।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 759.54,
+      "end": 770.772
+    }
+  },
+  "कुछ रीडिंग दोबारा देखने की जरूरत है। आराम से बैठें, डिवाइस सही जगह रखें और फिर जाँचें। बदलाव बना रहे तो डॉक्टर से बात करें।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 771.072,
+      "end": 785.136
+    }
+  },
+  "एक रीडिंग के लिए जल्दी मेडिकल मदद चाहिए। सीने में दर्द, साँस लेने में दिक्कत, बेहोशी, अचानक कमजोरी या उलझन हो तो अभी इमरजेंसी मदद लें। अगली पेड जाँच का इंतजार न करें।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 785.436,
+      "end": 803.268
+    }
+  },
+  "अगली बार यही माप फिर मिलेंगे, ताकि आज से तुलना हो सके। करीब वही समय और हालात रखें। बार-बार जाँच से नए सेंसर वाले माप नहीं बनते, न अच्छी सेहत की गारंटी मिलती है।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 803.568,
+      "end": 820.392
+    }
+  },
+  "अब आपकी दर्ज रीडिंग सुनिए।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 820.692,
+      "end": 823.836
+    }
+  },
+  "आज आपके लिए क्या करना ठीक रहेगा": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 824.136,
+      "end": 827.832
+    }
+  },
+  "दोस्त के साथ सेहत पर ध्यान दें": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 828.132,
+      "end": 831.732
+    }
+  },
+  "दोस्त या पार्टनर को अपनी अलग, निजी जाँच के लिए बुलाएँ। नियमित ध्यान देने की तुलना करें, शरीर में कौन बेहतर है उसकी नहीं। शेयर करना आपकी मर्जी है।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 832.032,
+      "end": 846.864
+    }
+  },
+  "इन मापों से पूरी सेहत का भरोसेमंद स्कोर नहीं निकलता।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 847.164,
+      "end": 852.3
+    }
+  },
+  "लंबाई": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 852.6,
+      "end": 854.472
+    }
+  },
+  "आपकी लंबाई कितनी है।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 854.772,
+      "end": 857.628
+    }
+  },
+  "वजन": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 857.928,
+      "end": 859.8
+    }
+  },
+  "आज मशीन पर आपका वजन।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 860.1,
+      "end": 863.364
+    }
+  },
+  "बीपी ऊपर वाला": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 863.664,
+      "end": 866.256
+    }
+  },
+  "दिल जब खून भेजता है, तब का दबाव।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 866.556,
+      "end": 870.684
+    }
+  },
+  "बीपी नीचे वाला": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 870.984,
+      "end": 873.528
+    }
+  },
+  "दो धड़कनों के बीच का दबाव।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 873.828,
+      "end": 877.332
+    }
+  },
+  "धड़कन": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 877.632,
+      "end": 879.504
+    }
+  },
+  "एक मिनट में दिल कितनी बार धड़का।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 879.804,
+      "end": 883.356
+    }
+  },
+  "ऑक्सीजन": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 883.656,
+      "end": 885.672
+    }
+  },
+  "खून में ऑक्सीजन का अंदाजा। हिलने या उँगली ठंडी होने से रीडिंग बदल सकती है।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 885.972,
+      "end": 894.012
+    }
+  },
+  "शरीर की गर्मी": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 894.312,
+      "end": 896.736
+    }
+  },
+  "जहाँ सेंसर लगा था, वहाँ शरीर कितना गर्म था।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 897.036,
+      "end": 901.908
+    }
+  },
+  "बीएमआई": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 902.208,
+      "end": 904.296
+    }
+  },
+  "लंबाई के हिसाब से वजन। यह सीधे फैट नहीं मापता।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 904.596,
+      "end": 910.932
+    }
+  },
+  "शरीर का सतही क्षेत्र": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 911.232,
+      "end": 914.184
+    }
+  },
+  "लंबाई और वजन से शरीर की बाहरी सतह का हिसाब।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 914.484,
+      "end": 919.644
+    }
+  },
+  "आराम में लगने वाली एनर्जी": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 919.944,
+      "end": 923.04
+    }
+  },
+  "आराम में लगने वाली एनर्जी का अंदाजा। पूरे दिन के खाने का टारगेट नहीं।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 923.34,
+      "end": 930.972
+    }
+  },
+  "शरीर के फैट का अनुमान": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 931.272,
+      "end": 934.488
+    }
+  },
+  "फॉर्मूले से फैट का अंदाजा। फैट सेंसर की रीडिंग नहीं।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 934.788,
+      "end": 941.7
+    }
+  },
+  "फैट का वजन": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 942.0,
+      "end": 944.424
+    }
+  },
+  "शरीर के फैट का अनुमानित वजन।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 944.724,
+      "end": 948.54
+    }
+  },
+  "फैट के अलावा वजन": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 948.84,
+      "end": 951.816
+    }
+  },
+  "पानी, अंग और हड्डियाँ भी इसमें हैं। सिर्फ मसल नहीं।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 952.116,
+      "end": 958.404
+    }
+  },
+  "बिना फैट वजन का इंडेक्स": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 958.704,
+      "end": 962.016
+    }
+  },
+  "लंबाई के हिसाब से बिना फैट वाले वजन का अनुमान।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 962.316,
+      "end": 967.428
+    }
+  },
+  "शरीर में पानी का अनुमान": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 967.728,
+      "end": 970.8
+    }
+  },
+  "शरीर में पानी का अंदाजा। इससे पानी की कमी पक्के तौर पर नहीं पता चलती।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 971.1,
+      "end": 978.828
+    }
+  },
+  "वजन में पानी का हिस्सा": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 979.128,
+      "end": 981.984
+    }
+  },
+  "वजन में पानी का हिस्सा। पीने के पानी का टारगेट नहीं।": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 982.284,
+      "end": 988.524
+    }
+  },
+  "সেন্টিমিটার": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 564.792,
+      "end": 566.664
+    }
+  },
+  "কিলো": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 566.964,
+      "end": 568.836
+    }
+  },
+  "মিলিমিটার মার্কারি": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 569.136,
+      "end": 571.56
+    }
+  },
+  "বিট প্রতি মিনিট": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 571.86,
+      "end": 574.188
+    }
+  },
+  "শতাংশ": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 574.488,
+      "end": 576.36
+    }
+  },
+  "ডিগ্রি ফারেনহাইট": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 576.66,
+      "end": 579.012
+    }
+  },
+  "কিলো প্রতি বর্গ মিটার": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 579.312,
+      "end": 581.928
+    }
+  },
+  "বর্গ মিটার": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 582.228,
+      "end": 584.196
+    }
+  },
+  "কিলো ক্যালোরি প্রতি দিন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 584.496,
+      "end": 587.112
+    }
+  },
+  "লিটার": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 587.412,
+      "end": 589.284
+    }
+  },
+  "দশমিক": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 589.584,
+      "end": 591.456
+    }
+  },
+  "সব মাপ একসঙ্গে": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 591.756,
+      "end": 594.228
+    }
+  },
+  "যন্ত্রে মাপা": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 594.528,
+      "end": 596.592
+    }
+  },
+  "হিসাব করা": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 596.892,
+      "end": 598.764
+    }
+  },
+  "ফর্মুলার অনুমান": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 599.064,
+      "end": 601.392
+    }
+  },
+  "তথ্য": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 601.692,
+      "end": 603.564
+    }
+  },
+  "সাধারণ সীমার মধ্যে": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 603.864,
+      "end": 606.48
+    }
+  },
+  "আবার মাপুন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 606.78,
+      "end": 608.748
+    }
+  },
+  "ডাক্তারের সঙ্গে কথা বলুন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 609.048,
+      "end": 612.0
+    }
+  },
+  "চিকিৎসার সাহায্য নিন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 612.3,
+      "end": 614.964
+    }
+  },
+  "পাওয়া যায়নি": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 615.264,
+      "end": 617.136
+    }
+  },
+  "বড়দের পরীক্ষার সাধারণ সীমা": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 617.436,
+      "end": 620.652
+    }
+  },
+  "নথিভুক্ত মাপ": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 620.952,
+      "end": 623.52
+    }
+  },
+  "আজকের পাওয়া তথ্য": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 623.82,
+      "end": 626.316
+    }
+  },
+  "এই অনুমান উচ্চতা, ওজন, বয়স আর প্রোফাইলে বেছে নেওয়া পুরুষ বা মহিলার ফর্মুলা দিয়ে করা। সেন্সরে মাপা নয়। প্রেগন্যান্সি, অসুখ, শরীরের জল বদলালে বা অ্যাথলিট হলে ভুল হতে পারে। কতটা খাবেন বা জল খাবেন, তা এগুলি দিয়ে ঠিক করবেন না।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 626.616,
+      "end": 647.304
+    }
+  },
+  "মেটাবলিক বয়স হল শরীরের এনার্জিকে বয়সের সঙ্গে মিলিয়ে করা অনুমান। এই যন্ত্রে তা বা ভেতরের ফ্যাট নির্ভরযোগ্যভাবে মাপা যায় না। নিচে বিশ্রামের সময় কতটা এনার্জি লাগে তার অনুমান আছে, খাবারের টার্গেট নয়।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 647.604,
+      "end": 665.244
+    }
+  },
+  "প্রতিটি রঙের নিজের স্কেল আর একক আছে। একই লাইনে আগের পরীক্ষার সঙ্গে তুলনা করুন। একটি মাপ দেখতে তার বোতাম চাপুন।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 665.544,
+      "end": 676.824
+    }
+  },
+  "শরীরের ফ্যাট আর জলের অনুমান": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 677.124,
+      "end": 680.532
+    }
+  },
+  "জল ফ্যাট ছাড়া শরীরের অংশের মধ্যেও থাকে। এই শতাংশগুলি যোগ করবেন না।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 680.832,
+      "end": 688.104
+    }
+  },
+  "কিছু রিডিং সাধারণ সীমার মধ্যে আছে। তার মানে সব অসুখ নেই এমন নয়। ভালো অভ্যাসগুলি চালিয়ে যান।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 688.404,
+      "end": 698.532
+    }
+  },
+  "কিছু রিডিং আবার দেখা দরকার। শান্ত হয়ে বসুন, যন্ত্র ঠিক জায়গায় রেখে আবার মাপুন। বদল থেকে গেলে ডাক্তারের সঙ্গে কথা বলুন।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 698.832,
+      "end": 710.664
+    }
+  },
+  "একটি রিডিংয়ের জন্য দ্রুত চিকিৎসার সাহায্য দরকার। বুকে ব্যথা, শ্বাসকষ্ট, অজ্ঞান হওয়া, হঠাৎ দুর্বলতা বা বিভ্রান্তি হলে এখনই জরুরি সাহায্য নিন। পরের পেড পরীক্ষার অপেক্ষা করবেন না।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 710.964,
+      "end": 726.852
+    }
+  },
+  "পরের পরীক্ষায় একই মাপ আবার পাওয়া যাবে, আজকের সঙ্গে তুলনা করার জন্য। একই রকম সময় আর পরিস্থিতি রাখুন। বেশি পরীক্ষা করলেই নতুন সেন্সরের মাপ তৈরি হয় না, ভালো স্বাস্থ্যের নিশ্চয়তাও নেই।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 727.152,
+      "end": 744.096
+    }
+  },
+  "এবার আপনার মাপগুলি শুনুন।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 744.396,
+      "end": 747.372
+    }
+  },
+  "আজ আপনার পরের পদক্ষেপ": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 747.672,
+      "end": 751.728
+    }
+  },
+  "বন্ধুর সঙ্গে খেয়াল রাখুন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 752.028,
+      "end": 754.884
+    }
+  },
+  "বন্ধু বা সঙ্গীকে তার নিজের ব্যক্তিগত পরীক্ষায় আমন্ত্রণ জানান। নিয়মিত খেয়াল রাখার তুলনা করুন, কার শরীর ভালো তার নয়। শেয়ার করা আপনার ইচ্ছা।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 755.184,
+      "end": 768.432
+    }
+  },
+  "এই মাপ থেকে পুরো স্বাস্থ্যের নির্ভরযোগ্য স্কোর পাওয়া যায় না।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 768.732,
+      "end": 773.604
+    }
+  },
+  "উচ্চতা": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 773.904,
+      "end": 775.776
+    }
+  },
+  "আপনি কতটা লম্বা।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 776.076,
+      "end": 778.5
+    }
+  },
+  "ওজন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 778.8,
+      "end": 780.672
+    }
+  },
+  "আজ যন্ত্রে আপনার ওজন।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 780.972,
+      "end": 783.876
+    }
+  },
+  "বিপি উপরের মাপ": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 784.176,
+      "end": 787.128
+    }
+  },
+  "হার্ট যখন রক্ত পাঠায়, তখনকার চাপ।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 787.428,
+      "end": 800.532
+    }
+  },
+  "বিপি নিচের মাপ": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 800.832,
+      "end": 803.4
+    }
+  },
+  "দুটি হার্টবিটের মাঝের চাপ।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 803.7,
+      "end": 811.932
+    }
+  },
+  "পালস": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 812.232,
+      "end": 814.104
+    }
+  },
+  "এক মিনিটে হার্ট কতবার চলেছে।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 814.404,
+      "end": 817.644
+    }
+  },
+  "অক্সিজেন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 817.944,
+      "end": 819.816
+    }
+  },
+  "রক্তে অক্সিজেনের আন্দাজ। নড়লে বা আঙুল ঠান্ডা হলে রিডিং বদলাতে পারে।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 820.116,
+      "end": 827.196
+    }
+  },
+  "শরীরের তাপমাত্রা": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 827.496,
+      "end": 829.944
+    }
+  },
+  "যেখানে সেন্সর ছিল, সেখানকার শরীরের তাপমাত্রা।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 830.244,
+      "end": 834.852
+    }
+  },
+  "বিএমআই": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 835.152,
+      "end": 837.024
+    }
+  },
+  "উচ্চতার তুলনায় ওজন। সরাসরি ফ্যাট মাপে না।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 837.324,
+      "end": 842.628
+    }
+  },
+  "শরীরের বাইরের ক্ষেত্রফল": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 842.928,
+      "end": 845.832
+    }
+  },
+  "উচ্চতা আর ওজন থেকে বাইরের ক্ষেত্রফলের হিসাব।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 846.132,
+      "end": 850.5
+    }
+  },
+  "বিশ্রামের এনার্জি": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 850.8,
+      "end": 853.248
+    }
+  },
+  "বিশ্রামের এনার্জির আন্দাজ। সারাদিনের খাবারের টার্গেট নয়।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 853.548,
+      "end": 859.788
+    }
+  },
+  "শরীরের ফ্যাটের অনুমান": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 860.088,
+      "end": 862.92
+    }
+  },
+  "ফর্মুলা দিয়ে ফ্যাটের আন্দাজ। ফ্যাট সেন্সরের রিডিং নয়।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 863.22,
+      "end": 868.908
+    }
+  },
+  "ফ্যাটের ওজন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 869.208,
+      "end": 871.344
+    }
+  },
+  "শরীরের ফ্যাটের আনুমানিক ওজন।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 871.644,
+      "end": 875.1
+    }
+  },
+  "ফ্যাট ছাড়া ওজন": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 875.4,
+      "end": 877.728
+    }
+  },
+  "জল, অঙ্গ আর হাড়ও আছে। শুধু মাসল নয়।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 878.028,
+      "end": 883.164
+    }
+  },
+  "ফ্যাট ছাড়া ওজনের ইনডেক্স": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 883.464,
+      "end": 886.512
+    }
+  },
+  "উচ্চতার তুলনায় ফ্যাট ছাড়া ওজনের অনুমান।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 886.812,
+      "end": 891.06
+    }
+  },
+  "শরীরের জলের অনুমান": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 891.36,
+      "end": 894.192
+    }
+  },
+  "শরীরের জলের আন্দাজ। জল কমে গেছে কি না নিশ্চিত বলা যায় না।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 894.492,
+      "end": 901.14
+    }
+  },
+  "ওজনের মধ্যে জলের অংশ": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 901.44,
+      "end": 904.44
+    }
+  },
+  "ওজনের মধ্যে জলের অংশ। জল খাওয়ার টার্গেট নয়।": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 904.74,
+      "end": 910.404
+    }
+  },
+  "Scan": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 0.0,
+      "end": 1.872
+    }
+  },
+  "Previous": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 2.172,
+      "end": 4.044
+    }
+  },
+  "Today": {
+    "en": {
+      "file": "insights-v1.mp3",
+      "start": 4.344,
+      "end": 6.216
+    }
+  },
+  "जाँच": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 0.0,
+      "end": 1.872
+    }
+  },
+  "पिछली बार": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 2.172,
+      "end": 4.236
+    }
+  },
+  "आज": {
+    "hi": {
+      "file": "insights-v1.mp3",
+      "start": 4.536,
+      "end": 6.408
+    }
+  },
+  "পরীক্ষা": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 0.0,
+      "end": 1.872
+    }
+  },
+  "আগেরবার": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 2.172,
+      "end": 4.044
+    }
+  },
+  "আজ": {
+    "bn": {
+      "file": "insights-v1.mp3",
+      "start": 4.344,
+      "end": 6.216
+    }
+  }
 }
