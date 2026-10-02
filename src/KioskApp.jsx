@@ -15,6 +15,7 @@ import Checkout from "./pages/Checkout.jsx";
 import OrderSuccess from "./pages/OrderSuccess.jsx";
 import BodyComposition from "./pages/BodyComposition.jsx";
 import Feedback from "./pages/feedback.jsx";
+import IdleReturn from "./components/IdleReturn.jsx";
 import KioskGuardian from "./components/KioskGuardian.jsx";
 import KioskSafetyManager from "./components/KioskSafetyManager.jsx";
 
@@ -53,7 +54,7 @@ export default function KioskApp() {
       <VoiceAssistantProvider>
         <div className="app-screen">
           <KioskAdPlayer />
-          <KioskGuardian />
+          <KioskGuardian /><IdleReturn />
           <KioskSafetyManager />
           <SpeechControl />
           <VoiceAssistantOverlay />
