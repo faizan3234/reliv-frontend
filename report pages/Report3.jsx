@@ -1,15 +1,11 @@
-import { getScanCount } from '../utils/reportSnapshot';
-import { useMemo, useState, useRef, useEffect, useCallback } from "react";
-import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { useHealth } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
-import { useVoicePage } from "../hooks/useVoicePage";
-import { getReport3Speech } from "../voice/reportVoice";
-import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -277,35 +273,13 @@ function assessSubcutaneousFat(vitals, patient, scanCount) {
 export default function Report3() {
   const { speakText, stop } = useSpeech();
   const { data } = useHealth();
+  const { patient, vitals } = data;
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const [reportSpeechLanguage, setReportSpeechLanguage] = useState(() =>
-    location.state?.reportSpeechLanguage ||
-    data?.reportSpeechLanguage ||
-    localStorage.getItem("reliv_report_speech_language") ||
-    sessionStorage.getItem("reliv_report_speech_lang") ||
-    data?.language ||
-    "en"
-  );
-
-  useVoicePage({
-    onHelp: () => {
-      const helpText = reportSpeechLanguage === 'hi'
-        ? "यहाँ हड्डियों की मज़बूती और प्रोटीन का स्तर है। नीचे स्क्रॉल करके Next दबाइए।"
-        : reportSpeechLanguage === 'bn'
-        ? "এখানে হাড়ের ঘনত্ব ও প্রোটিনের মাত্রা দেখানো হয়েছে। স্ক্রল করে Next চাপুন।"
-        : "Review your bone mass and protein levels. Scroll to read your insights and tap Next.";
-      speakText(helpText, { langHint: reportSpeechLanguage });
-    }
-  });
-
-  const patient = data?.patient || EMPTY_REPORT.patient;
-  const vitals = data?.vitals || EMPTY_REPORT.vitals;
   const [showHeightInfo, setShowHeightInfo] = useState(false);
 
   const userName = getFirstName(patient);
-  const scanCount = getScanCount(data);
+  const scanCount = data.history?.length || 1;
+  const isBaselineUnlocked = scanCount >= 2;
   const canCelebrate = scanCount >= 4;
 
   const confidenceStage =
@@ -316,20 +290,19 @@ export default function Report3() {
     scanCount === 6 ? "likely" : "confirmed";
 
   const metrics = useMemo(() => {
-    if (!vitals?.weight || !vitals?.height || !patient?.age || !patient?.gender) return null;
+    if (!vitals?.weight || !vitals?.height || !vitals?.impedance || !patient?.age || !patient?.gender) return null;
     
     const sex = patient.gender.toLowerCase() === "male" ? 1 : 0;
-    const impedance = vitals.impedance || 0;
     const bmi = bodyCompositionUtils.calc_bmi(vitals.weight, vitals.height);
     const bmr = bodyCompositionUtils.calc_bmr(vitals.weight, vitals.height, sex, patient.age);
     const metabolicAge = bodyCompositionUtils.calc_metabolic_age(bmr, patient.age, sex);
     
-    const bodyFatPct = bodyCompositionUtils.calc_fat_percent(vitals.weight, vitals.height, sex, patient.age, impedance);
+    const bodyFatPct = bodyCompositionUtils.calc_fat_percent(vitals.weight, vitals.height, sex, patient.age, vitals.impedance);
     const musclePct = bodyCompositionUtils.calc_skeletal_muscle_percent(
-      bodyCompositionUtils.calc_muscle_percent(vitals.weight, vitals.height, sex, patient.age, impedance)
+      bodyCompositionUtils.calc_muscle_percent(vitals.weight, vitals.height, sex, patient.age, vitals.impedance)
     );
-    const visceralFat = bodyCompositionUtils.calc_visceral_fat_level(vitals.weight, vitals.height, sex, patient.age, impedance);
-    const waterPct = bodyCompositionUtils.calc_water_percent(vitals.weight, vitals.height, sex, patient.age, impedance);
+    const visceralFat = bodyCompositionUtils.calc_visceral_fat_level(vitals.weight, vitals.height, sex, patient.age, vitals.impedance);
+    const waterPct = bodyCompositionUtils.calc_water_percent(vitals.weight, vitals.height, sex, patient.age, vitals.impedance);
     
     return {
       bmi: Number(bmi.toFixed(1)),
@@ -362,50 +335,35 @@ export default function Report3() {
   // Extract for JSX access
   const { boneMassData, proteinData, lbmiData, structuralData, subcutFatData } = tissueMetrics;
 
-  // ── Dynamic speech: layman explanation in user's selected report voice language ──
+  // ── Dynamic speech: name, bone mass, protein, graph progress ──
   const speechFired = useRef(false);
   useEffect(() => {
     if (speechFired.current) return;
     speechFired.current = true;
     const timer = setTimeout(() => {
-      const speechPayload = {
-        ...data,
-        patient,
-        vitals,
-      };
-      const text = getReport3Speech(speechPayload, reportSpeechLanguage);
-      speakText(text, { langHint: reportSpeechLanguage });
-    }, 450);
+      const name = userName || "Champion";
+      let text = `${name}, this graph grows as you visit.`;
+      if (boneMassData?.status) {
+        text += ` Your bone mass is ${boneMassData.status}.`;
+      }
+      if (proteinData?.status) {
+        text += ` Protein level is ${proteinData.status}.`;
+        if (proteinData.status === "Low Protein") text += ` Increase protein intake. Dal, paneer, eggs, soya chunks.`;
+      }
+      if (metrics?.visceralFat) {
+        text += ` Visceral fat is ${metrics.visceralFat}.`;
+      }
+      text += ` Come back tomorrow. New insights unlock.`;
+      speakText(text);
+    }, 400);
     return () => { clearTimeout(timer); stop(); };
-  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
-
-  const handleReplayOverview = useCallback(() => {
-    const speechPayload = {
-      ...data,
-      patient,
-      vitals,
-    };
-    const text = getReport3Speech(speechPayload, reportSpeechLanguage);
-    speakText(text, { langHint: reportSpeechLanguage });
-  }, [data, patient, vitals, reportSpeechLanguage, speakText]);
-
-  const handleLanguageChange = useCallback((newLang) => {
-    setReportSpeechLanguage(newLang);
-    sessionStorage.setItem('reliv_report_speech_lang', newLang);
-    const speechPayload = {
-      ...data,
-      patient,
-      vitals,
-    };
-    const text = getReport3Speech(speechPayload, newLang);
-    speakText(text, { langHint: newLang });
-  }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
+  }, []);
 
   const biologicalAge = metrics?.biologicalAge;
   const ageDiff = biologicalAge ? patient.age - biologicalAge : null;
   const isMale = patient?.gender?.toLowerCase() === "male";
 
-  const getMuscleStatus = useCallback((musclePct) => {
+  const getMuscleStatus = (musclePct) => {
     if (isMale) {
       if (musclePct < 30) return { status: "Low", comment: "Your muscle reserves are currently on the lower side, which can affect strength and metabolic stability." };
       if (musclePct < 33) return { status: "Below Average", comment: "Your muscle levels are slightly below the typical healthy range, but respond well to resistance activity." };
@@ -419,9 +377,9 @@ export default function Report3() {
       if (musclePct < 34) return { status: "Strong", comment: "Your muscle composition is stronger than average and supports efficient movement and recovery." };
       return { status: "Exceptional", comment: "Your muscle structure is highly developed for your age and supports long-term metabolic health." };
     }
-  }, [isMale]);
+  };
 
-  const getBodyFatStatus = useCallback((bodyFatPct) => {
+  const getBodyFatStatus = (bodyFatPct) => {
     if (isMale) {
       if (bodyFatPct < 8) return { status: "Very Low", comment: "Very low fat reserves may impact hormonal balance and recovery." };
       if (bodyFatPct < 12) return { status: "Lean", comment: "Your fat levels are lean and support athletic efficiency." };
@@ -435,7 +393,7 @@ export default function Report3() {
       if (bodyFatPct < 34) return { status: "Elevated", comment: "Your fat storage is slightly above the ideal range and may benefit from gradual lifestyle adjustments." };
       return { status: "High", comment: "Higher fat storage may place additional metabolic demand on your body." };
     }
-  }, [isMale]);
+  };
 
   const getVisceralFatStatus = (visceralFat) => {
     if (visceralFat <= 9) return { status: "Normal", comment: "Visceral fat levels are within a healthy range, reducing strain on internal organs." };
@@ -553,14 +511,14 @@ export default function Report3() {
     }
     
     return list.length > 0 ? list : ["Your first scan provides a solid foundation—see this profile evolve with new data and patterns in future scans."];
-  }, [metrics, scanCount, getMuscleStatus, getBodyFatStatus]);
+  }, [metrics, scanCount]);
 
-  if (!metrics) {
+  if (!isBaselineUnlocked) {
     return (
-      <div style={{ minHeight: "100vh", height: "auto", width: "100%", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container touch-pan-y">
+      <div style={{ height: "100vh", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container">
         <Logo size="text-4xl" />
         <div style={{ textAlign: "center", fontSize: "24px", color: "#666666", margin: "80px 0", fontStyle: "italic", maxWidth: "600px" }}>
-          Your measured values are available above. This scan does not contain the inputs needed for detailed body-composition estimates. More visits alone cannot supply a missing scale measurement.
+          Body Composition Profile unlocks after your 2nd scan. Keep scanning to reveal insights about your muscle mass, body fat, and metabolic age.
         </div>
         <button
           onClick={() => navigate("/report-4")}
@@ -582,7 +540,7 @@ export default function Report3() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", height: "auto", width: "100%", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container touch-pan-y">
+    <div style={{ height: "100vh", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 32px", overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="scrollable-container">
       <div style={{ width: "100%", maxWidth: "1000px", margin: "0 auto" }}>
         
         {/* Header */}
@@ -606,18 +564,6 @@ export default function Report3() {
             </div>
           )}
         </div>
-
-        <ReportVoiceExplainer
-          reportSpeechLanguage={reportSpeechLanguage}
-          onLanguageChange={handleLanguageChange}
-          availableMetrics={['boneMass', 'protein', 'hydration', 'muscleMass']}
-          healthData={{
-            ...data,
-            patient,
-            vitals,
-          }}
-          onReplayOverview={handleReplayOverview}
-        />
 
         {/* HEIGHT CARD - shown from first scan */}
         {vitals?.height > 0 && (() => {

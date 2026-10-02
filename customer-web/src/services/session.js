@@ -40,10 +40,10 @@ export function getPendingVerification(requestId) {
   if (typeof window === 'undefined') return null;
 
   try {
-    const raw =
-      (requestId && window.localStorage?.getItem(PENDING_VERIFICATION_KEY + ':' + requestId)) ||
-      (window.localStorage && window.localStorage.getItem(PENDING_VERIFICATION_KEY)) ||
-      (window.sessionStorage && window.sessionStorage.getItem(PENDING_VERIFICATION_KEY));
+    const raw = requestId
+      ? window.localStorage?.getItem(PENDING_VERIFICATION_KEY + ':' + requestId)
+      : (window.localStorage && window.localStorage.getItem(PENDING_VERIFICATION_KEY)) ||
+        (window.sessionStorage && window.sessionStorage.getItem(PENDING_VERIFICATION_KEY));
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
@@ -131,10 +131,10 @@ export function getPaymentRecovery(encryptedPackage) {
   if (typeof window === 'undefined') return null;
 
   try {
-    const raw =
-      (encryptedPackage && window.localStorage?.getItem(RECOVERY_STORAGE_KEY + ':' + encryptedPackage)) ||
-      (window.localStorage && window.localStorage.getItem(RECOVERY_STORAGE_KEY)) ||
-      (window.sessionStorage && window.sessionStorage.getItem(RECOVERY_STORAGE_KEY));
+    const raw = encryptedPackage
+      ? window.localStorage?.getItem(RECOVERY_STORAGE_KEY + ':' + encryptedPackage)
+      : (window.localStorage && window.localStorage.getItem(RECOVERY_STORAGE_KEY)) ||
+        (window.sessionStorage && window.sessionStorage.getItem(RECOVERY_STORAGE_KEY));
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);

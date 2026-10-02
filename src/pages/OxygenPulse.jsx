@@ -9,7 +9,7 @@ import { sanitizeError } from "../utils/errorSanitizer";
 import SupportButton from "../components/SupportButton";
 import oxygenImg from "../assets/oxygen.png";
 import { useHealth } from "../context/HealthContext";
-import { useSpeech } from "../context/SpeechContext";
+import { useSpeech, usePageSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { guidanceText } from "../voice/guidanceCopy";
@@ -95,6 +95,7 @@ const OxygenPulsePage = () => {
 
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
+  usePageSpeech('oxygen-pulse');
 
   useVoicePage({
     guidanceKey: measurementState,

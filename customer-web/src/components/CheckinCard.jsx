@@ -10,19 +10,19 @@ export function CheckinCard({onChange}) {
   ctx.fillStyle='#fb923c';ctx.beginPath();ctx.arc(1000,100,340,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#fdba74';ctx.font='bold 60px Arial';ctx.fillText('RELIV',90,150);
   ctx.fillStyle='#ffffff';ctx.font='bold 82px Arial';ctx.fillText('BETTER HABITS.',90,400);ctx.fillText('TOGETHER.',90,500);
-  ctx.fillStyle='#fde68a';ctx.font='bold 36px Arial';ctx.fillText(relationship==='couple'?'OUR COUPLE CHECK-IN':'OUR FRIEND CHECK-IN',90,615);
+  ctx.fillStyle='#fde68a';ctx.font='bold 36px Arial';ctx.fillText(relationship==='couple'?'OUR COUPLE CHECK-IN':relationship==='duel'?'HEALTH DUEL: LOSER BUYS COFFEE ☕':'OUR FRIEND CHECK-IN',90,615);
   ctx.fillStyle='rgba(255,255,255,0.12)';ctx.fillRect(80,750,920,530);
   ctx.fillStyle='#ffffff';ctx.font='bold 58px Arial';ctx.fillText(alias.trim()||'Your nickname',120,900,840);ctx.fillText('&',120,990);ctx.fillText(partner.trim()||'Their nickname',120,1080,840);
-  ctx.fillStyle='#fed7aa';ctx.font='36px Arial';ctx.fillText('We are making time for our health.',120,1190,840);
-  ctx.fillStyle='#ffffff';ctx.font='bold 46px Arial';ctx.fillText('THE WIN: SHOWING UP.',90,1460);
-  ctx.font='32px Arial';ctx.fillText('A shared intention. No medical rankings.',90,1540);ctx.fillText('Choose a habit. Encourage each other.',90,1600);
-  ctx.fillStyle='#fdba74';ctx.font='bold 34px Arial';ctx.fillText('#RelivTogether',90,1790);
+  ctx.fillStyle='#fed7aa';ctx.font='36px Arial';ctx.fillText(relationship==='duel'?'Loser buys coffee & tags @reliv.health!':'We are making time for our health.',120,1190,840);
+  ctx.fillStyle='#ffffff';ctx.font='bold 46px Arial';ctx.fillText(relationship==='duel'?'THE DUEL: TAG RELIV ON STORY!':'THE WIN: SHOWING UP.',90,1460);
+  ctx.font='32px Arial';ctx.fillText(relationship==='duel'?'Post on Instagram & Reliv will tag back.':'A shared intention. No medical rankings.',90,1540);ctx.fillText('Choose a habit. Encourage each other.',90,1600);
+  ctx.fillStyle='#fdba74';ctx.font='bold 34px Arial';ctx.fillText(relationship==='duel'?'#RelivHealthDuel #LoserBuysCoffee':'#RelivTogether',90,1790);
  },[alias,partner,relationship]);
  const getBlob=()=>new Promise((resolve,reject)=>canvas.current.toBlob(b=>b?resolve(b):reject(new Error('Could not create card.')),'image/png'));
  const save=async(share)=>{if(!ready)return;setError('');try{const blob=await getBlob(),file=new File([blob],'Reliv-Together.png',{type:'image/png'});if(share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Reliv Together'});return;}const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){if(e.name!=='AbortError')setError('Could not share. Try Save card.');}};
  return <section className="rounded-3xl border border-indigo-200 bg-indigo-50 p-5 space-y-4" aria-label="Optional friend or couple story card">
   <h3 className="text-xl font-bold text-slate-900">Make a friend / couple story card</h3><p className="text-sm text-slate-700">A friendly invitation to build habits together. No health scores, readings or medical winners are published.</p>
-  <select aria-label="Card type" value={relationship} onChange={e=>{setRelationship(e.target.value);setConsent(false);}} className="min-h-12 w-full rounded-xl border p-3"><option value="friends">Friends</option><option value="couple">Couple</option></select>
+  <select aria-label="Card type" value={relationship} onChange={e=>{setRelationship(e.target.value);setConsent(false);}} className="min-h-12 w-full rounded-xl border p-3"><option value="friends">Friends</option><option value="couple">Couple</option><option value="duel">Health Duel (Loser Buys Coffee ☕)</option></select>
   <input aria-label="Your nickname" placeholder="Your nickname" maxLength={20} value={alias} onChange={e=>{setAlias(e.target.value);setConsent(false);}} className="min-h-12 w-full rounded-xl border p-3"/>
   <input aria-label="Their nickname" placeholder="Their nickname" maxLength={20} value={partner} onChange={e=>{setPartner(e.target.value);setConsent(false);}} className="min-h-12 w-full rounded-xl border p-3"/>
   <canvas ref={canvas} width="1080" height="1920" className="mx-auto w-full max-w-64 rounded-2xl" aria-label="Preview of your optional story card"/>

@@ -5,7 +5,17 @@ import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line 
 import { useNavigate } from "react-router-dom";
 import Logo from "./Logo";
 
-export default function ChallengePrompt({ open, onClose, userName, score, metabolicAge, gender, email }) {
+export default function ChallengePrompt({
+  open,
+  onClose,
+  userName,
+  score,
+  metabolicAge,
+  gender,
+  email,
+  bodyWater,
+  visceralFat
+}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState(null); // null | "challenge" | "couple"
   const [confirmed, setConfirmed] = useState(false);
@@ -18,10 +28,12 @@ export default function ChallengePrompt({ open, onClose, userName, score, metabo
       challengerName: userName || "Anonymous",
       challengerScore: score ?? 0,
       challengerMetabolicAge: metabolicAge,
+      challengerBodyWater: bodyWater,
+      challengerVisceralFat: visceralFat,
       challengerGender: gender,
       challengerEmail: email,
       startedAt: Date.now(),
-      expiresAt: Date.now() + 300000, // 5 min
+      expiresAt: Date.now() + 600000, // 10 min
     };
     try {
       localStorage.setItem("reliv_challenge", JSON.stringify(challengeData));

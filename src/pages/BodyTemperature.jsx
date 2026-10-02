@@ -8,7 +8,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import TopEllipseBackground from "../components/TopEllipseBackground";
 import temperatureImg from "../assets/temperature.png";
 import { useHealth } from "../context/HealthContext";
-import { useSpeech } from "../context/SpeechContext";
+import { useSpeech, usePageSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
 import { requestJSON } from "../utils/request";
 import { API_BASE } from "../config/api";
@@ -100,6 +100,7 @@ const BodyTemperaturePage = () => {
 
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
+  usePageSpeech('body-temperature');
 
   useVoicePage({
     guidanceKey: measurementState,

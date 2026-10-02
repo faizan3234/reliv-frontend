@@ -29,9 +29,10 @@ export function PaymentV2Page({ sessionStore }) {
 function PaymentAttempt({ sessionStore }) {
   const { state, updateState, resetSession } = sessionStore;
 
-  // Extract encrypted package from state, URL hash, or persistent recovery storage
-  const recoverySession = getPaymentRecovery(state.encryptedPackage || extractPaymentPackage());
-  const encryptedPackage = state.encryptedPackage || extractPaymentPackage() || recoverySession?.encryptedPackage;
+  // Extract encrypted package from URL hash first, then state, then recovery
+  const urlPackage = extractPaymentPackage();
+  const recoverySession = getPaymentRecovery(urlPackage || state.encryptedPackage);
+  const encryptedPackage = urlPackage || state.encryptedPackage || recoverySession?.encryptedPackage;
 
   const [loadingState, setLoadingState] = useState('INIT'); // 'INIT' | 'ORDER_READY' | 'PAYING' | 'VERIFYING' | 'SUCCESS' | 'ERROR' | 'IDLE'
   const [orderData, setOrderData] = useState(null);
@@ -173,7 +174,8 @@ function PaymentAttempt({ sessionStore }) {
         throw new Error('The payment service returned an incomplete order. Please retry.');
       }
 
-      // 5. Unpaid / Active Order Ready
+      // 5. Unpaid / Active Order Ready — NEVER reveal or keep any confirmation code
+      setConfirmationCode('');
       savePaymentRecovery({
         requestId: order.requestId,
         encryptedPackage: activePackage,

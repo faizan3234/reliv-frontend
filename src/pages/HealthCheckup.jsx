@@ -9,7 +9,7 @@ import { useHealth } from "../context/HealthContext";
 import { sanitizeError } from "../utils/errorSanitizer";
 import bpPicture from "../assets/bppicture.png";
 import meditatingGirl from "../assets/MeditatingGirl.mp4";
-import { useSpeech } from "../context/SpeechContext";
+import { useSpeech, usePageSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { guidanceText } from "../voice/guidanceCopy";
@@ -96,6 +96,7 @@ const BloodPressurePage = () => {
 
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
+  usePageSpeech('health-checkup');
 
   useVoicePage({
     guidanceKey: measurementState,

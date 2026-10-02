@@ -1,18 +1,14 @@
-import { getScanCount } from '../utils/reportSnapshot';
-import { readProfileAccess } from '../utils/kioskSession';
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useHealth } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import Confetti from "react-confetti";
 import { useSpeech } from "../context/SpeechContext";
-import { useHealth } from "../context/HealthContext";
-import { useVoicePage } from "../hooks/useVoicePage";
-import { getReport1Speech } from "../voice/reportVoice";
-import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 import ChallengeComparison from "../components/ChallengeComparison";
 import { supabase } from "../config/supabase";
+import { QRCodeSVG } from "qrcode.react";
 import { API_BASE } from "../config/api";
 
 // Helper: Extract first name from email or name field
@@ -37,144 +33,18 @@ const getGenderCompliment = (gender, tier = 'high') => {
 
 const Report1 = () => {
   const { speakText, stop } = useSpeech();
+  const { data, refreshHistory } = useHealth();
+  const { patient, vitals } = data;
   const navigate = useNavigate();
-  const location = useLocation();
-  const { data: healthCtx } = useHealth();
-
-  const [reportSpeechLanguage, setReportSpeechLanguage] = useState(() =>
-    location.state?.reportSpeechLanguage ||
-    healthCtx?.reportSpeechLanguage ||
-    localStorage.getItem("reliv_report_speech_language") ||
-    sessionStorage.getItem("reliv_report_speech_lang") ||
-    healthCtx?.language ||
-    "en"
-  );
-
-  useVoicePage({
-    onHelp: () => {
-      const helpText = reportSpeechLanguage === 'hi'
-        ? "स्क्रीन पर अपना हेल्थ स्कोर और अंदरूनी उम्र देखिए। नीचे स्क्रॉल करके अगली रिपोर्ट के लिए Next दबाइए।"
-        : reportSpeechLanguage === 'bn'
-        ? "স্ক্রিনে আপনার স্বাস্থ্য স্কোর ও শারীরিক বয়স দেখুন। নিচে স্ক্রল করে পরের রিপোর্টের জন্য Next চাপুন।"
-        : "Check your body score and metabolic age on screen. Scroll to review and tap Next to see detailed measurements.";
-      speakText(helpText, { langHint: reportSpeechLanguage });
-    }
-  });
-
   const [showTooltip, setShowTooltip] = useState(false);
 
-  // ─────────────────────────────────────────────────────────────────────
-  // AUTHORITATIVE PAID REPORT ACCESS
-  // ─────────────────────────────────────────────────────────────────────
-
-  const [reportData, setReportData] = useState(null);
-  const [reportLoading, setReportLoading] = useState(true);
-  const [reportError, setReportError] = useState("");
-
-  const currentSessionId =
-    location.state?.sessionId ||
-    localStorage.getItem("reliv_session_id") ||
-    sessionStorage.getItem("reliv_session_id") ||
-    "";
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadAuthoritativeReport = async () => {
-      if (!currentSessionId) {
-        if (!cancelled) {
-          setReportError(
-            "No active health report session was found."
-          );
-          setReportLoading(false);
-        }
-        return;
-      }
-
-      try {
-        const res = await fetch(
-          `${API_BASE}/api/sessions/${encodeURIComponent(currentSessionId)}/report/data`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              ...(readProfileAccess(currentSessionId) ? { 'X-Reliv-Profile-Token': readProfileAccess(currentSessionId) } : {})
-            },
-            cache: "no-store"
-          }
-        );
-
-        const result =
-          await res.json().catch(() => ({}));
-
-        if (
-          !res.ok ||
-          result.ok !== true ||
-          result.paymentVerified !== true ||
-          result.reportStatus !== "READY" ||
-          !result.healthData
-        ) {
-          throw new Error(
-            result.message ||
-            "Your health report is not available yet."
-          );
-        }
-
-        if (!cancelled) {
-          setReportData({
-            sessionId: result.sessionId,
-            customerData: result.customerData || {},
-            healthData: result.healthData
-          });
-
-          setReportError("");
-        }
-
-      } catch (err) {
-        console.error(
-          "[Report1] Authoritative report access denied:",
-          err
-        );
-
-        if (!cancelled) {
-          setReportData(null);
-          setReportError(
-            err.message ||
-            "This health report cannot be opened."
-          );
-        }
-
-      } finally {
-        if (!cancelled) {
-          setReportLoading(false);
-        }
-      }
-    };
-
-    loadAuthoritativeReport();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentSessionId]);
-
-  // The backend snapshot is the ONLY source of report measurements.
-  const healthData = reportData?.healthData || null;
-
-  const patient = healthData?.patient || reportData?.customerData || null;
-
-  const vitals =
-    healthData?.vitals || null;
-
-  const userName =
-    getFirstName(patient);
-
-  const scanCount = getScanCount(healthData);
+  const userName = getFirstName(patient);
+  const scanCount = (data.history?.length || 0) + 1;
 
   // Leaderboard opt-in state
-  const [lbPrompt, setLbPrompt] = useState("idle"); // idle | saved | done | skipped | not_qualified
+  const [lbPrompt, setLbPrompt] = useState("idle"); // idle | qr | done | skipped | not_qualified
   const [lbSessionId] = useState(() => `lb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-
+  const QR_BASE = import.meta.env.VITE_QR_BASE_URL || "https://mail-request-m33c.vercel.app";
 
   // Challenge state
   const [showChallenge, setShowChallenge] = useState(false);
@@ -193,13 +63,14 @@ const Report1 = () => {
       !vitals?.weight ||
       !patient?.age ||
       !patient?.gender ||
-      !vitals?.height
+      !vitals?.height ||
+      !vitals?.impedance
     ) {
       return { score: null, metabolicAge: null };
     }
 
     const sex = patient.gender.toLowerCase() === "male" ? 1 : 0;
-    const { weight, height, impedance = 0 } = vitals;
+    const { weight, height, impedance } = vitals;
     const { age } = patient;
 
     const body_score = bodyCompositionUtils.calc_body_score(weight, height, sex, age, impedance);
@@ -208,61 +79,101 @@ const Report1 = () => {
       age,
       sex
     );
-    const body_water = bodyCompositionUtils.calc_water_percent(weight, height, sex, age, impedance);
-    const visceral_fat = bodyCompositionUtils.calc_visceral_fat_level(weight, height, sex, age, impedance);
 
     return {
       score: Math.round(body_score),
       metabolicAge: Math.round(metabolic_age),
-      bodyWaterPct: Math.round(body_water),
-      visceralFat: Math.round(visceral_fat),
     };
   }, [vitals, patient]);
 
-  // ── Dynamic speech: layman explanation in user's selected report voice language ──
+  const bodyComposition = useMemo(() => {
+    if (
+      !vitals?.weight ||
+      !patient?.age ||
+      !patient?.gender ||
+      !vitals?.height ||
+      !vitals?.impedance
+    ) {
+      return null;
+    }
+
+    const sex = patient.gender.toLowerCase() === "male" ? 1 : 0;
+    const { weight, height, impedance } = vitals;
+    const { age } = patient;
+
+    const bmr = bodyCompositionUtils.calc_bmr(weight, height, sex, age);
+    const body_score = bodyCompositionUtils.calc_body_score(weight, height, sex, age, impedance);
+    const metabolic_age = bodyCompositionUtils.calc_metabolic_age(bmr, age, sex);
+
+    return {
+      weight,
+      height,
+      impedance,
+      sex,
+      age,
+      bmr: Math.round(bmr),
+      bodyScore: Math.round(body_score),
+      metabolicAge: Math.round(metabolic_age),
+    };
+  }, [vitals, patient]);
+
+  const hasSavedRef = useRef(false);
+  const scanTimestampRef = useRef(Date.now());
+
+  useEffect(() => {
+    if (!patient?.email || !bodyComposition || hasSavedRef.current) return;
+
+    hasSavedRef.current = true;
+
+    (async () => {
+      try {
+        await fetch(`${API_BASE}/api/save-report`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            healthData: {
+              patient,
+              vitals,
+              bodyComposition,
+            },
+            scanId: `${patient.email}-${scanTimestampRef.current}`,
+          }),
+        });
+
+        await refreshHistory();
+      } catch (err) {
+        if (import.meta.env.DEV) console.error("Failed to save report:", err);
+      }
+    })();
+  }, [bodyComposition, patient?.email, patient, vitals, refreshHistory]);
+
+  // ── Dynamic speech: read user's name, score, elite status ──
   const speechFired = useRef(false);
   useEffect(() => {
-    if (speechFired.current || !reportData) return;
+    if (speechFired.current) return;
     speechFired.current = true;
     const timer = setTimeout(() => {
-      const speechPayload = {
-        ...healthData,
-        patient,
-        vitals,
-        bodyScore: bodyScoreData.score,
-        metabolicAge: bodyScoreData.metabolicAge,
-      };
-      const text = getReport1Speech(speechPayload, reportSpeechLanguage);
-      speakText(text, { langHint: reportSpeechLanguage });
-    }, 450);
+      const name = userName || "Champion";
+      const score = bodyScoreData.score;
+      const metAge = bodyScoreData.metabolicAge;
+      let text = `${name}, this is your health score compared to an average person your age.`;
+      if (score !== null) {
+        text += ` Your body score is ${score} out of 100.`;
+        if (score >= 80) text += ` You are an elite performer! Incredible.`;
+        else if (score >= 60) text += ` Good score. Keep it up.`;
+        else text += ` There is room to improve. Let's work on it.`;
+      }
+      if (metAge !== null) {
+        text += ` Your metabolic age is ${metAge} years.`;
+        if (patient?.age && metAge < patient.age) {
+          text += ` That's ${patient.age - metAge} years younger than your actual age!`;
+        }
+      }
+      text += ` Come back next time to see if it improved.`;
+      speakText(text);
+    }, 400);
     return () => { clearTimeout(timer); stop(); };
-  }, [reportData, healthData, patient, vitals, bodyScoreData, reportSpeechLanguage, speakText, stop]);
-
-  const handleReplayOverview = useCallback(() => {
-    const speechPayload = {
-      ...healthData,
-      patient,
-      vitals,
-      bodyScore: bodyScoreData.score,
-      metabolicAge: bodyScoreData.metabolicAge,
-    };
-    const text = getReport1Speech(speechPayload, reportSpeechLanguage);
-    speakText(text, { langHint: reportSpeechLanguage });
-  }, [healthData, patient, vitals, bodyScoreData, reportSpeechLanguage, speakText]);
-
-  const handleLanguageChange = useCallback((newLang) => {
-    setReportSpeechLanguage(newLang);
-    sessionStorage.setItem('reliv_report_speech_lang', newLang);
-    const speechPayload = {
-      ...healthData,
-      patient,
-      vitals,
-      bodyScore: bodyScoreData.score,
-      metabolicAge: bodyScoreData.metabolicAge,
-    };
-    const text = getReport1Speech(speechPayload, newLang);
-    speakText(text, { langHint: newLang });
-  }, [healthData, patient, vitals, bodyScoreData, setReportSpeechLanguage, speakText]);
+  }, []);
 
   const peersAverage = 72;
   const yearsYounger = bodyScoreData.metabolicAge
@@ -432,56 +343,8 @@ const Report1 = () => {
     ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1).toLowerCase()
     : "—";
 
-  if (reportLoading) {
-    return (
-      <div className="min-h-screen h-auto w-full bg-white flex items-center justify-center overflow-y-auto scrollable-container touch-pan-y px-6 py-8">
-        <div className="text-center">
-          <div className="text-2xl font-semibold text-gray-900">
-            Preparing your health report...
-          </div>
-          <div className="mt-3 text-gray-500">
-            Verifying your completed payment and report.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (
-    reportError ||
-    !reportData ||
-    !healthData ||
-    !patient ||
-    !vitals
-  ) {
-    return (
-      <div className="min-h-screen h-auto w-full bg-white flex items-center justify-center overflow-y-auto scrollable-container touch-pan-y px-6 py-8">
-        <div className="max-w-xl text-center">
-          <div className="text-3xl font-bold text-gray-900">
-            Report unavailable
-          </div>
-          <div className="mt-4 text-lg text-gray-600">
-            {reportError ||
-              "Your paid health report is not ready."}
-          </div>
-          <button
-            type="button"
-            onClick={() =>
-              navigate("/payment", {
-                replace: true
-              })
-            }
-            className="mt-8 bg-[#F28C38] text-white font-semibold text-lg px-10 py-4 rounded-2xl cursor-pointer"
-          >
-            Return to Payment
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen h-auto w-full bg-white overflow-y-auto scrollable-container touch-pan-y">
+    <div className="h-screen bg-white overflow-y-auto scrollable-container">
       {showConfetti && <Confetti />}
 
       {/* Challenge / Couple comparison overlay */}
@@ -489,9 +352,6 @@ const Report1 = () => {
         <ChallengeComparison
           challengerB_Name={userName}
           challengerB_Score={bodyScoreData.score ?? 0}
-          challengerB_MetabolicAge={bodyScoreData.metabolicAge}
-          challengerB_BodyWater={bodyScoreData.bodyWaterPct}
-          challengerB_VisceralFat={bodyScoreData.visceralFat}
           onContinue={() => setShowChallenge(false)}
         />
       )}
@@ -507,20 +367,6 @@ const Report1 = () => {
             Based on today’s scan • Age {patient?.age || "—"} • {genderDisplay}
           </p>
         </div>
-
-        <ReportVoiceExplainer
-          reportSpeechLanguage={reportSpeechLanguage}
-          onLanguageChange={handleLanguageChange}
-          availableMetrics={['metabolicAge', 'bodyScore', 'bloodPressure', 'pulse']}
-          healthData={{
-            ...healthData,
-            patient,
-            vitals,
-            bodyScore: bodyScoreData.score,
-            metabolicAge: bodyScoreData.metabolicAge,
-          }}
-          onReplayOverview={handleReplayOverview}
-        />
 
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -715,13 +561,13 @@ const Report1 = () => {
                             photo_path: null,
                           }, { onConflict: "email" });
 
-                          setLbPrompt("saved");
+                          setLbPrompt("qr");
                         } catch (err) {
                           console.error("Leaderboard save error:", err);
-                          setLbPrompt("saved");
+                          setLbPrompt("qr");
                         }
                       } else {
-                        setLbPrompt("saved");
+                        setLbPrompt("qr");
                       }
                     }}
                     className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-6 py-3 rounded-xl text-sm"
@@ -759,17 +605,26 @@ const Report1 = () => {
               </motion.div>
             )}
 
-            {/* ── Leaderboard confirmation ── */}
-            {lbPrompt === "saved" && (
+            {/* ── QR Code for Photo Upload ── */}
+            {lbPrompt === "qr" && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="w-full max-w-md mt-6 bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-lg"
               >
                 <h3 className="text-gray-900 text-lg font-bold mb-1">
-                  Leaderboard entry
+                  📸 Add Your Photo
                 </h3>
-                <p className="text-gray-500 text-sm mb-4">Continue to the next section of your report.</p>
+                <p className="text-gray-500 text-sm mb-4">
+                  Scan this QR with your phone to upload a photo for the leaderboard
+                </p>
+                <div className="bg-gray-50 rounded-xl p-3 inline-block mb-4 border border-gray-100">
+                  <QRCodeSVG
+                    value={`${QR_BASE}/photo-upload?sid=${lbSessionId}&name=${encodeURIComponent(userName)}`}
+                    size={180}
+                    level="M"
+                  />
+                </div>
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => setLbPrompt("done")}
@@ -781,7 +636,7 @@ const Report1 = () => {
                     onClick={() => setLbPrompt("done")}
                     className="bg-gray-100 text-gray-500 font-medium px-6 py-2.5 rounded-xl text-sm border border-gray-200"
                   >
-                    Continue
+                    Skip photo
                   </button>
                 </div>
               </motion.div>

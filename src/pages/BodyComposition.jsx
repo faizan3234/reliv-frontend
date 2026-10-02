@@ -7,7 +7,7 @@ import Logo from "../components/Logo";
 import SupportButton from "../components/SupportButton";
 import { useHealth } from "../context/HealthContext";
 import heightImage from "../assets/height.png";
-import { useSpeech } from "../context/SpeechContext";
+import { useSpeech, usePageSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { guidanceText } from "../voice/guidanceCopy";
 import { getMqttConfig } from "../config/mqtt";
@@ -57,6 +57,7 @@ const COUNTDOWN_SECONDS = 120;
 
 const BodyComposition = () => {
   const { stop, speakText } = useSpeech();
+  usePageSpeech('body-composition');
   const [weight, setWeight]                 = useState(null);
   const [height, setHeight]                 = useState(null);
   const [measurementState, setMeasurementState] = useState("idle");
