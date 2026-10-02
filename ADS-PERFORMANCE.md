@@ -1,6 +1,6 @@
 # Advertising loading update — 30 September 2026
 
-The installed display is a Waveshare 10.1-inch 1280×800 panel (16:10).
+The installed display is a Waveshare 10.1-inch 1280×800 panel 
 
 ## Changes
 
