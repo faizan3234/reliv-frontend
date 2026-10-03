@@ -1,3 +1,4 @@
+import VisitComparison from './VisitComparison';
 import { useMemo, useState } from 'react';
 import { metricCopy, languageIndex, insightCopy } from '../voice/insightCopy';
 import { metricStatus, reportRows } from '../utils/reportInsights';
@@ -61,6 +62,7 @@ export default function ReportHistoryChart({ data, field = 'all', language = 'en
   {allRows.length>7&&<div className="report-chart-pager"><button type="button" disabled={end<=7} onClick={()=>page(1)}>← {c.older}</button><span>{rows[0]?.scan}–{rows.at(-1)?.scan} / {count}</span><button type="button" disabled={endOffset===0} onClick={()=>page(-1)}>{c.newer} →</button></div>}
   {count>=5&&<p className="report-note">{c.coverage}: {recorded}/{total} ({total?Math.round(recorded/total*100):0}%). {c.coverageNote}</p>}
   <p className="report-muted">{c.change} {count>=6?c.repeat:''}</p>
+  {count>=6&&<VisitComparison data={data} language={language}/>}
   {count>=7&&<p className="report-muted">{c.retained}</p>}
  </figure>;
 }

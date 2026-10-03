@@ -1,5 +1,6 @@
+import { useReportNarration } from '../hooks/useReportNarration';
 import { getScanCount } from '../utils/reportSnapshot';
-import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import confetti from "canvas-confetti";
@@ -275,7 +276,7 @@ function assessSubcutaneousFat(vitals, patient, scanCount) {
 }
 
 export default function Report3() {
-  const { speakText, stop } = useSpeech();
+  const { speakText } = useSpeech();
   const { data } = useHealth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -364,11 +365,7 @@ export default function Report3() {
   const { boneMassData, proteinData, lbmiData, structuralData, subcutFatData } = tissueMetrics;
 
   // ── Dynamic speech: layman explanation in user's selected report voice language ──
-  const speechFired = useRef(false);
-  useEffect(() => {
-    if (speechFired.current) return;
-    speechFired.current = true;
-    const timer = setTimeout(() => {
+  useReportNarration(() => {
       const speechPayload = {
         ...data,
         patient,
@@ -376,9 +373,8 @@ export default function Report3() {
       };
       const text = getReport3Speech(speechPayload, reportSpeechLanguage);
       speakText(text, { langHint: reportSpeechLanguage });
-    }, 450);
-    return () => { clearTimeout(timer); stop(); };
-  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
+
+  });
 
   const handleReplayOverview = useCallback(() => {
     const speechPayload = {
@@ -1880,4 +1876,5 @@ export default function Report3() {
     </div>
   );
 }
+
 

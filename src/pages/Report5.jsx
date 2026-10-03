@@ -1,3 +1,4 @@
+import { useReportNarration } from '../hooks/useReportNarration';
 import { getScanCount, reportMeasurements } from '../utils/reportSnapshot';
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -502,11 +503,7 @@ export default function Report5() {
   const reportContainerRef = useRef(null);
 
   // ── Dynamic speech: layman explanation in user's selected report voice language ──
-  const speechFired = useRef(false);
-  useEffect(() => {
-    if (speechFired.current) return;
-    speechFired.current = true;
-    const timer = setTimeout(() => {
+  useReportNarration(() => {
       const speechPayload = {
         ...data,
         patient,
@@ -514,9 +511,8 @@ export default function Report5() {
       };
       const text = getReport5Speech(speechPayload, reportSpeechLanguage);
       speakText(text, { langHint: reportSpeechLanguage });
-    }, 450);
-    return () => { clearTimeout(timer); stop(); };
-  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
+
+  });
 
   const handleReplayOverview = useCallback(() => {
     const speechPayload = {
@@ -2470,4 +2466,5 @@ export default function Report5() {
     </div>
   );
 }
+
 

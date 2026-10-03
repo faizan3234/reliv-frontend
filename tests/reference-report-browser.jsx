@@ -26,13 +26,15 @@ function assert(ok,text){if(!ok)throw new Error(text);checks.push('PASS '+text);
 async function flush(){await act(async()=>new Promise(r=>wait(r,30)));}
 async function mount(page=1){if(root)await act(async()=>root.unmount());localStorage.clear();sessionStorage.clear();localStorage.setItem('reliv_session_id','KSK-REPORT-TEST');sessionStorage.setItem('reliv_profile_access',JSON.stringify({sessionId:'KSK-REPORT-TEST',token:'a'.repeat(64)}));localStorage.setItem('healthData',JSON.stringify({patient:{name:'Previous Person'},vitals:{oxygen:77},history:[]}));root=createRoot(document.getElementById('app'));await act(async()=>root.render(<MemoryRouter initialEntries={[`/report-${page}`]}><HealthProvider><SpeechProvider><VoiceAssistantProvider><ProtectedReportRoute><ReferenceReports/></ProtectedReportRoute></VoiceAssistantProvider></SpeechProvider></HealthProvider></MemoryRouter>));await flush();}
 async function run(){
- for(const count of [1,4,7]) {
+ for(const count of [1,4,6,7]) {
   paid.healthData.scanCount=count;
   paid.healthData.visitSummary={scanCount:count};
   paid.healthData.history=Array.from({length:count},(_,i)=>({scanNumber:i+1,createdAt:`2026-09-${String(i+1).padStart(2,'0')}`,patient:{age:25,gender:'male'},...paid.healthData.vitals}));
   for(let page=1;page<=5;page++) {
    await mount(page);
    assert(document.querySelector('.reference-progress').textContent.includes(`Scan ${count}`),`original layout page ${page} keeps scan ${count}`);
+   assert(Boolean(document.querySelector('.reference-back')) === (page>1&&page<5), 'Back available only on report pages 2–4');
+   if(page===4&&count>=6)assert(document.querySelectorAll('.journey-details tbody tr').length===7,'scan six adds seven bounded measured comparisons');
    assert(!document.body.textContent.includes('Previous Person'),'no previous patient leaks');
    assert(!document.body.textContent.includes('NaN')&&!document.body.textContent.includes('Infinity'),'numbers remain finite');
    if(page===2) assert(document.body.textContent.includes('Bone'),'original body-system cards restored');

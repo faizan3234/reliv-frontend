@@ -1,6 +1,7 @@
+import { useReportNarration } from '../hooks/useReportNarration';
 import ReportHistoryChart from "../components/ReportHistoryChart";
 import { getScanCount } from '../utils/reportSnapshot';
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 
 
@@ -316,7 +317,7 @@ function assessMetabolicAdvantage(vitals, patient, scanCount) {
 }
 
 export default function Report4() {
-  const { speakText, stop } = useSpeech();
+  const { speakText } = useSpeech();
   const { data } = useHealth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -375,11 +376,7 @@ export default function Report4() {
   }, [history]);
 
   // ── Dynamic speech: layman explanation in user's selected report voice language ──
-  const speechFired = useRef(false);
-  useEffect(() => {
-    if (speechFired.current) return;
-    speechFired.current = true;
-    const timer = setTimeout(() => {
+  useReportNarration(() => {
       const speechPayload = {
         ...data,
         patient,
@@ -387,9 +384,8 @@ export default function Report4() {
       };
       const text = getReport4Speech(speechPayload, reportSpeechLanguage);
       speakText(text, { langHint: reportSpeechLanguage });
-    }, 450);
-    return () => { clearTimeout(timer); stop(); };
-  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
+
+  });
 
   const handleReplayOverview = useCallback(() => {
     const speechPayload = {
@@ -1688,3 +1684,4 @@ export default function Report4() {
     </div>
   );
 }
+

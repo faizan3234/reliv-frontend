@@ -1,9 +1,9 @@
 export const dict = {
   // Body Composition
   body_composition_start: {
-    en: "Now we will measure body composition. Stand straight with both feet on the black area of the scale. Keep your feet together and stay perfectly still. Reliv will automatically measure your weight and height. If there is any problem, tell me.",
-    hi: "अब body composition measure करेंगे। Scale के black area पर दोनों पैर रखकर सीधे खड़े हो जाइए। पैर पास रखिए और बिल्कुल still रहिएगा। Reliv आपका weight और height automatically measure करेगा। अगर कोई problem हो, मुझे बोलिए।",
-    bn: "এবার body composition measure করব। Scale-এর black area-তে দুই পা রেখে সোজা হয়ে দাঁড়ান। পা কাছাকাছি রাখুন আর একদম still থাকবেন। Reliv আপনার weight আর height automatically measure করবে। কোনো problem হলে আমাকে বলুন।"
+    en: "1. Remove your shoes and stand in the centre of the scale.\n2. Stand straight, look ahead and keep still.\n3. Tap Start Measurement. Wait until both height and weight appear before continuing.",
+    hi: "1. जूते उतारकर मशीन के बीच में खड़े हो जाइए।\n2. सीधे खड़े रहिए, सामने देखिए और हिलिए मत।\n3. Start Measurement दबाइए। लंबाई और वजन, दोनों आने के बाद आगे बढ़िए।",
+    bn: "1. জুতো খুলে ওজন মাপার মেশিনের মাঝখানে দাঁড়ান।\n2. সোজা হয়ে সামনের দিকে তাকান, নড়বেন না।\n3. Start Measurement চাপুন। উচ্চতা আর ওজন দুটোই এলে এগিয়ে যান।"
   },
   body_composition_measuring: {
     en: "Measurement is running. Just stay still.",
@@ -17,9 +17,9 @@ export const dict = {
   },
   // BP
   bp_start: {
-    en: "Now we will check Blood Pressure. Wear the wrist cuff and keep your wrist near heart level. Press the ON button on the device, then press Measure on the screen. Stay relaxed during measurement and do not talk.",
-    hi: "अब Blood Pressure check करेंगे। Wrist cuff पहनिए और wrist को heart level के पास रखिए। Device का ON button press कीजिए, फिर screen पर Measure दबाइए। Measurement के वक्त relaxed रहिएगा और बात ना करें।",
-    bn: "এবার Blood Pressure check করব। Wrist cuff পরুন আর wrist heart level-এর কাছে রাখুন। Device-এর ON button press করুন, তারপর screen-এ Measure চাপুন। Measurement-এর সময় relaxed থাকবেন আর কথা বলবেন না।"
+    en: "1. Sit comfortably and put on the wrist cuff as shown on the device.\n2. Support your arm and keep your wrist at heart level.\n3. Turn the device ON and tap Measure. Keep still and do not talk until the reading appears.",
+    hi: "1. आराम से बैठिए और मशीन पर दिखाए तरीके से कलाई पर पट्टा लगाइए।\n2. हाथ को सहारा दीजिए और कलाई को छाती की ऊँचाई पर रखिए।\n3. मशीन ON कीजिए, फिर Measure दबाइए। नंबर आने तक हिलिए मत और बात मत कीजिए।",
+    bn: "1. আরাম করে বসুন। মেশিনে দেখানো মতো কবজিতে বেল্ট পরুন।\n2. হাতটা ঠেস দিয়ে রাখুন, কবজি বুকের সমান উঁচুতে রাখুন।\n3. মেশিন ON করে Measure চাপুন। রিডিং আসা পর্যন্ত নড়বেন না, কথা বলবেন না।"
   },
   bp_help_before: {
     en: "Wear the cuff, turn the device ON, then press Measure.",
@@ -33,9 +33,9 @@ export const dict = {
   },
   // Oxygen
   oxygen_start: {
-    en: "Now we will check Oxygen and Pulse. Place your finger properly inside the sensor clip, then press Measure. Keep your finger still until reading is complete.",
-    hi: "अब Oxygen और Pulse check करेंगे। Finger को sensor clip के अंदर properly रखिए, फिर Measure दबाइए। Reading complete होने तक finger still रखिए।",
-    bn: "এবার Oxygen আর Pulse check করব। Sensor clip-এর ভেতরে আঙুল properly রাখুন, তারপর Measure চাপুন। Reading complete না হওয়া পর্যন্ত আঙুল still রাখুন।"
+    en: "1. Rest your hand and place a finger inside the sensor clip.\n2. Tap Measure and keep your finger still.\n3. Wait for both oxygen and pulse readings. Ask staff for help if the clip does not fit.",
+    hi: "1. हाथ आराम से रखिए और सेंसर की क्लिप में एक उंगली डालिए।\n2. Measure दबाइए और उंगली मत हिलाइए।\n3. ऑक्सीजन और धड़कन के नंबर आने दीजिए। क्लिप ठीक से न लगे तो स्टाफ को बुलाइए।",
+    bn: "1. হাতটা আরাম করে রেখে সেন্সরের ক্লিপে একটা আঙুল দিন।\n2. Measure চাপুন, আঙুল নাড়বেন না।\n3. অক্সিজেন আর হার্টবিটের রিডিং আসতে দিন। ক্লিপ ঠিকমতো না লাগলে স্টাফকে ডাকুন।"
   },
   oxygen_idle: {
     en: "Is your finger placed properly in the sensor? Tell me if you need help.",
@@ -44,14 +44,14 @@ export const dict = {
   },
   // Temperature
   temp_start: {
-    en: "Now we will check Body Temperature. Position the sensor near your forehead as shown on screen, then press Measure. Just stay still for a moment.",
-    hi: "अब Body Temperature check करेंगे। Sensor को forehead के पास screen पर दिखाए तरीके से position कीजिए, फिर Measure दबाइए। बस एक moment still रहिएगा।",
-    bn: "এবার Body Temperature check করব। Screen-এ দেখানো মতো sensor-টি কপালের কাছে position করুন, তারপর Measure চাপুন। ব্যাস এক moment still থাকবেন।"
+    en: "1. Position your forehead near the temperature sensor as shown on the device.\n2. Tap Measure and keep your head still.\n3. Wait for the temperature to appear. Ask staff if you are unsure where the sensor is.",
+    hi: "1. मशीन पर दिखाए तरीके से माथा तापमान वाले सेंसर के पास रखिए।\n2. Measure दबाइए और सिर मत हिलाइए।\n3. तापमान आने दीजिए। सेंसर कहाँ है समझ न आए तो स्टाफ से पूछिए।",
+    bn: "1. মেশিনে দেখানো মতো কপালটা তাপমাত্রার সেন্সরের কাছে রাখুন।\n2. Measure চাপুন, মাথা নাড়বেন না।\n3. তাপমাত্রা আসতে দিন। সেন্সর কোথায় বুঝতে না পারলে স্টাফকে জিজ্ঞেস করুন।"
   },
   // Eyesight
   eyesight_start: {
-    en: "Now we will do the Eyesight Test. Cover one eye and select the option that matches the letters or numbers on the screen. After that we will test the other eye. If you don't understand, ask me.",
-    hi: "अब Eyesight Test करेंगे। एक eye cover कीजिए और screen पर जो letters या numbers दिख रहे हैं, वही option select कीजिए। उसके बाद दूसरी eye test करेंगे। अगर समझ ना आए तो मुझे पूछिए।",
-    bn: "এবার Eyesight Test করব। এক চোখ cover করুন আর screen-এ যে letters বা numbers দেখছেন, সেই option select করুন। এরপর অন্য চোখ test করব। বুঝতে না পারলে আমাকে জিজ্ঞেস করুন।"
+    en: "1. Follow the screen-distance marker set by staff.\n2. Cover your right eye without pressing it. Choose the smallest row you can read clearly with your left eye.\n3. Switch eyes and choose the row for your right eye.\n4. Tap Check my answers, then type the requested letter. This is a screening, not an eye prescription. If you cannot read the letters, ask staff; do not guess.",
+    hi: "1. स्टाफ ने स्क्रीन से जितनी दूरी बताई है, उतनी दूर रहिए।\n2. दाईं आँख ढकिए, दबाइए मत। बाईं आँख से जो सबसे छोटी लाइन साफ पढ़ पा रहे हैं, उसका नंबर चुनिए।\n3. अब बाईं आँख ढककर दाईं आँख के लिए लाइन चुनिए।\n4. जवाब जाँचें दबाइए और पूछा गया अक्षर लिखिए। यह शुरुआती जाँच है, चश्मे का नंबर नहीं। अक्षर न पढ़ पाएँ तो अंदाज़ा मत लगाइए, स्टाफ से मदद लीजिए।",
+    bn: "1. স্টাফ স্ক্রিন থেকে যতটা দূরে থাকতে বলেছেন, ততটা দূরে থাকুন।\n2. ডান চোখ ঢাকুন, চাপ দেবেন না। বাঁ চোখে যে সবচেয়ে ছোট লাইনটা পরিষ্কার পড়তে পারছেন, তার নম্বর বাছুন।\n3. এবার বাঁ চোখ ঢেকে ডান চোখের জন্য লাইন বাছুন।\n4. উত্তর মিলিয়ে দেখুন চাপুন, তারপর যে অক্ষর চাওয়া হচ্ছে সেটা লিখুন। এটা প্রাথমিক পরীক্ষা, চশমার পাওয়ার নয়। পড়তে না পারলে আন্দাজ না করে স্টাফকে ডাকুন।"
   }
 };

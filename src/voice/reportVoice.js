@@ -1,3 +1,4 @@
+import { metricCopy, languageIndex } from './insightCopy.js';
 import { getScanCount } from '../utils/reportSnapshot.js';
 import { containsPhrase, normalizeVoiceText } from './voicePageProfiles.js';
 
@@ -642,7 +643,6 @@ export const METRIC_EXPLAINERS = {
       bn: 'শরীরের স্বাভাবিক উষ্ণতার পরিমাপ'
     },
     getText: (val, ctx, lang = 'en') => {
-      const v = val ? Number(val).toFixed(1) : '98.6';
       if (lang === 'hi') {
         return `शरीर का तापमान यह बताता है कि भीतरी गरमाहट कितनी है। सामान्य तापमान 98.6 डिग्री होता है। थोड़ा सा बढ़ा हुआ तापमान हल्की धूप में चलने, भागदौड़ या हल्के तनाव की वजह से भी हो सकता है। थोड़ा सा पानी पीकर आराम करने से यह शांत हो जाता है।`;
       }
@@ -909,489 +909,45 @@ export const CANONICAL_METRIC_MAP = {
 /**
  * Returns a short, super-friendly 5-year-old child explanation for any vital.
  */
+const safeNumber = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : null;
+const voiceWords = {
+ en: {missing:'Not measured.', estimate:'This is a calculated estimate, not a direct measurement or diagnosis.', scan:'Scan', intro:['Your body overview. The score is an estimate, not a diagnosis.','Your body measurements and estimates.','Your recorded vital signs.','Your own scans over time. Tap a point to keep that scan open.','Your summary and next steps.'], next:'Scroll down to see more. You can replay this guide, ask for an explanation, or use Next when ready.', compare:'More visits allow comparisons; they do not automatically mean improvement.', end:'For fair comparisons, use similar measurement conditions next time. Ask a clinician about results that worry you. Do not change medicines based only on this report.'},
+ hi: {missing:'यह माप नहीं मिला।',estimate:'यह हिसाब से निकला अंदाज़ा है, सीधे मापा हुआ नंबर या बीमारी का पता नहीं।',scan:'स्कैन',intro:['आपके शरीर का सारांश। स्कोर एक अंदाज़ा है, बीमारी का पता नहीं।','आपके शरीर के माप और अंदाज़े।','आज मशीन से मिली रीडिंग।','ये आपके अपने पुराने स्कैन हैं। किसी बिंदु को छूकर उस स्कैन के नंबर देखिए।','आपकी रिपोर्ट का सारांश और आगे क्या करें।'],next:'और देखने के लिए नीचे स्क्रॉल कीजिए। फिर से सुन सकते हैं, किसी नंबर का मतलब पूछ सकते हैं, या तैयार हों तो आगे बढ़िए।',compare:'ज़्यादा स्कैन से तुलना होती है। इसका मतलब अपने आप सुधार नहीं है।',end:'अगली बार करीब-करीब उन्हीं हालात में माप लीजिए। किसी नंबर को लेकर चिंता हो तो डॉक्टर से पूछिए। सिर्फ इस रिपोर्ट से दवा मत बदलिए।'},
+ bn: {missing:'এই মাপ পাওয়া যায়নি।',estimate:'এটা হিসাব থেকে করা আন্দাজ, সরাসরি মাপা রিডিং বা রোগের খবর নয়।',scan:'স্ক্যান',intro:['আপনার শরীরের এক নজরের খবর। স্কোর একটা আন্দাজ, রোগের খবর নয়।','আপনার শরীরের মাপ আর আন্দাজ।','আজ মেশিনে পাওয়া রিডিং।','এগুলো আপনার নিজের আগের স্ক্যান। একটা বিন্দুতে চাপ দিলে সেই স্ক্যানের রিডিং দেখতে পাবেন।','আপনার রিপোর্টের সারাংশ আর এরপর কী করবেন।'],next:'আরও দেখতে নিচে স্ক্রল করুন। আবার শুনতে পারেন, কোনও মাপের মানে জানতে পারেন, বা তৈরি হলে পরের পাতায় যান।',compare:'বেশি স্ক্যান থাকলে তুলনা করা যায়। তার মানেই উন্নতি হয়েছে নয়।',end:'পরের বার কাছাকাছি একই অবস্থায় মাপ নিন। কোনও রিডিং নিয়ে চিন্তা হলে ডাক্তারকে জিজ্ঞেস করুন। শুধু এই রিপোর্ট দেখে ওষুধ বদলাবেন না।'}
+};
+
 export function getMetricLaymanExplainer(metricKey, healthData, language = 'en') {
-  if (!metricKey) return null;
-  const normalized = String(metricKey).toLowerCase().replace(/[^a-z0-9_]/g, '');
-  const canonicalKey = CANONICAL_METRIC_MAP[normalized] || metricKey;
-  const item = METRIC_EXPLAINERS[canonicalKey];
-  if (!item) return null;
-
-  const vitals = (typeof healthData === 'object' && healthData !== null) ? (healthData.vitals || healthData) : {};
-  let val = null;
-
-  if (canonicalKey === 'metabolicAge') val = healthData?.metabolicAge || vitals?.metabolicAge;
-  else if (canonicalKey === 'bodyScore') val = healthData?.bodyScore || vitals?.bodyScore;
-  else if (canonicalKey === 'bmi') val = vitals?.bmi;
-  else if (canonicalKey === 'bodyFat') val = vitals?.bodyFat;
-  else if (canonicalKey === 'muscleMass') val = vitals?.muscleMass;
-  else if (canonicalKey === 'pulse') val = vitals?.pulse || vitals?.bpm;
-  else if (canonicalKey === 'oxygen') val = vitals?.oxygen || vitals?.spo2;
-  else if (canonicalKey === 'standardWeight') val = vitals?.weight;
-  else if (canonicalKey === 'hydration') val = vitals?.waterPct || vitals?.bodyWater;
-  else if (canonicalKey === 'visceralFat') val = vitals?.visceralFat;
-  else if (canonicalKey === 'subcutaneousFat') val = vitals?.subcutaneousFat;
-  else if (canonicalKey === 'boneMass') val = vitals?.boneMass;
-  else if (canonicalKey === 'protein') val = vitals?.protein || vitals?.proteinMass;
-  else if (canonicalKey === 'dailyCalories') val = vitals?.bmr;
-  else if (canonicalKey === 'temperature') val = vitals?.temperature;
-  else if (canonicalKey === 'fatMuscleRatio') val = vitals?.fatMuscleRatio;
-  else if (canonicalKey === 'fatControl') val = vitals?.bodyFat;
-  else if (canonicalKey === 'muscleControl') val = vitals?.muscleMass;
-
-  return item.getText(val, healthData, language);
+ const normalized=String(metricKey||'').toLowerCase().replace(/[^a-z0-9_]/g,'');
+ const key=CANONICAL_METRIC_MAP[normalized]||metricKey;
+ const item=METRIC_EXPLAINERS[key];
+ if(!item)return null;
+ const w=voiceWords[language]||voiceWords.en;
+ const mapped={pulse:'bpm',hydration:'bodyWater',dailyCalories:'restingEnergy'}[key]||key;
+ const metric=metricCopy[mapped],v=healthData?.vitals||{};
+ const value=safeNumber(healthData?.[key]??v[mapped]??v[key]);
+ const ageExplanation={en:'Your birthday tells your actual age. This formula does not measure how old your organs are inside.',hi:'जन्मदिन से आपकी असली उम्र पता चलती है। यह हिसाब आपके अंदर के अंगों की उम्र नहीं मापता।',bn:'জন্মদিন থেকে আসল বয়স জানা যায়। এই হিসাব শরীরের ভেতরের অঙ্গের বয়স মাপে না।'};
+ const description=key==='metabolicAge'?(ageExplanation[language]||ageExplanation.en):metric?metric[1][languageIndex(language)]:item.subtitle[language]||item.subtitle.en;
+ if(key==='bloodPressure') {
+  const systolic=safeNumber(v.systolic),diastolic=safeNumber(v.diastolic);
+  return `${item.title[language]||item.title.en}. ${systolic===null||diastolic===null?w.missing:`${systolic} / ${diastolic} mmHg.`} ${metricCopy.systolic[1][languageIndex(language)]} ${metricCopy.diastolic[1][languageIndex(language)]}`;
+ }
+ const measured=['bpm','oxygen','temperature','weight','height','systolic','diastolic'].includes(mapped);
+ return `${item.title[language]||item.title.en}. ${description} ${value===null?w.missing:`${value} ${metric?.[2]||''}.`} ${measured?'':w.estimate}`;
 }
 
-// ── DYNAMIC LAYMAN REPORT EXPLANATION DECODERS (OFFLINE, ZERO DOCTOR JARGON) ──
-
-/**
- * Report 1: Health Score & Overview
- * 9 Score Bands, Plain-Language Explanation, Peer Reference (72), Blind/Elderly Accessibility, Next Guidance
- */
-export function getReport1Speech(healthData, language = 'en') {
-  const patient = healthData?.patient || {};
-  const vitals = healthData?.vitals || {};
-  const name = patient?.name ? patient.name.split(' ')[0] : (language === 'hi' ? 'दोस्त' : language === 'bn' ? 'বন্ধু' : 'Friend');
-  const score = Math.round(Number(healthData?.bodyScore || vitals?.bodyScore || 85));
-
-  if (language === 'hi') {
-    let text = `${name}... `;
-    text += `आपका हेल्थ स्कोर 100 में से ${score} है। `;
-
-    if (score >= 95) {
-      text += `बहुत ही बढ़िया! आज चेक की गई ज्यादातर रीडिंग्स सही सीमा के बहुत करीब हैं। आप बहुत अच्छा कर रहे हैं। आपकी उम्र के लोगों का सामान्य संदर्भ स्कोर लगभग 72 होता है, और आपका स्कोर उससे काफी ऊपर है। अपनी स्वस्थ दिनचर्या ऐसे ही बनाए रखिए। `;
-    } else if (score >= 90) {
-      text += `शानदार! आज आपकी सेहत की जांच बहुत अच्छी आई है। ज्यादातर माप अपनी सही सीमा में हैं। एक-दो चीजों में और सुधार हो सकता है, लेकिन कुल मिलाकर आप बहुत अच्छा कर रहे हैं। `;
-    } else if (score >= 80) {
-      text += `बहुत अच्छा! आपका हेल्थ स्कोर 100 में से मापा जाता है। एक अच्छे स्कोर का मतलब है कि आज की ज्यादातर जांचें अपनी सही सीमा के बहुत करीब हैं। आपकी ज्यादातर रीडिंग्स बहुत अच्छी आई हैं, और बस एक-दो जगहों पर थोड़ा सुधार हो सकता है। आपकी उम्र के लोगों का सामान्य संदर्भ स्कोर लगभग 72 होता है, और आपका स्कोर ${score} उससे काफी ऊपर है। `;
-    } else if (score >= 70) {
-      text += `अच्छा रिजल्ट है। आपकी रीडिंग्स एक सामान्य आधार पर हैं। काफी जांचें अच्छी हैं और कुछ में सुधार किया जा सकता है। आपकी उम्र का संदर्भ स्कोर लगभग 72 है, और आपका स्कोर उसके करीब है। `;
-    } else if (score >= 60) {
-      text += `रिजल्ट ठीक है, लेकिन सुधार की गुंजाइश है। कुछ रीडिंग्स अच्छी हैं और कुछ पर थोड़ा ध्यान देने की जरूरत है। नियमित चलना, संतुलित खाना और अच्छी नींद बनाए रखें। यह सिर्फ आज का स्कोर है, इसका मतलब यह नहीं कि आप अस्वस्थ हैं। `;
-    } else if (score >= 50) {
-      text += `आज की कुछ रीडिंग्स पर थोड़ा ध्यान देने की जरूरत है। इसका मतलब यह नहीं कि कोई गंभीर समस्या है। बस कुछ माप अपनी सही सीमा से थोड़ी दूर हैं। अब हम आपको बताएंगे कि क्या अच्छा है और कहां सुधार करना है। `;
-    } else if (score >= 40) {
-      text += `कुछ हिस्सों में सुधार की जरूरत है। घबराइए मत। एक चेकअप से पूरी सेहत तय नहीं होती। बस कुछ माप अपनी सीमा से थोड़ी बाहर हैं। हम एक-एक करके समझाएंगे कि किस पर ध्यान देना है। `;
-    } else if (score >= 30) {
-      text += `आज कई रीडिंग्स पर अधिक ध्यान देने की जरूरत है। घबराइए मत, यह कोई अंतिम रोग का फैसला नहीं है। पानी कम पीना, तनाव या थकान से भी माप बदल सकते हैं। असामान्य जांचों को दोबारा देखना बेहतर रहेगा। `;
-    } else {
-      text += `आज की कई जांचें सामान्य सीमा से काफी दूर हैं, इसलिए इन्हें ध्यान से देखना जरूरी है। घबराइए मत। सिर्फ इस स्कोर से कोई बीमारी तय नहीं होती। इन जांचों को दोबारा चेक करें और जरूरत लगे तो डॉक्टर से सलाह लें। `;
-    }
-
-    text += `यह स्कोर केवल एक सामान्य सारांश है, कोई डॉक्टरी बीमारी नहीं। आपको स्क्रीन देखने की बिल्कुल जरूरत नहीं है। मैं आपकी रिपोर्ट का हर जरूरी हिस्सा आपको आसान शब्दों में समझाऊंगी। अगली स्क्रीन पर चलिए, और देखते हैं कि आपके शरीर का कौन सा हिस्सा सबसे मजबूत है और कहां थोड़ा ध्यान देना है।`;
-    return text;
-  }
-
-  if (language === 'bn') {
-    let text = `${name}... `;
-    text += `আপনার হেলথ স্কোর ১০০-এর মধ্যে ${score}। `;
-
-    if (score >= 95) {
-      text += `দারুণ রেজাল্ট! আজ চেক করা বেশিরভাগ পরিমাপ স্বাভাবিক সীমার খুব কাছে রয়েছে। আপনি খুব ভালো করছেন। আপনার বয়সের মানুষদের রেফারেন্স স্কোর প্রায় ৭২, আর আপনার স্কোর তার চেয়ে অনেক বেশি। এই সুস্থ রুটিন বজায় রাখুন। `;
-    } else if (score >= 90) {
-      text += `চমৎকার! আজ আপনার সামগ্রিক রিপোর্ট খুবই ভালো। বেশিরভাগ মান সঠিক সীমার মধ্যে রয়েছে। অল্প কিছু জায়গায় উন্নতির সুযোগ রয়েছে, তবে সার্বিকভাবে আপনি খুব ভালো আছেন। `;
-    } else if (score >= 80) {
-      text += `খুব ভালো রেজাল্ট! আপনার হেলথ স্কোর ১০০-র মধ্যে হিসাব করা হয়। একটি ভালো স্কোরের অর্থ হলো আজকের বেশিরভাগ পরিমাপ স্বাভাবিক সীমার খুব কাছাকাছি রয়েছে। আপনার বেশিরভাগ রিডিং খুবই ভালো এসেছে, আর সামান্য কিছু জায়গায় আরও একটু উন্নতি করা যেতে পারে। আপনার বয়সের মানুষদের সাধারণ রেফারেন্স স্কোর প্রায় ৭২, আর আপনার স্কোর ${score} তার চেয়ে বেশ উপরে। `;
-    } else if (score >= 70) {
-      text += `ভালো ফলাফল। আপনার স্বাস্থ্য একটি ভালো স্তরে রয়েছে। অনেকগুলো মান বেশ ভালো, আর কয়েকটিতে একটু নজর দেওয়া যায়। আপনার বয়সের রেফারেন্স স্কোর প্রায় ৭২, আর আপনার স্কোর তার কাছাকাছি বা একটু উপরে। `;
-    } else if (score >= 60) {
-      text += `ফলাফল মোটামুটি ভালো, তবে উন্নতির সুযোগ রয়েছে। কিছু রিডিং ভালো এসেছে, আর কিছু বিষয়ে একটু বেশি যত্ন নেওয়া দরকার। নিয়মিত হাঁটা, সুষম খাবার আর ভালো ঘুমের ওপর নজর দিন। এটি শুধু আজকের পরিমাপের একটি সারসংক্ষেপ, এর মানে আপনি অসুস্থ নন। `;
-    } else if (score >= 50) {
-      text += `আজকের কিছু রিডিংয়ে একটু মনোযোগ দেওয়া প্রয়োজন। এর মানে এই নয় যে নিশ্চিত কোনো বড় সমস্যা আছে। শুধু কিছু মান পছন্দের সীমা থেকে কিছুটা দূরে রয়েছে। আমরা সহজ ভাষায় বুঝিয়ে দেবো কোন মানগুলো ভালো আর কোথায় উন্নতি দরকার। `;
-    } else if (score >= 40) {
-      text += `কিছু জায়গায় উন্নতির প্রয়োজন রয়েছে। একদম ভয় পাবেন না। একটিমাত্র স্ক্যান দিয়ে পুরো স্বাস্থ্য বিচার করা যায় না। কিছু পরিমাপ স্বাভাবিক সীমার বাইরে রয়েছে, আমরা এক এক করে বুঝিয়ে দেবো কী করতে হবে। `;
-    } else if (score >= 30) {
-      text += `বেশ কিছু রিডিংয়ে আজ বাড়তি নজর দেওয়া দরকার। শান্ত থাকুন, এই স্কোরটি কোনো চূড়ান্ত রোগ নির্ণয় নয়। জল কম খাওয়া, ক্লান্তি বা মানসিক চাপের কারণেও মান পরিবর্তিত হতে পারে। অস্বাভাবিক রিডিংগুলো পুনরায় পরীক্ষা করা ভালো। `;
-    } else {
-      text += `আজকের বেশ কিছু পরিমাপ স্বাভাবিক সীমা থেকে অনেকটাই দূরে রয়েছে, তাই এগুলো গুরুত্ব দিয়ে দেখা দরকার। ভয় পাওয়ার কারণ নেই। শুধুমাত্র এই স্কোর দিয়ে কোনো রোগ নির্ধারণ হয় না। প্রয়োজনে অস্বাভাবিক মাপগুলো আবার পরীক্ষা করুন এবং ডাক্তারের পরামর্শ নিন। `;
-    }
-
-    text += `এই স্কোরটি শুধুমাত্র একটি সংক্ষিপ্ত চিত্র, কোনো রোগ নির্ণয় নয়। আপনাকে স্ক্রিনের দিকে তাকিয়ে পড়ার দরকার নেই। আমি আপনার রিপোর্টের প্রতিটি গুরুত্বপূর্ণ অংশ সহজ ভাষায় বুঝিয়ে দিচ্ছি। এবার চলুন দেখা যাক আপনার শরীরের কোন দিকটি সবচেয়ে শক্তিশালী আর কোন দিকটায় একটু যত্ন নেওয়া দরকার।`;
-    return text;
-  }
-
-  // English fallback
-  let text = `${name}... `;
-  text += `Your health score is ${score} out of 100. That is a very good result! `;
-  text += `A higher score means more of today's checked values are closer to their preferred ranges. `;
-
-  if (score >= 95) {
-    text += `Outstanding! Most of the values checked today are very close to their preferred ranges. You are doing extremely well. The reference score for people around your age is about 72, and your score is much higher. Keep following your healthy routine. `;
-  } else if (score >= 90) {
-    text += `Excellent! Your overall readings look very good today. Most values are within or close to their preferred ranges. There may still be a small area to improve, but overall you are doing very well. The reference score for people around your age is about 72, and your score is ${score}, which is above that reference. `;
-  } else if (score >= 80) {
-    text += `Very good! Most of today’s readings are looking good. A few areas could still improve, but your overall result is strong. Keep up your healthy habits. The reference score for your age group is about 72. Your score is ${score}, which is above that reference. `;
-  } else if (score >= 70) {
-    text += `Good. Your overall result is around a healthy baseline. Several readings are doing well, while a few can improve. The reference score for people around your age is about 72, so your result is close to or slightly above that reference. `;
-  } else if (score >= 60) {
-    text += `Your result is fair — some improvement needed. Some readings are doing well, but a few areas need improvement. This is a good point to focus on regular activity, balanced food, good sleep and consistency. This score is only a summary of today’s measurements. It does not mean that you are unhealthy. `;
-  } else if (score >= 50) {
-    text += `Some of today’s readings need attention. This does not mean that something is definitely wrong. It simply means several values are farther from their preferred ranges. We’ll now explain which readings are good and which ones you may want to improve. `;
-  } else if (score >= 40) {
-    text += `Several areas need improvement. Please don’t worry. One scan cannot diagnose your health. This result simply shows that some of today’s measurements are outside or farther from their preferred ranges. We’ll go through them one by one and explain what you can work on. `;
-  } else if (score >= 30) {
-    text += `Several readings need more attention today. Please stay calm—this score is not a diagnosis. Some values may also change because of hydration, food, recent exercise, stress or measurement conditions. We recommend reviewing the individual readings and repeating unusual measurements when appropriate. `;
-  } else {
-    text += `Several of today’s measurements are far from their preferred ranges and should be looked at carefully. Please don’t panic. This score alone does not diagnose an illness. We recommend repeating any unusual measurements. If important readings remain abnormal, or if you are feeling unwell, please speak with a doctor or healthcare professional. `;
-  }
-
-  text += `This score is an overall summary, not a medical diagnosis. `;
-  text += `You do not need to read the screen. I will explain each part of your report to you. `;
-  text += `Next, let’s find out which areas of your body are strongest, and which ones need attention.`;
-  return text;
+function pageSpeech(data,language,page) {
+ const w=voiceWords[language]||voiceWords.en,v=data?.vitals||{};
+ const fields=page===2?['height','weight']:page===3?['systolic','diastolic','bpm','oxygen','temperature']:[];
+ const readings=fields.map(key=>{
+  const value=safeNumber(v[key]);
+  return `${metricCopy[key][0][languageIndex(language)]}: ${value===null?w.missing:`${value} ${metricCopy[key][2]}.`}`;
+ }).join(' ');
+ const score=page===1?safeNumber(data?.bodyScore):null;
+ const scoreText=score===null?'':`${METRIC_EXPLAINERS.bodyScore.title[language]||METRIC_EXPLAINERS.bodyScore.title.en}: ${score} / 100.`;
+ return `${w.scan} ${getScanCount(data)}. ${w.intro[page-1]} ${scoreText} ${readings} ${page===4?w.compare:''} ${page===5?w.end:w.next}`;
 }
-
-/**
- * Report 2: Body Composition Fundamentals & Strongest Systems
- * Plain-language breakdown of Standard Weight, Muscle, Fat, Water, and Weight goals with Indian nutrition advice.
- */
-export function getReport2Speech(healthData, language = 'en') {
-  const patient = healthData?.patient || {};
-  const vitals = healthData?.vitals || {};
-  const name = patient?.name ? patient.name.split(' ')[0] : (language === 'hi' ? 'दोस्त' : language === 'bn' ? 'বন্ধু' : 'Friend');
-  const weight = vitals.weight ? Number(vitals.weight).toFixed(1) : '65.0';
-  const height = vitals.height ? Math.round(Number(vitals.height)) : 175;
-  const bmi = vitals.bmi ? Number(vitals.bmi).toFixed(1) : '18.6';
-  const bodyFat = vitals.bodyFat ? Number(vitals.bodyFat).toFixed(1) : '12.7';
-  const muscleMass = vitals.muscleMass ? Number(vitals.muscleMass).toFixed(1) : '36.4';
-  const waterPct = vitals.waterPct || vitals.bodyWater ? Number(vitals.waterPct || vitals.bodyWater).toFixed(1) : '81.6';
-  const scanCount = getScanCount(healthData);
-
-  const standardWeight = Math.round(22.2 * ((height / 100) ** 2) * 10) / 10;
-  const weightGap = Math.round((standardWeight - Number(weight)) * 10) / 10;
-  const absWeightGap = Math.abs(weightGap);
-
-  const isMale = patient?.gender?.toLowerCase() === 'female' ? false : true;
-  const muscleLow = isMale ? (Number(muscleMass) < 38) : (Number(muscleMass) < 28);
-  const fatHigh = isMale ? (Number(bodyFat) > 24) : (Number(bodyFat) > 31);
-  const fatOptimal = Number(bodyFat) >= 10 && Number(bodyFat) <= 20;
-
-  // Resolve contradiction: If user has low muscle or low weight, muscle is NOT strongest!
-  // Standout strength is Body Fat balance or Cellular Hydration.
-  const strongestStrength = fatOptimal ? 'bodyFat' : 'water';
-
-  if (language === 'hi') {
-    let text = `${name}, आपको स्क्रीन देखने की बिल्कुल जरूरत नहीं है। मैं आपके शरीर की बनावट का पूरा हिसाब आसान शब्दों में बता रही हूं। `;
-    text += `आपकी ${height} सेंटीमीटर लंबाई के अनुसार, आपका मानक स्वस्थ वज़न ${standardWeight} किलो होना चाहिए, और आज आपका वज़न ${weight} किलो है। `;
-
-    if (weightGap > 0.8) {
-      text += `यानी सही और आदर्श वज़न तक पहुँचने के लिए आपको लगभग ${absWeightGap} किलो मांसपेशियां बढ़ाने की ज़रूरत है। `;
-    } else if (weightGap < -0.8) {
-      text += `यानी आदर्श वज़न तक पहुँचने के लिए आपको लगभग ${absWeightGap} किलो वज़न घटाने की ज़रूरत है। `;
-    } else {
-      text += `आपका वज़न आपकी लंबाई के हिसाब से बिल्कुल सही और मानक संतुलन में है! `;
-    }
-
-    if (strongestStrength === 'bodyFat') {
-      text += `आज आपका सबसे मजबूत हिस्सा शरीर का फैट संतुलन है, लगभग ${bodyFat} प्रतिशत! यह बहुत ही स्वस्थ और सुरक्षित स्तर पर है। `;
-    } else {
-      text += `आज आपका सबसे मजबूत हिस्सा शरीर का पानी है, लगभग ${waterPct} प्रतिशत! यह आपके जोड़ों को चिकना और ऊर्जा को ताज़ा रखता है। `;
-    }
-
-    if (muscleLow) {
-      text += `आपकी मांसपेशियों का वज़न ${muscleMass} किलो है, जो आपकी लंबाई के हिसाब से थोड़ा कम है। मांसपेशियां ही शरीर का असली इंजन हैं। इन्हें मज़बूत करने के लिए खाने में मूंग की दाल, पनीर, अंकुरित अनाज, भुना चना और उबले अंडे शामिल करें, और रोज़ाना 20 मिनट हल्का व्यायाम करें। `;
-    } else {
-      text += `आपकी मांसपेशियों का वज़न ${muscleMass} किलो है, जो बहुत अच्छी स्थिति में है और आपको दिनभर फुर्तीला रखती है। `;
-    }
-
-    if (fatHigh) {
-      text += `शरीर में चर्बी थोड़ी सी ज्यादा है। तली-भुनी चीजें कम करके रोज़ आधा घंटा टहलने से यह सामान्य हो जाएगी। `;
-    }
-
-    if (scanCount >= 2) {
-      text += `यह आपका स्कैन नंबर ${scanCount} है, जिससे पिछली बार की तुलना साफ दिखाई दे रही है। `;
-    } else {
-      text += `यह आपका पहला स्कैन है, जिससे आपकी शुरुआत तय हुई है। अगले स्कैन में पिछली बार से तुलना साफ दिखाई देगी। `;
-    }
-
-    text += `आगे ब्लड प्रेशर और जरूरी जांचें देखने के लिए कंटिन्यू दबाएं, या पीछे जाने के लिए बैक दबाएं।`;
-    return text;
-  }
-
-  if (language === 'bn') {
-    let text = `${name}, আপনাকে স্ক্রিনের দিকে তাকাতে হবে না। আমি আপনার শরীরের গঠন ও উপাদানের হিসাব সহজ ভাষায় বুঝিয়ে দিচ্ছি। `;
-    text += `আপনার ${height} সেন্টিমিটার উচ্চতা অনুযায়ী আপনার আদর্শ মানক ওজন হওয়া উচিত ${standardWeight} কেজি, আর আজ আপনার ওজন ${weight} কেজি। `;
-
-    if (weightGap > 0.8) {
-      text += `অর্থাৎ আদর্শ ওজনে পৌঁছানোর জন্য আপনাকে প্রায় ${absWeightGap} কেজি ওজন বা পেশীর শক্তি বাড়াতে হবে। `;
-    } else if (weightGap < -0.8) {
-      text += `অর্থাৎ আদর্শ ওজনে পৌঁছাতে আপনাকে প্রায় ${absWeightGap} কেজি অতিরিক্ত ওজন কমাতে হবে। `;
-    } else {
-      text += `আপনার ওজন আপনার উচ্চতার সাথে একদম নিখুঁত ও সুন্দর ভারসাম্যে রয়েছে! `;
-    }
-
-    if (strongestStrength === 'bodyFat') {
-      text += `আজ আপনার শরীরের সবচেয়ে সেরা ও শক্তিশালী দিক হলো ফ্যাটের ভারসাম্য, মাত্র ${bodyFat} শতাংশ! এটি চমৎকার ও অত্যন্ত স্বাস্থ্যকর। `;
-    } else {
-      text += `আজ আপনার শরীরের সবচেয়ে শক্তিশালী অংশ হলো জলের মাত্রা, প্রায় ${waterPct} শতাংশ! এটি হাড়ের জোড়গুলোকে সচল রাখে এবং সারাদিন সতেজতা দেয়। `;
-    }
-
-    if (muscleLow) {
-      text += `আপনার পেশীর ওজন ${muscleMass} কেজি, যা আপনার উচ্চতার তুলনায় কিছুটা কম। পেশীই হলো শরীরের মূল চালিকাশক্তি। পেশী শক্তপোক্ত করতে রোজকার খাবারে মুগ ডাল, ছানা, ডিম, অঙ্কুরিত ছোলা যোগ করুন এবং প্রতিদিন ২০ মিনিট একটু জোরে হাঁটুন। `;
-    } else {
-      text += `আপনার পেশীর ওজন ${muscleMass} কেজি, যা খুব ভালো অবস্থায় রয়েছে এবং দৈনন্দিন কাজের শক্তি জোগায়। `;
-    }
-
-    if (fatHigh) {
-      text += `শরীরে ফ্যাটের মাত্রা সামান্য বেশি। ভাজাভুজি এড়িয়ে প্রতিদিন একটু হাঁটলে এটি স্বাভাবিক হয়ে যাবে। `;
-    }
-
-    if (scanCount >= 2) {
-      text += `এটি আপনার স্ক্যান নম্বর ${scanCount}, যার মাধ্যমে আগের ভিজিটের উন্নতি বোঝা যাচ্ছে। `;
-    } else {
-      text += `এটি আপনার প্রথম স্ক্যান, যা শুরুর পরিমাপ নির্ধারণ করলো। পরের স্ক্যানে আগের তুলনায় কতটা উন্নতি হলো তা দেখা যাবে। `;
-    }
-
-    text += `পরের স্ক্রিনে ব্লাড প্রেশার ও অন্যান্য মাপ দেখতে কন্টিনিউ চাপুন, অথবা আগের স্ক্রিনে ফিরতে ব্যাক চাপুন।`;
-    return text;
-  }
-
-  // English fallback
-  let text = `${name}, you do not need to look at the screen. I will explain your body composition results in plain words. `;
-  text += `According to your height of ${height} cm, your standard healthy weight is ${standardWeight} kg. Today you weigh ${weight} kg. `;
-
-  if (weightGap > 0.8) {
-    text += `That means you need to gain about ${absWeightGap} kg of healthy muscle to reach your standard ideal weight. `;
-  } else if (weightGap < -0.8) {
-    text += `That means you need to gently reduce about ${absWeightGap} kg to reach your standard ideal weight. `;
-  } else {
-    text += `Your weight matches your standard ideal weight in great harmony! `;
-  }
-
-  if (strongestStrength === 'bodyFat') {
-    text += `Your standout strength today is body fat balance, at ${bodyFat} percent, which is classified as very healthy and athletic! `;
-  } else {
-    text += `Your standout strength today is body water, at about ${waterPct} percent, giving your cells deep hydration and steady daily stamina. `;
-  }
-
-  if (muscleLow) {
-    text += `Your muscle mass is ${muscleMass} kg, which is slightly low for your height. Muscles are your power engine for walking, climbing stairs, and carrying groceries. Adding protein foods like moong dal, paneer, sprouts, or boiled eggs, and doing 20 minutes of daily brisk walking will help you build solid muscle. `;
-  } else {
-    text += `Your muscle mass is ${muscleMass} kg, providing strong support for all your daily activities. `;
-  }
-
-  if (fatHigh) {
-    text += `Your body fat is slightly above the target range. Reducing fried snacks and enjoying a 30-minute walk each day will gently bring it back into balance. `;
-  }
-
-  if (scanCount >= 2) {
-    text += `This is scan ${scanCount} of 7, showing how your muscle and fat targets are progressing over time. `;
-  } else {
-    text += `This is scan 1 of 7, establishing your baseline. Progress comparisons will unlock on your next scan. `;
-  }
-
-  text += `Tap Continue to go to your vital signs, or tap Back to return to your health score.`;
-  return text;
-}
-
-/**
- * Report 3: Deep Metrics & Vital Signs (Blood Pressure, Pulse, Oxygen, Bones, Protein, Visceral Fat, Calories)
- */
-export function getReport3Speech(healthData, language = 'en') {
-  const patient = healthData?.patient || {};
-  const vitals = healthData?.vitals || {};
-  const sys = (vitals.systolic ?? vitals.bpSystolic) ? Math.round(Number((vitals.systolic ?? vitals.bpSystolic))) : 99;
-  const dia = (vitals.diastolic ?? vitals.bpDiastolic) ? Math.round(Number((vitals.diastolic ?? vitals.bpDiastolic))) : 63;
-  const spo2 = vitals.oxygen ? Math.round(Number(vitals.oxygen)) : 98;
-  const pulse = (vitals.bpm ?? vitals.pulse) ? Math.round(Number((vitals.bpm ?? vitals.pulse))) : 72;
-  const bone = vitals.boneMass ? Number(vitals.boneMass).toFixed(2) : '2.97';
-  const protein = vitals.protein ? Number(vitals.protein).toFixed(2) : (vitals.proteinMass ? Number(vitals.proteinMass).toFixed(2) : '11.57');
-  const visceral = vitals.visceralFat ? Math.round(Number(vitals.visceralFat)) : 1;
-  const subcut = vitals.subcutaneousFat ? Number(vitals.subcutaneousFat).toFixed(1) : '12.6';
-  const calories = Math.round(Number(vitals.bmr || 1420) * 1.2 || 1705);
-  const scanCount = getScanCount(healthData);
-
-  const bpHigh = sys > 128 || dia > 85;
-
-  if (language === 'hi') {
-    let text = `अब हम आपके दिल की धड़कन, ब्लड प्रेशर और शरीर के जरूरी संकेत देखते हैं। आप आराम से सुनिए, मैं सब आसान शब्दों में समझा रही हूं। `;
-    text += `आपका ब्लड प्रेशर ${sys} और ${dia} है। `;
-    if (bpHigh) {
-      text += `यह थोड़ा सा बढ़ा हुआ है। नमक कम करें और भरपूर पानी पिएं। `;
-    } else {
-      text += `यह बिल्कुल सामान्य और शांत सीमा में है, जिसका मतलब है कि खून बिना किसी दबाव के आसानी से बह रहा है। `;
-    }
-    text += `खून में ऑक्सीजन ${spo2} प्रतिशत है, जो फेफड़ों से हर अंग तक ताज़ी हवा पहुंचा रहा है। `;
-    text += `आपके दिल की धड़कन ${pulse} प्रति मिनट है, जो एक शांत ताल में चल रही है। `;
-    text += `आपकी हड्डियों का खनिज वज़न ${bone} किलोग्राम है, और प्रोटीन ${protein} किलोग्राम है। `;
-    text += `अंदरूनी विसरल फैट स्कोर ${visceral} है, जो बहुत सुरक्षित है। त्वचा के नीचे सबक्यूटेनियस फैट ${subcut} प्रतिशत है। `;
-    text += `शरीर को चुस्त रखने के लिए आपकी रोज़ाना की कैलोरी ज़रूरत लगभग ${calories} कैलोरी है। `;
-    if (scanCount >= 2) {
-      text += `पिछली जांच के मुकाबले आपके संकेत अच्छी स्थिरता दिखा रहे हैं। `;
-    }
-    text += `अगली स्क्रीन पर प्रोग्रेस ग्राफ देखने के लिए कंटिन्यू दबाएं, या पीछे जाने के लिए बैक दबाएं।`;
-    return text;
-  }
-
-  if (language === 'bn') {
-    let text = `এবার আমরা আপনার রক্তচাপ, হৃদস্পন্দন ও শরীরের মূল লক্ষণগুলো দেখবো। আপনি আরাম করে শুনুন, আমি সব বুঝিয়ে বলছি। `;
-    text += `আপনার রক্তচাপ বা ব্লাড প্রেশার ${sys} বাই ${dia}। `;
-    if (bpHigh) {
-      text += `এটি কিছুটা বেশি রয়েছে। কাঁচা লবণ এড়িয়ে চলুন ও পর্যাপ্ত জল খান। `;
-    } else {
-      text += `এটি শান্ত ও নিরাপদ সীমার মধ্যে রয়েছে, অর্থাৎ রক্ত চলাচল স্বাভাবিক রয়েছে। `;
-    }
-    text += `রক্তে অক্সিজেনের মাত্রা ${spo2} শতাংশ, ফুসফুস পর্যাপ্ত সতেজ হাওয়া প্রতিটি অঙ্গে পৌঁছে দিচ্ছে। `;
-    text += `আপনার নাড়ির গতি মিনিটে ${pulse} বার, যা একটি সুন্দর ও শান্ত ছন্দে চলছে। `;
-    text += `আপনার হাড়ের ওজন ${bone} কিলোগ্রাম এবং প্রোটিন ${protein} কিলোগ্রাম। `;
-    text += `ভেতরের ভিসারাল ফ্যাট স্কোর ${visceral}, যা খুবই স্বাস্থ্যকর। সাবকিউটেনিয়াস ফ্যাট ${subcut} শতাংশ। `;
-    text += `সারাদিন সক্রিয় থাকতে আপনার দৈনিক ক্যালোরির প্রয়োজন প্রায় ${calories} ক্যালোরি। `;
-    if (scanCount >= 2) {
-      text += `আগের ভিজিটের তুলনায় আপনার শরীরের লক্ষণগুলো ভালো স্থিরতা দেখাচ্ছে। `;
-    }
-    text += `পরের স্ক্রিনে বহু-স্ক্যানের প্রোগ্রেস গ্রাফ দেখতে কন্টিনিউ চাপুন, অথবা আগের স্ক্রিনে ফিরতে ব্যাক চাপুন।`;
-    return text;
-  }
-
-  // English fallback
-  let text = `Now we examine your core vital signs and inner reserves. You can listen comfortably while I explain each reading. `;
-  text += `Your blood pressure is ${sys} over ${dia}. `;
-  if (bpHigh) {
-    text += `This is slightly elevated today. Cutting back on table salt and staying hydrated will help keep it steady. `;
-  } else {
-    text += `This is in a calm, safe, and optimal range, meaning blood is flowing smoothly without strain on your heart. `;
-  }
-  text += `Your blood oxygen is ${spo2} percent, delivering plenty of fresh oxygen across your body. `;
-  text += `Your resting pulse is ${pulse} beats per minute, beating with a steady rhythm. `;
-  text += `Your bone mass is ${bone} kg, and your protein mass is ${protein} kg. `;
-  text += `Your visceral fat score is ${visceral}, which is low and very healthy. Subcutaneous fat is ${subcut} percent, considered optimal. `;
-  text += `To maintain healthy daily energy, your recommended daily intake is about ${calories} calories. `;
-  if (scanCount >= 2) {
-    text += `Your vitals are showing dependable stability compared to your earlier visits. `;
-  }
-  text += `Tap Continue to review your multi-scan progress graph, or tap Back to revisit body composition.`;
-  return text;
-}
-
-/**
- * Report 4: Vitals Longitudinal Trends & Scan History
- */
-export function getReport4Speech(healthData, language = 'en') {
-  const vitals = healthData?.vitals || {};
-  const scanCount = getScanCount(healthData);
-  const ratio = vitals.fatMuscleRatio ? Number(vitals.fatMuscleRatio).toFixed(1) : '0.2';
-  const waterPct = vitals.waterPct || vitals.bodyWater ? Number(vitals.waterPct || vitals.bodyWater).toFixed(1) : '81.6';
-  const efficiency = vitals.efficiency ? Number(vitals.efficiency).toFixed(1) : '0.8';
-  const energyReserve = vitals.energyReserve ? Math.round(Number(vitals.energyReserve)) : 1028;
-  const metabolicLoad = vitals.metabolicLoad ? Number(vitals.metabolicLoad).toFixed(1) : '1.5';
-
-  if (language === 'hi') {
-    let text = `यह आपका प्रोग्रेस डैशबोर्ड है। अगर आप स्क्रीन पर ग्राफ नहीं देख पा रहे हैं, तो चिंता मत कीजिए, मैं बोलकर बताती हूं। `;
-    text += `आपका फैट-मसल अनुपात ${ratio} है, जो 0.5 से कम होने के कारण बहुत ही शानदार है। `;
-    text += `शरीर में पानी की मात्रा ${waterPct} प्रतिशत है, और मेटाबॉलिक लोड ${metabolicLoad} है। `;
-    text += `एनर्जी रिज़र्व ${energyReserve} है और कार्यक्षमता ${efficiency} है। कार्यक्षमता थोड़ी कम है, जिस पर भरपूर पानी और अच्छी नींद से सुधार किया जा सकता है। `;
-    text += `आपकी अंदरूनी मेटाबॉलिक उम्र आपकी असली उम्र से बिल्कुल मेल खाती है, जो एक बड़ा मेटाबॉलिक फायदा है। `;
-    text += `बार-बार जांच करने से ब्लड प्रेशर का पैटर्न साफ दिख रहा है, जो पहले 104-74, 120-80 और अब 99-63 पर शांत है। `;
-
-    if (scanCount <= 1) {
-      text += `यह कुल 7 में से आपकी पहली जांच है, जो शुरुआती आधार बनाती है। `;
-    } else if (scanCount >= 7) {
-      text += `बधाई हो! आपने सातों स्कैन पूरे कर लिए हैं और 100 प्रतिशत विश्वास के साथ आपका स्वास्थ्य आधार पक्का हो चुका है! `;
-    } else {
-      text += `जांच नंबर ${scanCount} of 7! जैसे-जैसे स्कैन बढ़ते हैं, जांच का विश्वास 14 प्रतिशत से बढ़कर 100 प्रतिशत तक पहुंचता है। `;
-    }
-    text += `अगली स्क्रीन पर पूरी रिपोर्ट का सारांश, आंखों की जांच और रिपोर्ट ले जाने वाला क्यूआर कोड देखने के लिए कंटिन्यू दबाएं, या पीछे जाने के लिए बैक दबाएं।`;
-    return text;
-  }
-
-  if (language === 'bn') {
-    let text = `এটি আপনার প্রোগ্রেস ড্যাশবোর্ড। স্ক্রিনে গ্রাফ দেখতে না পেলেও কোনো চিন্তা নেই, আমি মুখে বুঝিয়ে দিচ্ছি। `;
-    text += `আপনার ফ্যাট-মাসল অনুপাত ${ratio}, যা ০.৫-এর কম হওয়ায় অত্যন্ত চমৎকার। `;
-    text += `শরীরে জলের মাত্রা ${waterPct} শতাংশ, এবং মেটাবলিক লোড ${metabolicLoad}। `;
-    text += `এনার্জি রিজার্ভ ${energyReserve} এবং কার্যক্ষমতা ${efficiency}। দক্ষতা কিছুটা কম, যা পর্যাপ্ত জল ও ভালো ঘুমে দ্রুত বাড়বে। `;
-    text += `আপনার মেটাবলিক বয়স আসল বয়সের সাথে একদম মিলে গেছে, যা একটি বড় মেটাবলিক সুবিধা। `;
-    text += `বারবার পরীক্ষায় ব্লাড প্রেশারের ধারা স্পষ্ট, যা আগে ১০৪-৭৪, ১২০-৮০ এবং এখন ৯৯-৬৩ তে শান্ত রয়েছে। `;
-
-    if (scanCount <= 1) {
-      text += `এটি সাতটি স্ক্যানের মধ্যে প্রথম ভিজিট, যা শুরুর ভিত্তি তৈরি করেছে। `;
-    } else if (scanCount >= 7) {
-      text += `অভিনন্দন! আপনি সব সাতটি স্ক্যান সম্পূর্ণ করেছেন এবং ১০০ শতাংশ নিশ্চয়তার সাথে প্রোফাইল তৈরি হয়েছে! `;
-    } else {
-      text += `ভিজিট নম্বর ${scanCount} of 7! স্ক্যান বাড়ার সাথে সাথে তথ্যের নির্ভুলতা ১৪ শতাংশ থেকে ১০০ শতাংশে পৌঁছায়। `;
-    }
-    text += `পরবর্তী স্ক্রিনে সম্পূর্ণ সারাংশ, চোখের পরীক্ষার ফলাফল এবং বাড়ি নিয়ে যাওয়ার কিউআর কোড দেখতে কন্টিনিউ চাপুন, অথবা আগের স্ক্রিনে ফিরতে ব্যাক চাপুন।`;
-    return text;
-  }
-
-  // English fallback
-  let text = `This is your progress dashboard. If you cannot see the graph on the screen, don't worry—I will tell you exactly what your trends show. `;
-  text += `Your fat-to-muscle ratio is ${ratio}, which is excellent since anything under 0.5 is ideal. `;
-  text += `Hydration is at ${waterPct} percent, and metabolic load is ${metabolicLoad}. `;
-  text += `Your energy reserve is ${energyReserve} with an efficiency of ${efficiency}, which points to an opportunity for metabolic improvement through hydration and restful sleep. `;
-  text += `Your biological age matches your chronological age, confirming favorable metabolic health. `;
-  text += `Your blood pressure trend shows steady, calm readings, moving from earlier 104 over 74 and 120 over 80 to your most recent 99 over 63. `;
-
-  if (scanCount <= 1) {
-    text += `This is visit 1 of 7, establishing your starting baseline. `;
-  } else if (scanCount >= 7) {
-    text += `Congratulations! You have completed all 7 scans, locking in 100 percent data confidence across all 112 health metrics! `;
-  } else {
-    text += `Visit ${scanCount} of 7! As you complete scans, confidence progresses from 14 percent to 100 percent. `;
-  }
-  text += `Tap Continue to view your full summary, eye check, and take-home QR code, or tap Back to return to vitals.`;
-  return text;
-}
-
-/**
- * Report 5: Actionable Daily Habits, Eyesight & Take-Home QR Code Guidance
- */
-export function getReport5Speech(healthData, language = 'en') {
-  const patient = healthData?.patient || {};
-  const vitals = healthData?.vitals || {};
-  const name = patient?.name ? patient.name.split(' ')[0] : (language === 'hi' ? 'दोस्त' : language === 'bn' ? 'বন্ধু' : 'Friend');
-  const height = Number(vitals.height || 175);
-  const weight = Number(vitals.weight || 65);
-  const standardWeight = Math.round(22.2 * ((height / 100) ** 2) * 10) / 10;
-  const weightGap = Math.round((standardWeight - weight) * 10) / 10;
-  const absWeightGap = Math.abs(weightGap);
-  const calories = Math.round(Number(vitals.bmr || 1420) * 1.2 || 1705);
-
-  if (language === 'hi') {
-    let text = `${name}, यह आपके पूरे हेल्थ चेकअप का अंतिम सारांश है। `;
-    text += `कुल मिलाकर, आपके शरीर का फैट संतुलन, मुख्य संकेत और पानी की मात्रा आपको दिनभर अच्छी स्फूर्ति देते हैं। `;
-    if (weightGap > 0.8) {
-      text += `आगे सुधार के लिए सबसे जरूरी कदम है कि अपने मानक वज़न ${standardWeight} किलो तक पहुंचने के लिए लगभग ${absWeightGap} किलो मांसपेशियां बढ़ाएं। इसके लिए रोज़ाना लगभग ${calories} कैलोरी पौष्टिक घरेलू खाना लें। `;
-    } else if (weightGap < -0.8) {
-      text += `आगे सुधार के लिए सबसे जरूरी कदम है कि अपने मानक वज़न ${standardWeight} किलो तक पहुंचने के लिए लगभग ${absWeightGap} किलो अतिरिक्त वज़न कम करें। `;
-    } else {
-      text += `आपका वज़न आपकी लंबाई के हिसाब से बिल्कुल सही और मानक संतुलन में है! `;
-    }
-    text += `आपकी आंखों की जांच का नतीजा भी यहां दर्ज है। अगर आंखों में भारीपन या धुंधलापन लगे, तो आंखों के डॉक्टर से जांच जरूर कराएं। `;
-    text += `कुल 7 स्कैन में 112 से ज़्यादा बायोमेट्रिक संकेत जांचकर आपकी रिपोर्ट तैयार हुई है। `;
-    text += `इस पूरी डिजिटल रिपोर्ट को 2 मिनट में अपने फोन पर ले जाने के लिए, आप अपने स्मार्टफोन का कैमरा स्क्रीन पर बने चौकोर क्यूआर कोड के सामने करें। यह बिना कोई ऐप डाउनलोड किए तुरंत खुल जाएगी। `;
-    text += `जब आप तैयार हों, रिटर्न होम दबा सकते हैं, या पुरानी रिपोर्ट देखने के लिए बैक दबा सकते हैं। आज रिलिव के साथ अपनी सेहत का ध्यान रखने के लिए बहुत-बहुत धन्यवाद!`;
-    return text;
-  }
-
-  if (language === 'bn') {
-    let text = `${name}, এটি আপনার সম্পূর্ণ হেলথ চেকআপের চূড়ান্ত সারাংশ। `;
-    text += `সামগ্রিকভাবে, আপনার ফ্যাটের ভারসাম্য, মূল লক্ষণগুলো এবং জলের পর্যাপ্ত মাত্রা আপনাকে সারাদিনের শক্তি জোগাচ্ছে। `;
-    if (weightGap > 0.8) {
-      text += `উন্নতির জন্য প্রধান পদক্ষেপ হলো আপনার আদর্শ মানক ওজন ${standardWeight} কেজিতে পৌঁছানো এবং প্রায় ${absWeightGap} কেজি পেশীর শক্তি বাড়ানো, যার জন্য প্রতিদিন প্রায় ${calories} ক্যালোরি পুষ্টিকর খাবার প্রয়োজন। `;
-    } else if (weightGap < -0.8) {
-      text += `উন্নতির জন্য প্রধান পদক্ষেপ হলো আপনার আদর্শ মানক ওজন ${standardWeight} কেজিতে পৌঁছাতে প্রায় ${absWeightGap} কেজি ওজন কমানো। `;
-    } else {
-      text += `আপনার ওজন আপনার উচ্চতার সাথে একদম আদর্শ ভারসাম্যে রয়েছে! `;
-    }
-    text += `এই স্ক্রিনে আপনার চোখের পরীক্ষার ফলাফলও নথিভুক্ত রয়েছে। চোখে ক্লান্তি বা ঝাপসা লাগলে চোখের ডাক্তার দেখানো সবসময়ই ভালো। `;
-    text += `মোট ৭টি স্ক্যানে ১১২টিরও বেশি তথ্য যাচাই করে এই নির্ভরযোগ্য রিপোর্ট তৈরি হয়েছে। `;
-    text += `মাত্র ২ মিনিটে এই সম্পূর্ণ ডিজিটাল রিপোর্টটি নিজের ফোনে নিয়ে যেতে, স্মার্টফোনের ক্যামেরাটি স্ক্রিনের চারকোণা কিউআর কোডের সামনে ধরুন। কোনো অ্যাপ ছাড়াই এটি ফোনে খুলে যাবে। `;
-    text += `আপনার দেখা শেষ হলে রিটার্ন হোম চাপতে পারেন, অথবা পেছনের পাতা দেখতে ব্যাক চাপুন। আজ রিলিভের সাথে নিজের স্বাস্থ্যের যত্ন নেওয়ার জন্য আপনাকে অনেক ধন্যবাদ!`;
-    return text;
-  }
-
-  // English fallback
-  let text = `${name}, here is the final summary of your entire checkup. `;
-  text += `Overall, your body fat balance, vital signs, and cellular hydration provide solid daily stamina. `;
-  if (weightGap > 0.8) {
-    text += `Your primary opportunity for improvement is reaching your standard healthy weight of ${standardWeight} kg by gaining about ${absWeightGap} kg of lean muscle, supported by ${calories} daily calories and nutritious home foods. `;
-  } else if (weightGap < -0.8) {
-    text += `Your primary opportunity for improvement is reaching your standard healthy weight of ${standardWeight} kg by gently reducing ${absWeightGap} kg through balanced home meals and daily brisk walking. `;
-  } else {
-    text += `Your weight matches your standard ideal weight of ${standardWeight} kg in great harmony! `;
-  }
-  text += `Your eyesight screening is also recorded on this screen. If you ever feel eye strain or blurred vision, having your eyes checked by an optometrist is always recommended. `;
-  text += `Your report is confirmed across 7 scans with over 112 biometric data points. `;
-  text += `To take this complete digital report home with you in under two minutes, simply point your smartphone camera at the square QR code on the screen. It will open your private digital report instantly on your phone without downloading any app. `;
-  text += `You can tap Return Home whenever you are ready, or tap Back to review earlier pages. Thank you for checking your health with Reliv today!`;
-  return text;
-}
+export const getReport1Speech=(data,language='en')=>pageSpeech(data,language,1);
+export const getReport2Speech=(data,language='en')=>pageSpeech(data,language,2);
+export const getReport3Speech=(data,language='en')=>pageSpeech(data,language,3);
+export const getReport4Speech=(data,language='en')=>pageSpeech(data,language,4);
+export const getReport5Speech=(data,language='en')=>pageSpeech(data,language,5);

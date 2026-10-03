@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Volume2, VolumeX, Sparkles, X, RotateCcw } from 'lucide-react';
 import { useSpeech } from '../context/SpeechContext';
 import { METRIC_EXPLAINERS, getMetricLaymanExplainer, CANONICAL_METRIC_MAP } from '../voice/reportVoice';
@@ -10,13 +10,19 @@ export default function ReportVoiceExplainer({
   healthData = {},
   onReplayOverview
 }) {
-  const { speakText, stop, isSpeaking } = useSpeech();
+  const { speakText, stop, speakingRef } = useSpeech();
+  const [isSpeaking, setIsSpeaking] = useState(Boolean(speakingRef?.current));
+  useEffect(() => {
+    const onSpeaking = event => setIsSpeaking(Boolean(event.detail));
+    window.addEventListener('reliv_speaking', onSpeaking);
+    return () => window.removeEventListener('reliv_speaking', onSpeaking);
+  }, []);
   const [activeMetric, setActiveMetric] = useState(null);
   const [showExplainerPanel, setShowExplainerPanel] = useState(false);
 
   const lang = reportSpeechLanguage || 'hi';
 
-  const handleSelectMetric = (metricKey) => {
+  const handleSelectMetric = useCallback((metricKey) => {
     const normalized = String(metricKey).toLowerCase().replace(/[^a-z0-9_]/g, '');
     const canonical = (CANONICAL_METRIC_MAP && CANONICAL_METRIC_MAP[normalized]) || metricKey;
     setActiveMetric(canonical);
@@ -25,7 +31,7 @@ export default function ReportVoiceExplainer({
     if (explainerText) {
       speakText(explainerText, { langHint: lang });
     }
-  };
+  }, [healthData, lang, speakText, stop]);
 
   useEffect(() => {
     const handleCustomMetric = (e) => {
@@ -37,7 +43,7 @@ export default function ReportVoiceExplainer({
     };
     window.addEventListener('reliv_speak_metric', handleCustomMetric);
     return () => window.removeEventListener('reliv_speak_metric', handleCustomMetric);
-  }, [healthData, lang]);
+  }, [handleSelectMetric]);
 
   const handleCloseExplainer = () => {
     setActiveMetric(null);
@@ -244,3 +250,4 @@ export default function ReportVoiceExplainer({
     </div>
   );
 }
+
