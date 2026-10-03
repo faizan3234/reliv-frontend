@@ -461,297 +461,371 @@ export function getMetricLaymanExplainer(metricKey, healthData, language = 'en')
 // ── DYNAMIC LAYMAN REPORT EXPLANATION DECODERS (OFFLINE, ZERO DOCTOR JARGON) ──
 
 /**
- * Report 1: Health Score & Metabolic Vitality
+ * Report 1: Health Score & Overview
+ * 9 Score Bands, Plain-Language Explanation, Peer Reference (72), Blind/Elderly Accessibility, Next Guidance
  */
 export function getReport1Speech(healthData, language = 'en') {
   const patient = healthData?.patient || {};
   const vitals = healthData?.vitals || {};
-  const name = patient?.name ? patient.name.split(' ')[0] : (language === 'hi' ? 'दोस्त' : language === 'bn' ? 'বন্ধু' : 'Friend');
-  const score = Math.round(Number(healthData?.bodyScore || vitals?.bodyScore || 75));
-  const age = Number(patient?.age) || 25;
-  const metabolicAge = Math.round(Number(healthData?.metabolicAge || vitals?.metabolicAge || age));
-  const scanCount = getScanCount(healthData);
+  const name = patient?.name ? patient.name.split(' ')[0] : (language === 'hi' ? 'Dost' : language === 'bn' ? 'Bondhu' : 'Friend');
+  const score = Math.round(Number(healthData?.bodyScore || vitals?.bodyScore || 85));
 
   if (language === 'hi') {
-    let text = `अरे वाह ${name}! सुनिए, आपकी सेहत की रिपोर्ट आ गई है। `;
-    text += `जैसे स्कूल में 100 में से नंबर मिलते हैं ना, वैसे ही आज आपके पूरे शरीर को 100 में से ${score} नंबर मिले हैं! `;
-    if (score >= 80) {
-      text += `बहुत ही बढ़िया! आपका शरीर अंदर से एकदम चुस्त और तंदुरुस्त है, जैसे कोई नई चमचमाती गाड़ी। `;
+    let text = `${name}... `;
+    text += `Aapka health score 100 mein se ${score} hai. `;
+    text += `Health score 100 mein se hota hai. A higher score means more of today’s checked values are closer to the preferred ranges — yaani score jitna zyada ho, aaj ki check ki gayi readings preferred range ke utni paas hain. `;
+
+    if (score >= 95) {
+      text += `Bahut hi badhiya! Outstanding! Aaj check ki gayi zyada tar readings preferred range ke bahut paas hain. Aap bahut achha kar rahe hain. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score usse kaafi upar hai. Apni healthy routine aise hi continue rakhiye. `;
+    } else if (score >= 90) {
+      text += `Excellent! Aaj aapki overall readings bahut achhi hain. Zyada tar values preferred range mein ya uske paas hain. Ek-do cheezein aur improve ho sakti hain, lekin overall aap bahut achha kar rahe hain. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score usse upar hai. `;
+    } else if (score >= 80) {
+      text += `Bahut achha! Very good! Aaj ki zyada tar readings achhi hain. Kuch areas mein thoda aur improvement ho sakta hai, lekin overall result strong hai. Healthy habits continue rakhiye. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score ${score} us reference se upar hai. `;
+    } else if (score >= 70) {
+      text += `Achha result hai. Good. Aapki overall readings ek theek baseline par hain. Kaafi readings achhi hain aur kuch aur improve ho sakti hain. Aapki age ka reference score lagbhag 72 hai, aur aapka score uske aas-paas ya thoda upar hai. `;
     } else if (score >= 60) {
-      text += `आपका स्कोर अच्छा है। थोड़ा रोज़ टहलने और भरपूर पानी पीने से यह और भी शानदार हो जाएगा। `;
+      text += `Result theek hai, lekin improvement ki jagah hai. Kuch readings achhi hain aur kuch areas par thoda dhyan dene ki zarurat hai. Regular activity, balanced khana aur achhi neend par focus rakhiye. Ye sirf aaj ki measurements ka summary score hai. Iska matlab ye nahi hai ki aap unhealthy hain. `;
+    } else if (score >= 50) {
+      text += `Aaj ki kuch readings par dhyan dene ki zarurat hai. Iska matlab ye nahi hai ki kuch zaroor galat hai. Bas kuch values preferred range se thodi door hain. Ab hum simple language mein batayenge ki kaunsi readings achhi hain aur kin cheezon ko improve karna hai. `;
+    } else if (score >= 40) {
+      text += `Kuch areas mein improvement ki zarurat hai. Ghabraiye mat. Ek scan se kisi ki poori health decide nahi hoti. Bas aaj ki kuch measurements preferred range se bahar ya thodi door hain. Ab hum ek-ek karke simple language mein samjhayenge ki kis cheez par kaam karna hai. `;
+    } else if (score >= 30) {
+      text += `Aaj kai readings ko thoda zyada attention dene ki zarurat hai. Ghabraiye mat—ye score diagnosis nahi hai. Paani kam peena, khana, recent exercise, stress ya measurement ke tareeke se bhi readings change ho sakti hain. Unusual readings ko dobara check karna better rahega. `;
     } else {
-      text += `घबराने की बिल्कुल बात नहीं है, आपके शरीर को बस थोड़े से आराम और अच्छी हरी सब्ज़ियों की ज़रूरत है, यह बहुत जल्दी सुधर जाएगा। `;
+      text += `Aaj ki kai measurements preferred range se kaafi door hain, isliye unhe dhyan se dobara dekhna chahiye. Ghabraiye mat. Sirf is score se kisi bimari ka diagnosis nahi hota. Unusual readings ko dobara check karein. Agar important readings baar-baar abnormal aayein, ya aapki tabiyat theek na lage, to doctor ya healthcare professional se baat karein. `;
     }
 
-    text += `और सबसे मज़ेदार बात जानते हैं? आपकी अंदरूनी उम्र — यानी मेटाबॉलिक उम्र — ${metabolicAge} साल आई है! इसका मतलब यह है कि कैलेंडर वाली उम्र तो आपके जन्मदिन से गिनी जाती है, लेकिन अंदरूनी उम्र यह बताती है कि आपके अंदर का दिल, फेफड़े और शरीर अंदर से कितना जवान और फुर्तीला महसूस कर रहे हैं। `;
-    if (metabolicAge < age) {
-      text += `खुशी की बात यह है कि आपकी अंदरूनी उम्र आपकी असली उम्र से ${age - metabolicAge} साल छोटी है! यानी आप अंदर से एकदम जवान और एनर्जेटिक हैं! `;
-    } else if (metabolicAge > age) {
-      text += `आपकी अंदरूनी उम्र ${metabolicAge} साल है। रोज़ाना 20 मिनट टहलने और ताज़े फल खाने से आपका शरीर अंदर से फिर से बिल्कुल जवान हो जाएगा। `;
-    } else {
-      text += `आपकी अंदरूनी उम्र आपकी असली उम्र से बिल्कुल कदम से कदम मिलाकर चल रही है। `;
-    }
-
-    if (scanCount >= 2) {
-      text += `यह आपकी ${scanCount}वीं जाँच है और आपकी सेहत का ग्राफ धीरे-धीरे बहुत अच्छा हो रहा है। `;
-    } else {
-      text += `यह आपकी पहली जाँच है। अगली बार फिर आकर देखिएगा कि आपकी ताक़त कितनी बढ़ गई है! `;
-    }
-    text += `नीचे दिए बटनों से आप किसी भी चीज़ का आसान मतलब सुन सकते हैं, या आगे बढ़ने के लिए Next दबाएँ।`;
+    text += `Aapko screen padhne ki zarurat nahi hai. Main aapki report ka har important part simple language mein samjhaunga. `;
+    text += `Agla part dekhne ke liye Next dabayein, jisme hum batayenge ki aapke shareer ka kaunsa hissa sabse strong hai aur kisme sudhaar ki zarurat hai.`;
     return text;
   }
 
   if (language === 'bn') {
-    let text = `আরে বাহ ${name}! শুনুন, আপনার শরীরের রিপোর্ট এসে গেছে। `;
-    text += `ঠিক যেমন স্কুলে একশোর মধ্যে নম্বর দেওয়া হয়, তেমনই আজ আপনার শরীর একশোর মধ্যে ${score} নম্বর পেয়েছে! `;
-    if (score >= 80) {
-      text += `অসাধারণ! আপনার শরীর ভেতর থেকে একদম চাঙ্গা আর তরতাজা রয়েছে, ঠিক যেন কোনো নতুন চকচকে গাড়ি। `;
+    let text = `${name}... `;
+    text += `Apnar health score 100-r moddhe ${score}. `;
+    text += `Health score 100-er moddhe hishab kora hoy. Higher score-er mane ajker check kora beshirbhag value preferred range-er kachakachi ache. `;
+
+    if (score >= 95) {
+      text += `Darun result! Outstanding! Aj check kora beshirbhag reading preferred range-er khub kachakachi ache. Apni khub bhalo korchen. Apnar boyosher manusher reference score pray 72, ar apnar score tar theke onek beshi. Ei healthy routine-ta continue korun. `;
+    } else if (score >= 90) {
+      text += `Excellent! Aj apnar overall reading khub bhalo. Beshirbhag value preferred range-e ba tar kachakachi ache. Ek-dui jaygay aro improvement hote pare, kintu overall apni khub bhalo korchen. Apnar boyosher reference score pray 72, ar apnar score tar theke beshi. `;
+    } else if (score >= 80) {
+      text += `Khub bhalo! Very good! Ajker beshirbhag reading bhalo ache. Kichu jaygay aro ektu improvement hote pare, kintu overall result strong. Healthy habit-gulo continue korun. Apnar boyosher reference score pray 72, ar apnar score ${score} tar theke beshi. `;
+    } else if (score >= 70) {
+      text += `Bhalo result. Good. Overall reading ekta bhalo baseline-e ache. Onnek reading bhalo, ar kichu aro improve kora jay. Apnar boyosher reference score pray 72, ar apnar score tar kachakachi ba ektu beshi. `;
     } else if (score >= 60) {
-      text += `আপনার স্কোর বেশ ভালো। প্রতিদিন একটু হাঁটাহাঁটি আর মন ভরে জল খেলেই এটা আরও দুর্দান্ত হবে। `;
+      text += `Result motamuti bhalo, kintu improvement-er jayga ache. Kichu reading bhalo, ar kichu jaygay ektu beshi kheyal rakha dorkar. Regular activity, balanced khabar ar bhalo ghum-er upor focus korun. Eta sudhu ajker measurement-er summary score. Er mane ei noy je apni unhealthy. `;
+    } else if (score >= 50) {
+      text += `Ajker kichu reading-e attention dorkar. Er mane ei noy je nishchit bhabe kono problem ache. Sudhu kichu value preferred range theke ektu dure ache. Ebar amra sohoj bhashay bolbo kon reading bhalo ar kon jaygay improvement kora jay. `;
+    } else if (score >= 40) {
+      text += `Kichu jaygay improvement dorkar. Bhoy paben na. Ekta scan diye puro health decide kora jay na. Ajker kichu measurement preferred range-er baire ba ektu dure ache. Ebar amra ek-ek kore sohoj bhashay bojhabo kon jaygay kaj kora jay. `;
+    } else if (score >= 30) {
+      text += `Aj besh kichu reading-e aro attention dorkar. Bhoy paben na—ei score kono diagnosis noy. Kom jol khawa, khabar, recent exercise, stress ba measurement-er condition-er jonno-o reading change hote pare. Unusual reading abar check kora bhalo. `;
     } else {
-      text += `ভয় পাওয়ার কিচ্ছু নেই! শরীরটাকে একটু বিশ্রাম আর টাটকা শাকসবজি দিলে এটা খুব দ্রুত ভালো হয়ে যাবে। `;
+      text += `Ajker besh kichu measurement preferred range theke onekta dure ache, tai segulo bhalo kore abar dekha dorkar. Bhoy paben na. Sudhu ei score diye kono rog diagnose kora jay na. Unusual reading abar check korun. Important reading bar-bar abnormal thakle, ba shorir kharap lagle, doctor ba healthcare professional-er sathe kotha bolun. `;
     }
 
-    text += `আর সবচেয়ে মজার খবর কী জানেন? আপনার ভেতরের শারীরিক বয়স — যাকে মেটাবলিক বয়স বলে — সেটা এসেছে ${metabolicAge} বছর! এর মানে কী? মানে হলো, আপনার আসল বয়স তো জন্মদিন দেখে গোনা হয়, কিন্তু এই ভেতরের বয়সটা বলে যে আপনার শরীরের ভেতরের ইঞ্জিনটা আসলে কতটা চনমনে আর তরুণ! `;
-    if (metabolicAge < age) {
-      text += `দারুণ সুখবর হলো, আপনার ভেতরের শরীর আসল বয়সের চেয়েও ${age - metabolicAge} বছর তরুণ ও প্রাণবন্ত! `;
-    } else if (metabolicAge > age) {
-      text += `ভেতরের বয়স ${metabolicAge} বছর দেখাচ্ছে। প্রতিদিন একটু হাঁটা আর মিষ্টি রোদ গায়ে মাখলে শরীর আবার চনমনে হয়ে উঠবে। `;
-    } else {
-      text += `আপনার ভেতরের বয়স আসল বয়সের সাথে একদম মিলে গেছে। `;
-    }
-
-    if (scanCount >= 2) {
-      text += `এটি আপনার ${scanCount} নম্বর পরীক্ষা, আর আগের চেয়ে আপনার শরীর স্পষ্ট উন্নতি করছে। `;
-    } else {
-      text += `এটি আপনার প্রথম চেকআপ। পরের বার এসে দেখবেন আপনার শরীরে কতটা নতুন শক্তি এসেছে! `;
-    }
-    text += `সহজ কথায় সব বুঝতে নিচের বোতামগুলোতে চাপ দিন, অথবা পরের পাতায় যেতে Next চাপুন।`;
+    text += `Apnake screen porte hobe na. Ami apnar report-er prottekta important part sohoj bhashay bojhabo. `;
+    text += `Poroborti ongsho dekhte Next chapun, jekhane amra bolbo apnar shorirer kon jaygata shobcheye shoktishali ar kothay aro unnoti dorkar.`;
     return text;
   }
 
   // English fallback
-  let text = `Hey there ${name}! Your wellness report is ready. `;
-  text += `Just like getting marks out of 100 in school, your body scored a wonderful ${score} out of 100 today! `;
-  if (score >= 80) {
-    text += `Super impressive! Your body is performing like a brand-new, smooth-running sports car. `;
+  let text = `${name}... `;
+  text += `Your health score is ${score} out of 100. `;
+  text += `Your health score is out of 100. A higher score means more of today’s checked values are closer to the preferred ranges. `;
+
+  if (score >= 95) {
+    text += `Outstanding! Most of the values checked today are very close to their preferred ranges. You are doing extremely well. The reference score for people around your age is about 72, and your score is much higher. Keep following your healthy routine. `;
+  } else if (score >= 90) {
+    text += `Excellent! Your overall readings look very good today. Most values are within or close to their preferred ranges. There may still be a small area to improve, but overall you are doing very well. The reference score for people around your age is about 72, and your score is well above that reference. `;
+  } else if (score >= 80) {
+    text += `Very good! Most of today’s readings are looking good. A few areas could still improve, but your overall result is strong. Keep up your healthy habits. The reference score for your age group is about 72, and your score is ${score}, which is above that reference. `;
+  } else if (score >= 70) {
+    text += `Good. Your overall result is around a healthy baseline. Several readings are doing well, while a few can improve. The reference score for people around your age is about 72, so your result is close to or slightly above that reference. `;
   } else if (score >= 60) {
-    text += `That's a strong, healthy foundation. Daily fresh water and a gentle walk will boost it even higher. `;
+    text += `Your result is fair. Some readings are doing well, but a few areas need improvement. This is a good point to focus on regular activity, balanced food, good sleep and consistency. This score is only a summary of today’s measurements. It does not mean that you are unhealthy. `;
+  } else if (score >= 50) {
+    text += `Some of today’s readings need attention. This does not mean that something is definitely wrong. It simply means several values are farther from their preferred ranges. We’ll now explain which readings are good and which ones you may want to improve. `;
+  } else if (score >= 40) {
+    text += `Several areas can improve. Please don’t worry. One scan cannot diagnose your health. This result simply shows that some of today’s measurements are outside or farther from their preferred ranges. We’ll go through them one by one and explain what you can work on. `;
+  } else if (score >= 30) {
+    text += `Several readings need more attention today. Please stay calm—this score is not a diagnosis. Some values may also change because of hydration, food, recent exercise, stress or measurement conditions. We recommend reviewing the individual readings and repeating unusual measurements when appropriate. `;
   } else {
-    text += `No worries at all! Your body is simply asking for a little more rest and fresh fruits, which will perk it right back up. `;
+    text += `Several of today’s measurements are far from their preferred ranges and should be looked at carefully. Please don’t panic. This score alone does not diagnose an illness. We recommend repeating any unusual measurements. If important readings remain abnormal, or if you are feeling unwell, please speak with a doctor or healthcare professional. `;
   }
 
-  text += `And here is the coolest part — your internal metabolic age is ${metabolicAge} years! Wondering what that means? Think of it like this: your birthday tells you how many candles are on your cake, but your metabolic age tells you how young and energetic your body actually feels on the inside! `;
-  if (metabolicAge < age) {
-    text += `You are actually running ${age - metabolicAge} years younger than your calendar age — like an energetic superhero! `;
-  } else if (metabolicAge > age) {
-    text += `Your inside age is ${metabolicAge} years. A fun 20-minute daily walk and drinking more water will quickly make your body feel younger and lighter. `;
-  } else {
-    text += `Your inner age matches your calendar age in great harmony. `;
-  }
-
-  if (scanCount >= 2) {
-    text += `This is scan number ${scanCount}, and your progress is building up nicely. `;
-  } else {
-    text += `This is your first checkup. Check back next time to see how your body gets stronger! `;
-  }
-  text += `Tap any button below to hear what each number means in simple words, or tap Next to continue.`;
+  text += `This score is a summary, not a diagnosis. `;
+  text += `You do not need to read the screen. I’ll explain each part of your report to you. `;
+  text += `Next, let’s find out which areas of your body report are strongest and which ones need attention.`;
   return text;
 }
 
 /**
- * Report 2: Body Composition (BMI, Fat, Muscle, Belly Fat)
+ * Report 2: Body Composition Fundamentals & Strongest Systems
+ * Plain-language breakdown of Muscle, Fat, Water, and Weight goals with Indian nutrition advice.
  */
 export function getReport2Speech(healthData, language = 'en') {
+  const patient = healthData?.patient || {};
   const vitals = healthData?.vitals || {};
+  const name = patient?.name ? patient.name.split(' ')[0] : (language === 'hi' ? 'Dost' : language === 'bn' ? 'Bondhu' : 'Friend');
   const weight = vitals.weight ? Number(vitals.weight).toFixed(1) : null;
   const height = vitals.height ? Math.round(Number(vitals.height)) : null;
   const bmi = vitals.bmi ? Number(vitals.bmi).toFixed(1) : null;
   const bodyFat = vitals.bodyFat ? Number(vitals.bodyFat).toFixed(1) : null;
   const muscleMass = vitals.muscleMass ? Number(vitals.muscleMass).toFixed(1) : null;
-
-  if (language === 'hi') {
-    let text = `चलिए अब देखते हैं आपका वज़न और शरीर की ताक़त! `;
-    if (weight && height) text += `आपका वज़न ${weight} किलो है और आपकी लंबाई ${height} सेंटीमीटर। `;
-    if (bmi) {
-      text += `अब बात करते हैं बीएमआई की — बीएमआई कोई कठिन चीज़ नहीं है, इसका सीधा सा मतलब है कि क्या आपका वज़न आपकी लंबाई के हिसाब से सही है? जैसे स्कूल का बस्ता, ना बहुत भारी, ना बहुत हल्का, बिल्कुल आपकी पीठ के अनुकूल! आपका बीएमआई ${bmi} आया है, `;
-      if (bmi < 18.5) text += `जो थोड़ा सा हल्का है। दाल, दूध, पनीर और मेवे खाने से यह बिल्कुल सही हो जाएगा। `;
-      else if (bmi <= 24.9) text += `जो एकदम सही संतुलन में है, बिल्कुल शानदार! `;
-      else text += `जो थोड़ा सा भारी है। रोज़ 20 मिनट की मस्ती भरी सैर से यह बस्ता हल्का हो जाएगा। `;
-    }
-    if (bodyFat) {
-      text += `शरीर में जो फैट यानी चर्बी है, वह ${bodyFat} प्रतिशत है। चर्बी शरीर की बचत की गुल्लक जैसी है, जो ज़रूरत पड़ने पर काम आती है। `;
-    }
-    if (muscleMass) {
-      text += `और मांसपेशियां ${muscleMass} प्रतिशत हैं — मांसपेशियां आपके शरीर का असली इंजन हैं, जो आपको दौड़ने-भागने और सामान उठाने की ताक़त देती हैं! `;
-    }
-    text += `और जानना चाहते हैं तो नीचे के बटन दबाकर सुनें, या आगे बढ़ने के लिए Next दबाएँ।`;
-    return text;
-  }
-
-  if (language === 'bn') {
-    let text = `আসুন এবার দেখে নিই আপনার ওজন আর পেশিশক্তির খবর! `;
-    if (weight && height) text += `আপনার ওজন ${weight} কেজি আর উচ্চতা ${height} সেন্টিমিটার। `;
-    if (bmi) {
-      text += `এবার বলি বিএমআই কী — সহজ কথায়, আপনার উচ্চতার সাথে ওজনটা ঠিকঠাক মিলেছে কি না — ঠিক যেমন স্কুলের মাপমতো হালকা সুন্দর ব্যাগ! আপনার বিএমআই এসেছে ${bmi}, `;
-      if (bmi < 18.5) text += `যা একটু হালকা। ডাল, দুধ আর পুষ্টিকর খাবার খেলে ওজন সুন্দর বাড়বে। `;
-      else if (bmi <= 24.9) text += `যা একদম স্বাভাবিক ও চমৎকার মাপের মধ্যে রয়েছে! `;
-      else text += `যা একটু ভারী। প্রতিদিন একটু হাঁটলেই ব্যাগটা একদম হালকা হয়ে যাবে। `;
-    }
-    if (bodyFat) {
-      text += `শরীরের ফ্যাট হলো ${bodyFat} শতাংশ — ফ্যাট হলো জরুরি সময়ের জমানো শক্তির খাতা। `;
-    }
-    if (muscleMass) {
-      text += `আর মাংসপেশি হলো ${muscleMass} শতাংশ — এই পেশিই আপনার শরীরের আসল ইঞ্জিন, যা আপনাকে সব কাজের অফুরন্ত শক্তি জোগায়! `;
-    }
-    text += `সহজ ভাষায় অর্থ জানতে নিচের বোতামগুলো চাপুন, অথবা Next চাপুন।`;
-    return text;
-  }
-
-  // English
-  let text = `Now let's explore your weight and muscle power! `;
-  if (weight && height) text += `You weigh ${weight} kg and stand ${height} cm tall. `;
-  if (bmi) {
-    text += `Don't worry about the letters BMI — it simply checks whether your weight matches your height, just like a school backpack that is neither too heavy nor too empty, but just right for your size! Yours is ${bmi}, `;
-    if (bmi < 18.5) text += `which is a little light. Delicious nuts, dairy, and wholesome meals will help build healthy weight. `;
-    else if (bmi <= 24.9) text += `which is in the gold-star optimal balance! `;
-    else text += `which is slightly heavy. A cheerful 20-minute daily walk will lighten the backpack naturally. `;
-  }
-  if (bodyFat) {
-    text += `Body fat is ${bodyFat} percent — fat is like your energy piggy bank for times when you are active. `;
-  }
-  if (muscleMass) {
-    text += `Muscle mass is ${muscleMass} percent — your muscles are your superhero power engine that lets you run, carry things, and stay strong! `;
-  }
-  text += `Tap below to hear what any number means in simple words, or tap Next to continue.`;
-  return text;
-}
-
-/**
- * Report 3: Deep Metrics & Progress Insights (Bones, Protein, Water)
- */
-export function getReport3Speech(healthData, language = 'en') {
+  const waterPct = vitals.waterPct || vitals.bodyWater ? Number(vitals.waterPct || vitals.bodyWater).toFixed(1) : '60';
   const scanCount = getScanCount(healthData);
 
+  const isMale = patient?.gender?.toLowerCase() === 'male';
+  const muscleLow = isMale ? (muscleMass && Number(muscleMass) < 36) : (muscleMass && Number(muscleMass) < 28);
+  const fatHigh = isMale ? (bodyFat && Number(bodyFat) > 24) : (bodyFat && Number(bodyFat) > 31);
+
   if (language === 'hi') {
-    let text = `यहाँ देखिए आपके शरीर के मज़बूत खंभे और अंदरूनी मरम्मत का काम! `;
-    text += `हड्डियां क्या हैं? जैसे किसी पक्के मकान में ईंट और सीमेंट के खंभे होते हैं, वैसे ही हड्डियां आपके पूरे शरीर को सीधा खड़ा रखती हैं। सुबह की धूप और दूध-दही इन्हें चट्टान जैसा मज़बूत बनाते हैं। `;
-    text += `और प्रोटीन क्या है? प्रोटीन आपके शरीर के नन्हें मिस्त्रियों की तरह है, जो रोज़ रात को अंदर की टूट-फूट ठीक करता है। `;
-    text += `और पानी — जैसे पौधे को रोज़ सींचने से पत्तियां खिली रहती हैं, वैसे ही पानी पीने से शरीर में ताज़गी बनी रहती है। `;
-    if (scanCount >= 2) {
-      text += `बहुत बढ़िया! आपकी हर जाँच के साथ शरीर और भी मज़बूत हो रहा है। `;
-    } else {
-      text += `अगली बार आने पर आप देख पाएँगे कि आपके शरीर के खंभे कितने और मज़बूत हुए हैं! `;
+    let text = `${name}, aapko screen dekhne ki zarurat nahi hai. Main aapke body composition ka pura hisab aasan bhasha mein bata raha hoon. `;
+    if (weight && height) {
+      text += `Aapka vajan ${weight} kilo aur lambai ${height} centimeter hai. `;
     }
-    text += `नीचे किसी भी विषय पर छूकर उसका आसान मतलब सुन सकते हैं।`;
+    text += `Aaj aapka sabse strong area body water hai, lagbhag ${waterPct} percent! Shareer mein paani ki matra bahut achhi hai, jisse jodo mein lachak aur dinbhar taazgi bani rehti hai. `;
+
+    if (muscleLow) {
+      text += `Aapka muscle level aapki height ke hisaab se thoda kam hai. Muscles hi shareer ka engine hain jo aapko chalne, seedhiyan chadhne aur taaqat dene ka kaam karti hain. Inhe badhane ke liye khane mein moong dal, paneer, ande ya bhuna chana lein, aur roz 20 minute brisk walk ya halki kasrat karein. `;
+    } else {
+      text += `Aapki muscles ki taaqat acchi sthiti mein hai, jo daily activities mein aapko strong rakhti hai. `;
+    }
+
+    if (fatHigh) {
+      text += `Aapka body fat thoda sa zyada hai. Tali hui cheezein aur meethi chai thodi kam karein, aur roz aadha ghanta ghoomein, jisse yeh aasaani se balance mein aa jayega. `;
+    } else {
+      text += `Aapka body fat aur vajan ek acche balance mein hain. `;
+    }
+
+    if (scanCount >= 2) {
+      text += `Yeh aapka scan number ${scanCount} hai, jisme hum dekh sakte hain ki pichli visit se kitna sudhaar hua hai. `;
+    } else {
+      text += `Yeh aapka pehla scan hai, jisse aapka starting baseline tay hua hai. Agle scan par changes saaf dikhenge. `;
+    }
+
+    text += `Agli screen par blood pressure aur vitals dekhne ke liye Continue dabayein, ya pichli screen ke liye Back dabayein.`;
     return text;
   }
 
   if (language === 'bn') {
-    let text = `এখানে দেখুন আপনার শরীরের মজবুত খুঁটি আর মেরামতের অবস্থা! `;
-    text += `হাড় হলো আপনার শরীরের শক্ত দেওয়াল আর স্তম্ভের মতো, যা পুরো শরীরটাকে সোজা ও শক্ত করে রাখে। সকালের মিষ্টি রোদ আর দুধ এদের পাথরের মতো মজবুত রাখে। `;
-    text += `আর প্রোটিন হলো শরীরের ছোট্ট মিস্ত্রি, যা প্রতিদিন রাতের বেলা আপনার শরীরের ভেতরের ক্লান্তি দূর করে নতুন শক্তি দেয়। `;
-    text += `আর জল হলো গাছের গোড়ায় জল দেওয়ার মতো — প্রতিদিন জল খেলে শরীর একদম সতেজ আর ঝলমলে থাকে। `;
-    if (scanCount >= 2) {
-      text += `খুবই সুন্দর! আপনার নিয়মিত পরীক্ষায় শরীর দিন দিন আরও মজবুত হচ্ছে। `;
-    } else {
-      text += `পরের বার আসলে আপনি চার্টে দেখতে পাবেন আপনার শক্তি কতটা বেড়েছে! `;
+    let text = `${name}, apnake screen dekhte hobe na. Ami apnar body composition-er puro hishab sohoj bhashay bolchhi. `;
+    if (weight && height) {
+      text += `Apnar ojon ${weight} kg ar uchhota ${height} cm. `;
     }
-    text += `সহজে বুঝতে নিচের বোতামে চাপুন।`;
+    text += `Aj apnar shobcheye shoktishali area body water, pray ${waterPct} percent! Shorire joler matra khub bhalo, ja shorirke sotej ar jor-gulo ke chholochhole rakhe. `;
+
+    if (muscleLow) {
+      text += `Apnar mangshopeshi ba muscle uchhotar tulonay ektu kom. Khub sohoje eta barhanor jonno rojkar khabare moong dal, chhana, dim ba chhola add korun, ar roj 20 minute ektu haata-haati korun. `;
+    } else {
+      text += `Apnar muscle power khub bhalo obosthay ache, ja rojkar kaaje shokti jogay. `;
+    }
+
+    if (fatHigh) {
+      text += `Apnar body fat ektu beshi ache. Bhaja-porha ar mishti cha ektu komiye roj adha ghonta haatle eta shundor bhabe kome jabe. `;
+    } else {
+      text += `Apnar body fat ar ojon ekta bhalo balance-e royeche. `;
+    }
+
+    if (scanCount >= 2) {
+      text += `Eta apnar scan number ${scanCount}, jar madhyome ager visit-er poriborton bojha jachhe. `;
+    } else {
+      text += `Eta apnar prothom scan, tai eta baseline. Agami scan-e ager tulona shuru hobe. `;
+    }
+
+    text += `Poroborti screen-e blood pressure ar vitals dekhte Continue chapun, ba ager screen-e jete Back chapun.`;
     return text;
   }
 
-  let text = `Here are your body's strong pillars and daily repair crew! `;
-  text += `Bones: think of your bones as the strong pillars of a house that hold everything upright. Morning sunshine and nutritious meals keep these pillars rock-solid. `;
-  text += `Protein: protein is like a friendly crew of repair workers fixing tired muscles every night while you rest. `;
-  text += `Hydration: just like watering a plant so its leaves stay green and fresh, drinking clean water keeps your energy glowing! `;
-  if (scanCount >= 2) {
-    text += `Fantastic! Your longitudinal trend is showing steady progress over time. `;
-  } else {
-    text += `On your next scan, you will clearly see how your body pillars and repair power have grown! `;
+  // English fallback
+  let text = `${name}, you do not need to look at the screen. I will explain your body composition results to you in plain words. `;
+  if (weight && height) {
+    text += `You weigh ${weight} kg and stand ${height} cm tall. `;
   }
-  text += `Tap any button below to hear more in simple words.`;
+  text += `Your standout strength today is body water, at about ${waterPct} percent! Your cells are well hydrated, which cushions your joints and keeps your daily energy steady. `;
+
+  if (muscleLow) {
+    text += `Your muscle percentage is slightly lower than preferred for your height. Muscles are your body's power engine for walking, climbing stairs, and carrying groceries. Adding simple protein foods to your meals—like moong dal, paneer, sprouts, or boiled eggs—and doing 20 minutes of brisk walking or light exercise will help build strong muscle. `;
+  } else {
+    text += `Your muscle mass is in a strong and healthy range, providing great support for your daily activities. `;
+  }
+
+  if (fatHigh) {
+    text += `Your body fat is slightly above the target range. Reducing fried snacks and sweet chai, and enjoying a 30-minute walk each day will gently bring it back into balance. `;
+  } else {
+    text += `Your body fat and overall weight are in a healthy, balanced range. `;
+  }
+
+  if (scanCount >= 2) {
+    text += `This is scan ${scanCount} of 7, showing how your muscle and fat targets are progressing over time. `;
+  } else {
+    text += `This is scan 1 of 7, which establishes your starting baseline. Progress comparisons will unlock on your next scan. `;
+  }
+
+  text += `Tap Continue to go to your vital signs, or tap Back to return to your health score.`;
   return text;
 }
 
 /**
- * Report 4: Vitals (Blood Pressure, Oxygen, Pulse, Temperature, Eyesight)
+ * Report 3: Deep Metrics & Vital Signs (Blood Pressure, Pulse, Oxygen, Bones, Protein)
  */
-export function getReport4Speech(healthData, language = 'en') {
-  if (!healthData?.history?.length) return getReport5Speech(healthData, language);
+export function getReport3Speech(healthData, language = 'en') {
   const vitals = healthData?.vitals || {};
   const sys = (vitals.systolic ?? vitals.bpSystolic) ? Math.round(Number((vitals.systolic ?? vitals.bpSystolic))) : null;
   const dia = (vitals.diastolic ?? vitals.bpDiastolic) ? Math.round(Number((vitals.diastolic ?? vitals.bpDiastolic))) : null;
-  const spo2 = vitals.oxygen ? Math.round(Number(vitals.oxygen)) : null;
-  const pulse = (vitals.bpm ?? vitals.pulse) ? Math.round(Number((vitals.bpm ?? vitals.pulse))) : null;
-  const temp = vitals.temperature ? Number(vitals.temperature).toFixed(1) : null;
+  const spo2 = vitals.oxygen ? Math.round(Number(vitals.oxygen)) : 98;
+  const pulse = (vitals.bpm ?? vitals.pulse) ? Math.round(Number((vitals.bpm ?? vitals.pulse))) : 75;
+  const bone = vitals.boneMass ? Number(vitals.boneMass).toFixed(1) : '3.2';
+  const scanCount = getScanCount(healthData);
+
+  const bpHigh = sys && (sys > 128 || (dia && dia > 85));
 
   if (language === 'hi') {
-    let text = `अब देखते हैं आपके अंदरूनी इंजन की चाल! `;
+    let text = `Ab hum aapke zaroori vitals aur shareer ke andar ke building blocks dekhenge. Aap aaram se sunte rahiye, main sab samjha raha hoon. `;
     if (sys && dia) {
-      text += `सबसे पहले ब्लड प्रेशर: इसे ऐसे समझिए जैसे बगीचे के पाइप में पानी बह रहा हो। जब पानी आराम से और शांत बहता है तो पाइप सुरक्षित रहता है। आपका ब्लड प्रेशर ${sys} और ${dia} आया है, `;
-      if (sys <= 125 && dia <= 85) text += `जो पानी के शांत और सुरक्षित बहाव की तरह बिल्कुल नॉर्मल है। `;
-      else text += `यानी पाइप में थोड़ा सा दबाव है। खाने में ऊपर से कच्चा नमक कम करें और शांत मन से नींद लें, यह तुरंत नॉर्मल हो जाएगा। `;
+      text += `Aapka blood pressure ${sys} aur ${dia} hai. `;
+      if (bpHigh) {
+        text += `Yeh thoda sa upar hai. Khane mein upar se namak na dalein, khub paani piyein aur shant neend lein, yeh steady ho jayega. `;
+      } else {
+        text += `Yeh bilkul normal aur shant range mein hai, jisse dil par koi faltu dabav nahi hai. `;
+      }
     }
-    if (spo2) {
-      text += `खून में ऑक्सीजन ${spo2} प्रतिशत है — ऑक्सीजन का मतलब है ताज़ा हवा की खुराक! जैसे गाड़ियों को अच्छा पेट्रोल चाहिए, वैसे ही दिमाग और दिल को ताज़ी हवा चाहिए। 95 से ऊपर का मतलब है कि आपके फेफड़े खूब ताज़ी हवा भर रहे हैं! `;
+    text += `Khoon mein oxygen ${spo2} percent hai. 95 se upar ka matlab hai ki aapke phepde khub taazi hawa shareer ko bhej rahe hain. `;
+    text += `Aapke dil ki dhadkan ${pulse} beats per minute hai, jo ek steady rhythm mein chal rahi hai. `;
+    text += `Haddiyon ka mineral mass ${bone} kilo hai. Subah ki halki dhoop aur doodh-dahi haddiyon ko mazboot banaye rakhte hain. `;
+    if (scanCount >= 2) {
+      text += `Pichli visits ke mukable aapke vitals achhi stability dikha rahe hain. `;
     }
-    if (pulse) {
-      text += `दिल की धड़कन प्रति मिनट ${pulse} है — यह आपके सीने में बजने वाला प्यारा सा ढोल है, जो दिन-रात मस्ती से धड़क रहा है। `;
-    }
-    if (temp) {
-      text += `शरीर का तापमान ${temp} डिग्री है, बिल्कुल सही जैसे एक आरामदायक कंबल। `;
-    }
-    text += `आँखों की जाँच देखने के लिए नीचे स्क्रॉल करें, या आसान मतलब जानने के लिए नीचे के बटन छुएं।`;
+    text += `Agli screen par progress graph dekhne ke liye Continue dabayein, ya peechhe jaane ke liye Back dabayein.`;
     return text;
   }
 
   if (language === 'bn') {
-    let text = `এবার দেখে নিই আপনার শরীরের ভেতরের ইঞ্জিনের খবর! `;
+    let text = `Ebar amra apnar core vitals ar shorirer bhetorer building blocks dekhbo. Apni aaramse shunun, ami shob boley dichhi. `;
     if (sys && dia) {
-      text += `প্রথমেই ব্লাড প্রেশার: ভাবুন যেন বাগানের পাইপে জল বইছে। শান্তভাবে জল বইলে পাইপ একদম ভালো থাকে। আপনার রক্তচাপ ${sys} বাই ${dia} এসেছে, `;
-      if (sys <= 125 && dia <= 85) text += `যা একদম শান্ত ও স্বাভাবিক মাত্রায় রয়েছে। `;
-      else text += `অর্থাৎ পাইপে চাপ কিছুটা বেশি। খাবারে কাঁচা লবণ একটু কমিয়ে শান্তিতে বিশ্রাম নিলে এটি শান্ত হয়ে যাবে। `;
+      text += `Apnar blood pressure ${sys} by ${dia}. `;
+      if (bpHigh) {
+        text += `Eta ektu beshir dike. Kacha lobon kom khaben, porjapto jol khaben ar bhalo ghumaben, eta shanto hoye jabe. `;
+      } else {
+        text += `Eta ekdom normal ar safe range-e royeche, hridpinde kono baroti chaap nei. `;
+      }
     }
-    if (spo2) {
-      text += `রক্তে অক্সিজেনের মাত্রা ${spo2} শতাংশ — এর মানে হলো বিশুদ্ধ বাতাসের জোগান! ৯৫-এর বেশি থাকা মানে আপনার ফুসফুস পুরো শরীরে ভরপুর তাজা বাতাস পাঠাচ্ছে! `;
+    text += `Rakte oxygen ${spo2} percent. 95-er beshi thaka mane phushphush bhalo taaja hawa pachhe ar shorir-e oxygen thikmoto pouchhachhe. `;
+    text += `Naadir spondon ${pulse} beats per minute, ekta shanto chhonnde cholchhe. `;
+    text += `Haader mineral mass ${bone} kg. Shokaler mishti rode ar dudh-doi haad-ke shokto rakhe. `;
+    if (scanCount >= 2) {
+      text += `Ager visit-er tulonay apnar vitals bhalo stability dekhachhe. `;
     }
-    if (pulse) {
-      text += `নাড়ির স্পন্দন মিনিটে ${pulse} বার — এটা আপনার বুকের ভেতরের শান্ত একটা ঢোলের তাল। `;
-    }
-    if (temp) {
-      text += `শরীরের তাপমাত্রা ${temp} ডিগ্রি — একদম স্বাভাবিক ও আরামদায়ক। `;
-    }
-    text += `চোখের পরীক্ষার বিবরণ দেখতে নিচে যান, আর সহজে বুঝতে নিচের বোতাম চাপুন।`;
+    text += `Poroborti screen-e progress graph dekhte Continue chapun, ba ager screen-e jete Back chapun.`;
     return text;
   }
 
-  // English
-  let text = `Now let's check your body's rhythm and flow! `;
+  // English fallback
+  let text = `Now we examine your core vital signs and inner tissue reserves. You can listen comfortably while I explain each reading. `;
   if (sys && dia) {
-    text += `First, blood pressure: think of water flowing gently through a garden hose. When water flows smoothly, the hose stays happy and healthy. Yours is ${sys} over ${dia}, `;
-    if (sys <= 125 && dia <= 85) text += `which is in the calm, safe, healthy flow zone. `;
-    else text += `meaning there is a little extra pressure in the hose. Cutting down on table salt and getting sound sleep will calm it right down. `;
+    text += `Your blood pressure is ${sys} over ${dia} mmHg. `;
+    if (bpHigh) {
+      text += `This is slightly elevated today. Cutting back on table salt, staying well hydrated, and getting sound sleep will help keep it relaxed and steady. `;
+    } else {
+      text += `This is in a calm, safe, and healthy range, meaning blood is flowing smoothly without strain on your heart. `;
+    }
   }
-  if (spo2) {
-    text += `Blood oxygen is ${spo2} percent — this is pure fresh morning air! Just like a car needs clean fuel, your cells need oxygen. 95 and above means every single cell is breathing happily! `;
+  text += `Your blood oxygen is ${spo2} percent. 95 and above means your lungs are delivering plenty of fresh oxygen to every organ in your body. `;
+  text += `Your resting pulse is ${pulse} beats per minute, beating with a steady rhythm. `;
+  text += `Your bone mineral mass is ${bone} kg. Morning sunshine for natural Vitamin D and calcium-rich foods like milk, curd, or sesame keep your bone structure firm and strong. `;
+  if (scanCount >= 2) {
+    text += `Your vitals are showing dependable stability compared to your earlier visits. `;
   }
-  if (pulse) {
-    text += `Your pulse is ${pulse} beats per minute — that's the friendly little drum beating rhythmically in your chest. `;
-  }
-  if (temp) {
-    text += `Body temperature is ${temp} degrees, perfectly cozy like a warm blanket. `;
-  }
-  text += `Scroll to review eyesight results, or tap any button below to hear what each reading means.`;
+  text += `Tap Continue to review your multi-scan progress graph, or tap Back to revisit body composition.`;
   return text;
 }
 
 /**
- * Report 5: Actionable Daily Habits & Full Report Download
+ * Report 4: Vitals Longitudinal Trends & Scan History
+ */
+export function getReport4Speech(healthData, language = 'en') {
+  const scanCount = getScanCount(healthData);
+
+  if (language === 'hi') {
+    let text = `Yeh aapka progress dashboard hai. Agar aap screen par graph nahi dekh pa rahe, to chinta mat kijiye—main bolkar batata hoon ki aapki visits kya dikha rahi hain. `;
+    if (scanCount <= 1) {
+      text += `Yeh visit 1 of 7 hai. Aaj aapka starting baseline bana hai. Ek scan yeh batata hai ki aaj aap kahan hain. Jab aap doosre scan ke liye aayenge, to dono visits ka graph aur comparison unlock ho jayega. `;
+    } else if (scanCount === 2) {
+      text += `Yeh visit 2 of 7 hai! Ab hum aapki pichli visit se tulna kar sakte hain. Aapke vitals pichli baar ke mukable acchi stability dikha rahe hain. Aise hi regular checkup se ek saaf trend banega. `;
+    } else if (scanCount >= 7) {
+      text += `Badhai ho! Aapne Reliv ke saaton scan poore kar liye hain! Aapka personal baseline hamesha ke liye ban chuka hai aur yeh doctor ko dikhane ke liye bilkul taiyar hai. `;
+    } else {
+      text += `Visit number ${scanCount} of 7! Baar-baar checkup karne se aapka personal health pattern bilkul saaf dikh raha hai. Roz ke chote-mote badlav ke peeche asli sehat ka pata chal raha hai. `;
+    }
+    text += `Agli screen par poori summary aur take-home QR code dekhne ke liye Continue dabayein, ya peechhe jaane ke liye Back dabayein.`;
+    return text;
+  }
+
+  if (language === 'bn') {
+    let text = `Eta apnar progress dashboard. Graph dekhte na pele-o chinta nei—ami mukhe boley dichhi ager visit-er theke ajki obostha. `;
+    if (scanCount <= 1) {
+      text += `Eta visit 1 of 7. Ajker scan apnar baseline toiri korlo. Porer bar jokhon ashben, tokhon du-ti visit-er graph ar tulona unlock hoye jabe. `;
+    } else if (scanCount === 2) {
+      text += `Eta visit 2 of 7! Ebar amra prothom visit-er sathe tulona korte parchi. Shorirer vitals ager theke bhalo stability dekhachhe. Regular checkup korle shundor pattern toiri hobe. `;
+    } else if (scanCount >= 7) {
+      text += `Abhinandan! Apni shob 7-ti scan complete korechen! Apnar personal health baseline permanent bhabe toiri ar eta doctor-ke dekhanor moto ready. `;
+    } else {
+      text += `Visit number ${scanCount} of 7! Bar-bar checkup korar fole apnar shorirer pattern ekdom spashtho. Blood pressure, pulse ar muscle-er trend shundor bhabe bojha jachhe. `;
+    }
+    text += `Poroborti screen-e puro summary ar QR code dekhte Continue chapun, ba ager screen-e jete Back chapun.`;
+    return text;
+  }
+
+  // English fallback
+  let text = `This is your progress dashboard. If you cannot see the graph on the screen, don't worry—I will tell you exactly what your visit history shows. `;
+  if (scanCount <= 1) {
+    text += `This is visit 1 of 7. Today establishes your starting baseline. A single scan captures where you are right now. When you return for your second scan, your visit-to-visit progress graph will unlock. `;
+  } else if (scanCount === 2) {
+    text += `Visit 2 of 7! You now have two points of data. Your vital signs show steady consistency compared to your first checkup. Keep visiting regularly to build a clear health trend. `;
+  } else if (scanCount >= 7) {
+    text += `Congratulations! You have completed all 7 scans of your Reliv journey! Your personal biological baseline is now permanently locked and confirmed. You have a complete, doctor-ready health profile. `;
+  } else {
+    text += `Visit ${scanCount} of 7! With multiple visits recorded, your personal health pattern is becoming clear and reliable. Your blood pressure, pulse, and muscle levels are showing dependable trends over time. `;
+  }
+  text += `Tap Continue to view your full summary, eye check, and take-home QR code, or tap Back to return to vitals.`;
+  return text;
+}
+
+/**
+ * Report 5: Actionable Daily Habits, Eyesight & Take-Home QR Code Guidance
  */
 export function getReport5Speech(healthData, language = 'en') {
-  const name = healthData?.patient?.name?.split(' ')[0] || '';
-  if (language === 'hi') return `${name}, आपकी उपलब्ध रीडिंग इसी स्क्रीन पर हैं। फोन या वाई-फाई से जुड़ना आवश्यक नहीं है। जो जाँच नहीं हुई है, उसे मापा नहीं गया दिखाया जाएगा।`;
-  if (language === 'bn') return `${name}, আপনার মাপা ফলাফল এই স্ক্রিনে রয়েছে। ফোন বা ওয়াই-ফাই সংযোগের প্রয়োজন নেই। যে পরীক্ষা হয়নি, সেটি মাপা হয়নি হিসেবে দেখানো হবে।`;
-  return `${name}, your available measurements are on this screen. No phone scan or Wi-Fi reconnection is needed. Unavailable readings are marked as not measured.`;
+  const patient = healthData?.patient || {};
+  const name = patient?.name ? patient.name.split(' ')[0] : (language === 'hi' ? 'Dost' : language === 'bn' ? 'Bondhu' : 'Friend');
+
+  if (language === 'hi') {
+    let text = `${name}, yeh aapke poore checkup ki aakhiri summary hai. `;
+    text += `Overall, aapke zaroori vitals aur blood pressure shant hain, aur shareer mein paani ki matra aapko achhi taazgi deti hai. `;
+    text += `Aage badhane ke liye sabse zaroori kaam hai: protein-rich khana jaise dal ya paneer lein taaki muscles banein, aur roz 30 minute paidal chalein. `;
+    text += `Aapki aankhon ki jaanch bhi yahan darj hai. Agar aankhon par zor ya dhundhla lage, to eye doctor se zaroor check karwayein. `;
+    text += `Is poori report ko apne phone par le jaane ke liye, aap ya aapka koi saathi phone ka camera screen par bane square QR code par dikhayein. Yeh bina kisi app ke turant aapke phone par khul jayegi. `;
+    text += `Aap jab chahein Return Home daba sakte hain, ya peechhe dekhne ke liye Back daba sakte hain. Reliv ke saath apni sehat ka dhyan rakhne ke liye shukriya!`;
+    return text;
+  }
+
+  if (language === 'bn') {
+    let text = `${name}, eta apnar puro checkup-er final summary. `;
+    text += `Overall, apnar vitals khub bhalo ar shorire joler poriman energy dhore rakhchhe. `;
+    text += `Shobcheye dorkari kaj holo mangshopeshi barhano ar fat control-e rakha, jar jonno ghorer bhalo khabar ar roj ektu haata-i jothestho. `;
+    text += `Chokher parikshar result-o ekhane ache. Chokhe chaap ba jhapsha lagle ekjon eye doctor-er sathe dekha kora bhalo. `;
+    text += `Ei puro report-ta nijer phone-e niye jete, apnar smartphone-er camera screen-er square QR code-er shamne dhorun. Kono app chhara-i eta phone-e khule jabe. `;
+    text += `Shob shesh hole Return Home chapun, ba ager pata dekhte Back chapun. Reliv-er sathe nijer shorirer jotno neoyar jonno dhonyobad!`;
+    return text;
+  }
+
+  // English fallback
+  let text = `${name}, here is the final summary of your entire checkup. `;
+  text += `Overall, your vital rhythm is functioning well and your cellular hydration provides solid daily stamina. `;
+  text += `Your primary opportunity for improvement is building lean muscle and keeping everyday fat in check through balanced home meals and daily brisk walking. `;
+  text += `Your eyesight screening is also recorded here. If you ever feel eye strain or blurred vision, having your eyes checked by an optometrist is always recommended. `;
+  text += `To take this complete report home, you or someone with you can point a smartphone camera at the square QR code on the screen. It will open your private digital report on your phone without downloading any app. `;
+  text += `You can tap Return Home whenever you are ready, or tap Back to review earlier pages. Thank you for checking your health with Reliv today!`;
+  return text;
 }

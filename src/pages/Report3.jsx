@@ -1690,8 +1690,30 @@ export default function Report3() {
           </div>
         </div>
 
-        {/* Continue button at bottom */}
-        <div style={{ textAlign: "center", marginTop: "48px", marginBottom: "32px" }}>
+        {/* Navigation buttons at bottom */}
+        <div style={{ textAlign: "center", marginTop: "48px", marginBottom: "32px", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "16px" }}>
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate("/report-2")}
+            style={{
+              background: "#ffffff",
+              color: "#1f2937",
+              fontWeight: "600",
+              fontSize: "17px",
+              padding: "16px 36px",
+              borderRadius: "9999px",
+              border: "2px solid #d1d5db",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "10px"
+            }}
+          >
+            ← Back to Body Composition
+          </motion.button>
+
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.97 }}
@@ -1700,8 +1722,8 @@ export default function Report3() {
               background: "#111827",
               color: "white",
               fontWeight: "600",
-              fontSize: "18px",
-              padding: "18px 48px",
+              fontSize: "17px",
+              padding: "16px 44px",
               borderRadius: "9999px",
               border: "none",
               cursor: "pointer",
@@ -1711,7 +1733,7 @@ export default function Report3() {
               gap: "12px"
             }}
           >
-            Continue to Advanced Analysis →
+            Continue to Progress Graph →
           </motion.button>
         </div>
       </div>

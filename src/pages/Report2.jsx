@@ -1553,14 +1553,25 @@ const Report2 = () => {
             All body composition metrics shown are being tracked for optimal health assessment.
           </p>
 
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigate("/report-3")}
-            className="bg-gray-900 text-white font-semibold text-lg px-16 py-6 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 inline-flex items-center gap-3 mb-8"
-          >
-            Continue to Metabolic Analysis →
-          </motion.button>
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/report-1")}
+              className="bg-white text-gray-800 border-2 border-gray-300 font-semibold text-lg px-8 py-5 rounded-full shadow-md hover:bg-gray-50 transition-all duration-300 inline-flex items-center gap-2 cursor-pointer"
+            >
+              ← Back to Health Score
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/report-3")}
+              className="bg-gray-900 text-white font-semibold text-lg px-12 py-5 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 inline-flex items-center gap-3 cursor-pointer"
+            >
+              Continue to Metabolic Analysis →
+            </motion.button>
+          </div>
 
           {/* PROGRESS INDICATOR */}
           <div className="mt-12 flex flex-col items-center gap-6">

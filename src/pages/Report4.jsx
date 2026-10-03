@@ -1564,8 +1564,27 @@ export default function Report4() {
           </div>
         </div>
 
-        {/* Continue button */}
-        <div style={{ textAlign: "center", marginTop: "64px" }}>
+        {/* Navigation buttons */}
+        <div style={{ textAlign: "center", marginTop: "64px", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "16px" }}>
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate("/report-3")}
+            style={{
+              background: "#ffffff",
+              color: "#1f2937",
+              fontWeight: "600",
+              fontSize: "17px",
+              padding: "16px 36px",
+              borderRadius: "9999px",
+              border: "2px solid #d1d5db",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)"
+            }}
+          >
+            ← Back to Vitals & Tissue
+          </motion.button>
+
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.97 }}
@@ -1582,7 +1601,7 @@ export default function Report4() {
               boxShadow: "0 10px 25px rgba(242, 140, 56, 0.3)"
             }}
           >
-            Continue to Report 5 →
+            Continue to Summary & Vision →
           </motion.button>
         </div>
       </div>

@@ -2298,6 +2298,23 @@ export default function Report5() {
               </button>
 
               <button
+                onClick={() => navigate("/report-4")}
+                style={{
+                  background: "#ffffff",
+                  color: "#1f2937",
+                  fontWeight: "600",
+                  fontSize: "16px",
+                  padding: "14px 28px",
+                  borderRadius: "9999px",
+                  border: "2px solid #d1d5db",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
+                }}
+              >
+                ← Back to Progress Graph
+              </button>
+
+              <button
                 onClick={handleReturnHome}
                 style={{
                   background: "#F28C38",
