@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import Confetti from 'react-confetti';
@@ -18,6 +18,8 @@ import { metricAudio, numberParts } from '../voice/reportAudio';
 import { reportInsights, summaryAdvice, observationCount, reportRows, metricColours } from '../utils/reportInsights';
 import { compute120Biomarkers } from '../utils/comprehensiveBiomarkers';
 import * as bc from '../utils/bodyComposition';
+import { reportPaymentQr } from '../utils/reportPresentation';
+import '../styles/report.css';
 
 const tones = {
   neutral: 'border-slate-200 bg-slate-50 text-slate-700',
@@ -88,7 +90,6 @@ const getRemedies = (score) => {
 };
 
 const getPersonalComment = (userName, score, gender) => {
-  const isMale = gender?.toLowerCase() === 'male';
   if (score >= 95) {
     return `${userName}, you absolute beast! ${getGenderCompliment(gender, 'elite')} Outstanding health — maintain and celebrate!`;
   } else if (score >= 90) {
@@ -112,7 +113,7 @@ function MetricCard({ metric, language }) {
 
   return (
     <div
-      className={`rounded-2xl border-l-4 p-5 transition-all hover:shadow-md ${tones[statusKey] || tones.neutral}`}
+      className={`rounded-2xl report-metric border p-5 ${tones[statusKey] || tones.neutral}`}
       data-metric={metric.key}
       data-status={metric.status}
     >
@@ -134,28 +135,15 @@ function MetricCard({ metric, language }) {
         <span>{w[metric.status] || metric.status}</span>
       </div>
 
-      <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-2">{c[1][i]}</p>
+      <p className="mt-2 text-xs leading-relaxed text-slate-600 ">{c[1][i]}</p>
     </div>
   );
 }
 
-function SafeQRCode({ value, size = 160, level = "M", marginSize = 2, className = "" }) {
-  const safeValue = useMemo(() => {
-    if (typeof value === 'string' && value.trim().length > 0 && !value.startsWith('data:') && value.length < 500) {
-      return value.trim();
-    }
-    return 'https://reliv7.vercel.app';
-  }, [value]);
-
-  if (typeof value === 'string' && value.startsWith('data:image/')) {
-    return <img src={value} alt="Report QR Code" style={{ width: size, height: size }} className={`object-contain ${className}`} />;
-  }
-
-  try {
-    return <QRCodeSVG value={safeValue} size={size} level={level} marginSize={marginSize} className={className} />;
-  } catch {
-    return <QRCodeSVG value="https://reliv7.vercel.app" size={size} level="L" marginSize={marginSize} className={className} />;
-  }
+function SafeQRCode({ value, size = 300, className = "" }) {
+  const qr = reportPaymentQr({ reportPaymentUrl: value });
+  if (!qr) return <p className="report-note" role="status">The original payment QR is unavailable. Reopen the payment page already on your phone. Do not pay again.</p>;
+  return <QRCodeSVG value={qr.value} size={size} level={qr.level} marginSize={4} className={className} title="Reopen your paid Reliv visit" />;
 }
 
 export default function UnifiedReport() {
@@ -184,7 +172,6 @@ export default function UnifiedReport() {
     }
   });
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [showScoreTooltip, setShowScoreTooltip] = useState(false);
 
   const w = reportCopy[language] || reportCopy.en;
   const v = insightCopy[language] || insightCopy.en;
@@ -263,34 +250,28 @@ export default function UnifiedReport() {
     writeBrowserStorage('reliv_report_speech_lang', code, 'sessionStorage');
   };
 
-  const qrTargetUrl = useMemo(() => {
-    const candidate = data.reportPaymentUrl;
-    if (typeof candidate === 'string' && candidate.trim().startsWith('http') && candidate.length < 500 && !candidate.startsWith('data:')) {
-      return candidate.trim();
-    }
-    return "https://reliv7.vercel.app";
-  }, [data.reportPaymentUrl]);
+  const qrTargetUrl = reportPaymentQr(data)?.value || null;
   const fat = metrics.find((m) => m.key === 'bodyFat')?.value || bio.keyMetrics.fatPct;
   const healthScore = bio.keyMetrics.score || 82;
-  const metabolicAgeVal = bio.keyMetrics.metabolicAge || Number(data.patient?.age) || 25;
+  const metabolicAgeVal = bio.keyMetrics.metabolicAge ?? null;
   const waterPctVal = bio.keyMetrics.waterPct || 58.2;
   const musclePctVal = bio.keyMetrics.musclePct || 36.5;
 
   const userName = getFirstName(data.patient);
   const peersAverage = 72;
-  const yearsYounger = bio.keyMetrics.metabolicAdvantage && bio.keyMetrics.metabolicAdvantage > 0 ? bio.keyMetrics.metabolicAdvantage : 0;
+  
   const remedies = getRemedies(healthScore);
   const personalizedComment = getPersonalComment(userName, healthScore, data.patient?.gender);
 
   const badges = [];
   if (healthScore >= 80) {
-    badges.push({ icon: '🏆', text: `Top 14% - Elite, ${userName}!` });
+    badges.push({ icon: '🏆', text: `Your latest scan, ${userName}` });
   }
   if (healthScore >= 90) {
     badges.push({ icon: '🌟', text: 'Wellness Champion' });
   }
   if (healthScore > peersAverage) {
-    badges.push({ icon: '📈', text: 'Above Average for Cohort' });
+    badges.push({ icon: '📈', text: 'Above reference marker' });
   }
   if (healthScore < 50) {
     badges.push({ icon: '💪', text: 'Growth Mode - Building Phase' });
@@ -304,18 +285,15 @@ export default function UnifiedReport() {
   const sex = isMale ? 1 : 0;
   const impedance = Number(data.vitals?.impedance) || 0;
 
-  const standardWeight = height > 0 ? bc.calc_standard_weight(height, sex) : 65;
-  const weightGap = weight > 0 && standardWeight > 0 ? bc.calc_weight_control(standardWeight, weight) : 0;
 
   const boneMassVal = weight > 0 && height > 0 ? bc.calc_bone_mass(weight, height, sex, age, impedance) : 2.8;
   const proteinPctVal = musclePctVal ? bc.calc_protein_percent(musclePctVal) : 16.2;
   const lbmiVal = weight > 0 && height > 0 ? bc.calc_lbmi(weight, height, age, impedance, sex) : 17.5;
-  const bsaVal = weight > 0 && height > 0 ? bc.calc_bsa(weight, height) : 1.78;
 
   const showConfetti = typeof window !== 'undefined' && !window.IS_REACT_ACT_ENVIRONMENT && healthScore >= 90;
 
   return (
-    <main aria-label="Health screening report" className="min-h-screen bg-gradient-to-br from-orange-50/50 via-white to-sky-50/40 px-4 sm:px-6 py-6 pb-52 sm:pb-56 text-slate-900 touch-pan-y selection:bg-orange-500 selection:text-white">
+    <main aria-label="Health screening report" className="report-screen report-refined">
       {showConfetti && (
         <Confetti
           width={typeof window !== 'undefined' ? window.innerWidth : 800}
@@ -325,7 +303,7 @@ export default function UnifiedReport() {
         />
       )}
 
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="report-wrap space-y-6">
 
         {/* ── Top Header ── */}
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-orange-200/80 pb-4">
@@ -362,7 +340,7 @@ export default function UnifiedReport() {
         </header>
 
         {/* ── Page Navigation Tabs (Apple Segmented Style) ── */}
-        <nav aria-label={w.page} className="grid grid-cols-5 gap-2">
+        <nav aria-label={w.page} className="report-steps">
           {w.titles.map((title, n) => (
             <button
               type="button"
@@ -376,15 +354,15 @@ export default function UnifiedReport() {
               }`}
             >
               <span className="block text-xs font-semibold opacity-75">{n + 1}.</span>
-              <span className="line-clamp-2">{title}</span>
+              <span className="">{title}</span>
             </button>
           ))}
         </nav>
 
         {/* ── Apple-Designed Light Hero Banner ── */}
-        <section className="rounded-3xl bg-white/95 backdrop-blur-xl p-6 sm:p-7 text-slate-900 shadow-sm border border-slate-200/90 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-orange-100/50 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-sky-100/40 rounded-full blur-3xl pointer-events-none"></div>
+        <section className="report-card report-page-heading">
+          
+          
           <div className="relative z-10">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-orange-50 text-orange-800 border border-orange-200/80 shadow-xs">
@@ -437,140 +415,23 @@ export default function UnifiedReport() {
         {page === 1 && (
           <div className="space-y-6">
 
-            {/* ── Old Report1 Inspired Master Health Snapshot Card ── */}
-            <section className="bg-white rounded-3xl shadow-sm border border-orange-200/80 p-6 sm:p-8 relative overflow-hidden">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-1">
-                  YOUR CURRENT HEALTH SNAPSHOT
-                </p>
-                <p className="text-[11px] text-slate-400 font-medium mb-4">
-                  TODAY · {w.scan} {count}
-                </p>
-
-                {/* Large 220px Circular Score Gauge */}
-                <div className="relative w-[220px] h-[220px] mb-4">
-                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="#f1f5f9" strokeWidth="12" />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      fill="none"
-                      stroke="#F28C38"
-                      strokeWidth="12"
-                      strokeLinecap="round"
-                      strokeDasharray="263.89"
-                      strokeDashoffset={263.89 * (1 - healthScore / 100)}
-                      className="transition-all duration-1000 ease-out"
-                    />
-                  </svg>
-
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-6xl font-black text-slate-900 tracking-tighter leading-none font-mono">
-                        {healthScore}
-                      </span>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          className="text-lg text-slate-400 hover:text-slate-600 cursor-pointer"
-                          onClick={() => setShowScoreTooltip(!showScoreTooltip)}
-                          title="Score information"
-                        >
-                          ⓘ
-                        </button>
-                        {showScoreTooltip && (
-                          <div className="absolute top-[-70px] left-1/2 -translate-x-1/2 w-64 bg-slate-900 text-white text-xs rounded-xl p-3 shadow-xl z-20">
-                            This score reflects cardiovascular balance, hydration, and metabolic vigor.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <span className="mt-2 text-sm uppercase tracking-widest font-extrabold text-slate-500">
-                      Health Score
-                    </span>
-                    <span className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-                      OUT OF 100
-                    </span>
-                  </div>
+            <section className="report-card">
+              <div className="report-score-layout">
+                <div className="report-score-ring" role="img" aria-label={`Estimated health score ${healthScore} out of 100`} style={{ background: `conic-gradient(#d65a17 0 ${Math.min(100,Math.max(0,healthScore))}%, #eeeef1 0 100%)` }}>
+                  <div><strong>{healthScore}</strong><span>Health score</span><small>out of 100 · estimate</small></div>
                 </div>
-
-                <p className="text-sm text-slate-600 text-center max-w-2xl mb-4 leading-relaxed font-medium">
-                  This score reflects how efficiently your heart, oxygen delivery, temperature balance, and body composition are working together today.
-                </p>
-
-                {/* Big Personal Compliment Header */}
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 text-center mb-6 max-w-3xl leading-snug">
-                  {personalizedComment}
-                </h2>
-
-                {/* Peer Comparison Bar (YOU vs AVERAGE) */}
-                <div className="w-full max-w-2xl mb-6">
-                  <div className="flex justify-between items-end mb-2">
-                    <div className="text-left">
-                      <span className="text-xs uppercase tracking-wider text-slate-500 font-bold block mb-1">YOU</span>
-                      <span className="text-4xl font-extrabold text-[#F28C38] font-mono">{healthScore}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs uppercase tracking-wider text-slate-500 font-bold block mb-1">AVERAGE FOR YOUR AGE</span>
-                      <span className="text-4xl font-bold text-slate-400 font-mono">{peersAverage}</span>
-                    </div>
-                  </div>
-
-                  <div className="h-5 bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-500 to-[#F28C38] rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${Math.min(100, Math.max(10, healthScore))}%` }}
-                    />
-                    <div
-                      className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-slate-600 rounded-full shadow"
-                      style={{ left: `${peersAverage}%`, transform: 'translate(-50%, -50%)' }}
-                    >
-                      <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-slate-500 font-bold">
-                        Avg
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-400 text-center mt-2 italic">
-                    Updated automatically after each scan
-                  </p>
+                <div className="report-score-copy"><div className="report-eyebrow">Your current snapshot · Scan {count}</div><h2>{personalizedComment}</h2><p className="report-muted">An estimated summary, not your age or a diagnosis. Your measured readings are on the next page.</p>
+                  <div className="report-score-comparison"><div><span>Your score</span><strong>{healthScore}<small>/100</small></strong></div><div><span>Reference marker</span><strong>{peersAverage}<small>/100</small></strong></div></div>
+                  <p className="report-muted">Orange is your score. The grey 72 is an illustrative reference, not a measured average of people your age.</p>
                 </div>
-
-                {/* Badges Row */}
-                {badges.length > 0 && (
-                  <div className="flex justify-center gap-3 mb-6 flex-wrap">
-                    {badges.map((b, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-2 bg-orange-50 text-[#F28C38] border border-orange-200 px-4 py-2 rounded-full text-xs font-bold shadow-sm"
-                      >
-                        <span className="text-base">{b.icon}</span>
-                        <span>{b.text}</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Indian Household Remedies for userName */}
-                {remedies.length > 0 && (
-                  <div className="w-full max-w-2xl bg-orange-50/50 border border-orange-200/80 rounded-2xl p-5 text-left mb-6">
-                    <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
-                      <span className="text-lg">🌿</span>
-                      Indian Household Remedies for {userName}
-                    </h3>
-                    <ul className="space-y-2">
-                      {remedies.map((remedy, idx) => (
-                        <li key={idx} className="text-xs sm:text-sm text-slate-700 flex items-start gap-2 leading-relaxed">
-                          <span className="text-[#F28C38] font-bold mt-0.5">•</span>
-                          <span>{remedy}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
               </div>
+              {badges.length > 0 && <div className="flex flex-wrap gap-2 mt-5">{badges.map((b,index) => <span key={index} className="report-badge">{b.text}</span>)}</div>}
             </section>
+            <section className="report-card"><h2>{w.metabolic}: a comparison</h2><p className="report-muted">Compare the age you entered with the existing body-age estimate. These are years, not a score.</p>
+              <div className="report-age"><div className="report-age-value"><span>{w.age}</span><strong>{data.patient?.age || '—'}</strong><span>{w.years}</span></div><span aria-hidden="true">↔</span><div className="report-age-value"><span>{w.metabolic}</span><strong>{metabolicAgeVal ?? '—'}</strong><span>{metabolicAgeVal === null ? v.missing : w.estimated}</span></div></div>
+              <p className="report-note">{metabolicAgeVal === null ? w.unavailable : w.estimated}</p>
+            </section>
+            <details className="report-card"><summary className="text-lg font-semibold cursor-pointer">Everyday guidance for {userName}</summary><ul className="mt-4 space-y-3 text-slate-600">{remedies.map((remedy,index) => <li key={index}>{remedy}</li>)}</ul></details>
 
             {/* Enhanced Body Water & Tissue Composition Section (High Contrast & Clear Typography) */}
             <article className="rounded-3xl border border-sky-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
@@ -653,9 +514,9 @@ export default function UnifiedReport() {
               </div>
 
               {/* Invariant disclaimer texts retained for test compatibility */}
-              <span className="sr-only">cannot measure them reliably</span>
-              <span className="sr-only">{v.metabolic}</span>
-              <span className="sr-only">{v.estimates}</span>
+              
+              <p className="report-muted">{v.metabolic}</p>
+              <p className="report-muted">{v.estimates}</p>
 
               <p className="text-xs text-slate-700 font-medium bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                 💧 <strong>Hydration Insight:</strong> {v.water}
@@ -672,7 +533,7 @@ export default function UnifiedReport() {
                   🟢 Normal · 🟡 Caution · 🔴 Attention
                 </span>
               </div>
-              <dl className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {visible.map((metric) => (
                   <MetricCard key={metric.key} metric={metric} language={language} />
                 ))}
@@ -688,7 +549,7 @@ export default function UnifiedReport() {
           <div className="space-y-6">
 
             {/* Clinical Measured Vitals (Systolic BP, Diastolic BP, Oxygen, Pulse, Temperature) */}
-            <dl className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visible
                 .filter((m) => !['height', 'weight'].includes(m.key))
                 .map((metric) => (
@@ -1062,7 +923,7 @@ export default function UnifiedReport() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 max-h-[460px] overflow-y-auto pr-1">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {bio.activeBiomarkers
                   .filter((b) => selectedCategory === 'all' || b.category === selectedCategory)
                   .map((b) => (
@@ -1076,11 +937,11 @@ export default function UnifiedReport() {
                           {b.status}
                         </span>
                       </div>
-                      <p className="font-bold text-sm text-slate-800 line-clamp-1">{b.name[language] || b.name.en}</p>
+                      <p className="font-bold text-sm text-slate-800 ">{b.name[language] || b.name.en}</p>
                       <p className="text-xl font-extrabold text-slate-900 my-1 font-mono">
                         {b.value !== null ? b.value : '—'} <span className="text-xs font-normal text-slate-500">{b.unit}</span>
                       </p>
-                      <p className="text-[11px] text-slate-500 line-clamp-1">Ref: {b.normal}</p>
+                      <p className="text-[11px] text-slate-500 ">Ref: {b.normal}</p>
                     </div>
                   ))}
               </div>
@@ -1119,7 +980,7 @@ export default function UnifiedReport() {
 
             {/* Friend / Family Check-in QR & Mobile Save Card */}
             <article className="flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-gradient-to-r from-orange-50 via-amber-50 to-pink-50 p-6 sm:p-7 border border-orange-200 shadow-sm">
-              <div className="flex-1 space-y-3 min-w-[260px]">
+              <div className="flex-1 space-y-3 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">📱</span>
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-outfit">{v.share}</h2>
@@ -1131,31 +992,31 @@ export default function UnifiedReport() {
                     ? 'फोन के मोबाइल इंटरनेट से QR स्कैन करें। रिपोर्ट ईमेल करें और इंस्टाग्राम स्टोरी कार्ड बनाएँ।'
                     : language === 'bn'
                     ? 'ফোনের মোবাইল ইন্টারনেটে QR স্ক্যান করুন। রিপোর্ট ইমেল করুন আর ইনস্টাগ্রাম স্টোরি কার্ড বানান।'
-                    : 'Scan with your phone camera. No kiosk Wi-Fi needed — works on your phone cellular data.'}
+                    : 'Scan with your phone camera. Use the same payment QR to reopen your code card and choose Email health report. No kiosk Wi-Fi or second payment needed.'}
                 </p>
 
                 <div className="pt-2 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setShowQrModal(true)}
+                    onClick={() => { if (qrTargetUrl) setShowQrModal(true); }}
                     className="min-h-11 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow flex items-center gap-2 transition-transform active:scale-95"
                   >
                     <span>🔍</span>
                     <span>Open Large QR Code to Scan</span>
                   </button>
-                  <span className="text-xs font-semibold text-slate-500 font-mono">
-                    {qrTargetUrl}
+                  <span className="text-xs font-semibold text-slate-500">
+                    Payment already completed · No second payment
                   </span>
                 </div>
               </div>
 
               {/* Scannable High-Contrast Preview QR Code */}
               <div
-                onClick={() => setShowQrModal(true)}
+                onClick={() => { if (qrTargetUrl) setShowQrModal(true); }}
                 className="rounded-2xl bg-white p-3.5 border-2 border-slate-200 shadow-md shrink-0 cursor-pointer hover:border-orange-500 transition-all flex flex-col items-center gap-1.5"
                 title="Click to enlarge QR code"
               >
-                <SafeQRCode value={qrTargetUrl} size={160} level="M" marginSize={3} />
+                <SafeQRCode value={qrTargetUrl} size={300} level="M" marginSize={3} />
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tap to Enlarge</span>
               </div>
             </article>
@@ -1169,7 +1030,7 @@ export default function UnifiedReport() {
       </div>
 
       {/* ── Fixed Footer Navigation ── */}
-      <footer className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-4 border-t border-slate-200 bg-white/95 backdrop-blur-md p-4 px-6 sm:px-10 shadow-lg">
+      <footer className="report-footer report-wrap">
         <button
           type="button"
           disabled={page === 1}
@@ -1238,7 +1099,7 @@ export default function UnifiedReport() {
           onClick={() => setShowQrModal(false)}
         >
           <div
-            className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl space-y-5 border border-slate-200"
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full max-h-[90dvh] overflow-y-auto text-center shadow-2xl space-y-5 border border-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -1265,11 +1126,11 @@ export default function UnifiedReport() {
 
             {/* Extra Large 250px Crisp Scannable QR Code */}
             <div className="p-4 bg-white rounded-2xl border-2 border-slate-300 inline-block shadow-inner mx-auto">
-              <SafeQRCode value={qrTargetUrl} size={250} level="M" marginSize={4} />
+              <SafeQRCode value={qrTargetUrl} size={440} level="M" marginSize={4} />
             </div>
 
-            <div className="text-xs font-semibold text-slate-600 bg-slate-50 rounded-xl py-2 px-3 border border-slate-200 break-all font-mono">
-              {qrTargetUrl}
+            <div className="text-sm text-slate-600 bg-slate-50 rounded-xl py-2 px-3 border border-slate-200">
+              Reopens the same paid visit. Do not pay again.
             </div>
 
             <button
@@ -1285,3 +1146,4 @@ export default function UnifiedReport() {
     </main>
   );
 }
+

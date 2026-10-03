@@ -11,7 +11,7 @@ import i18n from "i18next";
 
 const Splash = () => {
   const navigate = useNavigate();
-  const { stop, speakText, speakChained, speak } = useSpeech();
+  const { stop, speakText, speakChained } = useSpeech();
   const { resetHealth, update, data: healthData } = useHealth();
   
   const [showTerms, setShowTerms] = useState(false);
@@ -401,3 +401,4 @@ const Splash = () => {
 };
 
 export default Splash;
+

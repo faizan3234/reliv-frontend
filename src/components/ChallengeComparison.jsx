@@ -15,8 +15,6 @@ export default function ChallengeComparison({
 }) {
   const [challenge, setChallenge] = useState(null);
   const [revealed, setRevealed] = useState(false);
-  const [storyCardReady, setStoryCardReady] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -34,7 +32,6 @@ export default function ChallengeComparison({
     }
   }, []);
 
-  if (!challenge) return null;
 
   const {
     mode = "challenge",
@@ -43,7 +40,7 @@ export default function ChallengeComparison({
     challengerMetabolicAge = 26,
     challengerBodyWater = 56,
     challengerVisceralFat = 4
-  } = challenge;
+  } = challenge || {};
 
   const nameA = challengerName || "Player 1";
   const nameB = challengerB_Name || "Player 2";
@@ -61,8 +58,6 @@ export default function ChallengeComparison({
   const aWins = scoreA > scoreB;
   const winner = aWins ? nameA : nameB;
   const loser = aWins ? nameB : nameA;
-  const winnerScore = aWins ? scoreA : scoreB;
-  const loserScore = aWins ? scoreB : scoreA;
   const avg = Math.round((scoreA + scoreB) / 2);
 
   const getScoreColor = (s) => s >= 80 ? "#16a34a" : s >= 60 ? "#ea580c" : "#dc2626";
@@ -240,7 +235,6 @@ export default function ChallengeComparison({
     ctx.font = "bold 32px Arial, sans-serif";
     ctx.fillText("#RelivHealth #HealthDuel #LoserBuysCoffee", 90, 1780);
 
-    setStoryCardReady(true);
   }, [revealed, isChallenge, nameA, nameB, scoreA, scoreB, metaA, metaB, waterA, waterB, viscA, viscB, tied, aWins, winner, loser, avg]);
 
   const handleDownloadStoryCard = () => {
@@ -280,6 +274,8 @@ export default function ChallengeComparison({
       handleDownloadStoryCard();
     }
   };
+
+  if (!challenge) return null;
 
   return (
     <AnimatePresence>
@@ -582,3 +578,4 @@ export default function ChallengeComparison({
     </AnimatePresence>
   );
 }
+
