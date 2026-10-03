@@ -290,6 +290,7 @@ export default function Report3() {
   );
 
   useVoicePage({
+    idleEnabled: false,
     onHelp: () => {
       const helpText = reportSpeechLanguage === 'hi'
         ? "यहाँ हड्डियों की मज़बूती और प्रोटीन का स्तर है। नीचे स्क्रॉल करके Next दबाइए।"
@@ -313,7 +314,7 @@ export default function Report3() {
     scanCount === 3 ? "appears" :
     scanCount === 4 ? "consistently" :
     scanCount === 5 ? "pattern" :
-    scanCount === 6 ? "likely" : "confirmed";
+    scanCount === 6 ? "likely" : "recorded";
 
   const metrics = useMemo(() => {
     if (!vitals?.weight || !vitals?.height || !patient?.age || !patient?.gender) return null;
@@ -601,7 +602,7 @@ export default function Report3() {
               {scanCount === 3 && "Patterns beginning to emerge"}
               {scanCount === 4 && "Stability tracking active"}
               {scanCount === 5 && "Bio age delta unlocked"}
-              {scanCount === 6 && "Trend consistency confirmed"}
+              {scanCount === 6 && "Trend consistency recorded"}
               {scanCount >= 7 && "Full profile established"}
             </div>
           )}
@@ -860,7 +861,7 @@ export default function Report3() {
                 {confidenceStage === "consistently" && "Consistently: "}
                 {confidenceStage === "pattern" && "Pattern: "}
                 {confidenceStage === "likely" && "Likely: "}
-                {confidenceStage === "confirmed" && "Confirmed: "}
+                {confidenceStage === "recorded" && "Confirmed: "}
                 {getMuscleStatus(metrics.musclePct).status}
               </div>
               <div style={{
@@ -946,7 +947,7 @@ export default function Report3() {
                 {confidenceStage === "consistently" && "Consistently: "}
                 {confidenceStage === "pattern" && "Pattern: "}
                 {confidenceStage === "likely" && "Likely: "}
-                {confidenceStage === "confirmed" && "Confirmed: "}
+                {confidenceStage === "recorded" && "Confirmed: "}
                 {getBodyFatStatus(metrics.bodyFatPct).status}
               </div>
               <div style={{
@@ -1030,7 +1031,7 @@ export default function Report3() {
                 {confidenceStage === "consistently" && "Consistently: "}
                 {confidenceStage === "pattern" && "Pattern: "}
                 {confidenceStage === "likely" && "Likely: "}
-                {confidenceStage === "confirmed" && "Confirmed: "}
+                {confidenceStage === "recorded" && "Confirmed: "}
                 {getVisceralFatStatus(metrics.visceralFat).status}
               </div>
               <div style={{
@@ -1655,7 +1656,7 @@ export default function Report3() {
         {/* Scan Progress Footer */}
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <div style={{ fontSize: "15px", fontWeight: "600", color: "#6b7280", marginBottom: "16px" }}>
-            {scanCount < 7 ? `${7 - scanCount} more scan${7 - scanCount > 1 ? 's' : ''} to unlock full analysis` : "✓ Complete metabolic profile established"}
+            {scanCount < 7 ? `${7 - scanCount} more scan${7 - scanCount > 1 ? 's' : ''} to unlock full analysis` : "✓ Seven visits recorded"}
           </div>
           <div style={{ display: "flex", gap: "6px", justifyContent: "center", alignItems: "center" }}>
             {[1, 2, 3, 4, 5, 6, 7].map(num => (
@@ -1717,3 +1718,4 @@ export default function Report3() {
     </div>
   );
 }
+

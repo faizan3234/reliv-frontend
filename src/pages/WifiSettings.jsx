@@ -127,7 +127,7 @@ export default function WifiSettings() {
       } else {
         showToastMsg(`Connection failed: ${data.error || 'Check password'}`);
       }
-    } catch (err) {
+    } catch {
       showToastMsg('Connection timed out or failed');
     } finally {
       setActionLoading(false);
@@ -152,7 +152,7 @@ export default function WifiSettings() {
       } else {
         showToastMsg(`Switch failed: ${data.error || 'Network unavailable'}`);
       }
-    } catch (err) {
+    } catch {
       showToastMsg('Failed to switch network');
     } finally {
       setActionLoading(false);
@@ -176,7 +176,7 @@ export default function WifiSettings() {
       } else {
         showToastMsg(`Error: ${data.error || 'Could not forget'}`);
       }
-    } catch (err) {
+    } catch {
       showToastMsg('Failed to forget network');
     } finally {
       setActionLoading(false);
@@ -195,7 +195,7 @@ export default function WifiSettings() {
         showToastMsg('Disconnected from Wi-Fi');
         await refreshAll();
       }
-    } catch (err) {
+    } catch {
       showToastMsg('Disconnect failed');
     } finally {
       setActionLoading(false);
@@ -657,3 +657,4 @@ export default function WifiSettings() {
     </div>
   );
 }
+

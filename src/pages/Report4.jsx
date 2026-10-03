@@ -1,16 +1,9 @@
+import ReportHistoryChart from "../components/ReportHistoryChart";
 import { getScanCount } from '../utils/reportSnapshot';
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
-import { Line } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from "chart.js";
+
+
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useNavigate, useLocation } from "react-router-dom";
 import Logo from "../components/Logo";
@@ -20,7 +13,7 @@ import { useVoicePage } from "../hooks/useVoicePage";
 import { getReport4Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
-ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
+
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -316,7 +309,7 @@ function assessMetabolicAdvantage(vitals, patient, scanCount) {
   } else {
     status = "Very Slow Metabolism";
     remedy = "Medical checkup + lifestyle change";
-    comment = `${userName}, metabolism ${Math.abs(advantage)} years older. Urgent action needed!`;
+    comment = `${userName}, metabolism ${Math.abs(advantage)} years older. Discuss concerns with a clinician.`;
   }
   
   return { status, value: advantage, remedy, comment };
@@ -338,6 +331,7 @@ export default function Report4() {
   );
 
   useVoicePage({
+    idleEnabled: false,
     onHelp: () => {
       const helpText = reportSpeechLanguage === 'hi'
         ? "यहाँ आपका ब्लड प्रेशर, ऑक्सीजन और आँखों की जाँच के नतीजे हैं। नीचे स्क्रॉल करके Next दबाइए।"
@@ -420,113 +414,6 @@ export default function Report4() {
   }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
 
   // Chart data preparation
-  const chartData = useMemo(() => {
-    if (!unlocks.graphVisible) return null;
-
-    const labels = sortedHistory.map((_, i) => `Scan ${i + 1}`);
-    const datasets = [];
-
-    // Systolic BP (red)
-    datasets.push({
-      label: "Systolic BP",
-      data: sortedHistory.map((s) => normalizeVitals(s.vitals).systolic),
-      borderColor: "#ef4444",
-      backgroundColor: "#ef4444",
-      yAxisID: "y",
-      spanGaps: true,
-      tension: unlocks.trendLabels ? 0.4 : 0,
-      pointRadius: 5,
-      pointBackgroundColor: "#ef4444",
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-    });
-
-    // Diastolic BP (blue)
-    datasets.push({
-      label: "Diastolic BP",
-      data: sortedHistory.map((s) => normalizeVitals(s.vitals).diastolic),
-      borderColor: "#3b82f6",
-      backgroundColor: "#3b82f6",
-      yAxisID: "y",
-      spanGaps: true,
-      tension: unlocks.trendLabels ? 0.4 : 0,
-      pointRadius: 5,
-      pointBackgroundColor: "#3b82f6",
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-    });
-
-    // Pulse (green)
-    datasets.push({
-      label: "Pulse (BPM)",
-      data: sortedHistory.map((s) => normalizeVitals(s.vitals).bpm),
-      borderColor: "#10b981",
-      backgroundColor: "#10b981",
-      yAxisID: "y1",
-      spanGaps: true,
-      tension: unlocks.trendLabels ? 0.4 : 0,
-      pointRadius: 5,
-      pointBackgroundColor: "#10b981",
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-    });
-
-    // Oxygen (purple)
-    datasets.push({
-      label: "Oxygen (%)",
-      data: sortedHistory.map((s) => normalizeVitals(s.vitals).oxygen),
-      borderColor: "#a855f7",
-      backgroundColor: "#a855f7",
-      yAxisID: "y1",
-      spanGaps: true,
-      tension: unlocks.trendLabels ? 0.4 : 0,
-      pointRadius: 5,
-      pointBackgroundColor: "#a855f7",
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-    });
-
-    return { labels, datasets };
-  }, [sortedHistory, unlocks.graphVisible, unlocks.trendLabels]);
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: true,
-        position: "bottom",
-        labels: { font: { size: 13 }, padding: 16, usePointStyle: true },
-      },
-      tooltip: {
-        mode: "index",
-        intersect: false,
-        backgroundColor: "rgba(0,0,0,0.8)",
-        padding: 12,
-        titleFont: { size: 14, weight: "bold" },
-        bodyFont: { size: 13 },
-      },
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 13 } } },
-      y: {
-        type: "linear",
-        position: "left",
-        title: { display: true, text: "Blood Pressure (mmHg)", font: { size: 13, weight: "600" } },
-        grid: { color: "#e5e7eb" },
-      },
-      y1: {
-        type: "linear",
-        position: "right",
-        min: 40,
-        max: 160,
-        title: { display: true, text: "Pulse (BPM) & Oxygen (%)", font: { size: 13, weight: "600" } },
-        grid: { display: false },
-      },
-    },
-  };
-
-  // Delta calculation
   const deltas = useMemo(() => {
     if (!unlocks.deltaValues || scanCount < 2 || sortedHistory.length < 2) return null;
 
@@ -540,15 +427,15 @@ export default function Report4() {
 
     // lowerIsBetter: decrease = green (good), increase = red (bad)
     // e.g. BP and resting pulse — lower is healthier
-    const calc = (curr, prev, threshold, unit, lowerIsBetter = false) => {
+    const calc = (curr, prev, threshold, unit) => {
       if (curr == null || prev == null) return null;
       const delta = curr - prev;
       if (Math.abs(delta) < threshold) return { text: "No meaningful change", symbol: "—", color: "#888888" };
-      const isImprovement = lowerIsBetter ? delta < 0 : delta > 0;
+
       return {
         text: `${Math.abs(delta).toFixed(0)} ${unit}`,
         symbol: delta > 0 ? "↑" : "↓",
-        color: isImprovement ? "#10b981" : "#ef4444",
+        color: "#475569",
       };
     };
 
@@ -572,13 +459,13 @@ export default function Report4() {
     
     const first = normalizeVitals(firstItem.vitals).systolic || 0;
 
-    if (systolicAvg < first - 5) return unlocks.patternLanguage ? "Established improvement" : "Improving Trend";
+    if (systolicAvg < first - 5) return unlocks.patternLanguage ? "Observed change" : "Lower readings";
     if (systolicAvg > first + 5) return unlocks.patternLanguage ? "Established increase" : "Increasing Trend";
     return unlocks.patternLanguage ? "Consistent stability" : "Stable Trend";
   }, [sortedHistory, scanCount, unlocks.trendLabels, unlocks.patternLanguage]);
 
   // Confidence score
-  const confidenceScore = unlocks.confidenceScore ? Math.min((scanCount / 7) * 100, 100) : null;
+  const confidenceScore = unlocks.confidenceScore && history.length ? 100 * history.reduce((sum,row)=>sum+['systolic','diastolic','bpm','oxygen'].filter(key=>Number((row.vitals||row)[key])>0).length,0)/(history.length*4) : null;
 
   // Insights
   const insights = useMemo(() => {
@@ -599,7 +486,7 @@ export default function Report4() {
       list.push({
         icon: "🫁",
         title: "Oxygen Efficiency",
-        desc: "Oxygen levels remain reliably efficient.",
+        desc: "Review the actual oxygen readings and their screening labels.",
         arrow: "✓",
         color: "#10b981",
       });
@@ -609,7 +496,7 @@ export default function Report4() {
       list.push({
         icon: "📊",
         title: "Pattern Recognition",
-        desc: "Your vitals show consistent recovery between scans.",
+        desc: "Compare your recorded readings under similar conditions.",
         arrow: "✓",
         color: "#10b981",
       });
@@ -621,7 +508,7 @@ export default function Report4() {
   // Long-term summary
   const longTermSummary = useMemo(() => {
     if (!unlocks.longTermSummary) return null;
-    return "Across seven measurements, your cardiovascular and oxygen trends show consistent stability, suggesting balanced autonomic regulation.";
+    return "Your recorded scans can now be compared over time. A pattern is not a diagnosis; missing values remain gaps, and a clinician can help interpret changes.";
   }, [unlocks.longTermSummary]);
 
   // NEW: Ratio & Efficiency Metrics (scan-wise unlocking)
@@ -661,7 +548,7 @@ export default function Report4() {
     if (scanCount < 2) return "Graphs unlock after your next scan";
     if (scanCount < 3) return "Delta indicators (↑ ↓) unlock in your next scan";
     if (scanCount < 4) return "Trend labels unlock after scan 4";
-    if (scanCount < 5) return "Confidence score unlocks after scan 5";
+    if (scanCount < 5) return "More recorded comparisons after scan 5";
     if (scanCount < 6) return "Pattern language unlocks after scan 6";
     if (scanCount < 7) return "Long-term summary unlocks after scan 7";
     return "All features unlocked";
@@ -695,7 +582,7 @@ export default function Report4() {
               {scanCount === 2 && "Baseline comparison active - deltas unlock next"}
               {scanCount === 3 && "Delta indicators revealed - trends emerging"}
               {scanCount === 4 && "Trend labels active - confidence building"}
-              {scanCount === 5 && "Confidence scoring enabled - patterns next"}
+              {scanCount === 5 && "Five visits recorded - patterns next"}
               {scanCount === 6 && "Pattern recognition active - summary unlocks next"}
               {scanCount >= 7 && "Complete timeline established - all insights available"}
             </p>
@@ -870,7 +757,7 @@ export default function Report4() {
             {scanCount === 2 && "Baseline comparison active - deltas unlock next"}
             {scanCount === 3 && "Delta indicators revealed - trends emerging"}
             {scanCount === 4 && "Trend labels active - confidence building"}
-            {scanCount === 5 && "Confidence scoring enabled - patterns next"}
+            {scanCount === 5 && "Five visits recorded - patterns next"}
             {scanCount === 6 && "Pattern recognition active - summary unlocks next"}
             {scanCount >= 7 && "Complete timeline established - all insights available"}
           </p>
@@ -916,20 +803,20 @@ export default function Report4() {
                   {Math.round(confidenceScore)}%
                 </div>
                 <div style={{ fontSize: "14px", color: "#888888" }}>
-                  Trend Confidence
+                  Readings recorded
                 </div>
               </div>
             )}
           </div>
 
-          <div style={{ height: "320px" }}>
-            <Line data={chartData} options={chartOptions} />
+          <div style={{ minHeight: "320px" }}>
+            <ReportHistoryChart data={data} language={reportSpeechLanguage} />
           </div>
 
           <div style={{ fontSize: "14px", color: "#666666", textAlign: "center", marginTop: "16px" }}>
             {scanCount === 2 && "Two measurements show initial direction. Continue scanning for trend stability."}
             {scanCount >= 3 && scanCount < 5 && "Your vitals are being tracked across multiple scans."}
-            {scanCount >= 5 && "Confidence increases with repeated measurements."}
+            {scanCount >= 5 && "More visits add comparisons; they do not guarantee accuracy."}
           </div>
         </motion.div>
 
@@ -1659,7 +1546,7 @@ export default function Report4() {
         {/* Scan Progress Footer */}
         <div style={{ textAlign: "center", marginBottom: "40px" }}>
           <div style={{ fontSize: "14px", fontWeight: "600", color: "#6b7280", marginBottom: "12px" }}>
-            {scanCount < 7 ? `Scan ${scanCount} of 7 completed` : "✓ Complete trend analysis established"}
+            {scanCount < 7 ? `Scan ${scanCount} of 7 completed` : "✓ Seven visits recorded"}
           </div>
           <div style={{ display: "flex", gap: "6px", justifyContent: "center", alignItems: "center" }}>
             {[1, 2, 3, 4, 5, 6, 7].map(num => (

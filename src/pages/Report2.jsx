@@ -626,8 +626,8 @@ const descriptionBank = {
       direction: "Your BMI remains in the healthy range.",
       trend: "Sustained healthy weight-to-height ratio detected.",
       pattern: "Your BMI profile shows excellent long-term stability.",
-      confidence: "Highly consistent BMI pattern confirmed across scans.",
-      confirmed: "Seven scans confirm your BMI is consistently within the healthy range. Your weight-to-height ratio is well-balanced."
+      confidence: "Highly consistent BMI pattern recorded across scans.",
+      recorded: "Seven scans confirm your BMI is consistently within the healthy range. Your weight-to-height ratio is well-balanced."
     },
     Underweight: {
       capture: "BMI recorded in underweight category.",
@@ -635,15 +635,15 @@ const descriptionBank = {
       trend: "Consistent underweight pattern observed.",
       pattern: "Reliable underweight profile established. Consider nutritional guidance.",
       confidence: "Confirmed underweight BMI across measurements.",
-      confirmed: "Your BMI consistently indicates underweight status. Consult with a healthcare provider about healthy weight gain strategies."
+      recorded: "Your BMI consistently indicates underweight status. Consult with a healthcare provider about healthy weight gain strategies."
     },
     Overweight: {
       capture: "BMI recorded in overweight range.",
       direction: "Overweight BMI detected. Tracking for changes.",
       trend: "Sustained overweight pattern observed.",
       pattern: "Established overweight profile. Lifestyle interventions may help.",
-      confidence: "Consistently overweight BMI confirmed.",
-      confirmed: "Your BMI reliably indicates overweight status. Your healthcare provider can recommend personalized strategies."
+      confidence: "Consistently overweight BMI recorded.",
+      recorded: "Your BMI reliably indicates overweight status. Your healthcare provider can recommend personalized strategies."
     },
     Obese: {
       capture: "BMI recorded in obese category.",
@@ -651,7 +651,7 @@ const descriptionBank = {
       trend: "Persistent obese pattern detected.",
       pattern: "Established obesity profile. Medical guidance strongly recommended.",
       confidence: "Confirmed obese BMI pattern across scans.",
-      confirmed: "Your BMI consistently indicates obesity. Work with healthcare professionals for comprehensive management strategies."
+      recorded: "Your BMI consistently indicates obesity. Work with healthcare professionals for comprehensive management strategies."
     }
   },
   "Body Fat": {
@@ -660,32 +660,32 @@ const descriptionBank = {
       direction: "Body fat percentage remains in healthy range.",
       trend: "Consistently optimal fat distribution maintained.",
       pattern: "Your body fat profile demonstrates healthy stability.",
-      confidence: "Highly consistent healthy body fat pattern confirmed.",
-      confirmed: "Seven scans confirm your body fat percentage is consistently optimal. Your fat distribution supports overall health."
+      confidence: "Highly consistent healthy body fat pattern recorded.",
+      recorded: "Seven scans confirm your body fat percentage is consistently optimal. Your fat distribution supports overall health."
     },
     Athletic: {
       capture: "Athletic body fat percentage recorded.",
       direction: "Maintaining athletic body fat levels.",
       trend: "Sustained athletic fat percentage detected.",
       pattern: "Established athletic body composition profile.",
-      confidence: "Consistent athletic body fat pattern confirmed.",
-      confirmed: "Your body fat percentage consistently indicates athletic composition. Maintain your training regimen."
+      confidence: "Consistent athletic body fat pattern recorded.",
+      recorded: "Your body fat percentage consistently indicates athletic composition. Maintain your training regimen."
     },
     High: {
       capture: "Elevated body fat percentage detected.",
       direction: "High body fat noted. Monitoring for trends.",
       trend: "Sustained high body fat pattern observed.",
       pattern: "Established high body fat profile. Consider interventions.",
-      confidence: "Consistently elevated body fat confirmed.",
-      confirmed: "Your body fat percentage consistently indicates elevation. Your healthcare provider can recommend reduction strategies."
+      confidence: "Consistently elevated body fat recorded.",
+      recorded: "Your body fat percentage consistently indicates elevation. Your healthcare provider can recommend reduction strategies."
     },
     Fitness: {
       capture: "Fitness-level body fat percentage recorded.",
       direction: "Fitness-level body fat maintained.",
       trend: "Sustained fitness-level fat percentage detected.",
       pattern: "Established fitness-level body composition profile.",
-      confidence: "Consistent fitness-level body fat pattern confirmed.",
-      confirmed: "Your body fat percentage consistently indicates a fitness-level composition. Great balance of health and performance."
+      confidence: "Consistent fitness-level body fat pattern recorded.",
+      recorded: "Your body fat percentage consistently indicates a fitness-level composition. Great balance of health and performance."
     },
     "Essential Fat": {
       capture: "Essential fat levels recorded.",
@@ -693,7 +693,7 @@ const descriptionBank = {
       trend: "Persistent essential fat pattern observed.",
       pattern: "Established essential fat profile. Medical guidance recommended.",
       confidence: "Confirmed essential fat levels across scans.",
-      confirmed: "Your body fat is at essential levels. Consult healthcare professionals about safe ranges."
+      recorded: "Your body fat is at essential levels. Consult healthcare professionals about safe ranges."
     }
   },
   "Muscle Mass": {
@@ -702,8 +702,8 @@ const descriptionBank = {
       direction: "Excellent muscle mass maintained.",
       trend: "Sustained optimal muscle development detected.",
       pattern: "Your muscle profile demonstrates exceptional stability.",
-      confidence: "Highly consistent excellent muscle pattern confirmed.",
-      confirmed: "Seven scans confirm your muscle mass is consistently excellent. Your strength foundation is solid."
+      confidence: "Highly consistent excellent muscle pattern recorded.",
+      recorded: "Seven scans confirm your muscle mass is consistently excellent. Your strength foundation is solid."
     },
     Normal: {
       capture: "Healthy muscle percentage recorded.",
@@ -711,15 +711,15 @@ const descriptionBank = {
       trend: "Consistent healthy muscle levels maintained.",
       pattern: "Established healthy muscle composition profile.",
       confidence: "Confirmed normal muscle mass pattern.",
-      confirmed: "Your muscle mass consistently indicates healthy levels. Continue strength-maintaining activities."
+      recorded: "Your muscle mass consistently indicates healthy levels. Continue strength-maintaining activities."
     },
     "Below Average": {
       capture: "Below average muscle mass detected.",
       direction: "Low muscle percentage noted. Monitoring recommended.",
       trend: "Persistent low muscle pattern observed.",
       pattern: "Established below-average muscle profile. Consider strength training.",
-      confidence: "Consistently low muscle mass confirmed.",
-      confirmed: "Your muscle mass indicates below-average levels. Resistance training and protein intake may help."
+      confidence: "Consistently low muscle mass recorded.",
+      recorded: "Your muscle mass indicates below-average levels. Resistance training and protein intake may help."
     }
   },
   "Bone Mass": {
@@ -728,8 +728,8 @@ const descriptionBank = {
       direction: "Strong bone density maintained.",
       trend: "Sustained optimal bone health detected.",
       pattern: "Your skeletal profile demonstrates excellent stability.",
-      confidence: "Highly consistent strong bone pattern confirmed.",
-      confirmed: "Seven scans confirm your bone mass is consistently strong. Your skeletal foundation is robust."
+      confidence: "Highly consistent strong bone pattern recorded.",
+      recorded: "Seven scans confirm your bone mass is consistently strong. Your skeletal foundation is robust."
     },
     Normal: {
       capture: "Healthy bone mass recorded.",
@@ -737,15 +737,15 @@ const descriptionBank = {
       trend: "Consistent healthy bone levels maintained.",
       pattern: "Established healthy bone composition profile.",
       confidence: "Confirmed normal bone mass pattern.",
-      confirmed: "Your bone mass consistently indicates healthy levels. Maintain calcium and vitamin D intake."
+      recorded: "Your bone mass consistently indicates healthy levels. Maintain calcium and vitamin D intake."
     },
     "Low Density": {
       capture: "Low bone density detected.",
       direction: "Reduced bone mass noted. Monitoring recommended.",
       trend: "Persistent low bone density pattern observed.",
       pattern: "Established low bone mass profile. Consider bone health interventions.",
-      confidence: "Consistently low bone density confirmed.",
-      confirmed: "Your bone mass indicates low density. Consult healthcare professionals about bone strengthening strategies."
+      confidence: "Consistently low bone density recorded.",
+      recorded: "Your bone mass indicates low density. Consult healthcare professionals about bone strengthening strategies."
     }
   },
   "Water Balance": {
@@ -754,24 +754,24 @@ const descriptionBank = {
       direction: "Optimal hydration levels maintained.",
       trend: "Sustained healthy water balance detected.",
       pattern: "Your hydration profile demonstrates excellent stability.",
-      confidence: "Highly consistent optimal hydration pattern confirmed.",
-      confirmed: "Seven scans confirm your water balance is consistently optimal. Your hydration status supports all body functions."
+      confidence: "Highly consistent optimal hydration pattern recorded.",
+      recorded: "Seven scans confirm your water balance is consistently optimal. Your hydration status supports all body functions."
     },
     Low: {
       capture: "Low hydration levels recorded.",
       direction: "Reduced water percentage noted. Increase fluid intake.",
       trend: "Persistent low hydration pattern observed.",
       pattern: "Established low hydration profile. Increase water consumption.",
-      confidence: "Consistently low hydration confirmed.",
-      confirmed: "Your water balance indicates low hydration. Focus on increasing daily fluid intake."
+      confidence: "Consistently low hydration recorded.",
+      recorded: "Your water balance indicates low hydration. Focus on increasing daily fluid intake."
     },
     High: {
       capture: "High water percentage detected.",
       direction: "Elevated hydration noted. Monitoring recommended.",
       trend: "Sustained high water balance observed.",
       pattern: "Established high hydration profile. Medical evaluation may be needed.",
-      confidence: "Consistently high water percentage confirmed.",
-      confirmed: "Your water balance indicates elevation. Consult healthcare provider to rule out underlying conditions."
+      confidence: "Consistently high water percentage recorded.",
+      recorded: "Your water balance indicates elevation. Consult healthcare provider to rule out underlying conditions."
     },
     Dehydrated: {
       capture: "Dehydrated state detected.",
@@ -779,7 +779,7 @@ const descriptionBank = {
       trend: "Persistent dehydration pattern observed.",
       pattern: "Established dehydration profile. Urgent hydration protocol recommended.",
       confidence: "Confirmed dehydration across scans.",
-      confirmed: "Your water balance consistently indicates dehydration. Immediate consultation with healthcare provider recommended."
+      recorded: "Your water balance consistently indicates dehydration. Immediate consultation with healthcare provider recommended."
     }
   }
 };
@@ -837,7 +837,7 @@ function getBadges(scanCount) {
     badges.push({ emoji: "🟣", text: "Early Pattern Emerging", color: "bg-purple-50 text-purple-700 border border-purple-200" });
   } else if (scanCount === 4) {
     badges.push({ emoji: "🟢", text: "Trend Identified", color: "bg-green-50 text-green-700 border border-green-200" });
-    badges.push({ emoji: "🔒", text: "Doctor-grade insights unlocking", color: "bg-gray-50 text-gray-700 border border-gray-200" });
+    badges.push({ emoji: "🔒", text: "Screening insights unlocking", color: "bg-gray-50 text-gray-700 border border-gray-200" });
   } else if (scanCount === 5) {
     badges.push({ emoji: "🏅", text: "System Intelligence Active", color: "bg-yellow-50 text-yellow-700 border border-yellow-200" });
     badges.push({ emoji: "🧠", text: "Pattern Recognized", color: "bg-indigo-50 text-indigo-700 border border-indigo-200" });
@@ -878,7 +878,7 @@ function getConfidenceStage(scanCount) {
   if (scanCount === 2) return "direction";
   if (scanCount <= 4) return "trend";
   if (scanCount <= 6) return "pattern";
-  return "confirmed";
+  return "recorded";
 }
 
 // ============================================================================
@@ -900,6 +900,7 @@ const Report2 = () => {
   );
 
   useVoicePage({
+    idleEnabled: false,
     onHelp: () => {
       const helpText = reportSpeechLanguage === 'hi'
         ? "स्क्रीन पर अपनी मांसपेशियों और फैट का संतुलन देखिए। स्क्रॉल करके Next दबाइए।"
@@ -1087,7 +1088,7 @@ const Report2 = () => {
           const prefix = assessment.status === "Excellent" ? "CONFIRMED STRENGTH" :
                          assessment.status === "Normal" ? "CONFIRMED NORMAL" : "CONFIRMED AREA TO IMPROVE";
           category = prefix;
-          secondary = assessment.pattern ? `${assessment.pattern} system` : "Profile confirmed";
+          secondary = assessment.pattern ? `${assessment.pattern} system` : "Profile recorded";
         }
       }
 
@@ -1159,7 +1160,7 @@ const Report2 = () => {
   const controlMetrics = useMemo(() => {
     if (!vitals || !patient) return null;
     
-    const history = data.history || [];
+    const history = (data.history || []).slice(0, -1);
     
     return {
       weightControl: assessWeightControl(vitals, patient, history, scanCount),

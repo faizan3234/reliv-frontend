@@ -19,7 +19,7 @@ import IdleReturn from "./components/IdleReturn.jsx";
 import KioskGuardian from "./components/KioskGuardian.jsx";
 import KioskSafetyManager from "./components/KioskSafetyManager.jsx";
 
-import UnifiedReport from "./pages/UnifiedReport.jsx";
+import ReferenceReports from "./pages/ReferenceReports.jsx";
 import Team from "./pages/Team.jsx";
 import WellnessRecommendations from "./pages/WellnessRecommendations.jsx";
 import MobileEntry from "./pages/MobileEntry.jsx";
@@ -77,7 +77,7 @@ export default function KioskApp() {
             path="/report-1"
             element={
               <ProtectedReportRoute>
-                <UnifiedReport />
+                <ReferenceReports />
               </ProtectedReportRoute>
             }
           />
@@ -85,7 +85,7 @@ export default function KioskApp() {
             path="/report-2"
             element={
               <ProtectedReportRoute>
-                <UnifiedReport />
+                <ReferenceReports />
               </ProtectedReportRoute>
             }
           />
@@ -93,7 +93,7 @@ export default function KioskApp() {
             path="/report-3"
             element={
               <ProtectedReportRoute>
-                <UnifiedReport />
+                <ReferenceReports />
               </ProtectedReportRoute>
             }
           />
@@ -101,7 +101,7 @@ export default function KioskApp() {
             path="/report-4"
             element={
               <ProtectedReportRoute>
-                <UnifiedReport />
+                <ReferenceReports />
               </ProtectedReportRoute>
             }
           />
@@ -109,7 +109,7 @@ export default function KioskApp() {
             path="/report-5"
             element={
               <ProtectedReportRoute>
-                <UnifiedReport />
+                <ReferenceReports />
               </ProtectedReportRoute>
             }
           />
@@ -130,3 +130,4 @@ export default function KioskApp() {
       </VoiceAssistantProvider>
     );
 }
+

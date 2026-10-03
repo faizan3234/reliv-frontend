@@ -11,7 +11,7 @@ import { useVoicePage } from "../hooks/useVoicePage";
 import { getReport5Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 import ChallengePrompt from "../components/ChallengePrompt";
-import { API_BASE } from "../config/api";
+import PaidReportAccess from "../components/PaidReportAccess";
 
 // Helper: Extract first name
 const getFirstName = (patient) => {
@@ -22,14 +22,9 @@ const getFirstName = (patient) => {
 
 // Helper: Vision Assessment
 const getVisionAssessment = (line) => {
-  const lineNum = Number(line);
-  if (lineNum <= 2) return { rating: "🔴 Critical", glasses: "Required (Urgent)", status: "Refer", recommendation: "Immediate ophthalmologist visit" };
-  if (lineNum <= 4) return { rating: "🔴 Weak", glasses: "Recommended", status: "Review", recommendation: "Prescription spectacles advised" };
-  if (lineNum <= 6) return { rating: "🟠 Fair", glasses: "Suggested", status: "Monitor", recommendation: "Reading glasses (+0.75 to +1.25)" };
-  if (lineNum <= 8) return { rating: "🟡 Moderate", glasses: "Optional", status: "Observe", recommendation: "Eye exercises + annual check" };
-  if (lineNum <= 10) return { rating: "🟢 Good", glasses: "Not Required", status: "Healthy", recommendation: "Maintain eye hygiene" };
-  if (lineNum <= 12) return { rating: "🟢 Strong", glasses: "Not Required", status: "Optimal", recommendation: "Continue healthy habits" };
-  return { rating: "🔵 Elite", glasses: "Not Required", status: "Perfect", recommendation: "Peak visual performance" };
+  const value=Number(line);
+  if(!Number.isFinite(value)||value<=0) return {rating:'Not recorded',glasses:'Not assessed',status:'Not available',recommendation:'An eye professional can assess your vision.'};
+  return {rating:`Recorded line: ${value}`,glasses:'Requires an eye examination',status:'Screening only',recommendation:'This kiosk result cannot prescribe spectacles. Seek an eye examination if you notice vision problems.'};
 };
 
 // ============================================================================
@@ -167,7 +162,7 @@ function assessFatDominance(vitals, patient, scanCount) {
   } else {
     status = "Fat Dominant";
     remedy = "Strict diet + exercise";
-    comment = `${userName}, fat dominates by ${dominance.toFixed(1)}%! Urgent action needed!`;
+    comment = `${userName}, fat dominates by ${dominance.toFixed(1)}%! Discuss concerns with a clinician.`;
   }
   
   return { status, value: dominance, remedy, comment };
@@ -432,6 +427,7 @@ export default function Report5() {
   );
 
   useVoicePage({
+    idleEnabled: false,
     onHelp: () => {
       const helpText = reportSpeechLanguage === 'hi'
         ? "अपने नतीजे इसी स्क्रीन पर देखें। फोन से स्कैन करना ज़रूरी नहीं है।"
@@ -499,21 +495,11 @@ export default function Report5() {
   };
 
   const history = data.history || EMPTY_REPORT.history;
-  const [ecoStats, setEcoStats] = useState(null);
+  const ecoStats = null;
   const [speechPlaying, setSpeechPlaying] = useState(false);
-  const [inactivityTimer, setInactivityTimer] = useState(120);
 
   const confettiRef = useRef(false);
-  const inactivityIntervalRef = useRef(null);
   const reportContainerRef = useRef(null);
-
-  // Fetch eco stats
-  useEffect(() => {
-    fetch(`${API_BASE}/api/eco-stats`)
-      .then((res) => res.json())
-      .then(setEcoStats)
-      .catch(() => setEcoStats(null));
-  }, []);
 
   // ── Dynamic speech: layman explanation in user's selected report voice language ──
   const speechFired = useRef(false);
@@ -553,33 +539,6 @@ export default function Report5() {
     const text = getReport5Speech(speechPayload, newLang);
     speakText(text, { langHint: newLang });
   }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
-
-  // Inactivity timer - reset on any user interaction
-  useEffect(() => {
-    const resetTimer = () => setInactivityTimer(120);
-    
-    const events = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
-    events.forEach((event) => window.addEventListener(event, resetTimer));
-
-    inactivityIntervalRef.current = setInterval(() => {
-      setInactivityTimer((prev) => {
-        if (prev <= 1) return 0; // Signal expiry — effect below handles navigation
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      events.forEach((event) => window.removeEventListener(event, resetTimer));
-      if (inactivityIntervalRef.current) clearInterval(inactivityIntervalRef.current);
-    };
-  }, []);
-
-  // Separate effect: navigate when timer hits 0 (avoids calling navigation inside setState)
-  useEffect(() => {
-    if (inactivityTimer === 0) {
-      handleReturnHome();
-    }
-  }, [inactivityTimer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scanCount = getScanCount(data);
 
@@ -673,16 +632,16 @@ export default function Report5() {
     if (scanCount < 2 || !history.length) return list;
 
     if (oxygen >= 95) list.push("Oxygen delivery appears efficient and consistent");
-    if (bpm >= 60 && bpm <= 80) list.push("Heart rate reflects balanced autonomic response");
+    if (bpm >= 60 && bpm <= 80) list.push("Pulse reading recorded within the displayed screening range");
     
     if (scanCount >= 3) {
       if (metrics && metrics.musclePct > 30) list.push("Your muscle composition and hydration levels support efficient metabolic activity");
-      if (systolic < 120) list.push("Blood pressure stability suggests good cardiovascular health");
+      if (systolic < 120) list.push("Review both blood-pressure numbers and the screening label");
     }
 
     if (scanCount >= 4) {
       if (metrics && metrics.waterPct > 50) list.push("Hydration levels are supporting consistent metabolic readings");
-      list.push("Repeated measurements show stability across vitals");
+      list.push("Use the timeline to compare repeated measurements");
       // Trend language unlocked
       if (history && history.length >= 3) {
         const oldestItem = history[0];
@@ -695,41 +654,33 @@ export default function Report5() {
     }
 
     if (scanCount >= 5) {
-      list.push("Pattern consistency suggests balanced physiological regulation");
+      list.push("Additional visits add context to your recorded values");
       // Confidence meter active
       const confidenceLevel = Math.min(Math.round((scanCount / 7) * 100), 100);
       if (confidenceLevel >= 70) {
-        list.push(`Data confidence at ${confidenceLevel}% enables reliable health pattern recognition`);
+        list.push(`Seven-visit journey ${confidenceLevel}% complete; this is not medical confidence`);
       }
     }
 
     if (scanCount >= 6) {
-      list.push("Your health profile shows established stability over repeated observations");
+      list.push("Your health profile now includes repeated observations");
       // Doctor-tone framing
       if (systolic && systolic < 130) {
-        list.push("Clinical assessment: Blood pressure readings within normal therapeutic range");
+        list.push("Discuss blood-pressure readings and personal targets with your clinician");
       }
     }
 
     if (scanCount >= 7) {
-      list.push("Long-term trend analysis confirms consistent metabolic and cardiovascular balance");
+      list.push("Compare earlier and recent recorded scans for changes");
       // Full narrative synthesis
-      list.push("Seven-scan verification complete: Your baseline health signature is now established");
+      list.push("Seven visits recorded: Keep measuring under similar conditions");
     }
 
     return list.slice(0, Math.min(scanCount, 6));
   }, [scanCount, oxygen, bpm, systolic, metrics, history, vitals?.systolic]);
 
-  // Final narrative summary
-  const narrativeSummary = useMemo(() => {
-    if (scanCount < 7 || history.length < 6) return "Your current readings are available. A visit count alone cannot establish stability or a long-term health trend.";
-
-    const bpStatus = getBPStatus();
-    const overallTrend = bpStatus.status === "Optimal" ? "stable cardiovascular and metabolic balance" : "generally stable vitals with areas to observe over time";
-    const strongestArea = metrics && metrics.musclePct > 35 ? "muscle composition" : "cardiovascular stability";
-
-    return `Based on seven confirmed scans, your health profile reflects ${overallTrend} with particular strength in ${strongestArea}. Your vital stability and body composition patterns suggest balanced physiological function, with no indicators requiring immediate attention. This report is generated from repeated observations, increasing confidence in its accuracy.`;
-  }, [scanCount, metrics, getBPStatus, history.length]);
+  // Summarize recorded evidence without diagnosing from visit count.
+  const narrativeSummary = useMemo(() => `${scanCount} completed visit${scanCount===1?'':'s'} recorded. Compare your measured values and screening labels below. Body-composition numbers are estimates. Repeated scans add context but cannot confirm a diagnosis or rule out illness.`, [scanCount]);
 
   // NEW: Integration Metrics (scan-wise unlocking)
   const integrationMetrics = useMemo(() => {
@@ -852,29 +803,6 @@ export default function Report5() {
           }}
           onReplayOverview={handleReplayOverview}
         />
-
-        {/* Inactivity Timer */}
-        {inactivityTimer <= 30 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{
-              position: "fixed",
-              bottom: "20px",
-              right: "20px",
-              background: "#fef3c7",
-              border: "2px solid #fbbf24",
-              borderRadius: "12px",
-              padding: "12px 20px",
-              fontSize: "14px",
-              fontWeight: "600",
-              color: "#92400e",
-              zIndex: 1000,
-            }}
-          >
-            ⏱️ Returning to home in {inactivityTimer}s
-          </motion.div>
-        )}
 
         {/* Title */}
         <motion.div
@@ -2252,7 +2180,7 @@ export default function Report5() {
               Seven-visit milestone
             </h2>
             <p style={{ fontSize: "16px", color: "#ffffff", marginBottom: "16px" }}>
-              Your health profile has been confirmed through seven independent observations,
+              Your health profile has been recorded through seven independent observations,
               This visit count is not a measure of clinical accuracy.
             </p>
             <div style={{ display: "flex", justifyContent: "center", gap: "24px", flexWrap: "wrap", marginTop: "20px" }}>
@@ -2422,6 +2350,8 @@ export default function Report5() {
           </>
 
 
+        <PaidReportAccess data={data} />
+
         {/* Challenge a Friend / Couple modal */}
         <ChallengePrompt
           open={showChallengePrompt}
@@ -2438,3 +2368,4 @@ export default function Report5() {
     </div>
   );
 }
+

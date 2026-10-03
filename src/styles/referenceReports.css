@@ -1,0 +1,19 @@
+.reference-reports { width:100%; min-height:100vh; color:#1d1d1f; background:#fff; font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; touch-action:pan-y; overflow-wrap:anywhere; padding-bottom:100px; }
+.reference-progress { max-width:1120px; margin:0 auto; padding:18px 24px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; border-bottom:1px solid #fed7aa; font-size:18px; }
+.reference-note { max-width:1000px; margin:18px auto; padding:0 24px; font-size:14px; color:#60606a; line-height:1.6; }
+.reference-reports p { line-height:1.65; }
+.reference-reports button { min-height:48px; max-width:100%; touch-action:manipulation; }
+.reference-reports button:focus-visible { outline:3px solid #c2410c; outline-offset:4px; }
+.reference-reports .text-xs,.reference-reports .text-\[11px\] { font-size:14px; line-height:1.5; }
+.reference-reports .text-sm { font-size:16px; }
+.reference-reports .scrollable-container { overflow-y:visible !important; max-height:none; }
+.reference-reports .material-symbols-outlined { font-family:inherit; }
+.reference-reports canvas { max-width:100%; }
+.reference-reports .report-chart { height:auto; min-height:0; }
+.paid-report-access { max-width:1000px; margin:36px auto; padding:28px; border:1px solid #fed7aa; border-radius:24px; background:#fff7ed; display:flex; flex-wrap:wrap; gap:28px; align-items:center; }
+.paid-report-access > div { flex:1 1 280px; }
+.paid-report-access h2 { font-size:26px; font-weight:700; margin-bottom:14px; }
+.paid-report-qr { display:flex; flex-direction:column; align-items:center; gap:10px; background:white; padding:12px; border:1px solid #e5e7eb; border-radius:18px; max-width:100%; }
+.paid-report-qr svg { max-width:100%; height:auto; }
+@media(max-width:700px) { .reference-reports h1 { font-size:clamp(26px,6vw,40px) !important; } .reference-reports .grid-cols-2 { grid-template-columns:1fr; } .reference-reports [style*='padding: 48px 32px'] { padding:24px 16px !important; } }
+@media(prefers-reduced-motion:reduce) { .reference-reports * { animation:none !important; transition:none !important; } }
