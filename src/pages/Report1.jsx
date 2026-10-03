@@ -1,5 +1,4 @@
 import { getScanCount } from '../utils/reportSnapshot';
-import { readProfileAccess } from '../utils/kioskSession';
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useLocation, useNavigate } from "react-router-dom";
@@ -7,13 +6,11 @@ import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import Confetti from "react-confetti";
 import { useSpeech } from "../context/SpeechContext";
-import { useHealth } from "../context/HealthContext";
+import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { getReport1Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 import ChallengeComparison from "../components/ChallengeComparison";
-import { supabase } from "../config/supabase";
-import { API_BASE } from "../config/api";
 
 // Helper: Extract first name from email or name field
 const getFirstName = (patient) => {
@@ -51,6 +48,7 @@ const Report1 = () => {
   );
 
   useVoicePage({
+    idleEnabled: false,
     onHelp: () => {
       const helpText = reportSpeechLanguage === 'hi'
         ? "स्क्रीन पर अपना हेल्थ स्कोर और अंदरूनी उम्र देखिए। नीचे स्क्रॉल करके अगली रिपोर्ट के लिए Next दबाइए।"
@@ -67,114 +65,16 @@ const Report1 = () => {
   // AUTHORITATIVE PAID REPORT ACCESS
   // ─────────────────────────────────────────────────────────────────────
 
-  const [reportData, setReportData] = useState(null);
-  const [reportLoading, setReportLoading] = useState(true);
-  const [reportError, setReportError] = useState("");
-
-  const currentSessionId =
-    location.state?.sessionId ||
-    localStorage.getItem("reliv_session_id") ||
-    sessionStorage.getItem("reliv_session_id") ||
-    "";
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadAuthoritativeReport = async () => {
-      if (!currentSessionId) {
-        if (!cancelled) {
-          setReportError(
-            "No active health report session was found."
-          );
-          setReportLoading(false);
-        }
-        return;
-      }
-
-      try {
-        const res = await fetch(
-          `${API_BASE}/api/sessions/${encodeURIComponent(currentSessionId)}/report/data`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              ...(readProfileAccess(currentSessionId) ? { 'X-Reliv-Profile-Token': readProfileAccess(currentSessionId) } : {})
-            },
-            cache: "no-store"
-          }
-        );
-
-        const result =
-          await res.json().catch(() => ({}));
-
-        if (
-          !res.ok ||
-          result.ok !== true ||
-          result.paymentVerified !== true ||
-          result.reportStatus !== "READY" ||
-          !result.healthData
-        ) {
-          throw new Error(
-            result.message ||
-            "Your health report is not available yet."
-          );
-        }
-
-        if (!cancelled) {
-          setReportData({
-            sessionId: result.sessionId,
-            customerData: result.customerData || {},
-            healthData: result.healthData
-          });
-
-          setReportError("");
-        }
-
-      } catch (err) {
-        console.error(
-          "[Report1] Authoritative report access denied:",
-          err
-        );
-
-        if (!cancelled) {
-          setReportData(null);
-          setReportError(
-            err.message ||
-            "This health report cannot be opened."
-          );
-        }
-
-      } finally {
-        if (!cancelled) {
-          setReportLoading(false);
-        }
-      }
-    };
-
-    loadAuthoritativeReport();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentSessionId]);
-
-  // The backend snapshot is the ONLY source of report measurements.
-  const healthData = reportData?.healthData || null;
-
-  const patient = healthData?.patient || reportData?.customerData || null;
-
-  const vitals =
-    healthData?.vitals || null;
+  // ProtectedReportRoute already verified payment and the private PIN token.
+  const healthData = healthCtx;
+  const reportData = healthCtx;
+  const patient = healthCtx.patient || EMPTY_REPORT.patient;
+  const vitals = healthCtx.vitals || EMPTY_REPORT.vitals;
 
   const userName =
     getFirstName(patient);
 
   const scanCount = getScanCount(healthData);
-
-  // Leaderboard opt-in state
-  const [lbPrompt, setLbPrompt] = useState("idle"); // idle | saved | done | skipped | not_qualified
-  const [lbSessionId] = useState(() => `lb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-
 
   // Challenge state
   const [showChallenge, setShowChallenge] = useState(false);
@@ -368,19 +268,19 @@ const Report1 = () => {
     } else if (score >= 20) {
       // 20-30: Poor
       pool = [
-        `⚠️ ${userName}, high risk zone. Start gentle: 30-min daily walks, reduce sugar and fried foods.`,
+        `⚠️ ${userName}, consider discussing activity and nutrition goals with your clinician.`,
         `${userName}, time for change. Doctor visit advised soon for personalized guidance.`,
         `⚠️ ${userName}, let's improve together. Small steps: more water, balanced meals, gentle movement.`
       ];
     } else {
       // 10-20: Critical
       pool = [
-        `⚠️ ${userName}, this is a critical alert. Please consult a doctor urgently for blood tests and check-up.`,
-        `⚠️ ${userName}, immediate medical attention recommended. Avoid self-diagnosis.`,
-        `⚠️ ${userName}, severe imbalance detected. Professional healthcare guidance needed now.`
+        `⚠️ ${userName}, this estimate cannot establish health risk. Discuss concerns with a clinician.`,
+        `⚠️ ${userName}, ask a clinician about your health concerns. This is an estimate.`,
+        `⚠️ ${userName}, a calculated score alone cannot diagnose an imbalance.`
       ];
     }
-    return pool[Math.floor(Math.random() * pool.length)];
+    return pool[0];
   };
 
   const comment = bodyScoreData.score !== null ? getComment(bodyScoreData.score) : `Analyzing your latest health scan, ${userName}...`;
@@ -391,7 +291,7 @@ const Report1 = () => {
     if (isTopPerformer) {
       badges.push({ 
         icon: "military_tech", 
-        text: `Top 14% - Elite, ${userName}!` 
+        text: `Latest estimated score, ${userName}!`
       });
     }
     if (yearsYounger > 0) {
@@ -415,7 +315,7 @@ const Report1 = () => {
     if (bodyScoreData.score > peersAverage) {
       badges.push({ 
         icon: "trending_up", 
-        text: `Above Average for Age ${patient?.age || ''}` 
+        text: `Above reference · Age ${patient?.age || ''}`
       });
     }
     if (bodyScoreData.score < 50 && bodyScoreData.score >= 30) {
@@ -431,54 +331,6 @@ const Report1 = () => {
   const genderDisplay = patient?.gender
     ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1).toLowerCase()
     : "—";
-
-  if (reportLoading) {
-    return (
-      <div className="min-h-screen h-auto w-full bg-white flex items-center justify-center overflow-y-auto scrollable-container touch-pan-y px-6 py-8">
-        <div className="text-center">
-          <div className="text-2xl font-semibold text-gray-900">
-            Preparing your health report...
-          </div>
-          <div className="mt-3 text-gray-500">
-            Verifying your completed payment and report.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (
-    reportError ||
-    !reportData ||
-    !healthData ||
-    !patient ||
-    !vitals
-  ) {
-    return (
-      <div className="min-h-screen h-auto w-full bg-white flex items-center justify-center overflow-y-auto scrollable-container touch-pan-y px-6 py-8">
-        <div className="max-w-xl text-center">
-          <div className="text-3xl font-bold text-gray-900">
-            Report unavailable
-          </div>
-          <div className="mt-4 text-lg text-gray-600">
-            {reportError ||
-              "Your paid health report is not ready."}
-          </div>
-          <button
-            type="button"
-            onClick={() =>
-              navigate("/payment", {
-                replace: true
-              })
-            }
-            className="mt-8 bg-[#F28C38] text-white font-semibold text-lg px-10 py-4 rounded-2xl cursor-pointer"
-          >
-            Return to Payment
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen h-auto w-full bg-white overflow-y-auto scrollable-container touch-pan-y">
@@ -627,7 +479,7 @@ const Report1 = () => {
                     style={{ left: `${peersAverage}%`, transform: "translate(-50%, -50%)" }}
                   >
                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 font-medium">
-                      Avg
+                      Ref
                     </div>
                   </div>
                 </div>
@@ -655,7 +507,7 @@ const Report1 = () => {
                     transition={{ duration: 0.5 }}
                     className="flex items-center gap-3 bg-orange-50/70 text-[#F28C38] border border-orange-200/60 px-7 py-3.5 rounded-full text-base font-semibold"
                   >
-                    <span className="material-symbols-outlined text-xl">{badge.icon}</span>
+                    <span className="report-emoji text-xl">•</span>
                     {badge.text}
                   </motion.div>
                 ))}
@@ -665,8 +517,8 @@ const Report1 = () => {
             {remedies.length > 0 && scanCount >= 2 && (
               <div className="w-full max-w-4xl mt-12 bg-orange-50/30 border border-orange-200/50 rounded-2xl p-8">
                 <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#F28C38]">local_hospital</span>
-                  Indian Household Remedies for {userName}
+                  <span className="report-emoji text-[#F28C38]">🩺</span>
+                  Everyday wellbeing ideas for {userName}
                 </h3>
                 <ul className="space-y-2">
                   {remedies.map((remedy, idx) => (
@@ -677,124 +529,6 @@ const Report1 = () => {
                   ))}
                 </ul>
               </div>
-            )}
-
-            {/* ── Leaderboard Opt-In ── */}
-            {lbPrompt === "idle" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="w-full max-w-md mt-10 bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-lg"
-              >
-                <div className="text-3xl mb-2">🏆</div>
-                <h3 className="text-gray-900 text-lg font-bold mb-1">
-                  Campus Leaderboard
-                </h3>
-                <p className="text-gray-500 text-sm mb-5">
-                  Want your score on the leaderboard? Your name & score will be displayed on the kiosk.
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={async () => {
-                      const userScore = bodyScoreData.score ?? 0;
-
-                      if (userScore < 40) {
-                        setLbPrompt("not_qualified");
-                        return;
-                      }
-
-                      if (supabase) {
-                        try {
-                          await supabase.from("leaderboard").upsert({
-                            session_id: lbSessionId,
-                            name: patient?.name || userName,
-                            email: patient?.email || "",
-                            score: userScore,
-                            scan_count: scanCount,
-                            photo_path: null,
-                          }, { onConflict: "email" });
-
-                          setLbPrompt("saved");
-                        } catch (err) {
-                          console.error("Leaderboard save error:", err);
-                          setLbPrompt("saved");
-                        }
-                      } else {
-                        setLbPrompt("saved");
-                      }
-                    }}
-                    className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-6 py-3 rounded-xl text-sm"
-                  >
-                    Yes, add me! 🔥
-                  </button>
-                  <button
-                    onClick={() => setLbPrompt("skipped")}
-                    className="bg-gray-100 text-gray-500 font-medium px-6 py-3 rounded-xl text-sm border border-gray-200"
-                  >
-                    Nah, skip
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Below leaderboard threshold */}
-            {lbPrompt === "not_qualified" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="w-full max-w-md mt-6 bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-lg"
-              >
-                <div className="text-3xl mb-2">💪</div>
-                <h3 className="text-gray-900 text-base font-bold mb-1">Almost there!</h3>
-                <p className="text-gray-500 text-sm mb-3">
-                  Leaderboard entries require a score of 40 or above. Improve your health score and try again — you've got this!
-                </p>
-                <button
-                  onClick={() => setLbPrompt("skipped")}
-                  className="bg-gray-100 text-gray-500 font-medium px-6 py-2.5 rounded-xl text-sm border border-gray-200"
-                >
-                  Got it →
-                </button>
-              </motion.div>
-            )}
-
-            {/* ── Leaderboard confirmation ── */}
-            {lbPrompt === "saved" && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full max-w-md mt-6 bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-lg"
-              >
-                <h3 className="text-gray-900 text-lg font-bold mb-1">
-                  Leaderboard entry
-                </h3>
-                <p className="text-gray-500 text-sm mb-4">Continue to the next section of your report.</p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => setLbPrompt("done")}
-                    className="bg-green-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
-                  >
-                    Done ✓
-                  </button>
-                  <button
-                    onClick={() => setLbPrompt("done")}
-                    className="bg-gray-100 text-gray-500 font-medium px-6 py-2.5 rounded-xl text-sm border border-gray-200"
-                  >
-                    Continue
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {lbPrompt === "done" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-6 text-center"
-              >
-                <span className="text-green-500 text-lg font-semibold">✓ You're on the leaderboard!</span>
-              </motion.div>
             )}
 
             <motion.button
@@ -835,3 +569,4 @@ const Report1 = () => {
 };
 
 export default Report1;
+

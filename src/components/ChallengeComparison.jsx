@@ -1,3 +1,4 @@
+import relivLogo from "../assets/relivlogo.jpeg";
 // src/components/ChallengeComparison.jsx — HEALTH DUEL & COUPLE STORY CARD
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
@@ -16,6 +17,14 @@ export default function ChallengeComparison({
   const [challenge, setChallenge] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const canvasRef = useRef(null);
+  const [logoImage, setLogoImage] = useState(null);
+  const [exportError, setExportError] = useState('');
+  useEffect(() => {
+    const image = new Image();
+    image.onload = () => setLogoImage(image);
+    image.src = relivLogo;
+    return () => { image.onload = null; };
+  }, []);
 
   useEffect(() => {
     try {
@@ -78,7 +87,7 @@ export default function ChallengeComparison({
 
   // Draw 1080x1920 Instagram Story Winning Card on Canvas
   useEffect(() => {
-    if (!revealed) return;
+    if (!revealed || !logoImage) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -107,23 +116,23 @@ export default function ChallengeComparison({
     // Top Brand Badge
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 44px Arial, sans-serif";
-    ctx.fillText("RELIV HEALTH KIOSK", 90, 140);
+    ctx.drawImage(logoImage, 90, 330, 840, 285, 90, 65, 300, 102);
 
     ctx.fillStyle = isChallenge ? "#fdba74" : "#fbcfe8";
     ctx.font = "bold 30px Arial, sans-serif";
-    ctx.fillText(isChallenge ? "⚔️ OFFICIAL HEALTH DUEL" : "💕 POWER COUPLE SYNC", 90, 190);
+    ctx.fillText(isChallenge ? "⚔️ OFFICIAL HEALTH DUEL" : "💕 POWER COUPLE SYNC", 90, 190, 880);
 
     // Main Title
     ctx.fillStyle = "#ffffff";
     ctx.font = "900 78px Arial, sans-serif";
     if (isChallenge) {
-      ctx.fillText(tied ? "EPIC HEALTH TIE!" : "HEALTH DUEL", 90, 310);
+      ctx.fillText(tied ? "EPIC HEALTH TIE!" : "HEALTH DUEL", 90, 310, 880);
       ctx.fillStyle = "#fb923c";
-      ctx.fillText(tied ? "PERFECT MATCH 🤝" : `${winner.toUpperCase()} WINS! 👑`, 90, 400);
+      ctx.fillText(tied ? "PERFECT MATCH 🤝" : `${winner.toUpperCase()} WINS! 👑`, 90, 400, 880);
     } else {
-      ctx.fillText("BETTER TOGETHER.", 90, 310);
+      ctx.fillText("BETTER TOGETHER.", 90, 310, 880);
       ctx.fillStyle = "#f472b6";
-      ctx.fillText(`COUPLE SCORE: ${avg}/100`, 90, 400);
+      ctx.fillText(`COUPLE SCORE: ${avg}/100`, 90, 400, 880);
     }
 
     // Winner & Loser Head-to-Head Card
@@ -137,66 +146,66 @@ export default function ChallengeComparison({
     // Player A Column
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 46px Arial, sans-serif";
-    ctx.fillText(nameA, 120, 560, 380);
+    ctx.fillText(nameA, 120, 560, 380, 880);
     ctx.fillStyle = isChallenge ? "#fdba74" : "#fbcfe8";
     ctx.font = "bold 26px Arial, sans-serif";
-    ctx.fillText((aWins || tied) && isChallenge ? "CHAMPION 👑" : "CHALLENGER ⚡", 120, 605);
+    ctx.fillText((aWins || tied) && isChallenge ? "CHAMPION 👑" : "CHALLENGER ⚡", 120, 605, 880);
 
     // Player B Column
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 46px Arial, sans-serif";
-    ctx.fillText(nameB, 580, 560, 380);
+    ctx.fillText(nameB, 580, 560, 380, 880);
     ctx.fillStyle = isChallenge ? "#fdba74" : "#fbcfe8";
     ctx.font = "bold 26px Arial, sans-serif";
-    ctx.fillText((!aWins || tied) && isChallenge ? "CHAMPION 👑" : "CHALLENGER ⚡", 580, 605);
+    ctx.fillText((!aWins || tied) && isChallenge ? "CHAMPION 👑" : "CHALLENGER ⚡", 580, 605, 880);
 
     // Metric 1: Health Score
     ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
     ctx.fillRect(110, 640, 860, 90);
     ctx.fillStyle = "#94a3b8";
     ctx.font = "bold 28px Arial, sans-serif";
-    ctx.fillText("HEALTH SCORE", 440, 695);
+    ctx.fillText("HEALTH SCORE", 440, 695, 880);
     ctx.font = "900 44px monospace";
     ctx.fillStyle = getScoreColor(scoreA);
-    ctx.fillText(`${scoreA}`, 140, 700);
+    ctx.fillText(`${scoreA}`, 140, 700, 880);
     ctx.fillStyle = getScoreColor(scoreB);
-    ctx.fillText(`${scoreB}`, 860, 700);
+    ctx.fillText(`${scoreB}`, 860, 700, 880);
 
     // Metric 2: Metabolic Age
     ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
     ctx.fillRect(110, 750, 860, 90);
     ctx.fillStyle = "#94a3b8";
     ctx.font = "bold 28px Arial, sans-serif";
-    ctx.fillText("METABOLIC AGE", 430, 805);
+    ctx.fillText("METABOLIC AGE", 430, 805, 880);
     ctx.font = "900 38px monospace";
     ctx.fillStyle = metaA <= metaB ? "#4ade80" : "#cbd5e1";
-    ctx.fillText(`${metaA} yrs`, 140, 810);
+    ctx.fillText(`${metaA} yrs`, 140, 810, 880);
     ctx.fillStyle = metaB <= metaA ? "#4ade80" : "#cbd5e1";
-    ctx.fillText(`${metaB} yrs`, 820, 810);
+    ctx.fillText(`${metaB} yrs`, 820, 810, 880);
 
     // Metric 3: Body Water %
     ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
     ctx.fillRect(110, 860, 860, 90);
     ctx.fillStyle = "#94a3b8";
     ctx.font = "bold 28px Arial, sans-serif";
-    ctx.fillText("BODY WATER %", 440, 915);
+    ctx.fillText("BODY WATER %", 440, 915, 880);
     ctx.font = "900 38px monospace";
     ctx.fillStyle = waterA >= 50 ? "#38bdf8" : "#cbd5e1";
-    ctx.fillText(`${waterA}%`, 140, 920);
+    ctx.fillText(`${waterA}%`, 140, 920, 880);
     ctx.fillStyle = waterB >= 50 ? "#38bdf8" : "#cbd5e1";
-    ctx.fillText(`${waterB}%`, 850, 920);
+    ctx.fillText(`${waterB}%`, 850, 920, 880);
 
     // Metric 4: Visceral Fat Level
     ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
     ctx.fillRect(110, 970, 860, 90);
     ctx.fillStyle = "#94a3b8";
     ctx.font = "bold 28px Arial, sans-serif";
-    ctx.fillText("VISCERAL FAT", 440, 1025);
+    ctx.fillText("VISCERAL FAT", 440, 1025, 880);
     ctx.font = "900 38px monospace";
     ctx.fillStyle = viscA <= viscB ? "#a78bfa" : "#cbd5e1";
-    ctx.fillText(`Lvl ${viscA}`, 140, 1030);
+    ctx.fillText(`Lvl ${viscA}`, 140, 1030, 880);
     ctx.fillStyle = viscB <= viscA ? "#a78bfa" : "#cbd5e1";
-    ctx.fillText(`Lvl ${viscB}`, 830, 1030);
+    ctx.fillText(`Lvl ${viscB}`, 830, 1030, 880);
 
     // Loser Buys Coffee & Instagram Tag Box
     ctx.fillStyle = isChallenge ? "rgba(234, 88, 12, 0.25)" : "rgba(219, 39, 119, 0.25)";
@@ -208,38 +217,38 @@ export default function ChallengeComparison({
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 44px Arial, sans-serif";
     if (isChallenge) {
-      ctx.fillText(tied ? "🤝 BOTH OF YOU POST ON STORY!" : `☕ ${loser} BUYS COFFEE!`, 120, 1300);
+      ctx.fillText(tied ? "🤝 BOTH OF YOU POST ON STORY!" : `☕ ${loser} BUYS COFFEE!`, 120, 1300, 880);
       ctx.fillStyle = "#fed7aa";
       ctx.font = "32px Arial, sans-serif";
-      ctx.fillText(`Tag @reliv.health on your Instagram Story.`, 120, 1370);
-      ctx.fillText(`Reliv will repost & tag you back! 🔥`, 120, 1420);
+      ctx.fillText(`Tag @reliv_care on your Instagram Story.`, 120, 1370, 880);
+      ctx.fillText(`Small steps. Better habits. Together.`, 120, 1420, 880);
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 28px Arial, sans-serif";
-      ctx.fillText("No kiosk Wi-Fi needed: Save image & post anytime.", 120, 1510);
+      ctx.fillText("Download this PNG on this device to save or share.", 120, 1510, 880);
     } else {
-      ctx.fillText("💕 COUPLE HEALTH GOALS UNLOCKED!", 120, 1300);
+      ctx.fillText("💕 COUPLE HEALTH GOALS UNLOCKED!", 120, 1300, 880);
       ctx.fillStyle = "#fbcfe8";
       ctx.font = "32px Arial, sans-serif";
-      ctx.fillText(`Tag @reliv.health on your Instagram Story.`, 120, 1370);
-      ctx.fillText(`Reliv will repost & tag both of you back! ✨`, 120, 1420);
+      ctx.fillText(`Tag @reliv_care on your Instagram Story.`, 120, 1370, 880);
+      ctx.fillText(`Small steps. Better habits. Together.`, 120, 1420, 880);
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 28px Arial, sans-serif";
-      ctx.fillText("No kiosk Wi-Fi needed: Save image & post anytime.", 120, 1510);
+      ctx.fillText("Download this PNG on this device to save or share.", 120, 1510, 880);
     }
 
     // Footer
     ctx.fillStyle = "#94a3b8";
     ctx.font = "28px Arial, sans-serif";
-    ctx.fillText("Scan QR on report to email full 120+ biomarkers breakdown", 90, 1720);
+    ctx.fillText("Wellbeing estimates · Not a medical diagnosis", 90, 1720, 880);
     ctx.fillStyle = isChallenge ? "#fdba74" : "#f472b6";
     ctx.font = "bold 32px Arial, sans-serif";
-    ctx.fillText("#RelivHealth #HealthDuel #LoserBuysCoffee", 90, 1780);
+    ctx.fillText("#RelivHealth #HealthDuel #LoserBuysCoffee", 90, 1780, 880);
 
-  }, [revealed, isChallenge, nameA, nameB, scoreA, scoreB, metaA, metaB, waterA, waterB, viscA, viscB, tied, aWins, winner, loser, avg]);
+  }, [logoImage, revealed, isChallenge, nameA, nameB, scoreA, scoreB, metaA, metaB, waterA, waterB, viscA, viscB, tied, aWins, winner, loser, avg]);
 
   const handleDownloadStoryCard = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !logoImage) return;
     try {
       const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
@@ -247,31 +256,22 @@ export default function ChallengeComparison({
       a.download = `Reliv-${isChallenge ? "HealthDuel" : "CoupleSync"}-${winner.replace(/\s+/g, "_")}.png`;
       a.click();
     } catch {
-      /* ignore */
+      setExportError("Image could not be saved. Please try again.");
     }
   };
 
   const handleShareStory = async () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !logoImage) return;
+    setExportError('');
     try {
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], `Reliv-${isChallenge ? "HealthDuel" : "CoupleSync"}.png`, { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: isChallenge ? "Reliv Health Duel Results!" : "Reliv Couple Health Card",
-            text: isChallenge
-              ? `👑 ${winner} won the Health Duel! ${loser} buys coffee ☕ Tag @reliv.health on Instagram Story!`
-              : `💕 Our Couple Health Score is ${avg}/100! Tag @reliv.health`,
-            files: [file]
-          });
-        } else {
-          handleDownloadStoryCard();
-        }
-      }, "image/png");
-    } catch {
-      handleDownloadStoryCard();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Image could not be prepared.');
+      const file = new File([blob], 'Reliv-Better-Together.png', { type:'image/png' });
+      if (navigator.canShare?.({files:[file]})) await navigator.share({title:'Reliv · Better habits together',files:[file]});
+      else handleDownloadStoryCard();
+    } catch (error) {
+      if (error.name !== 'AbortError') setExportError('Sharing is unavailable. Use Download image to save your PNG.');
     }
   };
 
@@ -489,11 +489,11 @@ export default function ChallengeComparison({
                     ) : (
                       <>
                         <strong>{loser}</strong> buys coffee! ☕ Post this card on your Instagram Story and tag{" "}
-                        <span style={{ color: "#ea580c", fontWeight: 800 }}>@reliv.health</span>. Reliv will repost & tag you back! 🔥
+                        <span style={{ color: "#ea580c", fontWeight: 800 }}>@reliv_care</span>. Small steps. Better habits. Together.
                       </>
                     )
                   ) : (
-                    "Power couple energy! Post this story card to Instagram and tag @reliv.health — we'll tag both of you back! 💕"
+                    "Power couple energy! Post this story card to Instagram and tag @reliv_care — we'll tag both of you back! 💕"
                   )}
                 </div>
                 <div style={{ color: "#64748b", fontSize: 11, marginTop: 6 }}>
@@ -572,7 +572,8 @@ export default function ChallengeComparison({
           )}
 
           {/* Hidden Canvas for 1080x1920 Instagram Story rendering */}
-          <canvas ref={canvasRef} width="1080" height="1920" style={{ display: "none" }} />
+          {exportError && <p role="alert" className="text-amber-700 bg-amber-50 p-3 rounded-xl">{exportError}</p>}
+              <canvas ref={canvasRef} width="1080" height="1920" style={{ display: "none" }} />
         </motion.div>
       </motion.div>
     </AnimatePresence>

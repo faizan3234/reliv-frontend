@@ -110,7 +110,7 @@ export function HealthProvider({ children }) {
       ...report,
       patient: { ...defaultData.patient, ...report.patient },
       vitals: { ...defaultData.vitals, ...report.vitals },
-      history: Array.isArray(report.history) ? report.history : [],
+      history: Array.isArray(report.history) ? report.history.map(row => ({ ...row, vitals: row.vitals || row })) : [],
     }));
   }, []);
 
