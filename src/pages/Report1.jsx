@@ -328,6 +328,10 @@ const Report1 = () => {
 
   const showConfetti = bodyScoreData.score !== null && bodyScoreData.score >= 90;
 
+  const handleCardSpeak = (metricKey) => {
+    window.dispatchEvent(new CustomEvent('reliv_speak_metric', { detail: metricKey }));
+  };
+
   const genderDisplay = patient?.gender
     ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1).toLowerCase()
     : "—";
@@ -363,7 +367,7 @@ const Report1 = () => {
         <ReportVoiceExplainer
           reportSpeechLanguage={reportSpeechLanguage}
           onLanguageChange={handleLanguageChange}
-          availableMetrics={['metabolicAge', 'bodyScore', 'bloodPressure', 'pulse']}
+          availableMetrics={['bodyScore', 'metabolicAge', 'standardWeight', 'bmi', 'bloodPressure', 'pulse']}
           healthData={{
             ...healthData,
             patient,
@@ -378,7 +382,11 @@ const Report1 = () => {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, ease: "easeOut" }}
-          className="bg-white rounded-xl shadow-[0_15px_50px_-15px_rgba(0,0,0,0.07)] p-5 relative"
+          onClick={() => handleCardSpeak('bodyScore')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('bodyScore'); }}
+          className="bg-white rounded-xl shadow-[0_15px_50px_-15px_rgba(0,0,0,0.07)] p-5 relative cursor-pointer hover:shadow-2xl hover:scale-[1.008] transition-all group"
         >
           <div className="flex flex-col items-center">
             <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">
@@ -436,6 +444,10 @@ const Report1 = () => {
                     <span className="mt-1.5 text-xs uppercase tracking-widest text-gray-400">
                       OUT OF 100
                     </span>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200 mt-2 inline-flex group-hover:bg-orange-100 transition-colors">
+                      <span>🔊</span>
+                      <span>Tap to listen</span>
+                    </div>
                   </div>
                 ) : (
                   <span className="text-5xl font-medium text-gray-300">Calculating...</span>

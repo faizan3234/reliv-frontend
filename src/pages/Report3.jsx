@@ -402,6 +402,10 @@ export default function Report3() {
     speakText(text, { langHint: newLang });
   }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
 
+  const handleCardSpeak = (metricKey) => {
+    window.dispatchEvent(new CustomEvent('reliv_speak_metric', { detail: metricKey }));
+  };
+
   const biologicalAge = metrics?.biologicalAge;
   const ageDiff = biologicalAge ? patient.age - biologicalAge : null;
   const isMale = patient?.gender?.toLowerCase() === "male";
@@ -611,7 +615,18 @@ export default function Report3() {
         <ReportVoiceExplainer
           reportSpeechLanguage={reportSpeechLanguage}
           onLanguageChange={handleLanguageChange}
-          availableMetrics={['boneMass', 'protein', 'hydration', 'muscleMass']}
+          availableMetrics={[
+            'standardWeight',
+            'bodyFat',
+            'muscleMass',
+            'visceralFat',
+            'boneMass',
+            'protein',
+            'hydration',
+            'dailyCalories',
+            'bmi',
+            'metabolicAge'
+          ]}
           healthData={{
             ...data,
             patient,
@@ -628,6 +643,10 @@ export default function Report3() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
+              onClick={() => handleCardSpeak('standardWeight')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('standardWeight'); }}
               style={{
                 background: "#f0f9ff",
                 border: "1.5px solid #bae6fd",
@@ -638,12 +657,19 @@ export default function Report3() {
                 alignItems: "center",
                 gap: "16px",
                 flexWrap: "wrap",
+                cursor: "pointer",
+                boxShadow: "0 2px 10px rgba(3, 105, 161, 0.08)"
               }}
             >
               <div style={{ fontSize: "28px" }}>📏</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "13px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", color: "#0369a1", marginBottom: "4px" }}>
-                  Your Height
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "13px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", color: "#0369a1" }}>
+                    Your Height
+                  </span>
+                  <span style={{ fontSize: "11px", fontWeight: "bold", color: "#0369a1", background: "#e0f2fe", padding: "2px 8px", borderRadius: "9999px" }}>
+                    🔊 Tap to listen
+                  </span>
                 </div>
                 <div style={{ fontSize: "22px", fontWeight: "bold", color: "#0c4a6e" }}>
                   {htFt.display} &nbsp;<span style={{ fontSize: "15px", color: "#64748b", fontWeight: "normal" }}>({vitals.height} cm)</span>
@@ -770,17 +796,29 @@ export default function Report3() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
+            onClick={() => handleCardSpeak('metabolicAge')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('metabolicAge'); }}
             style={{
               background: "#fdf4ff",
               border: "2px solid #e9d5ff",
               borderRadius: "16px",
               padding: "32px",
               marginBottom: "36px",
-              textAlign: "center"
+              textAlign: "center",
+              cursor: "pointer",
+              boxShadow: "0 4px 18px rgba(147, 51, 234, 0.1)"
             }}
+            className="hover:scale-[1.01] hover:border-purple-400 transition-all"
           >
-            <div style={{ fontSize: "14px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px", color: "#9333ea", marginBottom: "12px" }}>
-              Biological Age {scanCount >= 5 ? "• Delta Confirmed" : ""}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "12px" }}>
+              <span style={{ fontSize: "14px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px", color: "#9333ea" }}>
+                Biological Age {scanCount >= 5 ? "• Delta Confirmed" : ""}
+              </span>
+              <span style={{ fontSize: "11px", fontWeight: "bold", color: "#9333ea", background: "#f3e8ff", padding: "2px 8px", borderRadius: "9999px" }}>
+                🔊 Tap to listen
+              </span>
             </div>
             <div style={{ fontSize: "56px", fontWeight: "bold", color: "#111111", marginBottom: "8px" }}>
               {biologicalAge} years
@@ -814,13 +852,19 @@ export default function Report3() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
+              onClick={() => handleCardSpeak('muscleMass')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('muscleMass'); }}
               style={{
                 background: "#ffffff",
                 border: "2px solid #e5e7eb",
                 borderRadius: "16px",
                 padding: "24px",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.06)"
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+                cursor: "pointer"
               }}
+              className="hover:scale-[1.01] hover:border-indigo-400 hover:shadow-lg transition-all"
             >
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "18px" }}>
                 <div style={{
@@ -837,7 +881,10 @@ export default function Report3() {
                 </div>
                 <div>
                   <div style={{ fontSize: "18px", fontWeight: "bold", color: "#111111" }}>Muscle Mass</div>
-                  <div style={{ fontSize: "13px", color: "#9ca3af" }}>Skeletal Muscle %</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "13px", color: "#9ca3af" }}>Skeletal Muscle %</span>
+                    <span style={{ fontSize: "10px", fontWeight: "bold", color: "#4f46e5", background: "#eef2ff", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                  </div>
                 </div>
               </div>
               <div style={{ fontSize: "42px", fontWeight: "bold", color: "#111111", marginBottom: "8px" }}>
@@ -900,13 +947,19 @@ export default function Report3() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
+              onClick={() => handleCardSpeak('bodyFat')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('bodyFat'); }}
               style={{
                 background: "#ffffff",
                 border: "2px solid #e5e7eb",
                 borderRadius: "16px",
                 padding: "24px",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.06)"
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+                cursor: "pointer"
               }}
+              className="hover:scale-[1.01] hover:border-pink-400 hover:shadow-lg transition-all"
             >
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "18px" }}>
                 <div style={{
@@ -923,7 +976,10 @@ export default function Report3() {
                 </div>
                 <div>
                   <div style={{ fontSize: "18px", fontWeight: "bold", color: "#111111" }}>Body Fat</div>
-                  <div style={{ fontSize: "13px", color: "#9ca3af" }}>Total Body Fat %</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "13px", color: "#9ca3af" }}>Total Body Fat %</span>
+                    <span style={{ fontSize: "10px", fontWeight: "bold", color: "#e11d48", background: "#ffe4e6", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                  </div>
                 </div>
               </div>
               <div style={{ fontSize: "42px", fontWeight: "bold", color: "#111111", marginBottom: "8px" }}>
@@ -986,13 +1042,19 @@ export default function Report3() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
+              onClick={() => handleCardSpeak('visceralFat')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('visceralFat'); }}
               style={{
                 background: "#ffffff",
                 border: "2px solid #e5e7eb",
                 borderRadius: "16px",
                 padding: "24px",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.06)"
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+                cursor: "pointer"
               }}
+              className="hover:scale-[1.01] hover:border-amber-400 hover:shadow-lg transition-all"
             >
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "18px" }}>
                 <div style={{
@@ -1009,7 +1071,10 @@ export default function Report3() {
                 </div>
                 <div>
                   <div style={{ fontSize: "18px", fontWeight: "bold", color: "#111111" }}>Visceral Fat</div>
-                  <div style={{ fontSize: "13px", color: "#9ca3af" }}>Internal Fat Level</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "13px", color: "#9ca3af" }}>Internal Fat Level</span>
+                    <span style={{ fontSize: "10px", fontWeight: "bold", color: "#d97706", background: "#fef3c7", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                  </div>
                 </div>
               </div>
               <div style={{ fontSize: "42px", fontWeight: "bold", color: "#111111", marginBottom: "8px" }}>
@@ -1085,8 +1150,18 @@ export default function Report3() {
               Supporting Metrics
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
-              <div>
-                <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>Body Water</div>
+              <div
+                onClick={() => handleCardSpeak('hydration')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('hydration'); }}
+                style={{ cursor: "pointer", padding: "14px", borderRadius: "12px", background: "#ffffff", border: "1px solid #e5e7eb", transition: "all 0.2s" }}
+                className="hover:scale-[1.02] hover:border-blue-300 hover:shadow-md"
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "13px", color: "#6b7280" }}>Body Water</span>
+                  <span style={{ fontSize: "10px", fontWeight: "bold", color: "#2563eb", background: "#eff6ff", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                </div>
                 <div style={{ fontSize: "28px", fontWeight: "bold", color: "#111111", marginBottom: "4px" }}>
                   {metrics.waterPct}%
                 </div>
@@ -1102,8 +1177,18 @@ export default function Report3() {
                   {getWaterStatus(metrics.waterPct).status}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>BMI</div>
+              <div
+                onClick={() => handleCardSpeak('bmi')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('bmi'); }}
+                style={{ cursor: "pointer", padding: "14px", borderRadius: "12px", background: "#ffffff", border: "1px solid #e5e7eb", transition: "all 0.2s" }}
+                className="hover:scale-[1.02] hover:border-emerald-300 hover:shadow-md"
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "13px", color: "#6b7280" }}>BMI</span>
+                  <span style={{ fontSize: "10px", fontWeight: "bold", color: "#059669", background: "#ecfdf5", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                </div>
                 <div style={{ fontSize: "28px", fontWeight: "bold", color: "#111111", marginBottom: "4px" }}>
                   {metrics.bmi}
                 </div>
@@ -1119,8 +1204,18 @@ export default function Report3() {
                   {getBMIStatus(metrics.bmi)}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>BMR (Basal Metabolic Rate)</div>
+              <div
+                onClick={() => handleCardSpeak('dailyCalories')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('dailyCalories'); }}
+                style={{ cursor: "pointer", padding: "14px", borderRadius: "12px", background: "#ffffff", border: "1px solid #e5e7eb", transition: "all 0.2s" }}
+                className="hover:scale-[1.02] hover:border-indigo-300 hover:shadow-md"
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "13px", color: "#6b7280" }}>BMR (Calories)</span>
+                  <span style={{ fontSize: "10px", fontWeight: "bold", color: "#4f46e5", background: "#eef2ff", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                </div>
                 <div style={{ fontSize: "28px", fontWeight: "bold", color: "#111111", marginBottom: "4px" }}>
                   {metrics.bmr} cal/day
                 </div>
@@ -1181,13 +1276,19 @@ export default function Report3() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 }}
+                  onClick={() => handleCardSpeak('boneMass')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('boneMass'); }}
                   style={{
                     background: "linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)",
                     border: "2px solid #d8b4fe",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(167, 139, 250, 0.15)"
+                    boxShadow: "0 4px 14px rgba(167, 139, 250, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-purple-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -1204,7 +1305,10 @@ export default function Report3() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#581c87" }}>Bone Mass</div>
-                      <div style={{ fontSize: "12px", color: "#7e22ce" }}>Skeletal Strength</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#7e22ce" }}>Skeletal Strength</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#6b21a8", background: "#f3e8ff", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -1256,13 +1360,19 @@ export default function Report3() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.15 }}
+                  onClick={() => handleCardSpeak('protein')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('protein'); }}
                   style={{
                     background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
                     border: "2px solid #fbbf24",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(251, 191, 36, 0.15)"
+                    boxShadow: "0 4px 14px rgba(251, 191, 36, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-amber-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -1279,7 +1389,10 @@ export default function Report3() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#78350f" }}>Protein Mass</div>
-                      <div style={{ fontSize: "12px", color: "#92400e" }}>Building Blocks</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#92400e" }}>Building Blocks</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#92400e", background: "#fef3c7", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -1342,13 +1455,19 @@ export default function Report3() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
+                  onClick={() => handleCardSpeak('muscleMass')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('muscleMass'); }}
                   style={{
                     background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
                     border: "2px solid #60a5fa",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(96, 165, 250, 0.15)"
+                    boxShadow: "0 4px 14px rgba(96, 165, 250, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-blue-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -1365,7 +1484,10 @@ export default function Report3() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#1e3a8a" }}>LBMI</div>
-                      <div style={{ fontSize: "12px", color: "#1e40af" }}>Lean Body Mass Quality</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#1e40af" }}>Lean Body Mass Quality</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#1e40af", background: "#dbeafe", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -1417,13 +1539,19 @@ export default function Report3() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.25 }}
+                  onClick={() => handleCardSpeak('boneMass')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('boneMass'); }}
                   style={{
                     background: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
                     border: "2px solid #34d399",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(52, 211, 153, 0.15)"
+                    boxShadow: "0 4px 14px rgba(52, 211, 153, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-emerald-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -1440,7 +1568,10 @@ export default function Report3() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#064e3b" }}>Structural Mass</div>
-                      <div style={{ fontSize: "12px", color: "#065f46" }}>Bone + Muscle Framework</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#065f46" }}>Bone + Muscle Framework</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#065f46", background: "#d1fae5", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -1492,13 +1623,19 @@ export default function Report3() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}
+                  onClick={() => handleCardSpeak('subcutaneousFat')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('subcutaneousFat'); }}
                   style={{
                     background: "linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)",
                     border: "2px solid #f87171",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(248, 113, 113, 0.15)"
+                    boxShadow: "0 4px 14px rgba(248, 113, 113, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-red-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -1515,7 +1652,10 @@ export default function Report3() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#7f1d1d" }}>Subcutaneous Fat</div>
-                      <div style={{ fontSize: "12px", color: "#991b1b" }}>Under-skin Fat Distribution</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#991b1b" }}>Under-skin Fat Distribution</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#991b1b", background: "#fecaca", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   

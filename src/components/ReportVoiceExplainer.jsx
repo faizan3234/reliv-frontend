@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Volume2, VolumeX, Sparkles, X, RotateCcw } from 'lucide-react';
 import { useSpeech } from '../context/SpeechContext';
-import { METRIC_EXPLAINERS, getMetricLaymanExplainer } from '../voice/reportVoice';
+import { METRIC_EXPLAINERS, getMetricLaymanExplainer, CANONICAL_METRIC_MAP } from '../voice/reportVoice';
 
 export default function ReportVoiceExplainer({
   reportSpeechLanguage = 'hi',
@@ -17,13 +17,27 @@ export default function ReportVoiceExplainer({
   const lang = reportSpeechLanguage || 'hi';
 
   const handleSelectMetric = (metricKey) => {
-    setActiveMetric(metricKey);
+    const normalized = String(metricKey).toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const canonical = (CANONICAL_METRIC_MAP && CANONICAL_METRIC_MAP[normalized]) || metricKey;
+    setActiveMetric(canonical);
     stop();
-    const explainerText = getMetricLaymanExplainer(metricKey, healthData, lang);
+    const explainerText = getMetricLaymanExplainer(canonical, healthData, lang);
     if (explainerText) {
       speakText(explainerText, { langHint: lang });
     }
   };
+
+  useEffect(() => {
+    const handleCustomMetric = (e) => {
+      const metricKey = e.detail;
+      if (metricKey) {
+        handleSelectMetric(metricKey);
+        setShowExplainerPanel(true);
+      }
+    };
+    window.addEventListener('reliv_speak_metric', handleCustomMetric);
+    return () => window.removeEventListener('reliv_speak_metric', handleCustomMetric);
+  }, [healthData, lang]);
 
   const handleCloseExplainer = () => {
     setActiveMetric(null);
@@ -39,7 +53,9 @@ export default function ReportVoiceExplainer({
     }
   };
 
-  const currentMetricData = activeMetric ? METRIC_EXPLAINERS[activeMetric] : null;
+  const currentMetricData = activeMetric
+    ? (METRIC_EXPLAINERS[activeMetric] || METRIC_EXPLAINERS[CANONICAL_METRIC_MAP?.[String(activeMetric).toLowerCase().replace(/[^a-z0-9_]/g, '')]])
+    : null;
 
   return (
     <div className="w-full max-w-4xl mx-auto px-1 sm:px-2 mb-4">

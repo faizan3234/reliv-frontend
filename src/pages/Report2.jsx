@@ -790,11 +790,28 @@ const descriptionBank = {
 function calculateSystemScore(systemName, assessment, scanCount) {
   if (!assessment.status) return 0;
 
+  // Underweight, Below Average, High Fat, or Obese cannot be strongest system
+  if (
+    assessment.status === "Below Average" ||
+    assessment.status === "Underweight" ||
+    assessment.status === "Dehydrated" ||
+    assessment.status === "High" ||
+    assessment.status === "Obese" ||
+    assessment.status === "Essential Fat"
+  ) {
+    return 0;
+  }
+
   let score = 0;
 
-  // Status weight
-  if (assessment.status === "Excellent") {
-    score += 4;
+  // Status weight: Athletic, Fitness, Strong, Excellent get top score
+  if (
+    assessment.status === "Excellent" ||
+    assessment.status === "Athletic" ||
+    assessment.status === "Fitness" ||
+    assessment.status === "Strong"
+  ) {
+    score += 5;
   } else if (assessment.status === "Normal" || assessment.status === "Optimized") {
     score += 3;
   } else if (assessment.status === "Borderline") {
@@ -1186,6 +1203,10 @@ const Report2 = () => {
     }
   }, [shouldShowConfetti]);
 
+  const handleCardSpeak = (metricKey) => {
+    window.dispatchEvent(new CustomEvent('reliv_speak_metric', { detail: metricKey }));
+  };
+
   return (
     <div className="min-h-screen bg-[#FDFAF5] flex flex-col items-center px-2 py-4 overflow-y-auto scrollable-container">
       {shouldShowConfetti && <Confetti numberOfPieces={200} recycle={false} />}
@@ -1214,7 +1235,17 @@ const Report2 = () => {
         <ReportVoiceExplainer
           reportSpeechLanguage={reportSpeechLanguage}
           onLanguageChange={handleLanguageChange}
-          availableMetrics={['bmi', 'bodyFat', 'muscleMass', 'metabolicAge']}
+          availableMetrics={[
+            'standardWeight',
+            'bodyFat',
+            'muscleMass',
+            'hydration',
+            'fatControl',
+            'muscleControl',
+            'idealBodyWeight',
+            'bmi',
+            'boneMass'
+          ]}
           healthData={{
             ...data,
             patient,
@@ -1225,84 +1256,103 @@ const Report2 = () => {
 
         {/* SYSTEM CARDS */}
         <div className="space-y-3">
-          {systems.map((system, idx) => (
-            <motion.div
-              key={system.name}
-              initial={{ opacity: 0, y: 35 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.12, duration: 0.7 }}
-              className={`bg-white rounded-2xl p-4 flex flex-col md:flex-row items-center relative transition-all duration-300 ${
-                system.hasStatus
-                  ? "shadow-[0_10px_40px_-12px_rgba(0,0,0,0.08)]"
-                  : "shadow-sm opacity-75 scale-[0.985]"
-              } ${system.isStrongest ? "ring-1 ring-[#F28C38]/20" : ""}`}
-            >
-              {system.hasStatus && (
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-2.5"
-                  style={{ backgroundColor: system.accent, opacity: system.isStrongest ? 0.92 : 0.58 }}
-                />
-              )}
+          {systems.map((system, idx) => {
+            const systemMetricMap = {
+              "BMI": "bmi",
+              "Body Fat": "bodyFat",
+              "Muscle Mass": "muscleMass",
+              "Bone Mass": "boneMass",
+              "Water Balance": "hydration",
+            };
+            const metricKey = systemMetricMap[system.name] || 'bmi';
 
-              <div className="w-full md:w-[22%] flex items-center gap-4 md:gap-8 mb-2 md:mb-0">
-                <div
-                  className={`size-16 md:size-20 rounded-2xl flex items-center justify-center text-3xl md:text-5xl transition-all ${
-                    system.isStrongest
-                      ? "bg-[#F28C38]/10 text-[#F28C38]"
-                      : system.hasStatus
-                      ? "bg-gray-50 text-gray-500"
-                      : "bg-gray-100/50 text-gray-300"
-                  }`}
-                >
-                  {system.icon}
-                </div>
-
-                <div>
-                  {system.isStrongest && system.hasStatus && (
-                    <div className="bg-[#F28C38]/90 text-white text-xs font-bold px-3 py-1 rounded-full tracking-wider uppercase mb-2 inline-block">
-                      Strongest
-                    </div>
-                  )}
-                  <h3 className="text-lg md:text-2xl font-bold text-gray-900">{system.name}</h3>
-                </div>
-              </div>
-
-              <div className="w-full md:w-[56%] px-2 md:px-14">
-                <p
-                  className={`text-base md:text-lg font-medium leading-relaxed ${
-                    system.hasStatus ? "text-gray-800" : "text-gray-400 italic"
-                  }`}
-                >
-                  {system.description}
-                </p>
-              </div>
-
-              <div className="w-full md:w-[22%] flex flex-col items-end gap-2.5 mt-2 md:mt-0">
-                {system.category ? (
-                  <>
-                    <div
-                      className={`px-6 py-2 rounded-full font-semibold text-xs tracking-wider uppercase ${
-                        system.category === "EXCELLENT"
-                          ? "bg-[#F28C38] text-white"
-                          : system.category?.includes("CONFIDENT")
-                          ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                          : system.category?.includes("CONFIRMED")
-                          ? "bg-green-50 text-green-700 border border-green-200"
-                          : system.category === "STABLE" || system.category === "IMPROVING"
-                          ? "bg-blue-50 text-blue-700 border border-blue-200"
-                          : "bg-amber-50 text-amber-700 border border-amber-200"
-                      }`}
-                    >
-                      {system.category}
-                    </div>
-                    <span className="text-xs text-gray-500 font-medium text-right">{system.secondary}</span>
-                  </>
-                ) : (
-                  <span className="text-xs text-gray-400 italic">{system.secondary}</span>
+            return (
+              <motion.div
+                key={system.name}
+                initial={{ opacity: 0, y: 35 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.12, duration: 0.7 }}
+                onClick={() => handleCardSpeak(metricKey)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak(metricKey); }}
+                className={`bg-white rounded-2xl p-4 flex flex-col md:flex-row items-center relative transition-all duration-300 cursor-pointer hover:shadow-xl hover:scale-[1.01] hover:ring-2 hover:ring-orange-400/40 group ${
+                  system.hasStatus
+                    ? "shadow-[0_10px_40px_-12px_rgba(0,0,0,0.08)]"
+                    : "shadow-sm opacity-75 scale-[0.985]"
+                } ${system.isStrongest ? "ring-1 ring-[#F28C38]/20" : ""}`}
+              >
+                {system.hasStatus && (
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-2.5"
+                    style={{ backgroundColor: system.accent, opacity: system.isStrongest ? 0.92 : 0.58 }}
+                  />
                 )}
-              </div>
-            </motion.div>
-          ))}
+
+                <div className="w-full md:w-[22%] flex items-center gap-4 md:gap-8 mb-2 md:mb-0">
+                  <div
+                    className={`size-16 md:size-20 rounded-2xl flex items-center justify-center text-3xl md:text-5xl transition-all ${
+                      system.isStrongest
+                        ? "bg-[#F28C38]/10 text-[#F28C38]"
+                        : system.hasStatus
+                        ? "bg-gray-50 text-gray-500"
+                        : "bg-gray-100/50 text-gray-300"
+                    }`}
+                  >
+                    {system.icon}
+                  </div>
+
+                  <div>
+                    {system.isStrongest && system.hasStatus && (
+                      <div className="bg-[#F28C38]/90 text-white text-xs font-bold px-3 py-1 rounded-full tracking-wider uppercase mb-2 inline-block">
+                        Strongest
+                      </div>
+                    )}
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-900">{system.name}</h3>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 bg-orange-50/80 px-2 py-0.5 rounded-full border border-orange-200/80 mt-1 inline-flex group-hover:bg-orange-100 transition-colors">
+                      <span>🔊</span>
+                      <span>Tap to listen</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full md:w-[56%] px-2 md:px-14">
+                  <p
+                    className={`text-base md:text-lg font-medium leading-relaxed ${
+                      system.hasStatus ? "text-gray-800" : "text-gray-400 italic"
+                    }`}
+                  >
+                    {system.description}
+                  </p>
+                </div>
+
+                <div className="w-full md:w-[22%] flex flex-col items-end gap-2.5 mt-2 md:mt-0">
+                  {system.category ? (
+                    <>
+                      <div
+                        className={`px-6 py-2 rounded-full font-semibold text-xs tracking-wider uppercase ${
+                          system.category === "EXCELLENT"
+                            ? "bg-[#F28C38] text-white"
+                            : system.category?.includes("CONFIDENT")
+                            ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                            : system.category?.includes("CONFIRMED")
+                            ? "bg-green-50 text-green-700 border border-green-200"
+                            : system.category === "STABLE" || system.category === "IMPROVING"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}
+                      >
+                        {system.category}
+                      </div>
+                      <span className="text-xs text-gray-500 font-medium text-right">{system.secondary}</span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">{system.secondary}</span>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* NEW: BODY CONTROL TARGETS (Scan 2+) */}
@@ -1322,12 +1372,20 @@ const Report2 = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.7 }}
-                  className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-6 border-2 border-purple-200 shadow-lg"
+                  onClick={() => handleCardSpeak('standardWeight')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('standardWeight'); }}
+                  className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-6 border-2 border-purple-200 shadow-lg cursor-pointer hover:shadow-xl hover:scale-[1.01] hover:border-purple-400 transition-all group"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="text-3xl mb-2">⚖️</div>
                       <h3 className="text-xl font-bold text-gray-900">Weight Control</h3>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full border border-purple-300 mt-1 inline-flex group-hover:bg-purple-200 transition-colors">
+                        <span>🔊</span>
+                        <span>Tap to listen</span>
+                      </div>
                     </div>
                     <div className="bg-purple-100 px-3 py-1 rounded-full">
                       <span className="text-xs font-bold text-purple-700">SCAN {scanCount}</span>
@@ -1372,12 +1430,20 @@ const Report2 = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.8 }}
-                  className="bg-gradient-to-br from-red-50 to-white rounded-2xl p-6 border-2 border-red-200 shadow-lg"
+                  onClick={() => handleCardSpeak('fatControl')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('fatControl'); }}
+                  className="bg-gradient-to-br from-red-50 to-white rounded-2xl p-6 border-2 border-red-200 shadow-lg cursor-pointer hover:shadow-xl hover:scale-[1.01] hover:border-red-400 transition-all group"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="text-3xl mb-2">🔥</div>
                       <h3 className="text-xl font-bold text-gray-900">Fat Control</h3>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-100/80 px-2 py-0.5 rounded-full border border-red-300 mt-1 inline-flex group-hover:bg-red-200 transition-colors">
+                        <span>🔊</span>
+                        <span>Tap to listen</span>
+                      </div>
                     </div>
                     <div className="bg-red-100 px-3 py-1 rounded-full">
                       <span className="text-xs font-bold text-red-700">SCAN {scanCount}</span>
@@ -1418,12 +1484,20 @@ const Report2 = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.9 }}
-                  className="bg-gradient-to-br from-green-50 to-white rounded-2xl p-6 border-2 border-green-200 shadow-lg"
+                  onClick={() => handleCardSpeak('muscleControl')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('muscleControl'); }}
+                  className="bg-gradient-to-br from-green-50 to-white rounded-2xl p-6 border-2 border-green-200 shadow-lg cursor-pointer hover:shadow-xl hover:scale-[1.01] hover:border-green-400 transition-all group"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="text-3xl mb-2">💪</div>
                       <h3 className="text-xl font-bold text-gray-900">Muscle Control</h3>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-100/80 px-2 py-0.5 rounded-full border border-green-300 mt-1 inline-flex group-hover:bg-green-200 transition-colors">
+                        <span>🔊</span>
+                        <span>Tap to listen</span>
+                      </div>
                     </div>
                     <div className="bg-green-100 px-3 py-1 rounded-full">
                       <span className="text-xs font-bold text-green-700">SCAN {scanCount}</span>
@@ -1470,12 +1544,20 @@ const Report2 = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 1.0 }}
-                  className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-6 border-2 border-blue-200 shadow-lg"
+                  onClick={() => handleCardSpeak('idealBodyWeight')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('idealBodyWeight'); }}
+                  className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-6 border-2 border-blue-200 shadow-lg cursor-pointer hover:shadow-xl hover:scale-[1.01] hover:border-blue-400 transition-all group"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="text-3xl mb-2">🎯</div>
                       <h3 className="text-xl font-bold text-gray-900">Ideal Weight</h3>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-300 mt-1 inline-flex group-hover:bg-blue-200 transition-colors">
+                        <span>🔊</span>
+                        <span>Tap to listen</span>
+                      </div>
                     </div>
                     <div className="bg-blue-100 px-3 py-1 rounded-full">
                       <span className="text-xs font-bold text-blue-700">SCAN {scanCount}</span>

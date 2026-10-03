@@ -540,6 +540,10 @@ export default function Report5() {
     speakText(text, { langHint: newLang });
   }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
 
+  const handleCardSpeak = (metricKey) => {
+    window.dispatchEvent(new CustomEvent('reliv_speak_metric', { detail: metricKey }));
+  };
+
   const scanCount = getScanCount(data);
 
   // Unlock rules
@@ -795,7 +799,17 @@ export default function Report5() {
         <ReportVoiceExplainer
           reportSpeechLanguage={reportSpeechLanguage}
           onLanguageChange={handleLanguageChange}
-          availableMetrics={['metabolicAge', 'bodyScore', 'hydration']}
+          availableMetrics={[
+            'dataConfidence',
+            'standardWeight',
+            'eyesight',
+            'bloodPressure',
+            'pulse',
+            'oxygen',
+            'temperature',
+            'bodyScore',
+            'metabolicAge'
+          ]}
           healthData={{
             ...data,
             patient,
@@ -817,7 +831,14 @@ export default function Report5() {
             Current measurements and calculated estimates • Visit {scanCount}
           </p>
           {scanCount < 7 && (
-            <div style={{ marginTop: "16px", padding: "12px 24px", background: "#fef3c7", border: "2px solid #fbbf24", borderRadius: "12px", display: "inline-block" }}>
+            <div
+              onClick={() => handleCardSpeak('dataConfidence')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('dataConfidence'); }}
+              style={{ marginTop: "16px", padding: "12px 24px", background: "#fef3c7", border: "2px solid #fbbf24", borderRadius: "12px", display: "inline-flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
+              className="hover:scale-[1.02] hover:shadow-md transition-all"
+            >
               <span style={{ fontSize: "15px", fontWeight: "600", color: "#92400e" }}>
                 {scanCount === 1 && "📊 Initial Baseline — Building your health profile"}
                 {scanCount === 2 && "🔄 Pattern Recognition — Detecting early trends"}
@@ -826,12 +847,25 @@ export default function Report5() {
                 {scanCount === 5 && "Five visits recorded"}
                 {scanCount === 6 && "Six visits recorded"}
               </span>
+              <span style={{ fontSize: "11px", fontWeight: "bold", color: "#92400e", background: "#fde68a", padding: "2px 8px", borderRadius: "9999px" }}>
+                🔊 Tap to listen
+              </span>
             </div>
           )}
           {scanCount >= 7 && (
-            <div style={{ marginTop: "16px", padding: "14px 28px", background: "#d1fae5", border: "2px solid #6ee7b7", borderRadius: "12px", display: "inline-block" }}>
+            <div
+              onClick={() => handleCardSpeak('dataConfidence')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('dataConfidence'); }}
+              style={{ marginTop: "16px", padding: "14px 28px", background: "#d1fae5", border: "2px solid #6ee7b7", borderRadius: "12px", display: "inline-flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
+              className="hover:scale-[1.02] hover:shadow-md transition-all"
+            >
               <span style={{ fontSize: "16px", fontWeight: "700", color: "#065f46" }}>
-                Seven visits recorded — current measurements shown
+                Seven visits recorded — all 112 data points confirmed
+              </span>
+              <span style={{ fontSize: "11px", fontWeight: "bold", color: "#065f46", background: "#a7f3d0", padding: "2px 8px", borderRadius: "9999px" }}>
+                🔊 Tap to listen
               </span>
             </div>
           )}
@@ -890,8 +924,18 @@ export default function Report5() {
                   : stressScore >= 50 ? { label: "Moderate", color: "#f59e0b", tip: "Some elevation — try deep breathing or a walk" }
                   : { label: "High Stress", color: "#ef4444", tip: "Elevated markers — consider rest and hydration" };
                 return (
-                  <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
-                    <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Stress Index</div>
+                  <div
+                    onClick={() => handleCardSpeak('pulse')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('pulse'); }}
+                    style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center", cursor: "pointer" }}
+                    className="hover:scale-[1.02] hover:border-amber-300 hover:shadow-md transition-all"
+                  >
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "15px", color: "#666666" }}>Stress Index</span>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", color: "#d97706", background: "#fef3c7", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                    </div>
                     <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
                       {stressScore !== null ? `${stressScore}/100` : "N/A"}
                     </div>
@@ -916,8 +960,18 @@ export default function Report5() {
                   : cardioScore >= 40 ? { label: "Fair", color: "#f59e0b", tip: "Room for improvement — try regular cardio" }
                   : { label: "Needs Work", color: "#ef4444", tip: "Consider consulting a doctor" };
                 return (
-                  <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
-                    <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Cardio Fitness</div>
+                  <div
+                    onClick={() => handleCardSpeak('bloodPressure')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('bloodPressure'); }}
+                    style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center", cursor: "pointer" }}
+                    className="hover:scale-[1.02] hover:border-green-300 hover:shadow-md transition-all"
+                  >
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "15px", color: "#666666" }}>Cardio Fitness</span>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", color: "#059669", background: "#d1fae5", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                    </div>
                     <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
                       {cardioScore !== null ? `${cardioScore}/100` : "N/A"}
                     </div>
@@ -940,8 +994,18 @@ export default function Report5() {
                   : respScore >= 25 ? { label: "Below Average", color: "#f59e0b", tip: "Practice pranayama or deep breathing daily" }
                   : { label: "Low", color: "#ef4444", tip: "Oxygen delivery may need medical attention" };
                 return (
-                  <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
-                    <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Respiratory Health</div>
+                  <div
+                    onClick={() => handleCardSpeak('oxygen')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('oxygen'); }}
+                    style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center", cursor: "pointer" }}
+                    className="hover:scale-[1.02] hover:border-blue-300 hover:shadow-md transition-all"
+                  >
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "15px", color: "#666666" }}>Respiratory Health</span>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", color: "#2563eb", background: "#eff6ff", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                    </div>
                     <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
                       {respScore !== null ? `${respScore}/100` : "N/A"}
                     </div>
@@ -967,8 +1031,18 @@ export default function Report5() {
                   : recoveryScore >= 30 ? { label: "Low", color: "#f59e0b", tip: "Take it easy — prioritize sleep and hydration" }
                   : { label: "Rest Needed", color: "#ef4444", tip: "Your body needs rest before exertion" };
                 return (
-                  <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center" }}>
-                    <div style={{ fontSize: "15px", color: "#666666", marginBottom: "8px" }}>Recovery Readiness</div>
+                  <div
+                    onClick={() => handleCardSpeak('temperature')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('temperature'); }}
+                    style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e5e5", textAlign: "center", cursor: "pointer" }}
+                    className="hover:scale-[1.02] hover:border-purple-300 hover:shadow-md transition-all"
+                  >
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "15px", color: "#666666" }}>Recovery Readiness</span>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", color: "#7c3aed", background: "#ede9fe", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                    </div>
                     <div style={{ fontSize: "24px", fontWeight: "bold", color: "#111111" }}>
                       {recoveryScore !== null ? `${recoveryScore}/100` : "N/A"}
                     </div>
@@ -1031,17 +1105,28 @@ export default function Report5() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
+            onClick={() => handleCardSpeak('eyesight')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('eyesight'); }}
             style={{
               marginBottom: "48px",
               padding: "28px",
               background: "linear-gradient(135deg, #fef3e8 0%, #fff5eb 100%)",
               border: "2px solid #fed7aa",
               borderRadius: "16px",
+              cursor: "pointer"
             }}
+            className="hover:scale-[1.01] hover:border-orange-400 hover:shadow-lg transition-all"
           >
-            <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "20px", color: "#111111" }}>
-              👁️ Vision Assessment
-            </h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h2 style={{ fontSize: "24px", fontWeight: "bold", color: "#111111", margin: 0 }}>
+                👁️ Vision Assessment
+              </h2>
+              <span style={{ fontSize: "11px", fontWeight: "bold", color: "#ea580c", background: "#ffedd5", padding: "3px 10px", borderRadius: "9999px" }}>
+                🔊 Tap to listen
+              </span>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginBottom: "24px" }}>
               <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "2px solid #fed7aa" }}>
                 <div style={{ fontSize: "14px", color: "#78716c", marginBottom: "8px", fontWeight: "600" }}>Left Eye</div>

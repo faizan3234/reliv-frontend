@@ -413,6 +413,10 @@ export default function Report4() {
     speakText(text, { langHint: newLang });
   }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
 
+  const handleCardSpeak = (metricKey) => {
+    window.dispatchEvent(new CustomEvent('reliv_speak_metric', { detail: metricKey }));
+  };
+
   // Chart data preparation
   const deltas = useMemo(() => {
     if (!unlocks.deltaValues || scanCount < 2 || sortedHistory.length < 2) return null;
@@ -591,7 +595,7 @@ export default function Report4() {
           <ReportVoiceExplainer
             reportSpeechLanguage={reportSpeechLanguage}
             onLanguageChange={handleLanguageChange}
-            availableMetrics={['bloodPressure', 'oxygen', 'pulse', 'temperature']}
+            availableMetrics={['bloodPressure', 'pulse', 'oxygen', 'temperature', 'fatMuscleRatio', 'hydration', 'efficiency', 'dataConfidence']}
             healthData={{
               ...data,
               patient,
@@ -618,8 +622,18 @@ export default function Report4() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
                 {vitals.systolic && vitals.diastolic && (
-                  <div style={{ textAlign: "center", padding: "16px", background: "#fef2f2", borderRadius: "12px" }}>
-                    <div style={{ fontSize: "14px", color: "#dc2626", fontWeight: "600", marginBottom: "8px" }}>Blood Pressure</div>
+                  <div
+                    onClick={() => handleCardSpeak('bloodPressure')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('bloodPressure'); }}
+                    style={{ textAlign: "center", padding: "16px", background: "#fef2f2", borderRadius: "12px", cursor: "pointer" }}
+                    className="hover:scale-[1.02] hover:border hover:border-red-300 transition-all"
+                  >
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "14px", color: "#dc2626", fontWeight: "600" }}>Blood Pressure</span>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", color: "#dc2626", background: "#fee2e2", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                    </div>
                     <div style={{ fontSize: "28px", fontWeight: "bold", color: "#111111" }}>
                       {vitals.systolic}/{vitals.diastolic}
                     </div>
@@ -627,8 +641,18 @@ export default function Report4() {
                   </div>
                 )}
                 {vitals.bpm && (
-                  <div style={{ textAlign: "center", padding: "16px", background: "#f0fdf4", borderRadius: "12px" }}>
-                    <div style={{ fontSize: "14px", color: "#10b981", fontWeight: "600", marginBottom: "8px" }}>Pulse</div>
+                  <div
+                    onClick={() => handleCardSpeak('pulse')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('pulse'); }}
+                    style={{ textAlign: "center", padding: "16px", background: "#f0fdf4", borderRadius: "12px", cursor: "pointer" }}
+                    className="hover:scale-[1.02] hover:border hover:border-emerald-300 transition-all"
+                  >
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "14px", color: "#10b981", fontWeight: "600" }}>Pulse</span>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", color: "#059669", background: "#d1fae5", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                    </div>
                     <div style={{ fontSize: "28px", fontWeight: "bold", color: "#111111" }}>
                       {vitals.bpm}
                     </div>
@@ -636,8 +660,18 @@ export default function Report4() {
                   </div>
                 )}
                 {vitals.oxygen && (
-                  <div style={{ textAlign: "center", padding: "16px", background: "#faf5ff", borderRadius: "12px" }}>
-                    <div style={{ fontSize: "14px", color: "#a855f7", fontWeight: "600", marginBottom: "8px" }}>Oxygen</div>
+                  <div
+                    onClick={() => handleCardSpeak('oxygen')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('oxygen'); }}
+                    style={{ textAlign: "center", padding: "16px", background: "#faf5ff", borderRadius: "12px", cursor: "pointer" }}
+                    className="hover:scale-[1.02] hover:border hover:border-purple-300 transition-all"
+                  >
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "14px", color: "#a855f7", fontWeight: "600" }}>Oxygen</span>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", color: "#7c3aed", background: "#ede9fe", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                    </div>
                     <div style={{ fontSize: "28px", fontWeight: "bold", color: "#111111" }}>
                       {vitals.oxygen}%
                     </div>
@@ -645,8 +679,18 @@ export default function Report4() {
                   </div>
                 )}
                 {vitals.temperature && (
-                  <div style={{ textAlign: "center", padding: "16px", background: "#fff7ed", borderRadius: "12px" }}>
-                    <div style={{ fontSize: "14px", color: "#f97316", fontWeight: "600", marginBottom: "8px" }}>Temperature</div>
+                  <div
+                    onClick={() => handleCardSpeak('temperature')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('temperature'); }}
+                    style={{ textAlign: "center", padding: "16px", background: "#fff7ed", borderRadius: "12px", cursor: "pointer" }}
+                    className="hover:scale-[1.02] hover:border hover:border-orange-300 transition-all"
+                  >
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "14px", color: "#f97316", fontWeight: "600" }}>Temperature</span>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", color: "#ea580c", background: "#ffedd5", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                    </div>
                     <div style={{ fontSize: "28px", fontWeight: "bold", color: "#111111" }}>
                       {vitals.temperature}°F
                     </div>
@@ -766,7 +810,7 @@ export default function Report4() {
         <ReportVoiceExplainer
           reportSpeechLanguage={reportSpeechLanguage}
           onLanguageChange={handleLanguageChange}
-          availableMetrics={['bloodPressure', 'oxygen', 'pulse', 'temperature']}
+          availableMetrics={['bloodPressure', 'pulse', 'oxygen', 'temperature', 'fatMuscleRatio', 'hydration', 'efficiency', 'dataConfidence']}
           healthData={{
             ...data,
             patient,
@@ -975,13 +1019,19 @@ export default function Report4() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 }}
+                  onClick={() => handleCardSpeak('fatMuscleRatio')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('fatMuscleRatio'); }}
                   style={{
                     background: "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
                     border: "2px solid #f87171",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(248, 113, 113, 0.15)"
+                    boxShadow: "0 4px 14px rgba(248, 113, 113, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-red-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -998,7 +1048,10 @@ export default function Report4() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#7f1d1d" }}>Fat-Muscle Ratio</div>
-                      <div style={{ fontSize: "12px", color: "#991b1b" }}>Body Composition Balance</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#991b1b" }}>Body Composition Balance</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#991b1b", background: "#fee2e2", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -1052,13 +1105,19 @@ export default function Report4() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.15 }}
+                  onClick={() => handleCardSpeak('hydration')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('hydration'); }}
                   style={{
                     background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
                     border: "2px solid #60a5fa",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(96, 165, 250, 0.15)"
+                    boxShadow: "0 4px 14px rgba(96, 165, 250, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-blue-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -1075,7 +1134,10 @@ export default function Report4() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#1e3a8a" }}>Hydration Efficiency</div>
-                      <div style={{ fontSize: "12px", color: "#1e40af" }}>Water-Muscle Balance</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#1e40af" }}>Water-Muscle Balance</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#1e40af", background: "#dbeafe", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -1127,13 +1189,19 @@ export default function Report4() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
+                  onClick={() => handleCardSpeak('efficiency')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('efficiency'); }}
                   style={{
                     background: "linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)",
                     border: "2px solid #fb923c",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(251, 146, 60, 0.15)"
+                    boxShadow: "0 4px 14px rgba(251, 146, 60, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-orange-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -1150,7 +1218,10 @@ export default function Report4() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#7c2d12" }}>Metabolic Load</div>
-                      <div style={{ fontSize: "12px", color: "#9a3412" }}>Body Stress Level</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#9a3412" }}>Body Stress Level</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#c2410c", background: "#ffedd5", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -1202,13 +1273,19 @@ export default function Report4() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.25 }}
+                  onClick={() => handleCardSpeak('efficiency')}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('efficiency'); }}
                   style={{
                     background: "linear-gradient(135deg, #fef3c7 0%, #fde047 100%)",
                     border: "2px solid #facc15",
                     borderRadius: "14px",
                     padding: "22px",
-                    boxShadow: "0 4px 14px rgba(250, 204, 21, 0.15)"
+                    boxShadow: "0 4px 14px rgba(250, 204, 21, 0.15)",
+                    cursor: "pointer"
                   }}
+                  className="hover:scale-[1.01] hover:border-yellow-400 hover:shadow-lg transition-all"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                     <div style={{
@@ -1225,7 +1302,10 @@ export default function Report4() {
                     </div>
                     <div>
                       <div style={{ fontSize: "16px", fontWeight: "bold", color: "#78350f" }}>Energy Reserve</div>
-                      <div style={{ fontSize: "12px", color: "#854d0e" }}>Fuel Storage Score</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", color: "#854d0e" }}>Fuel Storage Score</span>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", color: "#854d0e", background: "#fef9c3", padding: "1px 6px", borderRadius: "9999px" }}>🔊 Tap</span>
+                      </div>
                     </div>
                   </div>
                   
