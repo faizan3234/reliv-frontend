@@ -1,0 +1,71 @@
+param(
+    [int]$report = 1,
+    [string]$lang = "en",
+    [int]$score = 85
+)
+
+Add-Type -AssemblyName System.Speech
+$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
+
+# Ensure Female voice
+$femaleVoice = $synth.GetInstalledVoices() | Where-Object { 
+    $_.Enabled -and ($_.VoiceInfo.Gender -eq [System.Speech.Synthesis.VoiceGender]::Female -or $_.VoiceInfo.Name -like "*Zira*" -or $_.VoiceInfo.Name -like "*Heera*")
+} | Select-Object -First 1
+
+if ($femaleVoice) {
+    $synth.SelectVoice($femaleVoice.VoiceInfo.Name)
+    Write-Output ">> Speaking with Female Voice: $($femaleVoice.VoiceInfo.Name)"
+} else {
+    Write-Output ">> Selecting default female voice"
+    $synth.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Female)
+}
+
+$synth.Rate = 0
+
+$text = ""
+
+if ($report -eq 1) {
+    if ($lang -eq "en") {
+        $text = "Faizan... Your health score is $score out of 100. That is a very good result. A higher score means more of today's checked values are closer to the preferred ranges. Most of your readings are looking good, with a few areas that can still improve. The reference score for your age group is about 72. Your score is $score, which is above that reference. This score is a summary, not a diagnosis. You do not need to read the screen. I will explain each part of your report to you. Next, let's find out which areas of your body report are strongest and which ones need attention."
+    } elseif ($lang -eq "hi") {
+        $text = "Faizan... Aapka health score 100 mein se $score hai. Bahut achha! Health score 100 mein se hota hai. Ek higher score ka matlab hai ki aaj ki check ki gayi readings preferred range ke zyada paas hain. Aaj ki zyada tar readings achhi hain. Kuch areas mein thoda aur improvement ho sakta hai, lekin overall result strong hai. Healthy habits continue rakhiye. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score $score us reference se upar hai. Aapko screen padhne ki zarurat nahi hai. Main aapki report ka har important part simple language mein samjhaunga. Agla part dekhne ke liye Next dabayein, jisme hum batayenge ki aapke shareer ka kaunsa hissa sabse strong hai aur kisme sudhaar ki zarurat hai."
+    } else {
+        $text = "Faizan... Apnar health score 100-r moddhe $score. Khub bhalo! Health score 100-er moddhe hishab kora hoy. Higher score-er mane ajker check kora beshirbhag reading preferred range-er kachakachi ache. Ajker beshirbhag reading bhalo ache. Kichu jaygay aro ektu improvement hote pare, kintu overall result strong. Healthy habit-gulo continue korun. Apnar boyosher reference score pray 72, ar apnar score $score tar theke beshi. Apnake screen porte hobe na. Ami apnar report-er prottekta important part sohoj bhashay bojhabo. Poroborti ongsho dekhte Next chapun, jekhane amra bolbo apnar shorirer kon jaygata shobcheye shoktishali ar kothay aro unnoti dorkar."
+    }
+} elseif ($report -eq 2) {
+    if ($lang -eq "en") {
+        $text = "Faizan, you do not need to look at the screen. I will explain your body composition results to you in plain words. You weigh 70 kg and stand 175 cm tall. Your standout strength today is body water, at about 58 percent! Your cells are well hydrated, which cushions your joints and keeps your daily energy steady. Your muscle percentage is slightly lower than preferred for your height. Muscles are your body's power engine for walking, climbing stairs, and carrying groceries. Adding simple protein foods to your meals, like moong dal, paneer, sprouts, or boiled eggs, and doing 20 minutes of brisk walking or light exercise will help build strong muscle. Your body fat is slightly above the target range. Reducing fried snacks and sweet chai, and enjoying a 30-minute walk each day will gently bring it back into balance. This is scan 1 of 7, which establishes your starting baseline. Progress comparisons will unlock on your next scan. Tap Continue to go to your vital signs, or tap Back to return to your health score."
+    } elseif ($lang -eq "hi") {
+        $text = "Faizan, aapko screen dekhne ki zarurat nahi hai. Main aapke body composition ka pura hisab aasan bhasha mein bata raha hoon. Aapka vajan 70 kilo aur lambai 175 centimeter hai. Aaj aapka sabse strong area body water hai, lagbhag 58 percent! Shareer mein paani ki matra bahut achhi hai, jisse jodo mein lachak aur dinbhar taazgi bani rehti hai. Aapka muscle level aapki height ke hisaab se thoda kam hai. Muscles hi shareer ka engine hain jo aapko chalne, seedhiyan chadhne aur taaqat dene ka kaam karti hain. Inhe badhane ke liye khane mein moong dal, paneer, ande ya bhuna chana lein, aur roz 20 minute brisk walk ya halki kasrat karein. Aapka body fat thoda sa zyada hai. Tali hui cheezein aur meethi chai thodi kam karein, aur roz aadha ghanta ghoomein, jisse yeh aasaani se balance mein aa jayega. Yeh aapka pehla scan hai, jisse aapka starting baseline tay hua hai. Agle scan par changes saaf dikhenge. Agli screen par blood pressure aur vitals dekhne ke liye Continue dabayein, ya pichli screen ke liye Back dabayein."
+    } else {
+        $text = "Faizan, apnake screen dekhte hobe na. Ami apnar body composition-er puro hishab sohoj bhashay bolchhi. Apnar ojon 70 kg ar uchhota 175 cm. Aj apnar shobcheye shoktishali area body water, pray 58 percent! Shorire joler matra khub bhalo, ja shorirke sotej ar jor-gulo ke chholochhole rakhe. Apnar mangshopeshi ba muscle uchhotar tulonay ektu kom. Khub sohoje eta barhanor jonno rojkar khabare moong dal, chhana, dim ba chhola add korun, ar roj 20 minute ektu haata-haati korun. Apnar body fat ektu beshi ache. Bhaja-porha ar mishti cha ektu komiye roj adha ghonta haatle eta shundor bhabe kome jabe. Eta apnar prothom scan, tai eta baseline. Agami scan-e ager tulona shuru hobe. Poroborti screen-e blood pressure ar vitals dekhte Continue chapun, ba ager screen-e jete Back chapun."
+    }
+} elseif ($report -eq 3) {
+    if ($lang -eq "en") {
+        $text = "Now we examine your core vital signs and inner tissue reserves. You can listen comfortably while I explain each reading. Your blood pressure is 124 over 82. This is in a calm, safe, and healthy range, meaning blood is flowing smoothly without strain on your heart. Your blood oxygen is 98 percent. 95 and above means your lungs are delivering plenty of fresh oxygen to every organ in your body. Your resting pulse is 74 beats per minute, beating with a steady rhythm. Your bone mineral mass is 3.2 kg. Morning sunshine for natural Vitamin D and calcium-rich foods like milk, curd, or sesame keep your bone structure firm and strong. Tap Continue to review your multi-scan progress graph, or tap Back to revisit body composition."
+    } elseif ($lang -eq "hi") {
+        $text = "Ab hum aapke zaroori vitals aur shareer ke andar ke building blocks dekhenge. Aap aaram se sunte rahiye, main sab samjha raha hoon. Aapka blood pressure 124 aur 82 hai. Yeh bilkul normal aur shant range mein hai, jisse dil par koi faltu dabav nahi hai. Khoon mein oxygen 98 percent hai. 95 se upar ka matlab hai ki aapke phepde khub taazi hawa shareer ko bhej rahe hain. Aapke dil ki dhadkan 74 beats per minute hai, jo ek steady rhythm mein chal rahi hai. Haddiyon ka mineral mass 3.2 kilo hai. Subah ki halki dhoop aur doodh-dahi haddiyon ko mazboot banaye rakhte hain. Agli screen par progress graph dekhne ke liye Continue dabayein, ya peechhe jaane ke liye Back dabayein."
+    } else {
+        $text = "Ebar amra apnar core vitals ar shorirer bhetorer building blocks dekhbo. Apni aaramse shunun, ami shob boley dichhi. Apnar blood pressure 124 by 82. Eta ekdom normal ar safe range-e royeche, hridpinde kono baroti chaap nei. Rakte oxygen 98 percent. 95-er beshi thaka mane phushphush bhalo taaja hawa pachhe ar shorir-e oxygen thikmoto pouchhachhe. Naadir spondon 74 beats per minute, ekta shanto chhonnde cholchhe. Haader mineral mass 3.2 kg. Shokaler mishti rode ar dudh-doi haad-ke shokto rakhe. Poroborti screen-e progress graph dekhte Continue chapun, ba ager screen-e jete Back chapun."
+    }
+} elseif ($report -eq 4) {
+    if ($lang -eq "en") {
+        $text = "This is your progress dashboard. If you cannot see the graph on the screen, don't worry, I will tell you exactly what your visit history shows. This is visit 1 of 7. Today establishes your starting baseline. A single scan captures where you are right now. When you return for your second scan, your visit-to-visit progress graph will unlock. Tap Continue to view your full summary, eye check, and take-home QR code, or tap Back to return to vitals."
+    } elseif ($lang -eq "hi") {
+        $text = "Yeh aapka progress dashboard hai. Agar aap screen par graph nahi dekh pa rahe, to chinta mat kijiye, main bolkar batata hoon ki aapki visits kya dikha rahi hain. Yeh visit 1 of 7 hai. Aaj aapka starting baseline bana hai. Ek scan yeh batata hai ki aaj aap kahan hain. Jab aap doosre scan ke liye aayenge, to dono visits ka graph aur comparison unlock ho jayega. Agli screen par poori summary aur take-home QR code dekhne ke liye Continue dabayein, ya peechhe jaane ke liye Back dabayein."
+    } else {
+        $text = "Eta apnar progress dashboard. Graph dekhte na pele-o chinta nei, ami mukhe boley dichhi ager visit-er theke ajki obostha. Eta visit 1 of 7. Ajker scan apnar baseline toiri korlo. Porer bar jokhon ashben, tokhon du-ti visit-er graph ar tulona unlock hoye jabe. Poroborti screen-e puro summary ar QR code dekhte Continue chapun, ba ager screen-e jete Back chapun."
+    }
+} elseif ($report -eq 5) {
+    if ($lang -eq "en") {
+        $text = "Faizan, here is the final summary of your entire checkup. Overall, your vital rhythm is functioning well and your cellular hydration provides solid daily stamina. Your primary opportunity for improvement is building lean muscle and keeping everyday fat in check through balanced home meals and daily brisk walking. Your eyesight screening is also recorded here. If you ever feel eye strain or blurred vision, having your eyes checked by an optometrist is always recommended. To take this complete report home, you or someone with you can point a smartphone camera at the square QR code on the screen. It will open your private digital report on your phone without downloading any app. You can tap Return Home whenever you are ready, or tap Back to review earlier pages. Thank you for checking your health with Reliv today!"
+    } elseif ($lang -eq "hi") {
+        $text = "Faizan, yeh aapke poore checkup ki aakhiri summary hai. Overall, aapke zaroori vitals aur blood pressure shant hain, aur shareer mein paani ki matra aapko achhi taazgi deti hai. Aage badhane ke liye sabse zaroori kaam hai: protein-rich khana jaise dal ya paneer lein taaki muscles banein, aur roz 30 minute paidal chalein. Aapki aankhon ki jaanch bhi yahan darj hai. Agar aankhon par zor ya dhundhla lage, to eye doctor se zaroor check karwayein. Is poori report ko apne phone par le jaane ke liye, aap ya aapka koi saathi phone ka camera screen par bane square QR code par dikhayein. Yeh bina kisi app ke turant aapke phone par khul jayegi. Aap jab chahein Return Home daba sakte hain, ya peechhe dekhne ke liye Back daba sakte hain. Reliv ke saath apni sehat ka dhyan rakhne ke liye shukriya!"
+    } else {
+        $text = "Faizan, eta apnar puro checkup-er final summary. Overall, apnar vitals khub bhalo ar shorire joler poriman energy dhore rakhchhe. Shobcheye dorkari kaj holo mangshopeshi barhano ar fat control-e rakha, jar jonno ghorer bhalo khabar ar roj ektu haata-i jothestho. Chokher parikshar result-o ekhane ache. Chokhe chaap ba jhapsha lagle ekjon eye doctor-er sathe dekha kora bhalo. Ei puro report-ta nijer phone-e niye jete, apnar smartphone-er camera screen-er square QR code-er shamne dhorun. Kono app chhara-i eta phone-e khule jabe. Shob shesh hole Return Home chapun, ba ager pata dekhte Back chapun. Reliv-er sathe nijer shorirer jotno neoyar jonno dhonyobad!"
+    }
+}
+
+Write-Output ">> Speaking Report $report in $lang (Female Voice)..."
+$synth.Speak($text)
+Write-Output ">> Completed playback."

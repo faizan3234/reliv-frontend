@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reliv Health Voice Player — All Reports in Female Voice (EN / HI / BN)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #f97316;
+      --primary-dark: #ea580c;
+      --primary-light: #ffedd5;
+      --accent-teal: #0d9488;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      --card-bg: rgba(30, 41, 59, 0.85);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(249, 115, 22, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.4);
+      color: #fb923c;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #ffffff, #fed7aa, #fb923c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(16px);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Page Tabs */
+    .tab-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary-dark);
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+    }
+
+    /* Score Selector for Report 1 */
+    .score-selector-wrap {
+      display: none;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .score-selector-wrap.visible {
+      display: block;
+    }
+
+    .score-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .score-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94a3b8;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .score-pill:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    .score-pill.active {
+      background: #0ea5e9;
+      border-color: #38bdf8;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    /* Language Switcher */
+    .lang-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .lang-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .lang-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .lang-btn.active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-color: #34d399;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+
+    /* Voice Details & Settings */
+    .voice-meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      font-size: 0.85rem;
+    }
+
+    .voice-detected {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .female-lock-tag {
+      background: rgba(236, 72, 153, 0.18);
+      border: 1px solid rgba(244, 114, 182, 0.4);
+      color: #f472b6;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.04em;
+    }
+
+    /* Speech Script Box */
+    .script-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+      min-height: 140px;
+      max-height: 280px;
+      overflow-y: auto;
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: #f1f5f9;
+      margin-bottom: 20px;
+      position: relative;
+      white-space: pre-wrap;
+    }
+
+    .script-box.hi {
+      font-family: 'Noto Sans Devanagari', 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .script-box.bn {
+      font-family: 'Noto Sans Bengali', 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* Playback Action Controls */
+    .player-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-play {
+      flex: 2;
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      padding: 16px 24px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-play:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(249, 115, 22, 0.5);
+    }
+
+    .btn-play:active {
+      transform: translateY(0);
+    }
+
+    .btn-play.playing {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-secondary {
+      flex: 1;
+      min-width: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #e2e8f0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .speed-control select {
+      background: rgba(15, 23, 42, 0.8);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* Equalizer wave animation when speaking */
+    .wave-container {
+      display: none;
+      align-items: center;
+      gap: 3px;
+      height: 18px;
+    }
+
+    .wave-container.active {
+      display: inline-flex;
+    }
+
+    .wave-bar {
+      width: 3px;
+      height: 100%;
+      background: #ffffff;
+      border-radius: 2px;
+      animation: wave 1s ease-in-out infinite alternate;
+    }
+
+    .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.6s; }
+
+    @keyframes wave {
+      0% { height: 20%; }
+      100% { height: 100%; }
+    }
+
+    /* Links at bottom */
+    .nav-links {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .nav-links a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">🎙️ 100% Offline Layman Voice System</div>
+      <h1>Reliv Voice Audition Player</h1>
+      <p class="subtitle">Experience the exact spoken logic designed for non-technical, elderly, and visually impaired users. Every word is rendered strictly in a gentle, warm <strong>Female Voice</strong>.</p>
+    </header>
+
+    <div class="card">
+      <!-- 1. Report Selector -->
+      <div class="section-title">📄 Step 1: Select Report Screen</div>
+      <div class="tab-group" id="reportTabs">
+        <button class="tab-btn active" data-report="1">Report 1<br><small style="font-weight:400;opacity:0.8">Health Score</small></button>
+        <button class="tab-btn" data-report="2">Report 2<br><small style="font-weight:400;opacity:0.8">Body Composition</small></button>
+        <button class="tab-btn" data-report="3">Report 3<br><small style="font-weight:400;opacity:0.8">Vitals & Tissue</small></button>
+        <button class="tab-btn" data-report="4">Report 4<br><small style="font-weight:400;opacity:0.8">7-Visit Trends</small></button>
+        <button class="tab-btn" data-report="5">Report 5<br><small style="font-weight:400;opacity:0.8">Summary & QR</small></button>
+      </div>
+
+      <!-- Report 1 Score Band Selector -->
+      <div class="score-selector-wrap visible" id="scoreWrap">
+        <div class="section-title" style="font-size:0.75rem;margin-bottom:4px">🎯 Test Score Band (Report 1):</div>
+        <div class="score-pills" id="scorePills">
+          <button class="score-pill" data-score="98">95–100 (98 Outstanding)</button>
+          <button class="score-pill" data-score="92">90–94 (92 Excellent)</button>
+          <button class="score-pill active" data-score="85">80–89 (85 Very Good)</button>
+          <button class="score-pill" data-score="74">70–79 (74 Good)</button>
+          <button class="score-pill" data-score="65">60–69 (65 Fair)</button>
+          <button class="score-pill" data-score="55">50–59 (55 Attention)</button>
+          <button class="score-pill" data-score="45">40–49 (45 Improvement)</button>
+          <button class="score-pill" data-score="35">30–39 (35 Needs Attention)</button>
+          <button class="score-pill" data-score="24">&lt;30 (24 Several Attention)</button>
+        </div>
+      </div>
+
+      <!-- 2. Language Selector -->
+      <div class="section-title">🗣️ Step 2: Select Voice Language</div>
+      <div class="lang-group" id="langGroup">
+        <button class="lang-btn active" data-lang="en">
+          <span>🇬🇧 English</span>
+        </button>
+        <button class="lang-btn" data-lang="hi">
+          <span>🇮🇳 हिंदी (Conversational)</span>
+        </button>
+        <button class="lang-btn" data-lang="bn">
+          <span>🇧🇩 বাংলা (Conversational)</span>
+        </button>
+      </div>
+
+      <!-- Voice Status Bar -->
+      <div class="voice-meta-bar">
+        <div class="voice-detected">
+          <span>Voice Engine:</span>
+          <span id="voiceNameDisplay" style="color:#ffffff">Detecting Female Voice...</span>
+          <span class="female-lock-tag">FEMALE LOCKED</span>
+        </div>
+        <div class="speed-control">
+          <label for="speedSelect">Speed:</label>
+          <select id="speedSelect">
+            <option value="0.85">0.85x (Very Gentle / Elderly)</option>
+            <option value="0.95" selected>0.95x (Natural Conversational)</option>
+            <option value="1.0">1.0x (Standard)</option>
+            <option value="1.1">1.1x (Brisk)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Spoken Script Content -->
+      <div class="section-title">📜 Exactly What The Kiosk Speaks:</div>
+      <div class="script-box" id="scriptBox">Loading speech text...</div>
+
+      <!-- Playback Actions -->
+      <div class="player-controls">
+        <button class="btn-play" id="btnPlay">
+          <span id="playIcon">▶</span>
+          <span id="playText">PLAY FEMALE VOICE</span>
+          <div class="wave-container" id="waveAnimation">
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+        </button>
+
+        <button class="btn-secondary" id="btnStop">
+          <span>⏹ Stop</span>
+        </button>
+
+        <button class="btn-secondary" id="btnReplay">
+          <span>🔄 Restart</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a href="/report-1">← Return to Kiosk Report 1</a>
+      <a href="/report-2">Report 2</a>
+      <a href="/report-3">Report 3</a>
+      <a href="/report-4">Report 4</a>
+      <a href="/report-5">Report 5</a>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentReport = 1;
+    let currentScore = 85;
+    let currentLang = 'en';
+    let isSpeaking = false;
+    let currentUtterance = null;
+    let femaleVoices = [];
+
+    // Patient & Mock Data
+    const userName = 'Faizan';
+    const weight = '70.0';
+    const height = '175';
+    const waterPct = '58.0';
+    const bpSys = '124';
+    const bpDia = '82';
+    const spo2 = '98';
+    const pulse = '74';
+    const bone = '3.2';
+
+    // Exact Spoken Logic Database
+    const SPEECH_DB = {
+      1: {
+        en: (score) => {
+          let s = `${userName}... Your health score is ${score} out of 100. A higher score means more of today’s checked values are closer to the preferred ranges. `;
+          if (score >= 95) {
+            s += `Outstanding! Most of the values checked today are very close to their preferred ranges. You are doing extremely well. The reference score for people around your age is about 72, and your score is much higher. Keep following your healthy routine. `;
+          } else if (score >= 90) {
+            s += `Excellent! Your overall readings look very good today. Most values are within or close to their preferred ranges. There may still be a small area to improve, but overall you are doing very well. The reference score for people around your age is about 72, and your score is ${score}, which is above that reference. `;
+          } else if (score >= 80) {
+            s += `Very good! Most of today’s readings are looking good. A few areas could still improve, but your overall result is strong. Keep up your healthy habits. The reference score for your age group is about 72. Your score is ${score}, which is above that reference. `;
+          } else if (score >= 70) {
+            s += `Good. Your overall result is around a healthy baseline. Several readings are doing well, while a few can improve. The reference score for people around your age is about 72, so your result is close to or slightly above that reference. `;
+          } else if (score >= 60) {
+            s += `Your result is fair — some improvement needed. Some readings are doing well, but a few areas need improvement. This is a good point to focus on regular activity, balanced food, good sleep and consistency. This score is only a summary of today’s measurements. It does not mean that you are unhealthy. `;
+          } else if (score >= 50) {
+            s += `Some of today’s readings need attention. This does not mean that something is definitely wrong. It simply means several values are farther from their preferred ranges. We’ll now explain which readings are good and which ones you may want to improve. `;
+          } else if (score >= 40) {
+            s += `Several areas need improvement. Please don’t worry. One scan cannot diagnose your health. This result simply shows that some of today’s measurements are outside or farther from their preferred ranges. We’ll go through them one by one and explain what you can work on. `;
+          } else if (score >= 30) {
+            s += `Several readings need more attention today. Please stay calm—this score is not a diagnosis. Some values may also change because of hydration, food, recent exercise, stress or measurement conditions. We recommend reviewing the individual readings and repeating unusual measurements when appropriate. `;
+          } else {
+            s += `Several of today’s measurements are far from their preferred ranges and should be looked at carefully. Please don’t panic. This score alone does not diagnose an illness. We recommend repeating any unusual measurements. If important readings remain abnormal, or if you are feeling unwell, please speak with a doctor or healthcare professional. `;
+          }
+          s += `This score is a summary, not a diagnosis. You do not need to read the screen. I’ll explain each part of your report to you. Next, let’s find out which areas of your body report are strongest and which ones need attention.`;
+          return s;
+        },
+        hi: (score) => {
+          let s = `${userName}... Aapka health score 100 mein se ${score} hai. Health score 100 mein se hota hai. Ek higher score ka matlab hai ki aaj ki check ki gayi readings preferred range ke zyada paas hain. `;
+          if (score >= 95) {
+            s += `Bahut hi badhiya! Outstanding! Aaj check ki gayi zyada tar readings preferred range ke bahut paas hain. Aap bahut achha kar rahe hain. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score usse kaafi upar hai. Apni healthy routine aise hi continue rakhiye. `;
+          } else if (score >= 90) {
+            s += `Excellent! Aaj aapki overall readings bahut achhi hain. Zyada tar values preferred range mein ya uske paas hain. Ek-do cheezein aur improve ho sakti hain, lekin overall aap bahut achha kar rahe hain. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score ${score} usse upar hai. `;
+          } else if (score >= 80) {
+            s += `Bahut achha! Very good! Aaj ki zyada tar readings achhi hain. Kuch areas mein thoda aur improvement ho sakta hai, lekin overall result strong hai. Healthy habits continue rakhiye. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score ${score} us reference se upar hai. `;
+          } else if (score >= 70) {
+            s += `Achha result hai. Good. Aapki overall readings ek theek baseline par hain. Kaafi readings achhi hain aur kuch aur improve ho sakti hain. Aapki age ka reference score lagbhag 72 hai, aur aapka score uske aas-paas ya thoda upar hai. `;
+          } else if (score >= 60) {
+            s += `Result theek hai, lekin improvement ki jagah hai. Kuch readings achhi hain aur kuch areas par thoda dhyan dene ki zarurat hai. Regular activity, balanced khana aur achhi neend par focus rakhiye. Ye sirf aaj ki measurements ka summary score hai. Iska matlab ye nahi hai ki aap unhealthy hain. `;
+          } else if (score >= 50) {
+            s += `Aaj ki kuch readings par dhyan dene ki zarurat hai. Iska matlab ye nahi hai ki kuch zaroor galat hai. Bas kuch values preferred range se thodi door hain. Ab hum simple language mein batayenge ki kaunsi readings achhi hain aur kin cheezon ko improve karna hai. `;
+          } else if (score >= 40) {
+            s += `Kuch areas mein improvement ki zarurat hai. Ghabraiye mat. Ek scan se kisi ki poori health decide nahi hoti. Bas aaj ki kuch measurements preferred range se bahar ya thodi door hain. Ab hum ek-ek karke simple language mein samjhayenge ki kis cheez par kaam karna hai. `;
+          } else if (score >= 30) {
+            s += `Aaj kai readings ko thoda zyada attention dene ki zarurat hai. Ghabraiye mat—ye score diagnosis nahi hai. Paani kam peena, khana, recent exercise, stress ya measurement ke tareeke se bhi readings change ho sakti hain. Unusual readings ko dobara check karna better rahega. `;
+          } else {
+            s += `Aaj ki kai measurements preferred range se kaafi door hain, isliye unhe dhyan se dobara dekhna chahiye. Ghabraiye mat. Sirf is score se kisi bimari ka diagnosis nahi hota. Unusual readings ko dobara check karein. Agar important readings baar-baar abnormal aayein, ya aapki tabiyat theek na lage, to doctor ya healthcare professional se baat karein. `;
+          }
+          s += `Aapko screen padhne ki zarurat nahi hai. Main aapki report ka har important part simple language mein samjhaunga. Agla part dekhne ke liye Next dabayein, jisme hum batayenge ki aapke shareer ka kaunsa hissa sabse strong hai aur kisme sudhaar ki zarurat hai.`;
+          return s;
+        },
+        bn: (score) => {
+          let s = `${userName}... Apnar health score 100-r moddhe ${score}. Health score 100-er moddhe hishab kora hoy. Higher score-er mane ajker check kora beshirbhag reading preferred range-er kachakachi ache. `;
+          if (score >= 95) {
+            s += `Darun result! Outstanding! Aj check kora beshirbhag reading preferred range-er khub kachakachi ache. Apni khub bhalo korchen. Apnar boyosher manusher reference score pray 72, ar apnar score tar theke onek beshi. Ei healthy routine-ta continue korun. `;
+          } else if (score >= 90) {
+            s += `Excellent! Aj apnar overall reading khub bhalo. Beshirbhag value preferred range-e ba tar kachakachi ache. Ek-dui jaygay aro improvement hote pare, kintu overall apni khub bhalo korchen. Apnar boyosher reference score pray 72, ar apnar score ${score} tar theke beshi. `;
+          } else if (score >= 80) {
+            s += `Khub bhalo! Very good! Ajker beshirbhag reading bhalo ache. Kichu jaygay aro ektu improvement hote pare, kintu overall result strong. Healthy habit-gulo continue korun. Apnar boyosher reference score pray 72, ar apnar score ${score} tar theke beshi. `;
+          } else if (score >= 70) {
+            s += `Bhalo result. Good. Overall reading ekta bhalo baseline-e ache. Onnek reading bhalo, ar kichu aro improve kora jay. Apnar boyosher reference score pray 72, ar apnar score tar kachakachi ba ektu beshi. `;
+          } else if (score >= 60) {
+            s += `Result motamuti bhalo, kintu improvement-er jayga ache. Kichu reading bhalo, ar kichu jaygay ektu beshi kheyal rakha dorkar. Regular activity, balanced khabar ar bhalo ghum-er upor focus korun. Eta sudhu ajker measurement-er summary score. Er mane ei noy je apni unhealthy. `;
+          } else if (score >= 50) {
+            s += `Ajker kichu reading-e attention dorkar. Er mane ei noy je nishchit bhabe kono problem ache. Sudhu kichu value preferred range theke ektu dure ache. Ebar amra sohoj bhashay bolbo kon reading bhalo ar kon jaygay improvement kora jay. `;
+          } else if (score >= 40) {
+            s += `Kichu jaygay improvement dorkar. Bhoy paben na. Ekta scan diye puro health decide kora jay na. Ajker kichu measurement preferred range-er baire ba ektu dure ache. Ebar amra ek-ek kore sohoj bhashay bojhabo kon jaygay kaj kora jay. `;
+          } else if (score >= 30) {
+            s += `Aj besh kichu reading-e aro attention dorkar. Bhoy paben na—ei score kono diagnosis noy. Kom jol khawa, khabar, recent exercise, stress ba measurement-er condition-er jonno-o reading change hote pare. Unusual reading abar check kora bhalo. `;
+          } else {
+            s += `Ajker besh kichu measurement preferred range theke onekta dure ache, tai segulo bhalo kore abar dekha dorkar. Bhoy paben na. Sudhu ei score diye kono rog diagnose kora jay na. Unusual reading abar check korun. Important reading bar-bar abnormal thakle, ba shorir kharap lagle, doctor ba healthcare professional-er sathe kotha bolun. `;
+          }
+          s += `Apnake screen porte hobe na. Ami apnar report-er prottekta important part sohoj bhashay bojhabo. Poroborti ongsho dekhte Next chapun, jekhane amra bolbo apnar shorirer kon jaygata shobcheye shoktishali ar kothay aro unnoti dorkar.`;
+          return s;
+        }
+      },
+      2: {
+        en: () => `${userName}, you do not need to look at the screen. I will explain your body composition results to you in plain words. You weigh ${weight} kg and stand ${height} cm tall. Your standout strength today is body water, at about ${waterPct} percent! Your cells are well hydrated, which cushions your joints and keeps your daily energy steady. Your muscle percentage is slightly lower than preferred for your height. Muscles are your body's power engine for walking, climbing stairs, and carrying groceries. Adding simple protein foods to your meals—like moong dal, paneer, sprouts, or boiled eggs—and doing 20 minutes of brisk walking or light exercise will help build strong muscle. Your body fat is slightly above the target range. Reducing fried snacks and sweet chai, and enjoying a 30-minute walk each day will gently bring it back into balance. This is scan 1 of 7, which establishes your starting baseline. Progress comparisons will unlock on your next scan. Tap Continue to go to your vital signs, or tap Back to return to your health score.`,
+        hi: () => `${userName}, aapko screen dekhne ki zarurat nahi hai. Main aapke body composition ka pura hisab aasan bhasha mein bata raha hoon. Aapka vajan ${weight} kilo aur lambai ${height} centimeter hai. Aaj aapka sabse strong area body water hai, lagbhag ${waterPct} percent! Shareer mein paani ki matra bahut achhi hai, jisse jodo mein lachak aur dinbhar taazgi bani rehti hai. Aapka muscle level aapki height ke hisaab se thoda kam hai. Muscles hi shareer ka engine hain jo aapko chalne, seedhiyan chadhne aur taaqat dene ka kaam karti hain. Inhe badhane ke liye khane mein moong dal, paneer, ande ya bhuna chana lein, aur roz 20 minute brisk walk ya halki kasrat karein. Aapka body fat thoda sa zyada hai. Tali hui cheezein aur meethi chai thodi kam karein, aur roz aadha ghanta ghoomein, jisse yeh aasaani se balance mein aa jayega. Yeh aapka pehla scan hai, jisse aapka starting baseline tay hua hai. Agle scan par changes saaf dikhenge. Agli screen par blood pressure aur vitals dekhne ke liye Continue dabayein, ya pichli screen ke liye Back dabayein.`,
+        bn: () => `${userName}, apnake screen dekhte hobe na. Ami apnar body composition-er puro hishab sohoj bhashay bolchhi. Apnar ojon ${weight} kg ar uchhota ${height} cm. Aj apnar shobcheye shoktishali area body water, pray ${waterPct} percent! Shorire joler matra khub bhalo, ja shorirke sotej ar jor-gulo ke chholochhole rakhe. Apnar mangshopeshi ba muscle uchhotar tulonay ektu kom. Khub sohoje eta barhanor jonno rojkar khabare moong dal, chhana, dim ba chhola add korun, ar roj 20 minute ektu haata-haati korun. Apnar body fat ektu beshi ache. Bhaja-porha ar mishti cha ektu komiye roj adha ghonta haatle eta shundor bhabe kome jabe. Eta apnar prothom scan, tai eta baseline. Agami scan-e ager tulona shuru hobe. Poroborti screen-e blood pressure ar vitals dekhte Continue chapun, ba ager screen-e jete Back chapun.`
+      },
+      3: {
+        en: () => `Now we examine your core vital signs and inner tissue reserves. You can listen comfortably while I explain each reading. Your blood pressure is ${bpSys} over ${bpDia} mmHg. This is in a calm, safe, and healthy range, meaning blood is flowing smoothly without strain on your heart. Your blood oxygen is ${spo2} percent. 95 and above means your lungs are delivering plenty of fresh oxygen to every organ in your body. Your resting pulse is ${pulse} beats per minute, beating with a steady rhythm. Your bone mineral mass is ${bone} kg. Morning sunshine for natural Vitamin D and calcium-rich foods like milk, curd, or sesame keep your bone structure firm and strong. Tap Continue to review your multi-scan progress graph, or tap Back to revisit body composition.`,
+        hi: () => `Ab hum aapke zaroori vitals aur shareer ke andar ke building blocks dekhenge. Aap aaram se sunte rahiye, main sab samjha raha hoon. Aapka blood pressure ${bpSys} aur ${bpDia} hai. Yeh bilkul normal aur shant range mein hai, jisse dil par koi faltu dabav nahi hai. Khoon mein oxygen ${spo2} percent hai. 95 se upar ka matlab hai ki aapke phepde khub taazi hawa shareer ko bhej rahe hain. Aapke dil ki dhadkan ${pulse} beats per minute hai, jo ek steady rhythm mein chal rahi hai. Haddiyon ka mineral mass ${bone} kilo hai. Subah ki halki dhoop aur doodh-dahi haddiyon ko mazboot banaye rakhte hain. Agli screen par progress graph dekhne ke liye Continue dabayein, ya peechhe jaane ke liye Back dabayein.`,
+        bn: () => `Ebar amra apnar core vitals ar shorirer bhetorer building blocks dekhbo. Apni aaramse shunun, ami shob boley dichhi. Apnar blood pressure ${bpSys} by ${bpDia}. Eta ekdom normal ar safe range-e royeche, hridpinde kono baroti chaap nei. Rakte oxygen ${spo2} percent. 95-er beshi thaka mane phushphush bhalo taaja hawa pachhe ar shorir-e oxygen thikmoto pouchhachhe. Naadir spondon ${pulse} beats per minute, ekta shanto chhonnde cholchhe. Haader mineral mass ${bone} kg. Shokaler mishti rode ar dudh-doi haad-ke shokto rakhe. Poroborti screen-e progress graph dekhte Continue chapun, ba ager screen-e jete Back chapun.`
+      },
+      4: {
+        en: () => `This is your progress dashboard. If you cannot see the graph on the screen, don't worry—I will tell you exactly what your visit history shows. This is visit 1 of 7. Today establishes your starting baseline. A single scan captures where you are right now. When you return for your second scan, your visit-to-visit progress graph will unlock. Tap Continue to view your full summary, eye check, and take-home QR code, or tap Back to return to vitals.`,
+        hi: () => `Yeh aapka progress dashboard hai. Agar aap screen par graph nahi dekh pa rahe, to chinta mat kijiye—main bolkar batata hoon ki aapki visits kya dikha rahi hain. Yeh visit 1 of 7 hai. Aaj aapka starting baseline bana hai. Ek scan yeh batata hai ki aaj aap kahan hain. Jab aap doosre scan ke liye aayenge, to dono visits ka graph aur comparison unlock ho jayega. Agli screen par poori summary aur take-home QR code dekhne ke liye Continue dabayein, ya peechhe jaane ke liye Back dabayein.`,
+        bn: () => `Eta apnar progress dashboard. Graph dekhte na pele-o chinta nei—ami mukhe boley dichhi ager visit-er theke ajki obostha. Eta visit 1 of 7. Ajker scan apnar baseline toiri korlo. Porer bar jokhon ashben, tokhon du-ti visit-er graph ar tulona unlock hoye jabe. Poroborti screen-e puro summary ar QR code dekhte Continue chapun, ba ager screen-e jete Back chapun.`
+      },
+      5: {
+        en: () => `${userName}, here is the final summary of your entire checkup. Overall, your vital rhythm is functioning well and your cellular hydration provides solid daily stamina. Your primary opportunity for improvement is building lean muscle and keeping everyday fat in check through balanced home meals and daily brisk walking. Your eyesight screening is also recorded here. If you ever feel eye strain or blurred vision, having your eyes checked by an optometrist is always recommended. To take this complete report home, you or someone with you can point a smartphone camera at the square QR code on the screen. It will open your private digital report on your phone without downloading any app. You can tap Return Home whenever you are ready, or tap Back to review earlier pages. Thank you for checking your health with Reliv today!`,
+        hi: () => `${userName}, yeh aapke poore checkup ki aakhiri summary hai. Overall, aapke zaroori vitals aur blood pressure shant hain, aur shareer mein paani ki matra aapko achhi taazgi deti hai. Aage badhane ke liye sabse zaroori kaam hai: protein-rich khana jaise dal ya paneer lein taaki muscles banein, aur roz 30 minute paidal chalein. Aapki aankhon ki jaanch bhi yahan darj hai. Agar aankhon par zor ya dhundhla lage, to eye doctor se zaroor check karwayein. Is poori report ko apne phone par le jaane ke liye, aap ya aapka koi saathi phone ka camera screen par bane square QR code par dikhayein. Yeh bina kisi app ke turant aapke phone par khul jayegi. Aap jab chahein Return Home daba sakte hain, ya peechhe dekhne ke liye Back daba sakte hain. Reliv ke saath apni sehat ka dhyan rakhne ke liye shukriya!`,
+        bn: () => `${userName}, eta apnar puro checkup-er final summary. Overall, apnar vitals khub bhalo ar shorire joler poriman energy dhore rakhchhe. Shobcheye dorkari kaj holo mangshopeshi barhano ar fat control-e rakha, jar jonno ghorer bhalo khabar ar roj ektu haata-i jothestho. Chokher parikshar result-o ekhane ache. Chokhe chaap ba jhapsha lagle ekjon eye doctor-er sathe dekha kora bhalo. Ei puro report-ta nijer phone-e niye jete, apnar smartphone-er camera screen-er square QR code-er shamne dhorun. Kono app chhara-i eta phone-e khule jabe. Shob shesh hole Return Home chapun, ba ager pata dekhte Back chapun. Reliv-er sathe nijer shorirer jotno neoyar jonno dhonyobad!`
+      }
+    };
+
+    function updateScriptDisplay() {
+      const fn = SPEECH_DB[currentReport][currentLang];
+      const text = currentReport === 1 ? fn(currentScore) : fn();
+      const box = document.getElementById('scriptBox');
+      box.textContent = text;
+      box.className = 'script-box ' + currentLang;
+      return text;
+    }
+
+    // Voice Detection - Strictly Female Filter
+    function getBestFemaleVoice(lang) {
+      if (!window.speechSynthesis) return null;
+      const allVoices = window.speechSynthesis.getVoices();
+      if (!allVoices.length) return null;
+
+      const targetLang = lang;
+      const targetVoices = allVoices.filter(v =>
+        v.lang.toLowerCase().startsWith(targetLang) ||
+        v.lang.toLowerCase().replace('_', '-').startsWith(targetLang)
+      );
+
+      const femalePattern = /\b(female|woman|girl|zira|heera|kalpana|swara|neerja|samantha|aditi|priya|maya|shreya|tanishaa|jenny|susan|hazel|aria|sonia|raveena|veena|ananya|pooja|bangla|bengali)\b/i;
+      const malePattern = /\b(male|man|boy|david|george|mark|ravi|prabhat|madhav|hemant|james)\b/i;
+
+      // 1. Target language female voice
+      let match = targetVoices.find(v => femalePattern.test(v.name) || femalePattern.test(v.voiceURI));
+      // 2. Target language non-male voice
+      if (!match) match = targetVoices.find(v => !malePattern.test(v.name) && !malePattern.test(v.voiceURI));
+      // 3. Any female voice from system
+      if (!match) match = allVoices.find(v => femalePattern.test(v.name) || femalePattern.test(v.voiceURI));
+      // 4. Any non-male voice
+      if (!match) match = allVoices.find(v => !malePattern.test(v.name) && !malePattern.test(v.voiceURI));
+      // 5. Fallback
+      if (!match && targetVoices.length) match = targetVoices[0];
+      if (!match && allVoices.length) match = allVoices[0];
+
+      return match;
+    }
+
+    let activeAudio = null;
+
+    function stopSpeaking() {
+      if (activeAudio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+        activeAudio = null;
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      isSpeaking = false;
+      const btn = document.getElementById('btnPlay');
+      btn.className = 'btn-play';
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playText').textContent = 'PLAY NEURAL VOICE';
+      document.getElementById('waveAnimation').className = 'wave-container';
+    }
+
+    function refreshVoiceDisplay() {
+      const display = document.getElementById('voiceNameDisplay');
+      if (currentLang === 'en') {
+        display.textContent = 'Neerja (en-IN) — Splash Screen Voice';
+      } else if (currentLang === 'hi') {
+        display.textContent = 'Swara (hi-IN) — Splash Screen Voice';
+      } else {
+        display.textContent = 'Tanishaa (bn-IN) — Splash Screen Voice';
+      }
+    }
+
+    function speakCurrentText() {
+      stopSpeaking();
+
+      const text = updateScriptDisplay();
+      let audioFile = null;
+      if (currentReport === 1 && currentScore === 85) {
+        audioFile = `/assets/audio/reports/report1_${currentLang}_85.mp3`;
+      } else if (currentReport >= 2 && currentReport <= 5) {
+        audioFile = `/assets/audio/reports/report${currentReport}_${currentLang}.mp3`;
+      }
+
+      if (audioFile) {
+        const audio = new Audio(audioFile);
+        activeAudio = audio;
+        audio.playbackRate = parseFloat(document.getElementById('speedSelect').value) || 1.0;
+        
+        isSpeaking = true;
+        const btn = document.getElementById('btnPlay');
+        btn.className = 'btn-play playing';
+        document.getElementById('playIcon').textContent = '⏸';
+        document.getElementById('playText').textContent = 'SPEAKING (SPLASH VOICE)...';
+        document.getElementById('waveAnimation').className = 'wave-container active';
+
+        audio.onended = () => {
+          stopSpeaking();
+        };
+
+        audio.onerror = () => {
+          console.warn('Audio file failed, falling back to synthesis');
+          playViaSynthesis(text);
+        };
+
+        audio.play().catch(e => {
+          console.warn('Audio play prevented, fallback to synthesis:', e);
+          playViaSynthesis(text);
+        });
+        return;
+      }
+
+      playViaSynthesis(text);
+    }
+
+    function playViaSynthesis(text) {
+      if (!window.speechSynthesis) {
+        alert('Web Speech API is not supported in this browser.');
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      currentUtterance = utterance;
+
+      const voice = getBestFemaleVoice(currentLang);
+      if (voice) {
+        utterance.voice = voice;
+        utterance.lang = voice.lang;
+      } else {
+        utterance.lang = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' }[currentLang] || 'en-IN';
+      }
+
+      utterance.pitch = 1.05;
+      utterance.rate = parseFloat(document.getElementById('speedSelect').value) || 0.95;
+
+      utterance.onstart = () => {
+        isSpeaking = true;
+        const btn = document.getElementById('btnPlay');
+        btn.className = 'btn-play playing';
+        document.getElementById('playIcon').textContent = '⏸';
+        document.getElementById('playText').textContent = 'SPEAKING (FEMALE)...';
+        document.getElementById('waveAnimation').className = 'wave-container active';
+      };
+
+      utterance.onend = () => {
+        stopSpeaking();
+      };
+
+      utterance.onerror = () => {
+        stopSpeaking();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // Event Listeners
+    document.getElementById('btnPlay').addEventListener('click', () => {
+      if (isSpeaking) {
+        stopSpeaking();
+      } else {
+        speakCurrentText();
+      }
+    });
+
+    document.getElementById('btnStop').addEventListener('click', stopSpeaking);
+    document.getElementById('btnReplay').addEventListener('click', () => {
+      stopSpeaking();
+      speakCurrentText();
+    });
+
+    // Report Tab Clicks
+    document.querySelectorAll('#reportTabs .tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('#reportTabs .tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentReport = parseInt(btn.dataset.report, 10);
+        document.getElementById('scoreWrap').className = currentReport === 1 ? 'score-selector-wrap visible' : 'score-selector-wrap';
+        stopSpeaking();
+        updateScriptDisplay();
+      });
+    });
+
+    // Score Pill Clicks
+    document.querySelectorAll('#scorePills .score-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#scorePills .score-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentScore = parseInt(pill.dataset.score, 10);
+        stopSpeaking();
+        updateScriptDisplay();
+      });
+    });
+
+    // Language Button Clicks
+    document.querySelectorAll('#langGroup .lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#langGroup .lang-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLang = btn.dataset.lang;
+        stopSpeaking();
+        refreshVoiceDisplay();
+        updateScriptDisplay();
+      });
+    });
+
+    // Voices loaded event
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        refreshVoiceDisplay();
+      };
+    }
+
+    // Initialize
+    updateScriptDisplay();
+    setTimeout(refreshVoiceDisplay, 200);
+  </script>
+</body>
+</html>

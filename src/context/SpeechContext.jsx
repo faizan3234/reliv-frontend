@@ -310,22 +310,46 @@ export function SpeechProvider({ children }) {
         };
         const playSynthesis = () => {
           if (finished || requestId !== playbackRequestRef.current) return;
-          const localVoices = window.speechSynthesis?.getVoices().filter(voice =>
-            voice.localService && voice.lang.toLowerCase().startsWith(targetLang)) || [];
-          if (!localVoices.length || !window.SpeechSynthesisUtterance) {
+          const allVoices = window.speechSynthesis?.getVoices() || [];
+          if (!allVoices.length || !window.SpeechSynthesisUtterance) {
             void playLocalAudio();
             return;
           }
           utterance = new window.SpeechSynthesisUtterance(safeText);
-          utterance.lang = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' }[targetLang];
+          utterance.lang = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' }[targetLang] || 'en-IN';
           utterance.volume = volumeRef.current;
           const settings = { ...voiceSettingsRef.current, voicePreference: 'female', ...callbacks.voiceSettings };
           utterance.rate = settings.rate;
           utterance.pitch = settings.pitch;
-          const preference = settings.voicePreference === 'male' ? /\b(male|david|james)\b/i
-            : settings.voicePreference === 'female' ? /\b(female|samantha|zira|neerja|swara|tanishaa|jenny|susan|hazel)\b/i : null;
-          const localVoice = localVoices.find((voice) => preference?.test(voice.name)) || localVoices[0];
-          if (localVoice) utterance.voice = localVoice;
+
+          const targetVoices = allVoices.filter(voice =>
+            voice.lang.toLowerCase().startsWith(targetLang) ||
+            voice.lang.toLowerCase().replace('_', '-').startsWith(targetLang)
+          );
+          const voicePool = targetVoices.length > 0 ? targetVoices : allVoices;
+
+          const femalePattern = /\b(female|woman|girl|zira|heera|kalpana|swara|neerja|samantha|aditi|priya|maya|shreya|tanishaa|jenny|susan|hazel|aria|sonia|raveena|veena|ananya|pooja|bangla|bengali)\b/i;
+          const malePattern = /\b(male|man|boy|david|george|mark|ravi|prabhat|madhav|hemant|james)\b/i;
+
+          let chosenVoice = null;
+          // 1. Female voice matching target language
+          chosenVoice = targetVoices.find(v => femalePattern.test(v.name) || femalePattern.test(v.voiceURI));
+          // 2. Non-male voice matching target language
+          if (!chosenVoice) {
+            chosenVoice = targetVoices.find(v => !malePattern.test(v.name) && !malePattern.test(v.voiceURI));
+          }
+          // 3. Female voice from any language pool
+          if (!chosenVoice) {
+            chosenVoice = allVoices.find(v => femalePattern.test(v.name) || femalePattern.test(v.voiceURI));
+          }
+          // 4. Any non-male voice
+          if (!chosenVoice) {
+            chosenVoice = allVoices.find(v => !malePattern.test(v.name) && !malePattern.test(v.voiceURI));
+          }
+          if (!chosenVoice && voicePool.length > 0) {
+            chosenVoice = voicePool[0];
+          }
+          if (chosenVoice) utterance.voice = chosenVoice;
           utterance.onstart = () => clearTimeout(voiceStartTimer);
           utterance.onend = () => finish();
           utterance.onerror = (event) => {
