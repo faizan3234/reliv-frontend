@@ -119,3 +119,37 @@
 .report-refined [title="Click to enlarge QR code"] { max-width:100%; }
 .report-refined [title="Click to enlarge QR code"] svg { width:min(300px,100%); height:auto; }
 @media(max-width:700px) { .report-score-layout { grid-template-columns:1fr; gap:24px; } .report-score-ring { margin:auto; } }
+
+/* Bounded, touch-friendly comparison view: no animated or moving data points. */
+.report-trend-lock { text-align:center; padding:40px 24px; background:rgba(255,255,255,.92); }
+.report-trend-lock > span { font-size:30px; }
+.report-trend-lock h3 { margin:12px 0; font-size:24px; }
+.report-trend-lock p { max-width:620px; margin:12px auto; color:#62626a; }
+.report-chart-modes,.report-chart-pager { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+.report-chart-modes button,.report-chart-pager button { min-height:48px; padding:10px 18px; border:1px solid #d8d8de; border-radius:14px; background:white; }
+.report-chart-modes button[aria-pressed=true] { background:#fff1e8; color:#9a3412; border-color:#fb923c; }
+.report-chart-pager { justify-content:space-between; margin-top:20px; }
+.report-chart-pager button:disabled { opacity:.4; cursor:default; }
+.report-chart-legend { display:flex; flex-wrap:wrap; gap:12px 24px; margin:20px 0; font-size:15px; }
+.report-chart-legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:7px; }
+.report-combined-chart svg { width:100%; height:auto; max-height:390px; overflow:visible; touch-action:pan-y; }
+.report-selected-scan { background:#f7f7f9; border-radius:20px; padding:20px; }
+.report-selected-scan h3 { font-size:20px; margin-bottom:16px; }
+.report-selected-scan h3 small { font-size:14px; color:#6e6e76; margin-left:12px; }
+.report-selected-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.report-selected-grid > div { padding:14px; border-radius:14px; background:white; border-top:4px solid #d1d5db; overflow-wrap:anywhere; }
+.report-selected-grid > div[data-status=good] { border-color:#16a34a; background:#f0fdf4; }
+.report-selected-grid > div[data-status=caution] { border-color:#d97706; background:#fffbeb; }
+.report-selected-grid > div[data-status=review],.report-selected-grid > div[data-status=urgent] { border-color:#dc2626; background:#fef2f2; }
+.report-selected-grid p { font-size:25px; margin:6px 0; font-weight:650; }
+.report-selected-grid small,.report-delta { display:block; font-size:13px; color:#62626a; margin-top:7px; }
+.report-selected-grid p small { display:inline; }
+.report-journey-progress { padding:18px 22px; border:1px solid #fed7aa; border-radius:20px; background:#fff7ed; }
+.report-journey-steps { display:flex; gap:10px; margin-top:14px; }
+.report-journey-steps span { flex:1; border-radius:8px; background:#ffedd5; color:#9a3412; text-align:center; padding:6px; }
+.report-journey-steps .complete { background:#f97316; color:white; }
+@media(max-width:700px) { .report-selected-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .report-chart-legend { font-size:13px; } }
+@media(prefers-reduced-motion:reduce) { .report-screen * { animation:none !important; transition:none !important; } }
+.report-score-bar { position:relative; height:18px; border-radius:12px; background:#eeeef1; margin:22px 0; }
+.report-score-bar > span { display:block; height:100%; border-radius:12px; background:#f28c38; }
+.report-score-bar > i { position:absolute; top:-4px; width:5px; height:26px; background:#64748b; border:1px solid white; border-radius:4px; transform:translateX(-50%); }

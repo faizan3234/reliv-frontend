@@ -35,20 +35,39 @@ async function run(){
   assert(document.body.textContent.includes('Scan 1'),'first visit is labelled scan one');
   if(p===1)assert(document.body.textContent.includes('These are years, not a score.'),'metabolic age and health score are clearly distinguished');
   if(p===2)assert(document.querySelector('[data-metric=height]').textContent.includes('172.3')&&document.querySelector('[data-metric=oxygen]').textContent.includes('98'),'today page includes actual measured values');
-  if(p===3)assert(document.querySelectorAll('figure circle').length===6,'first scan has one point for each of six coloured measurements');
+  if(p===3)assert(document.body.textContent.includes('Trends appear after your next scan')&&!document.querySelector('figure svg'),'first scan shows a locked trend explanation');
   if(p===5) {
    assert([...document.querySelectorAll('svg title')].some(el=>el.textContent==='Reopen your paid Reliv visit'),'long original payment URL renders a report QR');
    assert(document.body.textContent.includes('Payment already completed'),'report makes clear no second payment is needed');
   }
-  if(p===4)assert(document.querySelectorAll('figure rect').length===6,'first scan has one bar for each of six measurements');
+  if(p===4)assert(document.body.textContent.includes('Trends appear after your next scan'),'first scan bar chart waits for a comparison');
   const before=played.length;await click('Listen to this guide');assert(played.length>=before+2&&played[before].startsWith('/assets/audio/en/'),'recorded page and scan explanation play without speech engine');
   assert(!requests.some(x=>x.url.endsWith('/api/speech/audio')),'all report explanations and values are bundled for offline playback');
  }
  await mount(1);for(let p=2;p<=5;p++){await click('Next page →');assert([...document.querySelectorAll('h1')].at(-1).textContent===reportCopy.en.titles[p-1],`Next opens screen ${p}`);}
  for(const [code,label,listen] of [['hi','हिंदी','यह निर्देश सुनें'],['bn','বাংলা','এই নির্দেশ শুনুন']]){await click(label);await click(listen);assert(played.some(url=>url.startsWith(`/assets/audio/${code}/`)),code+' recorded narration plays');assert([...document.querySelectorAll('h1')].at(-1).textContent===reportCopy[code].titles[4],code+' report labels translated');}
+ paid.healthData.scanCount=2;paid.healthData.history=[{systolic:120,diastolic:77,bpm:72,oxygen:98},{systolic:138,diastolic:77,bpm:72,oxygen:98}];
+ await mount(3);assert(document.querySelectorAll('figure').length===1&&document.querySelectorAll('[data-reading=point]').length===8,'second scan unlocks one four-series chart');
+ assert(!document.querySelector('.report-delta'),'change labels wait until third scan');
+ paid.healthData.vitals.systolic=138;paid.healthData.vitals.diastolic=77;await mount(2);
+ assert(document.querySelector('[data-testid=blood-pressure-summary]').textContent.includes('138 / 77')&&!document.querySelector('[data-testid=blood-pressure-summary]').textContent.includes('Normal'),'138/77 is not given a hardcoded normal badge');
  paid.healthData.scanCount=7;paid.healthData.history=Array.from({length:7},(_,i)=>({systolic:114+i,oxygen:i===3?null:98,createdAt:`2026-10-0${i+1}`}));
  await mount(3);assert(document.querySelectorAll('figure circle').length===13,'overview draws all available readings with a real gap');await click('Oxygen');assert(document.querySelectorAll('figure circle').length===6,'missing reading leaves a gap');
- await mount(4);assert(document.querySelectorAll('figure rect').length===13,'seventh scan has all available comparison bars');
+ await mount(4);assert(document.querySelectorAll('[data-reading=bar]').length===13,'seventh scan has all available comparison bars');
+ assert(document.querySelectorAll('figure').length===1,'one combined chart only');
+ const geometry=[...document.querySelectorAll('[data-reading=bar]')].map(el=>el.getAttribute('y')).join(',');
+ await act(async()=>document.querySelector('figure [aria-label="Scan 2"]').dispatchEvent(new MouseEvent('click',{bubbles:true})));
+ assert(document.querySelector('.report-selected-scan h3').textContent.includes('Scan 2'),'tap pins earlier scan details');
+ assert([...document.querySelectorAll('[data-reading=bar]')].map(el=>el.getAttribute('y')).join(',')===geometry,'selection never moves the plotted readings');
+ assert(document.body.textContent.includes('Seven-scan journey complete'),'seventh scan shows completion, not negative scans left');
+ paid.healthData.visitSummary={scanCount:4};paid.healthData.scanCount=1;
+ for(let page=1;page<=5;page++){await mount(page);assert(document.querySelector('header').textContent.includes('Scan 4'),`authoritative visit four overrides stale snapshot on page ${page}`);assert(document.body.textContent.includes('3 scans left'),'fourth visit has three scans remaining');}
+ delete paid.healthData.visitSummary;
+ paid.healthData.scanCount=105;paid.healthData.history=Array.from({length:100},(_,i)=>({scanNumber:i+6,systolic:120,diastolic:77,bpm:72,oxygen:98}));
+ await mount(4);assert(document.querySelectorAll('[data-reading=bar]').length===28,'long history renders only seven groups of four bars');
+ await click('← Earlier scans');assert(document.querySelector('figure figcaption').textContent.includes('92–98'),'older history retains lifetime scan numbers');
+ await mount(5);assert(document.querySelectorAll('.report-chart-pager').length===1,'large biomarker list has paging controls');
+ assert(document.querySelectorAll('.report-chart-pager')[0].textContent.includes('1–12'),'seventh-stage details render twelve cards at once');
  assert(chartScans({scanCount:105,history:Array(100).fill({oxygen:98})})[0].scan===99,'recent chart keeps lifetime scan numbering');
  assert(requests.some(x=>x.token==='a'.repeat(64)),'private token protects history requests');
  assert(!requests.some(x=>x.url.includes('/reports/history/')),'no public email history lookup');

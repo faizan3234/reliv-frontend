@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import Confetti from 'react-confetti';
 import { useHealth } from '../context/HealthContext';
 import { useSpeech } from '../context/SpeechContext';
 import { useVoicePage } from '../hooks/useVoicePage';
@@ -172,6 +171,7 @@ export default function UnifiedReport() {
     }
   });
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [biomarkerPage, setBiomarkerPage] = useState(0);
 
   const w = reportCopy[language] || reportCopy.en;
   const v = insightCopy[language] || insightCopy.en;
@@ -182,10 +182,17 @@ export default function UnifiedReport() {
   const metrics = reportInsights(data);
   const stage = reportStage(data, language);
   const rows = reportRows(data);
+  const recentRows = rows.slice(-7);
   const advice = summaryAdvice(metrics);
+  const pressureStatus = metrics.find(m => m.key === 'systolic')?.status || 'neutral';
 
   // Advanced 120+ calculated & physiological parameters
   const bio = useMemo(() => compute120Biomarkers(data.vitals, data.patient, count), [data.vitals, data.patient, count]);
+
+  const filteredBiomarkers = bio.activeBiomarkers.filter(b => selectedCategory === 'all' || b.category === selectedCategory);
+  const detailPage = Math.min(biomarkerPage, Math.max(0, Math.ceil(filteredBiomarkers.length / 12) - 1));
+  const heightMetres = Number(data.vitals?.height) / 100;
+  const weightRange = Number(data.patient?.age) >= 20 && heightMetres >= 1 && heightMetres <= 2.3 ? [18.5, 24.9].map(bmi => (bmi * heightMetres ** 2).toFixed(1)) : null;
 
   const visible = page === 1
     ? metrics.filter((m) => !['systolic', 'diastolic', 'oxygen', 'temperature', 'bpm'].includes(m.key))
@@ -290,18 +297,10 @@ export default function UnifiedReport() {
   const proteinPctVal = musclePctVal ? bc.calc_protein_percent(musclePctVal) : 16.2;
   const lbmiVal = weight > 0 && height > 0 ? bc.calc_lbmi(weight, height, age, impedance, sex) : 17.5;
 
-  const showConfetti = typeof window !== 'undefined' && !window.IS_REACT_ACT_ENVIRONMENT && healthScore >= 90;
+
 
   return (
     <main aria-label="Health screening report" className="report-screen report-refined">
-      {showConfetti && (
-        <Confetti
-          width={typeof window !== 'undefined' ? window.innerWidth : 800}
-          height={typeof window !== 'undefined' ? window.innerHeight : 600}
-          recycle={false}
-          numberOfPieces={140}
-        />
-      )}
 
       <div className="report-wrap space-y-6">
 
@@ -338,6 +337,10 @@ export default function UnifiedReport() {
             ))}
           </div>
         </header>
+        <section className="report-journey-progress" aria-label="Scan progress">
+          <strong>{w.scan} {count} · {count >= 7 ? ['Seven-scan journey complete', 'सात स्कैन की यात्रा पूरी', 'সাত স্ক্যানের যাত্রা সম্পূর্ণ'][i] : `${7-count} ${['scans left to complete your seven-scan journey', 'स्कैन बाकी हैं', 'স্ক্যান বাকি'][i]}`}</strong>
+          <div className="report-journey-steps" aria-hidden="true">{Array.from({length:7},(_,n)=><span key={n} className={n<count?'complete':''}>{n<count?'✓':n+1}</span>)}</div>
+        </section>
 
         {/* ── Page Navigation Tabs (Apple Segmented Style) ── */}
         <nav aria-label={w.page} className="report-steps">
@@ -421,6 +424,7 @@ export default function UnifiedReport() {
                   <div><strong>{healthScore}</strong><span>Health score</span><small>out of 100 · estimate</small></div>
                 </div>
                 <div className="report-score-copy"><div className="report-eyebrow">Your current snapshot · Scan {count}</div><h2>{personalizedComment}</h2><p className="report-muted">An estimated summary, not your age or a diagnosis. Your measured readings are on the next page.</p>
+                  <div className="report-score-bar" role="img" aria-label={`Your score ${healthScore}, illustrative reference ${peersAverage}`}><span style={{width:`${Math.min(100,Math.max(0,healthScore))}%`}}/><i style={{left:`${peersAverage}%`}}/></div>
                   <div className="report-score-comparison"><div><span>Your score</span><strong>{healthScore}<small>/100</small></strong></div><div><span>Reference marker</span><strong>{peersAverage}<small>/100</small></strong></div></div>
                   <p className="report-muted">Orange is your score. The grey 72 is an illustrative reference, not a measured average of people your age.</p>
                 </div>
@@ -513,6 +517,12 @@ export default function UnifiedReport() {
                 </div>
               </div>
 
+              <div className="report-note" data-testid="healthy-weight-range">
+                <h3>{['Healthy weight range for your height','आपकी लंबाई के लिए स्वस्थ वजन सीमा','আপনার উচ্চতার জন্য স্বাস্থ্যকর ওজনসীমা'][i]}</h3>
+                <strong className="text-2xl">{weightRange ? `${weightRange[0]}–${weightRange[1]} kg` : w.unavailable}</strong>
+                <p>{['An adult BMI screening guide, not a personal ideal weight or treatment target. Your build and health needs matter.','वयस्क BMI की सामान्य सीमा है, व्यक्तिगत लक्ष्य नहीं। शरीर और स्वास्थ्य की ज़रूरतें भी मायने रखती हैं।','এটি প্রাপ্তবয়স্ক BMI-এর সাধারণ সীমা, ব্যক্তিগত লক্ষ্য নয়। শরীর ও স্বাস্থ্যের প্রয়োজনও গুরুত্বপূর্ণ।'][i]}</p>
+              </div>
+
               {/* Invariant disclaimer texts retained for test compatibility */}
               
               <p className="report-muted">{v.metabolic}</p>
@@ -584,17 +594,17 @@ export default function UnifiedReport() {
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {/* System 1: Blood Pressure Balance */}
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700">❤️ Blood Pressure Balance</span>
-                    <span className="px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                      Normal
+                <div className={`p-4 rounded-2xl border space-y-2 ${tones[pressureStatus]}`} data-testid="blood-pressure-summary">
+                  <div className="flex items-center justify-between gap-2 text-base">
+                    <span className="font-bold">{['Blood pressure','रक्तचाप','রক্তচাপ'][i]}</span>
+                    <span className={`px-3 py-1 rounded-full font-bold border ${badgeStyles[pressureStatus]}`}>
+                      {v[pressureStatus]}
                     </span>
                   </div>
                   <p className="text-2xl font-black text-slate-900 font-mono">
-                    {data.vitals?.systolic || 120} / {data.vitals?.diastolic || 80} <span className="text-xs font-normal text-slate-500">mmHg</span>
+                    {data.vitals?.systolic || '—'} / {data.vitals?.diastolic || '—'} <span className="text-xs font-normal text-slate-500">mmHg</span>
                   </p>
-                  <p className="text-xs text-slate-600">Resting cardiovascular balance across systolic and diastolic cycle</p>
+                  <p className="text-xs text-slate-600">A screening reading, not a diagnosis. If flagged, rest and repeat; discuss repeated high readings with a clinician.</p>
                 </div>
 
                 {/* System 2: Body Fat */}
@@ -804,7 +814,7 @@ export default function UnifiedReport() {
             </div>
 
             {/* The Upgraded Chart Component */}
-            <ReportHistoryChart data={data} field={field} language={language} bars={page === 4} />
+            <ReportHistoryChart key={page} data={data} field={field} language={language} bars={page === 4} />
 
             {/* Page 3: Tissue Composition Assessments from Report3 */}
             {page === 3 && (
@@ -835,7 +845,7 @@ export default function UnifiedReport() {
               <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <table className="w-full text-left text-sm">
                   <caption className="mb-4 text-left font-bold text-base text-slate-900">
-                    {w.points} · {rows.length} {w.scan}
+                    {w.points} · {recentRows.length} {w.scan}
                   </caption>
                   <thead>
                     <tr className="border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -848,7 +858,7 @@ export default function UnifiedReport() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {rows.map((r) => (
+                    {recentRows.map((r) => (
                       <tr key={r.scan} className="hover:bg-slate-50 transition-colors">
                         <th className="p-3 font-bold text-slate-900">
                           {r.scan}
@@ -910,7 +920,7 @@ export default function UnifiedReport() {
                     <button
                       type="button"
                       key={cat}
-                      onClick={() => setSelectedCategory(cat)}
+                      onClick={() => { setSelectedCategory(cat); setBiomarkerPage(0); }}
                       className={`px-3 py-1 rounded-full font-bold capitalize transition-all ${
                         selectedCategory === cat
                           ? 'bg-slate-900 text-white'
@@ -923,9 +933,8 @@ export default function UnifiedReport() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {bio.activeBiomarkers
-                  .filter((b) => selectedCategory === 'all' || b.category === selectedCategory)
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredBiomarkers.slice(detailPage * 12, detailPage * 12 + 12)
                   .map((b) => (
                     <div
                       key={b.id}
@@ -944,6 +953,11 @@ export default function UnifiedReport() {
                       <p className="text-[11px] text-slate-500 ">Ref: {b.normal}</p>
                     </div>
                   ))}
+              </div>
+              <div className="report-chart-pager">
+                <button type="button" disabled={detailPage===0} onClick={()=>setBiomarkerPage(detailPage-1)}>← {w.previous}</button>
+                <span>{Math.min(detailPage*12+1,filteredBiomarkers.length)}–{Math.min((detailPage+1)*12,filteredBiomarkers.length)} / {filteredBiomarkers.length}</span>
+                <button type="button" disabled={(detailPage+1)*12>=filteredBiomarkers.length} onClick={()=>setBiomarkerPage(detailPage+1)}>{['More details','और विवरण','আরও তথ্য'][i]} →</button>
               </div>
             </section>
 

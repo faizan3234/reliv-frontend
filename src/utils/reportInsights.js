@@ -1,5 +1,6 @@
 import { bodyEstimates } from './bodyEstimates.js';
 import { metricCopy } from '../voice/insightCopy.js';
+import { getScanCount } from './reportSnapshot.js';
 export const metricColours={systolic:'#dc2626',diastolic:'#f97316',oxygen:'#2563eb',temperature:'#15803d',bpm:'#9333ea',weight:'#0891b2',bmi:'#c026d3',bodyFat:'#d97706',bodyWater:'#0284c7',restingEnergy:'#7c3aed'};
 const measured=new Set(['height','weight','systolic','diastolic','oxygen','bpm','temperature']);
 // Screening cues, not diagnosis. Adult ranges must never be applied to children.
@@ -32,8 +33,12 @@ export function summaryAdvice(metrics) {
 }
 export function reportRows(data) {
  const source=Array.isArray(data.history)&&data.history.length?data.history:[{...data.vitals,patient:data.patient}];
- const count=Number(data.scanCount)||1;
- return source.map((row,index)=>({...row,...bodyEstimates(row,row.patient||{}),scan:Math.max(1,count-source.length+1)+index}));
+ const count=getScanCount(data);
+ return [...source].sort((a,b)=> {
+  if (a.scanNumber && b.scanNumber) return a.scanNumber-b.scanNumber;
+  const first=Date.parse(a.createdAt),second=Date.parse(b.createdAt);
+  return Number.isFinite(first)&&Number.isFinite(second)?first-second:0;
+ }).map((row,index)=>({...row,...bodyEstimates(row,row.patient||{}),scan:Number.isSafeInteger(row.scanNumber)&&row.scanNumber>0?row.scanNumber:Math.max(1,count-source.length+1)+index}));
 }
 export function observationCount(data) {
  // Count actual retained observations, never multiply visit count by potential fields.
