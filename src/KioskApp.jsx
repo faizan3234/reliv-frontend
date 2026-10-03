@@ -28,6 +28,7 @@ import SpeechAdmin from "./pages/SpeechAdmin.jsx";
 import AdminMedicinePage from "./pages/AdminMedicinePage.jsx";
 import SpeechControl from "./components/SpeechControl.jsx";
 import PhotoUpload from "./pages/PhotoUpload.jsx";
+import WifiSettings from "./pages/WifiSettings.jsx";
 import ProtectedReportRoute from "./components/ProtectedReportRoute";
 import { VoiceAssistantProvider } from "./context/VoiceAssistantContext";
 import VoiceAssistantOverlay from "./components/VoiceAssistantOverlay";
@@ -120,6 +121,7 @@ export default function KioskApp() {
           <Route path="/mobile-entry" element={<MobileEntry />} />
           <Route path="/h" element={<MobileEntryGateway />} />
           <Route path="/photo-upload" element={<PhotoUpload />} />
+          <Route path="/wifi" element={<WifiSettings />} />
           <Route path="/admin" element={<AdminMedicinePage />} />
           <Route path="/admin-x7k9/speech" element={<SpeechAdmin />} />
           <Route path="*" element={<Navigate to="/" replace />} />

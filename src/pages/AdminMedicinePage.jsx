@@ -17,7 +17,8 @@ import {
   Image as ImageIcon,
   Layers,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Wifi
 } from "lucide-react";
 import { API_BASE } from "../config/api";
 import { formatINR } from "../utils/currency";
@@ -555,6 +556,13 @@ export default function AdminMedicinePage() {
           </div>
 
           <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => navigate('/wifi')}
+              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all"
+              title="Wi-Fi Settings (192.168.50.1/wifi)"
+            >
+              <Wifi size={18} />
+            </button>
             <button
               onClick={fetchMedicines}
               disabled={isLoading}

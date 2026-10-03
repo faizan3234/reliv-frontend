@@ -20,7 +20,7 @@ export default function IdleReturn(){
  useEffect(()=>{
   last.current=Date.now();setRemaining(null);
   // A pending physical delivery must remain visible for staff/customer review.
-  if(pathname==='/'||pathname==='/order-success'||pathname.startsWith('/admin')||usesNativeScrolling(pathname))return undefined;
+  if(pathname==='/'||pathname==='/order-success'||pathname==='/wifi'||pathname.startsWith('/admin')||usesNativeScrolling(pathname))return undefined;
   const limit=pathname==='/payment'?600000:pathname.startsWith('/report-')?240000:120000;
   const activity=()=>{if(Date.now()-last.current>=limit)return;last.current=Date.now();setRemaining(null);};
   const narration=e=>{if(pathname.startsWith('/report-')&&e.detail===true)activity();};
