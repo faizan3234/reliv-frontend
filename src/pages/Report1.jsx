@@ -1,5 +1,6 @@
+import { useReportNarration } from '../hooks/useReportNarration';
 import { getScanCount } from '../utils/reportSnapshot';
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useLocation, useNavigate } from "react-router-dom";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
@@ -33,7 +34,7 @@ const getGenderCompliment = (gender, tier = 'high') => {
 };
 
 const Report1 = () => {
-  const { speakText, stop } = useSpeech();
+  const { speakText } = useSpeech();
   const navigate = useNavigate();
   const location = useLocation();
   const { data: healthCtx } = useHealth();
@@ -120,11 +121,7 @@ const Report1 = () => {
   }, [vitals, patient]);
 
   // ── Dynamic speech: layman explanation in user's selected report voice language ──
-  const speechFired = useRef(false);
-  useEffect(() => {
-    if (speechFired.current || !reportData) return;
-    speechFired.current = true;
-    const timer = setTimeout(() => {
+  useReportNarration(() => {
       const speechPayload = {
         ...healthData,
         patient,
@@ -134,9 +131,8 @@ const Report1 = () => {
       };
       const text = getReport1Speech(speechPayload, reportSpeechLanguage);
       speakText(text, { langHint: reportSpeechLanguage });
-    }, 450);
-    return () => { clearTimeout(timer); stop(); };
-  }, [reportData, healthData, patient, vitals, bodyScoreData, reportSpeechLanguage, speakText, stop]);
+
+  }, Boolean(reportData));
 
   const handleReplayOverview = useCallback(() => {
     const speechPayload = {
@@ -397,7 +393,7 @@ const Report1 = () => {
             </p>
 
             <div className="relative w-[220px] h-[220px] mb-4">
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" role="img" aria-label={`Estimated body score ${bodyScoreData.score ?? "unavailable"} out of 100`}>
                 <circle cx="50" cy="50" r="42" fill="none" stroke="#f3f3f3" strokeWidth="14" />
                 {bodyScoreData.score !== null && (
                   <circle
@@ -408,8 +404,9 @@ const Report1 = () => {
                     stroke="#F28C38"
                     strokeWidth="14"
                     strokeLinecap="round"
+                    transform="rotate(-90 50 50)"
                     strokeDasharray="263.89"
-                    strokeDashoffset={263.89 * (1 - bodyScoreData.score / 100)}
+                    strokeDashoffset={263.89 * (1 - Math.max(0, Math.min(100, bodyScoreData.score)) / 100)}
                   />
                 )}
               </svg>
@@ -581,4 +578,5 @@ const Report1 = () => {
 };
 
 export default Report1;
+
 

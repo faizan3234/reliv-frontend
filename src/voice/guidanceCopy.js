@@ -51,11 +51,7 @@ export const GUIDANCE = {
     hi: 'उपलब्ध किट देखने के लिए स्क्रॉल कीजिए। किट पर दबाकर जानकारी देखिए, ज़रूरत की चीज़ चुनिए, फिर कार्ट खोलिए।',
     bn: 'উপলব্ধ কিট দেখতে স্ক্রল করুন। কিটে চাপ দিয়ে তথ্য দেখুন, প্রয়োজনীয় জিনিস বেছে নিয়ে কার্ট খুলুন।',
   },
-  scale: {
-    en: 'Stand on the scale with both feet on the black area. Tap Start Measurement, then stand still until it finishes.',
-    hi: 'स्केल के काले हिस्से पर दोनों पैर रखिए। Start Measurement दबाइए और जाँच पूरी होने तक स्थिर खड़े रहिए।',
-    bn: 'স্কেলের কালো অংশে দুই পা রাখুন। Start Measurement চাপুন এবং মাপা শেষ হওয়া পর্যন্ত স্থির থাকুন।',
-  },
+  scale: measurement.body_composition_start,
   measuring: measurement.body_composition_measuring,
   bloodPressure: measurement.bp_start,
   bloodPressureRunning: measurement.bp_measuring,

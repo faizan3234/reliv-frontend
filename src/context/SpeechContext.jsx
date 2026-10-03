@@ -309,7 +309,7 @@ export function SpeechProvider({ children }) {
               });
             };
             play();
-          } catch (error) {
+          } catch {
             if (!finished) playSynthesis();
           } finally {
             clearTimeout(timeout);
@@ -492,6 +492,12 @@ export function SpeechProvider({ children }) {
     [muted, stopActivePlayback, speakViaSynthesis, selectedLang]
   );
 
+  const enableReportAudio = useCallback(() => {
+    setMuted(false);
+    setVolume(current => current > 0 ? current : 1);
+    try { localStorage.setItem("reliv_muted", "false"); } catch { /* Storage can be unavailable. */ }
+  }, []);
+
   const toggleMute = useCallback(() => {
     setMuted((prev) => {
       if (!prev) stop();
@@ -540,6 +546,7 @@ export function SpeechProvider({ children }) {
         stop,
         muted,
         toggleMute,
+        enableReportAudio,
         volume,
         setVolume: setVol,
         speakingRef,
@@ -569,3 +576,4 @@ export function usePageSpeech(pageKey) {
     };
   }, [pageKey, speak, stop]);
 }
+

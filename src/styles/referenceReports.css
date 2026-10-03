@@ -17,3 +17,14 @@
 .paid-report-qr svg { max-width:100%; height:auto; }
 @media(max-width:700px) { .reference-reports h1 { font-size:clamp(26px,6vw,40px) !important; } .reference-reports .grid-cols-2 { grid-template-columns:1fr; } .reference-reports [style*='padding: 48px 32px'] { padding:24px 16px !important; } }
 @media(prefers-reduced-motion:reduce) { .reference-reports * { animation:none !important; transition:none !important; } }
+
+.reference-back { max-width:1120px; margin:16px auto 0; padding:0 24px; }
+.reference-back button { padding:10px 22px; border:1px solid #fed7aa; border-radius:14px; background:#fff7ed; color:#9a3412; font-weight:650; }
+.reference-reports h2,.reference-reports h3 { letter-spacing:-.025em; line-height:1.3; }
+.reference-reports .report-selected-grid > div { min-width:0; padding:18px; }
+.reference-reports .report-card { box-shadow:0 6px 24px #1d1d1f05; }
+.reference-reports .journey-details { margin:24px 0; border:1px solid #e5e7eb; border-radius:20px; padding:20px; }
+.journey-details summary { cursor:pointer; font-size:20px; font-weight:650; min-height:48px; }
+.journey-table-wrap { overflow-x:auto; }
+.journey-details table { width:100%; border-collapse:collapse; font-size:15px; }
+.journey-details th,.journey-details td { padding:14px 10px; border-bottom:1px solid #eee; text-align:left; white-space:nowrap; }

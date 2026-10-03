@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealth } from '../context/HealthContext';
 import { getScanCount } from '../utils/reportSnapshot';
 import Report1 from './Report1';
@@ -12,12 +12,15 @@ import '../styles/referenceReports.css';
 // Render only beneath ProtectedReportRoute. No history-by-email or cloud reads.
 export default function ReferenceReports() {
  const {data}=useHealth();
+ const navigate=useNavigate();
+ const lang=data.language || "en";
  const {pathname}=useLocation();
  const page=Math.min(5,Math.max(1,Number(pathname.match(/report-(\d)/)?.[1])||1));
  const count=getScanCount(data);
  const Page=[Report1,Report2,Report3,Report4,Report5][page-1];
  return <main className="reference-reports" aria-label="Health screening report">
   <header className="reference-progress"><strong>📋 Scan {count} · Report {page} / 5</strong><span>{count<7?`${7-count} scans left in your seven-scan journey`:'✓ Seven-scan journey complete'}</span></header>
+  {page>1 && page<5 && <nav className="reference-back"><button type="button" onClick={()=>{navigate(`/report-${page-1}`);window.scrollTo(0,0);}}>← {lang==="hi"?"पिछला पेज":lang==="bn"?"আগের পাতা":"Previous page"}</button></nav>}
   <p className="reference-note">Measured readings and calculated estimates are different. Body score, bone mass, body fat, muscle and calorie estimates are screening information—not diagnoses or direct tissue measurements.</p>
   <Page key={`${data.sessionId}-${page}`} />
  </main>;

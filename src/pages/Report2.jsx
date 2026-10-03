@@ -1,3 +1,4 @@
+import { useReportNarration } from '../hooks/useReportNarration';
 import { getScanCount } from '../utils/reportSnapshot';
 // src/pages/Report2.jsx
 import React, { useMemo, useEffect, useRef, useCallback, useState } from "react";
@@ -902,7 +903,7 @@ function getConfidenceStage(scanCount) {
 // MAIN REPORT COMPONENT
 // ============================================================================
 const Report2 = () => {
-  const { speakText, stop } = useSpeech();
+  const { speakText } = useSpeech();
   const { data } = useHealth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1135,11 +1136,7 @@ const Report2 = () => {
   const trustMessage = getTrustMessage(scanCount);
 
   // ── Dynamic speech: read user's name, BMI, body fat, muscle status ──
-  const speechFired = useRef(false);
-  useEffect(() => {
-    if (speechFired.current) return;
-    speechFired.current = true;
-    const timer = setTimeout(() => {
+  useReportNarration(() => {
       const speechPayload = {
         ...data,
         patient,
@@ -1147,9 +1144,8 @@ const Report2 = () => {
       };
       const text = getReport2Speech(speechPayload, reportSpeechLanguage);
       speakText(text, { langHint: reportSpeechLanguage });
-    }, 450);
-    return () => { clearTimeout(timer); stop(); };
-  }, [data, patient, vitals, reportSpeechLanguage, speakText, stop]);
+
+  });
 
   const handleReplayOverview = useCallback(() => {
     const speechPayload = {
@@ -1708,3 +1704,4 @@ const Report2 = () => {
 };
 
 export default Report2;
+

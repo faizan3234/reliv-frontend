@@ -1,9 +1,10 @@
+import SpokenGuide from '../components/SpokenGuide';
   const base = [
     "E", "FP", "TOZ", "LPED", "PECFD", "EDFCZP",
     "FELOPZD", "DEFPOTEC", "LEFODPCT", "TDPLTCEO",
     "PEZOLCFD", "FDTCOPEL", "CLEPOTFD"
   ];
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import VirtualKeyboard from "../components/VirtualKeyboard";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
@@ -16,6 +17,11 @@ export default function EyeSight() {
   const { data, update } = useHealth();
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
+  const labels = {
+    en: {title:'Check your eyesight', left:'Left eye', right:'Right eye', coverRight:'Cover your right eye', coverLeft:'Cover your left eye', select:'Choose the smallest clear row', check:'Check my answers', letter:'Type the letter', submit:'Check', note:'Screening only • Ask staff to check the viewing distance'},
+    hi: {title:'आँखों की जाँच',left:'बाईं आँख',right:'दाईं आँख',coverRight:'दाईं आँख ढकिए',coverLeft:'बाईं आँख ढकिए',select:'सबसे छोटी साफ दिखने वाली लाइन चुनिए',check:'जवाब जाँचें',letter:'अक्षर लिखिए',submit:'जाँचें',note:'शुरुआती जाँच • स्क्रीन से दूरी स्टाफ से पूछिए'},
+    bn: {title:'চোখের পরীক্ষা',left:'বাঁ চোখ',right:'ডান চোখ',coverRight:'ডান চোখ ঢাকুন',coverLeft:'বাঁ চোখ ঢাকুন',select:'সবচেয়ে ছোট পরিষ্কার লাইন বাছুন',check:'উত্তর মিলিয়ে দেখুন',letter:'অক্ষর লিখুন',submit:'মিলিয়ে দেখুন',note:'প্রাথমিক পরীক্ষা • স্ক্রিন থেকে দূরত্ব স্টাফকে জিজ্ঞেস করুন'}
+  }[selectedLang] || {title:'Check your eyesight',left:'Left eye',right:'Right eye',coverRight:'Cover right eye',coverLeft:'Cover left eye',select:'Choose a row',check:'Check my answers',letter:'Type the letter',submit:'Check',note:'Screening only'};
 
   useVoicePage({
     onHelp: () => speakText(guidanceText('eyesight', selectedLang)),
@@ -82,7 +88,7 @@ export default function EyeSight() {
       .vision-back:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(255,106,0,.25);background:#fff5eb;border-color:#ff6a00}
       .vision-back:active{transform:scale(.95)}
 
-      .vision-logo-container{display:flex;justify-content:center;margin-bottom:14px;animation:bounce 2s ease-in-out infinite}
+      .vision-logo-container{display:flex;justify-content:center;margin-bottom:14px;animation:none}
 
       .vision-header{display:flex;justify-content:center;align-items:center;padding-bottom:14px;margin-bottom:18px;border-bottom:2px solid #fed7aa;animation:slideIn .5s ease-out}
       .vision-system{font-size:13px;color:#16a34a;font-weight:700;background:linear-gradient(135deg,#d1fae5,#a7f3d0);padding:7px 16px;border-radius:24px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(16,185,129,.2)}
@@ -182,6 +188,8 @@ export default function EyeSight() {
 
 
 
+  const nextTimer = useRef(null);
+  useEffect(() => () => clearTimeout(nextTimer.current), []);
   const [lines, setLines] = useState([]);
   const [left, setLeft] = useState("");
   const [right, setRight] = useState("");
@@ -189,7 +197,7 @@ export default function EyeSight() {
   const [answer, setAnswer] = useState("");
   const [userInput, setUserInput] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [status, setStatus] = useState("Pending Verification");
+  const [status, setStatus] = useState(selectedLang==="hi"?"दोनों आँखों के लिए लाइन चुनिए।":selectedLang==="bn"?"দুই চোখের জন্য লাইন বাছুন।":"Choose a row for each eye.");
   const [statusType, setStatusType] = useState("pending");
   const [showQuestion, setShowQuestion] = useState(false);
 
@@ -216,14 +224,15 @@ export default function EyeSight() {
     const txt = lines[lineNo - 1];
     const pos = Math.floor(Math.random() * txt.length);
     setAnswer(txt[pos]);
-    setQuestion(`${eye} Eye — Line ${lineNo}: What is the ${pos + 1}ᵗʰ letter?`);
+    const eyeName=eye==='Left'?labels.left:labels.right;
+    setQuestion(selectedLang==='hi' ? `${eyeName} — लाइन ${lineNo}: बाईं तरफ से ${pos+1} नंबर का अक्षर लिखिए।` : selectedLang==='bn' ? `${eyeName} — লাইন ${lineNo}: বাঁ দিক থেকে ${pos+1} নম্বর অক্ষরটা লিখুন।` : `${eyeName} — Row ${lineNo}: Type letter number ${pos+1}, counting from the left.`);
     setUserInput("");
     setShowQuestion(true);
   };
 
   const checkAnswer = () => {
     if (userInput.toUpperCase() === answer) {
-      setStatus(`✔ Verified | Left: ${left} | Right: ${right} | 19cm`);
+      setStatus(`✓ ${labels.left}: ${left} · ${labels.right}: ${right}`);
       setStatusType("ok");
 
       const advice = (val) =>
@@ -240,9 +249,9 @@ export default function EyeSight() {
         },
       });
 
-      setTimeout(() => navigate("/body-temperature"), 2000);
+      nextTimer.current = setTimeout(() => navigate("/body-temperature"), 2000);
     } else {
-      setStatus("✖ Verification Failed. Please retry.");
+      setStatus(selectedLang==="hi"?"अक्षर नहीं मिला। फिर कोशिश कीजिए।":selectedLang==="bn"?"অক্ষর মেলেনি। আবার চেষ্টা করুন।":"The letter did not match. Please try again.");
       setStatusType("fail");
     }
     setShowQuestion(false);
@@ -263,10 +272,11 @@ export default function EyeSight() {
           <div className="vision-system">System Active</div>
         </div>
 
-        <div className="vision-subtitle">Near Vision Screening • Clinical Mode • 19 cm</div>
+        <div className="vision-subtitle">{labels.title}</div>
 
+        <SpokenGuide text={guidanceText("eyesight", selectedLang)} language={selectedLang} autoSpeak />
         <div className="vision-info">
-          <div className="vision-info-card">Distance<b>19 cm</b></div>
+          <div className="vision-info-card">{labels.note}</div>
           <div className="vision-info-card">Chart<b>Randomized</b></div>
           <div className="vision-info-card">Mode<b>Single Eye</b></div>
         </div>
@@ -282,15 +292,15 @@ export default function EyeSight() {
 
         <div className="vision-form">
           <div className="vision-field">
-            <label>Left Eye</label>
-            <p>Cover right eye completely</p>
+            <label>{labels.left}</label>
+            <p>{labels.coverRight}</p>
             {/* KEY FIX: value is string, options are strings — consistent */}
             <select
               className="vision-select"
               value={left}
               onChange={e => setLeft(e.target.value)}
             >
-              <option value="">— Select —</option>
+              <option value="">{labels.select}</option>
               {Array.from({ length: 13 }, (_, i) => (
                 <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
               ))}
@@ -298,14 +308,14 @@ export default function EyeSight() {
           </div>
 
           <div className="vision-field">
-            <label>Right Eye</label>
-            <p>Cover left eye completely</p>
+            <label>{labels.right}</label>
+            <p>{labels.coverLeft}</p>
             <select
               className="vision-select"
               value={right}
               onChange={e => setRight(e.target.value)}
             >
-              <option value="">— Select —</option>
+              <option value="">{labels.select}</option>
               {Array.from({ length: 13 }, (_, i) => (
                 <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
               ))}
@@ -315,7 +325,7 @@ export default function EyeSight() {
 
         {statusType !== "ok" && (
           <button className="vision-btn" onClick={startTest} disabled={!left || !right}>
-            Start Verification
+            {labels.check}
           </button>
         )}
 
@@ -326,7 +336,7 @@ export default function EyeSight() {
               className="vision-input"
               value={userInput}
               onFocus={() => setKeyboardVisible(true)}
-              placeholder="Enter letter"
+              placeholder={labels.letter}
               style={{ marginTop: "8px", cursor: "pointer" }}
               maxLength={1}
               readOnly
@@ -349,7 +359,7 @@ export default function EyeSight() {
                 onClick={checkAnswer}
                 disabled={!userInput}
               >
-                Submit
+                {labels.submit}
               </button>
             )}
           </div>
@@ -359,7 +369,7 @@ export default function EyeSight() {
           Status: {status}
         </div>
 
-        <div className="vision-footer">© Reliv Health Technologies • ISO Compliant Module</div>
+        <div className="vision-footer">{labels.note}</div>
       </div>
     </div>
   );
