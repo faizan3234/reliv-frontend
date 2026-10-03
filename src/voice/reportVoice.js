@@ -1,3 +1,4 @@
+import { reportRows } from '../utils/reportInsights.js';
 import { metricCopy, languageIndex } from './insightCopy.js';
 import { getScanCount } from '../utils/reportSnapshot.js';
 import { containsPhrase, normalizeVoiceText } from './voicePageProfiles.js';
@@ -944,7 +945,17 @@ function pageSpeech(data,language,page) {
  }).join(' ');
  const score=page===1?safeNumber(data?.bodyScore):null;
  const scoreText=score===null?'':`${METRIC_EXPLAINERS.bodyScore.title[language]||METRIC_EXPLAINERS.bodyScore.title.en}: ${score} / 100.`;
- return `${w.scan} ${getScanCount(data)}. ${w.intro[page-1]} ${scoreText} ${readings} ${page===4?w.compare:''} ${page===5?w.end:w.next}`;
+ let comparison='';
+ if(page===4) {
+  const rows=reportRows(data),latest=rows.at(-1),previous=rows.at(-2);
+  const beforeLabel=language==='hi'?'पिछले स्कैन में':language==='bn'?'আগের স্ক্যানে':'Previous scan';
+  const nowLabel=language==='hi'?'इस स्कैन में':language==='bn'?'এই স্ক্যানে':'This scan';
+  if(previous&&latest) comparison=['systolic','diastolic','bpm','oxygen'].map(key=>{
+   const before=safeNumber(previous[key]),now=safeNumber(latest[key]);
+   return before===null||now===null?'':`${metricCopy[key][0][languageIndex(language)]}. ${beforeLabel}: ${before}. ${nowLabel}: ${now} ${metricCopy[key][2]}.`;
+  }).join(' ');
+ }
+ return `${w.scan} ${getScanCount(data)}. ${w.intro[page-1]} ${scoreText} ${readings} ${page===4?`${comparison} ${w.compare}`:''} ${page===5?w.end:w.next}`;
 }
 export const getReport1Speech=(data,language='en')=>pageSpeech(data,language,1);
 export const getReport2Speech=(data,language='en')=>pageSpeech(data,language,2);

@@ -28,3 +28,13 @@
 .journey-table-wrap { overflow-x:auto; }
 .journey-details table { width:100%; border-collapse:collapse; font-size:15px; }
 .journey-details th,.journey-details td { padding:14px 10px; border-bottom:1px solid #eee; text-align:left; white-space:nowrap; }
+
+.reference-page-track { display:flex; gap:8px; max-width:1120px; padding:16px 24px 0; margin:0 auto; }
+.reference-page-track span { flex:1; height:5px; border-radius:8px; background:#eeeef0; }
+.reference-page-track span[data-complete="true"] { background:#fed7aa; }
+.reference-page-track span[data-current="true"] { background:#ea580c; }
+.reference-reports .reference-progress { align-items:center; border-bottom-color:#f0f0f2; }
+.reference-reports .reference-progress > span { color:#66666f; font-size:15px; }
+.reference-reports .reference-note { background:#fafafa; border:1px solid #eeeef0; padding:16px 20px; border-radius:16px; width:calc(100% - 48px); }
+.reference-reports button { transition:background-color 150ms ease,color 150ms ease; }
+.reference-reports .journey-details summary { padding-bottom:8px; }

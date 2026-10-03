@@ -229,6 +229,7 @@ export function SpeechProvider({ children }) {
         let objectUrl = null;
         let voiceStartTimer = null;
         let localFallbackStarted = false;
+        let synthesisStarted = false;
         const finish = (cancelled = false) => {
           if (finished) return;
           finished = true;
@@ -272,7 +273,8 @@ export function SpeechProvider({ children }) {
           callbacks.onError?.(error);
         };
         const playLocalAudio = async () => {
-          if (finished || localFallbackStarted) return;
+          if (finished) return;
+          if (localFallbackStarted) { fail(new Error('No working offline speech engine.')); return; }
           localFallbackStarted = true;
           clearTimeout(voiceStartTimer);
           if (utterance) { utterance.onend = utterance.onerror = null; window.speechSynthesis?.cancel(); }
@@ -318,11 +320,14 @@ export function SpeechProvider({ children }) {
 
         const playSynthesis = () => {
           if (finished || requestId !== playbackRequestRef.current) return;
-          const allVoices = window.speechSynthesis?.getVoices() || [];
-          if (!allVoices.length || !window.SpeechSynthesisUtterance) {
+          if (synthesisStarted) { fail(new Error('Speech engines could not play audio.')); return; }
+          const allVoices = (window.speechSynthesis?.getVoices() || []).filter(voice => voice.localService !== false);
+          const available = allVoices.filter(voice => String(voice.lang).toLowerCase().replace('_', '-').startsWith(targetLang));
+          if (!available.length || !window.SpeechSynthesisUtterance) {
             void playLocalAudio();
             return;
           }
+          synthesisStarted = true;
           utterance = new window.SpeechSynthesisUtterance(safeText);
           utterance.lang = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' }[targetLang] || 'en-IN';
           utterance.volume = volumeRef.current;
@@ -330,47 +335,17 @@ export function SpeechProvider({ children }) {
           utterance.rate = settings.rate;
           utterance.pitch = settings.pitch;
 
-          const targetVoices = allVoices.filter(voice =>
-            voice.lang.toLowerCase().startsWith(targetLang) ||
-            voice.lang.toLowerCase().replace('_', '-').startsWith(targetLang)
-          );
-
-          // Strictly Female Matching - Disallow ANY male voices everywhere
-          const malePattern = /\b(male|man|boy|david|george|mark|ravi|prabhat|madhav|hemant|james|guy|stefan|pavel|richard|sean|cosimo)\b/i;
-          const femalePattern = /\b(female|woman|girl|zira|heera|kalpana|swara|neerja|samantha|aditi|priya|maya|shreya|tanishaa|jenny|susan|hazel|aria|sonia|raveena|veena|ananya|pooja|bangla|bengali|victoria|sabina|sangeeta)\b/i;
-
-          // Strictly filter out male voices
-          const nonMaleTarget = targetVoices.filter(v => !malePattern.test(v.name) && !malePattern.test(v.voiceURI) && v.gender !== 'male');
-          const nonMaleAll = allVoices.filter(v => !malePattern.test(v.name) && !malePattern.test(v.voiceURI) && v.gender !== 'male');
-
-          let chosenVoice = null;
-          // 1. Explicit female in target language (e.g. Neerja / Swara / Heera)
-          chosenVoice = nonMaleTarget.find(v => femalePattern.test(v.name) || femalePattern.test(v.voiceURI));
-          // 2. Explicit female in any language (e.g. Zira / Samantha / Jenny)
-          if (!chosenVoice) {
-            chosenVoice = nonMaleAll.find(v => femalePattern.test(v.name) || femalePattern.test(v.voiceURI));
-          }
-          // 3. Non-male voice in target language
-          if (!chosenVoice && nonMaleTarget.length > 0) {
-            chosenVoice = nonMaleTarget[0];
-          }
-          // 4. Non-male voice in any language
-          if (!chosenVoice && nonMaleAll.length > 0) {
-            chosenVoice = nonMaleAll[0];
-          }
-
-          if (chosenVoice) {
-            utterance.voice = chosenVoice;
-          } else {
-            // Absolute fallback: under no circumstance sound male. Pitch shift to feminine range.
-            utterance.pitch = 1.35;
-          }
+          // Prefer a local female voice in the selected language; never read Bengali
+          // with an English/cloud voice just because its name matches a gender list.
+          const femalePattern = /female|woman|zira|heera|kalpana|swara|neerja|samantha|aditi|priya|maya|tanishaa|jenny|susan|hazel|aria|sonia|raveena|veena|ananya|pooja|victoria|sabina|sangeeta/i;
+          utterance.voice = available.find(voice => femalePattern.test(voice.name)) || available[0];
 
           utterance.onstart = () => clearTimeout(voiceStartTimer);
           utterance.onend = () => finish();
           utterance.onerror = (event) => {
             if (finished || requestId !== playbackRequestRef.current) return;
             if (event.error === 'not-allowed') {
+              synthesisStarted = false;
               clearTimeout(playbackTimeout);
               setSpeakerGate(false);
               retryPlaybackRef.current = playSynthesis;
@@ -426,9 +401,12 @@ export function SpeechProvider({ children }) {
           return;
         }
 
-        // Dynamic or unmanifested speech: prioritize backend Edge-TTS female neural voice
-        // (Identical Neerja/Swara voice as Splash screen), fallback to synthesis with strictly female voice
-        playLocalAudio();
+        // Dynamic report text cannot use a fixed recording. Use an installed local
+        // voice immediately; the Pi WAV endpoint is the offline fallback.
+        const localVoice = (window.speechSynthesis?.getVoices() || []).some(voice =>
+          voice.localService !== false && String(voice.lang).toLowerCase().replace('_', '-').startsWith(targetLang));
+        if (localVoice && window.SpeechSynthesisUtterance) playSynthesis();
+        else playLocalAudio();
       });
     },
     [setSpeakerGate]
