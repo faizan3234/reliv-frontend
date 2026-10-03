@@ -1,5 +1,5 @@
 export function getScanCount(data) {
-  const count = Number(data?.scanCount);
+  const count = Number(data?.visitSummary?.scanCount ?? data?.scanCount);
   return Number.isSafeInteger(count) && count > 0 ? count : 1;
 }
 
