@@ -141,8 +141,10 @@ export const METRIC_EXPLAINERS = {
     },
     getText: (val, ctx, lang = 'en') => {
       const vitals = (typeof ctx === 'object' && ctx !== null) ? (ctx.vitals || ctx) : {};
-      const height = Number(vitals.height || 175);
-      const weight = Number(vitals.weight || (typeof val === 'number' ? val : 65));
+      const height = safeNumber(vitals.height);
+      const weight = safeNumber(vitals.weight || (typeof val === 'number' ? val : null));
+      const w = voiceWords[lang] || voiceWords.en;
+      if (!height || !weight) return w.missing;
       const stdWeight = Math.round(22.2 * ((height / 100) ** 2) * 10) / 10;
       const gap = Math.round((stdWeight - weight) * 10) / 10;
       const absGap = Math.abs(gap);
@@ -199,7 +201,9 @@ export const METRIC_EXPLAINERS = {
     },
     getText: (val, ctx, lang = 'en') => {
       const vitals = (typeof ctx === 'object' && ctx !== null) ? (ctx.vitals || ctx) : {};
-      const bodyFat = Number(vitals.bodyFat || 12.7);
+      const bodyFat = safeNumber(vitals.bodyFat ?? val);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (bodyFat === null) return w.missing;
       if (lang === 'hi') {
         let s = `फैट कंट्रोल आपको यह बताता है कि शरीर में अतिरिक्त चर्बी घटानी है या बढ़ानी है। `;
         if (bodyFat < 10) {
@@ -249,7 +253,9 @@ export const METRIC_EXPLAINERS = {
     },
     getText: (val, ctx, lang = 'en') => {
       const vitals = (typeof ctx === 'object' && ctx !== null) ? (ctx.vitals || ctx) : {};
-      const muscle = Number(vitals.muscleMass || 36.4);
+      const muscle = safeNumber(vitals.muscleMass ?? val);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (muscle === null) return w.missing;
       if (lang === 'hi') {
         return `मसल कंट्रोल बताता है कि आपकी लंबाई के हिसाब से आपको कितनी मांसपेशियां बनानी चाहिए। आपका मसल मास ${muscle} किलो है, जो थोड़ा कम है। मांसपेशियों की कमी से शरीर जल्दी थक जाता है और पीठ या घुटनों में कमज़ोरी लगती है। मूंग दाल, पनीर, अंकुरित अनाज, भुना चना और रोज़ाना हल्का व्यायाम करने से मांसपेशियां मज़बूत होंगी!`;
       }
@@ -275,7 +281,9 @@ export const METRIC_EXPLAINERS = {
     },
     getText: (val, ctx, lang = 'en') => {
       const vitals = (typeof ctx === 'object' && ctx !== null) ? (ctx.vitals || ctx) : {};
-      const height = Number(vitals.height || 175);
+      const height = safeNumber(vitals.height);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (!height) return w.missing;
       const ideal = Math.round(22.2 * ((height / 100) ** 2) * 10) / 10;
       if (lang === 'hi') {
         return `आपकी लंबाई ${height} सेंटीमीटर के लिए आदर्श वज़न लगभग ${ideal} किलो है। जब आपका वज़न इस सीमा में रहता है, तो दिल और जोड़ों पर कोई फालतू दबाव नहीं पड़ता और दिनभर खूब फुर्ती रहती है।`;
@@ -301,8 +309,10 @@ export const METRIC_EXPLAINERS = {
       bn: 'শরীরের ভেতরের ইঞ্জিনের বয়স'
     },
     getText: (val, ctx, lang = 'en') => {
-      const v = val ? Math.round(Number(val)) : null;
-      const patientAge = typeof ctx === 'number' ? ctx : Number(ctx?.patient?.age || 21);
+      const v = safeNumber(val);
+      const patientAge = safeNumber(typeof ctx === 'number' ? ctx : ctx?.patient?.age);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (v === null) return w.missing;
       if (lang === 'hi') {
         let s = `सुनिए, आपकी एक उम्र होती है जो आपके जन्मदिन और आधार कार्ड से गिनी जाती है। लेकिन एक उम्र आपके शरीर के अंदर के दिल, फेफड़ों और अंगों की होती है, जिसे अंदरूनी या मेटाबॉलिक उम्र कहते हैं! `;
         if (v) s += `आपकी अंदरूनी उम्र ${v} साल आई है। `;
@@ -354,7 +364,9 @@ export const METRIC_EXPLAINERS = {
       bn: '১০০-র মধ্যে আপনার স্কোর'
     },
     getText: (val, ctx, lang = 'en') => {
-      const s = val ? Math.round(Number(val)) : 85;
+      const s = safeNumber(val);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (s === null) return w.missing;
       if (lang === 'hi') {
         return `जैसे स्कूल में टेस्ट देने पर 100 में से नंबर मिलते हैं, वैसे ही आज आपकी पूरी सेहत की जाँच करके आपके शरीर को 100 में से ${s} नंबर मिले हैं! आप अपनी उम्र के शीर्ष 28 प्रतिशत लोगों में आते हैं और वेलनेस चैंपियन हैं। 80 से ऊपर का मतलब है आपकी गाड़ी बिल्कुल मस्त और मक्खन चल रही है।`;
       }
@@ -545,7 +557,9 @@ export const METRIC_EXPLAINERS = {
     },
     getText: (val, ctx, lang = 'en') => {
       const vitals = (typeof ctx === 'object' && ctx !== null) ? (ctx.vitals || ctx) : {};
-      const cal = val ? Math.round(Number(val)) : Math.round(Number(vitals.bmr || 1420) * 1.2 || 1705);
+      const cal = safeNumber(val) || (vitals.bmr ? Math.round(Number(vitals.bmr) * 1.2) : null);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (!cal) return w.missing;
       if (lang === 'hi') {
         return `जैसे गाड़ी को चलने के लिए रोज़ पेट्रोल चाहिए, वैसे ही आपके शरीर को दिनभर सांस लेने, चलने और काम करने के लिए रोज़ाना लगभग ${cal} कैलोरी ऊर्जा चाहिए। घर की ताज़ी दाल-रोटी, सब्ज़ी, फल और दूध से यह ईंधन आसानी से मिल जाता है!`;
       }
@@ -693,8 +707,10 @@ export const METRIC_EXPLAINERS = {
     },
     getText: (val, ctx, lang = 'en') => {
       const vitals = (typeof ctx === 'object' && ctx !== null) ? (ctx.vitals || ctx) : {};
-      const sys = vitals.systolic || vitals.bpSystolic || 99;
-      const dia = vitals.diastolic || vitals.bpDiastolic || 63;
+      const sys = safeNumber(vitals.systolic || vitals.bpSystolic);
+      const dia = safeNumber(vitals.diastolic || vitals.bpDiastolic);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (!sys || !dia) return w.missing;
       if (lang === 'hi') {
         return `ब्लड प्रेशर का मतलब है नसों में खून का बहाव — जैसे बगीचे के पाइप में पानी बहता है। आपका ब्लड प्रेशर ${sys} और ${dia} है, जो बिल्कुल शांत और सुरक्षित है! अगर नल बहुत तेज़ खोल दें तो पाइप पर ज़ोर पड़ता है। नमक कम खाने और सुकून से सोने से नसों पर कभी दबाव नहीं आता।`;
       }
@@ -719,7 +735,9 @@ export const METRIC_EXPLAINERS = {
       bn: 'শরীরের প্রতিটি কোষে তাজা বাতাস'
     },
     getText: (val, ctx, lang = 'en') => {
-      const v = val ? Math.round(Number(val)) : 98;
+      const v = safeNumber(val);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (v === null) return w.missing;
       if (lang === 'hi') {
         return `खून में ऑक्सीजन का मतलब है कि आपके फेफड़े कितनी अच्छी ताज़ी हवा अंदर ले रहे हैं। जैसे गाड़ी को बढ़िया पेट्रोल चाहिए, वैसे ही शरीर के हर हिस्से को ताज़ी हवा चाहिए। आपका ऑक्सीजन ${v} प्रतिशत है, जिसका मतलब है हर अंग तक ताज़ी सुबह की हवा भरपूर पहुँच रही है!`;
       }
@@ -744,7 +762,9 @@ export const METRIC_EXPLAINERS = {
       bn: 'হৃদপিণ্ডের নিয়মিত শান্ত ছন্দ'
     },
     getText: (val, ctx, lang = 'en') => {
-      const v = val ? Math.round(Number(val)) : 72;
+      const v = safeNumber(val);
+      const w = voiceWords[lang] || voiceWords.en;
+      if (v === null) return w.missing;
       if (lang === 'hi') {
         return `पल्स यानी आपके दिल की धड़कन — यह आपके सीने में बजने वाला प्यारा सा ढोल है, जो दिन-रात मस्ती से धड़कता है। आपकी धड़कन ${v} प्रति मिनट है, जो कि बिल्कुल शांत और स्थिर ताल में चल रही है।`;
       }
@@ -938,12 +958,14 @@ export function getMetricLaymanExplainer(metricKey, healthData, language = 'en')
 
 function pageSpeech(data,language,page) {
  const w=voiceWords[language]||voiceWords.en,v=data?.vitals||{};
+ const patientName=data?.patient?.name?.trim() ? `${data.patient.name.trim()}... ` : '';
  const fields=page===2?['height','weight']:page===3?['systolic','diastolic','bpm','oxygen','temperature']:[];
  const readings=fields.map(key=>{
-  const value=safeNumber(v[key]);
+  const rawValue = v[key] ?? (key === 'systolic' ? v.bpSystolic : key === 'diastolic' ? v.bpDiastolic : key === 'bpm' ? v.pulse : key === 'oxygen' ? v.spo2 : key === 'temperature' ? v.temp : null);
+  const value=safeNumber(rawValue);
   return `${metricCopy[key][0][languageIndex(language)]}: ${value===null?w.missing:`${value} ${metricCopy[key][2]}.`}`;
  }).join(' ');
- const score=page===1?safeNumber(data?.bodyScore):null;
+ const score=page===1?safeNumber(data?.bodyScore ?? data?.vitals?.bodyScore ?? data?.score):null;
  const scoreText=score===null?'':`${METRIC_EXPLAINERS.bodyScore.title[language]||METRIC_EXPLAINERS.bodyScore.title.en}: ${score} / 100.`;
  let comparison='';
  if(page===4) {
@@ -951,11 +973,12 @@ function pageSpeech(data,language,page) {
   const beforeLabel=language==='hi'?'पिछले स्कैन में':language==='bn'?'আগের স্ক্যানে':'Previous scan';
   const nowLabel=language==='hi'?'इस स्कैन में':language==='bn'?'এই স্ক্যানে':'This scan';
   if(previous&&latest) comparison=['systolic','diastolic','bpm','oxygen'].map(key=>{
-   const before=safeNumber(previous[key]),now=safeNumber(latest[key]);
+   const before=safeNumber(previous[key] ?? (key === 'systolic' ? previous.bpSystolic : key === 'diastolic' ? previous.bpDiastolic : key === 'bpm' ? previous.pulse : key === 'oxygen' ? previous.spo2 : null));
+   const now=safeNumber(latest[key] ?? (key === 'systolic' ? latest.bpSystolic : key === 'diastolic' ? latest.bpDiastolic : key === 'bpm' ? latest.pulse : key === 'oxygen' ? latest.spo2 : null));
    return before===null||now===null?'':`${metricCopy[key][0][languageIndex(language)]}. ${beforeLabel}: ${before}. ${nowLabel}: ${now} ${metricCopy[key][2]}.`;
   }).join(' ');
  }
- return `${w.scan} ${getScanCount(data)}. ${w.intro[page-1]} ${scoreText} ${readings} ${page===4?`${comparison} ${w.compare}`:''} ${page===5?w.end:w.next}`;
+ return `${patientName}${w.scan} ${getScanCount(data)}. ${w.intro[page-1]} ${scoreText} ${readings} ${page===4?`${comparison} ${w.compare}`:''} ${page===5?w.end:w.next}`;
 }
 export const getReport1Speech=(data,language='en')=>pageSpeech(data,language,1);
 export const getReport2Speech=(data,language='en')=>pageSpeech(data,language,2);

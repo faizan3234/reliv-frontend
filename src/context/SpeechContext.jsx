@@ -230,11 +230,19 @@ export function SpeechProvider({ children }) {
         let voiceStartTimer = null;
         let localFallbackStarted = false;
         let synthesisStarted = false;
+        let resumeInterval = null;
+        const cleanupSynthesis = () => {
+          if (resumeInterval) {
+            clearInterval(resumeInterval);
+            resumeInterval = null;
+          }
+        };
         const finish = (cancelled = false) => {
           if (finished) return;
           finished = true;
           clearTimeout(playbackTimeout);
           clearTimeout(voiceStartTimer);
+          cleanupSynthesis();
           fetchController?.abort();
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           retryPlaybackRef.current = null;
@@ -265,6 +273,7 @@ export function SpeechProvider({ children }) {
         };
         const fail = (error) => {
           if (finished || requestId !== playbackRequestRef.current) return;
+          cleanupSynthesis();
           finish(true);
           playbackRequestRef.current += 1;
           audio?.pause();
@@ -274,9 +283,7 @@ export function SpeechProvider({ children }) {
         };
         const playFallbackAudio = () => {
           if (finished || requestId !== playbackRequestRef.current) return false;
-          const reportMatch = typeof window !== 'undefined' && window.location?.pathname?.match(/\/report-([1-5])/);
-          const reportNum = callbacks?.reportPage || (reportMatch ? reportMatch[1] : null);
-          const fallbackPath = callbacks?.fallbackAudio || (reportNum ? `/assets/audio/reports/report${reportNum}_${targetLang}.mp3` : null);
+          const fallbackPath = callbacks?.fallbackAudio;
           if (!fallbackPath) return false;
 
           audio = new Audio(fallbackPath);
@@ -306,8 +313,7 @@ export function SpeechProvider({ children }) {
         const playLocalAudio = async () => {
           if (finished) return;
           if (localFallbackStarted) {
-            if (playFallbackAudio()) return;
-            fail(new Error('No working offline speech engine.'));
+            playSynthesis();
             return;
           }
           localFallbackStarted = true;
@@ -330,7 +336,7 @@ export function SpeechProvider({ children }) {
             activeAudioRef.current = audio;
             audio.onended = () => finish();
             audio.onerror = () => {
-              if (!playFallbackAudio()) playSynthesis();
+              playSynthesis();
             };
             const play = () => {
               if (!begin()) return;
@@ -340,14 +346,14 @@ export function SpeechProvider({ children }) {
                   clearTimeout(playbackTimeout); setSpeakerGate(false);
                   retryPlaybackRef.current = play;
                   window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
-                } else if (!playFallbackAudio()) {
+                } else {
                   playSynthesis();
                 }
               });
             };
             play();
           } catch {
-            if (!finished && !playFallbackAudio()) playSynthesis();
+            if (!finished) playSynthesis();
           } finally {
             clearTimeout(timeout);
           }
@@ -356,17 +362,16 @@ export function SpeechProvider({ children }) {
         const playSynthesis = () => {
           if (finished || requestId !== playbackRequestRef.current) return;
           if (synthesisStarted) {
-            if (playFallbackAudio()) return;
             fail(new Error('Speech engines could not play audio.'));
             return;
           }
-          const allVoices = (window.speechSynthesis?.getVoices() || []).filter(voice => voice.localService !== false);
-          const available = allVoices.filter(voice => String(voice.lang).toLowerCase().replace('_', '-').startsWith(targetLang));
-          if (!available.length || !window.SpeechSynthesisUtterance) {
-            void playLocalAudio();
+          if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+            fail(new Error('Speech synthesis not available.'));
             return;
           }
           synthesisStarted = true;
+          const allVoices = (window.speechSynthesis?.getVoices() || []).filter(voice => voice.localService !== false);
+          const available = allVoices.filter(voice => String(voice.lang).toLowerCase().replace('_', '-').startsWith(targetLang));
           utterance = new window.SpeechSynthesisUtterance(safeText);
           utterance.lang = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' }[targetLang] || 'en-IN';
           utterance.volume = volumeRef.current;
@@ -374,21 +379,30 @@ export function SpeechProvider({ children }) {
           utterance.rate = settings.rate;
           utterance.pitch = settings.pitch;
 
-          // Prefer a local female voice in the selected language; never read Bengali
-          // with an English/cloud voice just because its name matches a gender list.
-          const malePattern = /\b(male|man|boy|david|george|mark|ravi|prabhat|madhav|hemant|james|guy|stefan|pavel|richard|sean|cosimo)\b/i;
-          const femalePattern = /female|woman|zira|heera|kalpana|swara|neerja|samantha|aditi|priya|maya|tanishaa|jenny|susan|hazel|aria|sonia|raveena|veena|ananya|pooja|victoria|sabina|sangeeta/i;
-          const femaleMatch = available.find(voice => femalePattern.test(voice.name));
-          const nonMaleMatch = available.find(voice => !malePattern.test(voice.name));
-          utterance.voice = femaleMatch || nonMaleMatch || available[0];
-          if (!femaleMatch && malePattern.test(utterance.voice?.name || '')) {
-            void playLocalAudio();
-            return;
+          if (available.length > 0) {
+            const malePattern = /\b(male|man|boy|david|george|mark|ravi|prabhat|madhav|hemant|james|guy|stefan|pavel|richard|sean|cosimo)\b/i;
+            const femalePattern = /female|woman|zira|heera|kalpana|swara|neerja|samantha|aditi|priya|maya|tanishaa|jenny|susan|hazel|aria|sonia|raveena|veena|ananya|pooja|victoria|sabina|sangeeta/i;
+            const femaleMatch = available.find(voice => femalePattern.test(voice.name));
+            const nonMaleMatch = available.find(voice => !malePattern.test(voice.name));
+            utterance.voice = femaleMatch || nonMaleMatch || available[0];
           }
 
-          utterance.onstart = () => clearTimeout(voiceStartTimer);
-          utterance.onend = () => finish();
+          utterance.onstart = () => {
+            // Keep Chrome SpeechSynthesis alive for longer speech without 15s cutoff
+            cleanupSynthesis();
+            resumeInterval = setInterval(() => {
+              if (window.speechSynthesis?.speaking) {
+                window.speechSynthesis.pause();
+                window.speechSynthesis.resume();
+              }
+            }, 10000);
+          };
+          utterance.onend = () => {
+            cleanupSynthesis();
+            finish();
+          };
           utterance.onerror = (event) => {
+            cleanupSynthesis();
             if (finished || requestId !== playbackRequestRef.current) return;
             if (event.error === 'not-allowed') {
               synthesisStarted = false;
@@ -396,14 +410,18 @@ export function SpeechProvider({ children }) {
               setSpeakerGate(false);
               retryPlaybackRef.current = playSynthesis;
               window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
-            } else if (!playFallbackAudio()) {
-              void playLocalAudio();
+            } else {
+              fail(new Error(`Speech synthesis error: ${event.error}`));
             }
           };
+
           if (begin()) {
-            voiceStartTimer = setTimeout(() => { void playLocalAudio(); }, 3500);
-            try { window.speechSynthesis.speak(utterance); }
-            catch { void playLocalAudio(); }
+            try { 
+              window.speechSynthesis.speak(utterance); 
+            } catch (err) {
+              cleanupSynthesis();
+              fail(err);
+            }
           }
         };
 
@@ -447,12 +465,13 @@ export function SpeechProvider({ children }) {
           return;
         }
 
-        // Dynamic report text cannot use a fixed recording. Use an installed local
-        // voice immediately; the Pi WAV endpoint is the offline fallback.
-        const localVoice = (window.speechSynthesis?.getVoices() || []).some(voice =>
-          voice.localService !== false && String(voice.lang).toLowerCase().replace('_', '-').startsWith(targetLang));
-        if (localVoice && window.SpeechSynthesisUtterance) playSynthesis();
-        else playLocalAudio();
+        // Dynamic report text cannot use a fixed recording. Prefer high quality
+        // neural TTS from backend (playLocalAudio), fall back to browser synthesis.
+        if (callbacks.preferSynthesis) {
+          playSynthesis();
+        } else {
+          playLocalAudio();
+        }
       });
     },
     [setSpeakerGate]
