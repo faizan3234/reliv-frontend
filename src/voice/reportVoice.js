@@ -473,12 +473,12 @@ export function getReport1Speech(healthData, language = 'en') {
   if (language === 'hi') {
     let text = `${name}... `;
     text += `Aapka health score 100 mein se ${score} hai. `;
-    text += `Health score 100 mein se hota hai. A higher score means more of today’s checked values are closer to the preferred ranges — yaani score jitna zyada ho, aaj ki check ki gayi readings preferred range ke utni paas hain. `;
+    text += `Health score 100 mein se hota hai. Ek higher score ka matlab hai ki aaj ki check ki gayi readings preferred range ke zyada paas hain. `;
 
     if (score >= 95) {
       text += `Bahut hi badhiya! Outstanding! Aaj check ki gayi zyada tar readings preferred range ke bahut paas hain. Aap bahut achha kar rahe hain. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score usse kaafi upar hai. Apni healthy routine aise hi continue rakhiye. `;
     } else if (score >= 90) {
-      text += `Excellent! Aaj aapki overall readings bahut achhi hain. Zyada tar values preferred range mein ya uske paas hain. Ek-do cheezein aur improve ho sakti hain, lekin overall aap bahut achha kar rahe hain. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score usse upar hai. `;
+      text += `Excellent! Aaj aapki overall readings bahut achhi hain. Zyada tar values preferred range mein ya uske paas hain. Ek-do cheezein aur improve ho sakti hain, lekin overall aap bahut achha kar rahe hain. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score ${score} usse upar hai. `;
     } else if (score >= 80) {
       text += `Bahut achha! Very good! Aaj ki zyada tar readings achhi hain. Kuch areas mein thoda aur improvement ho sakta hai, lekin overall result strong hai. Healthy habits continue rakhiye. Aapki age ke logon ka reference score lagbhag 72 hai, aur aapka score ${score} us reference se upar hai. `;
     } else if (score >= 70) {
@@ -503,12 +503,12 @@ export function getReport1Speech(healthData, language = 'en') {
   if (language === 'bn') {
     let text = `${name}... `;
     text += `Apnar health score 100-r moddhe ${score}. `;
-    text += `Health score 100-er moddhe hishab kora hoy. Higher score-er mane ajker check kora beshirbhag value preferred range-er kachakachi ache. `;
+    text += `Health score 100-er moddhe hishab kora hoy. Higher score-er mane ajker check kora beshirbhag reading preferred range-er kachakachi ache. `;
 
     if (score >= 95) {
       text += `Darun result! Outstanding! Aj check kora beshirbhag reading preferred range-er khub kachakachi ache. Apni khub bhalo korchen. Apnar boyosher manusher reference score pray 72, ar apnar score tar theke onek beshi. Ei healthy routine-ta continue korun. `;
     } else if (score >= 90) {
-      text += `Excellent! Aj apnar overall reading khub bhalo. Beshirbhag value preferred range-e ba tar kachakachi ache. Ek-dui jaygay aro improvement hote pare, kintu overall apni khub bhalo korchen. Apnar boyosher reference score pray 72, ar apnar score tar theke beshi. `;
+      text += `Excellent! Aj apnar overall reading khub bhalo. Beshirbhag value preferred range-e ba tar kachakachi ache. Ek-dui jaygay aro improvement hote pare, kintu overall apni khub bhalo korchen. Apnar boyosher reference score pray 72, ar apnar score ${score} tar theke beshi. `;
     } else if (score >= 80) {
       text += `Khub bhalo! Very good! Ajker beshirbhag reading bhalo ache. Kichu jaygay aro ektu improvement hote pare, kintu overall result strong. Healthy habit-gulo continue korun. Apnar boyosher reference score pray 72, ar apnar score ${score} tar theke beshi. `;
     } else if (score >= 70) {
@@ -533,22 +533,22 @@ export function getReport1Speech(healthData, language = 'en') {
   // English fallback
   let text = `${name}... `;
   text += `Your health score is ${score} out of 100. `;
-  text += `Your health score is out of 100. A higher score means more of today’s checked values are closer to the preferred ranges. `;
+  text += `A higher score means more of today’s checked values are closer to the preferred ranges. `;
 
   if (score >= 95) {
     text += `Outstanding! Most of the values checked today are very close to their preferred ranges. You are doing extremely well. The reference score for people around your age is about 72, and your score is much higher. Keep following your healthy routine. `;
   } else if (score >= 90) {
-    text += `Excellent! Your overall readings look very good today. Most values are within or close to their preferred ranges. There may still be a small area to improve, but overall you are doing very well. The reference score for people around your age is about 72, and your score is well above that reference. `;
+    text += `Excellent! Your overall readings look very good today. Most values are within or close to their preferred ranges. There may still be a small area to improve, but overall you are doing very well. The reference score for people around your age is about 72, and your score is ${score}, which is above that reference. `;
   } else if (score >= 80) {
-    text += `Very good! Most of today’s readings are looking good. A few areas could still improve, but your overall result is strong. Keep up your healthy habits. The reference score for your age group is about 72, and your score is ${score}, which is above that reference. `;
+    text += `Very good! Most of today’s readings are looking good. A few areas could still improve, but your overall result is strong. Keep up your healthy habits. The reference score for your age group is about 72. Your score is ${score}, which is above that reference. `;
   } else if (score >= 70) {
     text += `Good. Your overall result is around a healthy baseline. Several readings are doing well, while a few can improve. The reference score for people around your age is about 72, so your result is close to or slightly above that reference. `;
   } else if (score >= 60) {
-    text += `Your result is fair. Some readings are doing well, but a few areas need improvement. This is a good point to focus on regular activity, balanced food, good sleep and consistency. This score is only a summary of today’s measurements. It does not mean that you are unhealthy. `;
+    text += `Your result is fair — some improvement needed. Some readings are doing well, but a few areas need improvement. This is a good point to focus on regular activity, balanced food, good sleep and consistency. This score is only a summary of today’s measurements. It does not mean that you are unhealthy. `;
   } else if (score >= 50) {
     text += `Some of today’s readings need attention. This does not mean that something is definitely wrong. It simply means several values are farther from their preferred ranges. We’ll now explain which readings are good and which ones you may want to improve. `;
   } else if (score >= 40) {
-    text += `Several areas can improve. Please don’t worry. One scan cannot diagnose your health. This result simply shows that some of today’s measurements are outside or farther from their preferred ranges. We’ll go through them one by one and explain what you can work on. `;
+    text += `Several areas need improvement. Please don’t worry. One scan cannot diagnose your health. This result simply shows that some of today’s measurements are outside or farther from their preferred ranges. We’ll go through them one by one and explain what you can work on. `;
   } else if (score >= 30) {
     text += `Several readings need more attention today. Please stay calm—this score is not a diagnosis. Some values may also change because of hydration, food, recent exercise, stress or measurement conditions. We recommend reviewing the individual readings and repeating unusual measurements when appropriate. `;
   } else {
