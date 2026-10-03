@@ -20,6 +20,7 @@ export default function ReferenceReports() {
  const Page=[Report1,Report2,Report3,Report4,Report5][page-1];
  return <main className="reference-reports" aria-label="Health screening report">
   <header className="reference-progress"><strong>📋 Scan {count} · Report {page} / 5</strong><span>{count<7?`${7-count} scans left in your seven-scan journey`:'✓ Seven-scan journey complete'}</span></header>
+  <div className="reference-page-track" role="img" aria-label={`Report page ${page} of 5`}>{[1,2,3,4,5].map(step=><span key={step} data-current={step===page} data-complete={step<page}/>)}</div>
   {page>1 && page<5 && <nav className="reference-back"><button type="button" onClick={()=>{navigate(`/report-${page-1}`);window.scrollTo(0,0);}}>← {lang==="hi"?"पिछला पेज":lang==="bn"?"আগের পাতা":"Previous page"}</button></nav>}
   <p className="reference-note">Measured readings and calculated estimates are different. Body score, bone mass, body fat, muscle and calorie estimates are screening information—not diagnoses or direct tissue measurements.</p>
   <Page key={`${data.sessionId}-${page}`} />

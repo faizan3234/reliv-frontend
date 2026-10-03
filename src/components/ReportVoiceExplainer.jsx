@@ -17,6 +17,20 @@ export default function ReportVoiceExplainer({
     window.addEventListener('reliv_speaking', onSpeaking);
     return () => window.removeEventListener('reliv_speaking', onSpeaking);
   }, []);
+  const [audioProblem, setAudioProblem] = useState('');
+  useEffect(() => {
+    const failed = () => setAudioProblem('unavailable');
+    const blocked = () => setAudioProblem('blocked');
+    const speaking = event => { if (event.detail) setAudioProblem(''); };
+    window.addEventListener('reliv_speech_error', failed);
+    window.addEventListener('reliv_speech_blocked', blocked);
+    window.addEventListener('reliv_speaking', speaking);
+    return () => {
+      window.removeEventListener('reliv_speech_error', failed);
+      window.removeEventListener('reliv_speech_blocked', blocked);
+      window.removeEventListener('reliv_speaking', speaking);
+    };
+  }, []);
   const [activeMetric, setActiveMetric] = useState(null);
   const [showExplainerPanel, setShowExplainerPanel] = useState(false);
 
@@ -65,6 +79,9 @@ export default function ReportVoiceExplainer({
 
   return (
     <div className="w-full max-w-4xl mx-auto px-1 sm:px-2 mb-4">
+      {audioProblem && <p role="alert" className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-base text-amber-950">{audioProblem==='blocked'
+        ? (lang==='hi'?'ब्राउज़र ने आवाज़ रोकी है। स्क्रीन छूने पर फिर कोशिश होगी।':lang==='bn'?'ব্রাউজার আওয়াজ আটকে রেখেছে। স্ক্রিন ছুঁলে আবার চেষ্টা হবে।':'The browser blocked sound. Touching the screen will retry playback.')
+        : (lang==='hi'?'आवाज़ चालू नहीं हो पाई। स्टाफ से स्पीकर और ऑफलाइन आवाज़ की सेटिंग जाँचने को कहिए।':lang==='bn'?'আওয়াজ চালু হয়নি। স্টাফকে স্পিকার আর অফলাইন ভয়েস সেটিং দেখতে বলুন।':'Audio could not start. Ask staff to check the speaker and offline speech engine.')}</p>}
       {/* Top Floating / Inline Voice Bar */}
       <div className="bg-gradient-to-r from-orange-50/90 via-amber-50/90 to-white backdrop-blur-md rounded-2xl border border-orange-200/80 p-2.5 sm:p-3 shadow-md flex flex-wrap items-center justify-between gap-2.5">
         
