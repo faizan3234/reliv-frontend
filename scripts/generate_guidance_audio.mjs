@@ -3,6 +3,7 @@
 import { GUIDANCE } from '../src/voice/guidanceCopy.js';
 import { dict as payment } from '../src/config/PaymentDict.js';
 import { dict as services } from '../src/config/TwoOptionsDict.js';
+import { dict as measurements } from '../src/config/MeasurementsDict.js';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile, stat, mkdir, rename, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -14,7 +15,7 @@ const manifestPath = join(audioDir, 'manifest.json');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 const voices = { en: 'en-IN-NeerjaNeural', hi: 'hi-IN-SwaraNeural', bn: 'bn-IN-TanishaaNeural' };
 const jobs = new Map();
-for (const translations of Object.values({ ...GUIDANCE, ...payment, ...services })) {
+for (const translations of Object.values({ ...GUIDANCE, ...payment, ...services, ...measurements })) {
   for (const [language, voice] of Object.entries(voices)) {
     const text = translations[language];
     if (!text) throw new Error(`Missing ${language} translation`);

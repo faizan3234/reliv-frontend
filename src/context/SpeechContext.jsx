@@ -272,9 +272,44 @@ export function SpeechProvider({ children }) {
           window.dispatchEvent(new CustomEvent('reliv_speech_error', { detail: targetLang }));
           callbacks.onError?.(error);
         };
+        const playFallbackAudio = () => {
+          if (finished || requestId !== playbackRequestRef.current) return false;
+          const reportMatch = typeof window !== 'undefined' && window.location?.pathname?.match(/\/report-([1-5])/);
+          const reportNum = callbacks?.reportPage || (reportMatch ? reportMatch[1] : null);
+          const fallbackPath = callbacks?.fallbackAudio || (reportNum ? `/assets/audio/reports/report${reportNum}_${targetLang}.mp3` : null);
+          if (!fallbackPath) return false;
+
+          audio = new Audio(fallbackPath);
+          audio.volume = volumeRef.current;
+          activeAudioRef.current = audio;
+          audio.onended = () => finish();
+          audio.onerror = () => {
+            playSynthesis();
+          };
+          const playFallback = () => {
+            if (!begin()) return;
+            audio.play().catch(error => {
+              if (finished || requestId !== playbackRequestRef.current) return;
+              if (error.name === 'NotAllowedError') {
+                clearTimeout(playbackTimeout); setSpeakerGate(false);
+                retryPlaybackRef.current = playFallback;
+                window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
+              } else {
+                playSynthesis();
+              }
+            });
+          };
+          playFallback();
+          return true;
+        };
+
         const playLocalAudio = async () => {
           if (finished) return;
-          if (localFallbackStarted) { fail(new Error('No working offline speech engine.')); return; }
+          if (localFallbackStarted) {
+            if (playFallbackAudio()) return;
+            fail(new Error('No working offline speech engine.'));
+            return;
+          }
           localFallbackStarted = true;
           clearTimeout(voiceStartTimer);
           if (utterance) { utterance.onend = utterance.onerror = null; window.speechSynthesis?.cancel(); }
@@ -295,7 +330,7 @@ export function SpeechProvider({ children }) {
             activeAudioRef.current = audio;
             audio.onended = () => finish();
             audio.onerror = () => {
-              playSynthesis();
+              if (!playFallbackAudio()) playSynthesis();
             };
             const play = () => {
               if (!begin()) return;
@@ -305,14 +340,14 @@ export function SpeechProvider({ children }) {
                   clearTimeout(playbackTimeout); setSpeakerGate(false);
                   retryPlaybackRef.current = play;
                   window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
-                } else {
+                } else if (!playFallbackAudio()) {
                   playSynthesis();
                 }
               });
             };
             play();
           } catch {
-            if (!finished) playSynthesis();
+            if (!finished && !playFallbackAudio()) playSynthesis();
           } finally {
             clearTimeout(timeout);
           }
@@ -320,7 +355,11 @@ export function SpeechProvider({ children }) {
 
         const playSynthesis = () => {
           if (finished || requestId !== playbackRequestRef.current) return;
-          if (synthesisStarted) { fail(new Error('Speech engines could not play audio.')); return; }
+          if (synthesisStarted) {
+            if (playFallbackAudio()) return;
+            fail(new Error('Speech engines could not play audio.'));
+            return;
+          }
           const allVoices = (window.speechSynthesis?.getVoices() || []).filter(voice => voice.localService !== false);
           const available = allVoices.filter(voice => String(voice.lang).toLowerCase().replace('_', '-').startsWith(targetLang));
           if (!available.length || !window.SpeechSynthesisUtterance) {
@@ -337,8 +376,15 @@ export function SpeechProvider({ children }) {
 
           // Prefer a local female voice in the selected language; never read Bengali
           // with an English/cloud voice just because its name matches a gender list.
+          const malePattern = /\b(male|man|boy|david|george|mark|ravi|prabhat|madhav|hemant|james|guy|stefan|pavel|richard|sean|cosimo)\b/i;
           const femalePattern = /female|woman|zira|heera|kalpana|swara|neerja|samantha|aditi|priya|maya|tanishaa|jenny|susan|hazel|aria|sonia|raveena|veena|ananya|pooja|victoria|sabina|sangeeta/i;
-          utterance.voice = available.find(voice => femalePattern.test(voice.name)) || available[0];
+          const femaleMatch = available.find(voice => femalePattern.test(voice.name));
+          const nonMaleMatch = available.find(voice => !malePattern.test(voice.name));
+          utterance.voice = femaleMatch || nonMaleMatch || available[0];
+          if (!femaleMatch && malePattern.test(utterance.voice?.name || '')) {
+            void playLocalAudio();
+            return;
+          }
 
           utterance.onstart = () => clearTimeout(voiceStartTimer);
           utterance.onend = () => finish();
@@ -350,7 +396,7 @@ export function SpeechProvider({ children }) {
               setSpeakerGate(false);
               retryPlaybackRef.current = playSynthesis;
               window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
-            } else {
+            } else if (!playFallbackAudio()) {
               void playLocalAudio();
             }
           };
@@ -362,7 +408,7 @@ export function SpeechProvider({ children }) {
         };
 
         const entry = manifest?.[safeText];
-        const recording = typeof entry === 'string' ? { file: entry } : entry?.[targetLang];
+        const recording = typeof entry === 'string' ? { file: entry } : (entry?.file ? entry : entry?.[targetLang]);
         if (recording && !callbacks.preferSynthesis) {
           audio = new Audio(`/assets/audio/${targetLang}/${recording.file}`);
           if (Number.isFinite(recording.start) && Number.isFinite(recording.end)) {

@@ -1,5 +1,6 @@
 param(
     [string[]]$Files = @(
+        "public/assets/audio/reports/report1_hi_85.mp3",
         "public/assets/audio/reports/report2_hi.mp3",
         "public/assets/audio/reports/report3_hi.mp3",
         "public/assets/audio/reports/report4_hi.mp3",
