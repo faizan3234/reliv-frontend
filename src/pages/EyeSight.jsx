@@ -9,7 +9,7 @@ import VirtualKeyboard from "../components/VirtualKeyboard";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useHealth } from "../context/HealthContext";
-import { useSpeech } from "../context/SpeechContext";
+import { useSpeech, usePageSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
 import { guidanceText } from "../voice/guidanceCopy";
 export default function EyeSight() {
@@ -17,6 +17,7 @@ export default function EyeSight() {
   const { data, update } = useHealth();
   const selectedLang = data?.language || 'en';
   const { speakText } = useSpeech();
+  usePageSpeech('eyesight');
   const labels = {
     en: {title:'Check your eyesight', left:'Left eye', right:'Right eye', coverRight:'Cover your right eye', coverLeft:'Cover your left eye', select:'Choose the smallest clear row', check:'Check my answers', letter:'Type the letter', submit:'Check', note:'Screening only • Ask staff to check the viewing distance'},
     hi: {title:'आँखों की जाँच',left:'बाईं आँख',right:'दाईं आँख',coverRight:'दाईं आँख ढकिए',coverLeft:'बाईं आँख ढकिए',select:'सबसे छोटी साफ दिखने वाली लाइन चुनिए',check:'जवाब जाँचें',letter:'अक्षर लिखिए',submit:'जाँचें',note:'शुरुआती जाँच • स्क्रीन से दूरी स्टाफ से पूछिए'},

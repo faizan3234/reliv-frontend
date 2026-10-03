@@ -15,26 +15,10 @@ const DEFAULT_CONFIG = {
   "customer-details": GUIDANCE.detailsName,
   "two-options": GUIDANCE.service,
   "body-composition": GUIDANCE.scale,
-  "health-checkup": {
-    en: "Now we'll check your blood pressure. Place the wrist cuff correctly and keep your wrist at heart level. Stay relaxed and don't talk while the measurement is running.",
-    hi: "अब Blood Pressure check करेंगे। Wrist cuff सही तरह पहनिए और wrist को heart level पर रखिए। Measurement के दौरान relaxed रहें और बात न करें।",
-    bn: "এবার Blood Pressure check হবে। Wrist cuff ঠিকভাবে পরুন এবং wrist heart level-এ রাখুন। Measurement চলার সময় শান্ত ও স্থির থাকুন।"
-  },
-  "oxygen-pulse": {
-    en: "Place your finger properly inside the sensor clip. Tap Measure and keep your finger still until the reading completes.",
-    hi: "Finger को sensor clip में सही तरह रखिए। Measure दबाइए और reading पूरी होने तक finger स्थिर रखिए।",
-    bn: "Finger sensor clip-এর ভিতরে ঠিকভাবে রাখুন। Measure চাপুন এবং reading শেষ হওয়া পর্যন্ত finger স্থির রাখুন।"
-  },
-  "body-temperature": {
-    en: "Now we'll check your body temperature. Position the temperature sensor as shown and tap Measure. Hold still for a moment.",
-    hi: "अब Body Temperature check करेंगे। Sensor को screen पर दिखाए तरीके से रखें और Measure दबाएँ। थोड़ी देर स्थिर रहें।",
-    bn: "এবার Body Temperature check হবে। Screen-এ দেখানোভাবে sensor রাখুন और Measure চাপুন। কিছুক্ষণ স্থির থাকুন।"
-  },
-  "eyesight": {
-    en: "Now for your eyesight test. Cover one eye, read what's shown on screen, and select the matching option. Then we'll repeat with the other eye.",
-    hi: "अब Eyesight Test करेंगे। एक आँख ढकिए, screen पर जो दिख रहा है उसे पढ़िए और सही option चुनिए। फिर दूसरी आँख से repeat करेंगे।",
-    bn: "এবার Eyesight Test। একটি চোখ ঢেকে screen-এ যা দেখছেন তার সঠিক option বেছে নিন। তারপর অন্য চোখে repeat হবে।"
-  },
+  "health-checkup": GUIDANCE.bloodPressure,
+  "oxygen-pulse": GUIDANCE.oxygen,
+  "body-temperature": GUIDANCE.temperature,
+  "eyesight": GUIDANCE.eyesight,
   "report-1": {
     en: "Your checkup is complete. This is a simple snapshot of today's measurements.",
     hi: "आपका checkup complete हो गया है। यह आज की measurements का simple snapshot है।",
@@ -520,6 +504,7 @@ export function SpeechProvider({ children }) {
         'choose-language': GUIDANCE.language, 'customer-details': GUIDANCE.detailsName,
         'two-options': GUIDANCE.service, 'body-composition': GUIDANCE.scale,
         'health-checkup': GUIDANCE.bloodPressure, 'oxygen-pulse': GUIDANCE.oxygen, 'body-temperature': GUIDANCE.temperature,
+        'eyesight': GUIDANCE.eyesight,
       };
       const pageConfig = interactionPrompts[pageKey] || configRef.current[pageKey] || DEFAULT_CONFIG[pageKey];
       let textToSpeak = "";
@@ -539,6 +524,13 @@ export function SpeechProvider({ children }) {
     setMuted(false);
     setVolume(current => current > 0 ? current : 1);
     try { localStorage.setItem("reliv_muted", "false"); } catch { /* Storage can be unavailable. */ }
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+      }
+    } catch { /* AudioContext can be restricted */ }
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -609,14 +601,23 @@ export function useSpeech() {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function usePageSpeech(pageKey) {
-  const { speak, stop } = useSpeech();
+  const { speak, stop, enableReportAudio } = useSpeech();
+  useEffect(() => {
+    enableReportAudio?.();
+  }, [enableReportAudio]);
+  const speakRef = useRef(speak);
+  speakRef.current = speak;
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
 
   useEffect(() => {
-    const timer = setTimeout(() => speak(pageKey), 400);
+    const timer = setTimeout(() => {
+      speakRef.current(pageKey);
+    }, 400);
     return () => {
       clearTimeout(timer);
-      stop();
+      stopRef.current();
     };
-  }, [pageKey, speak, stop]);
+  }, [pageKey]);
 }
 
