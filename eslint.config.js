@@ -5,7 +5,8 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['**/dist/**']),
+  // Unbundled historical design references; live reports are in src/.
+  globalIgnores(['**/dist/**', 'report pages/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

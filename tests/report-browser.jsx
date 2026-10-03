@@ -16,7 +16,8 @@ window.setTimeout=(fn,ms,...args)=>ms>=400?-1:wait(fn,ms,...args);
 window.speechSynthesis={cancel(){},getVoices:()=>[],addEventListener(){},removeEventListener(){},speak(){throw new Error('No offline browser voice');}};
 window.WebSocket=class {static OPEN=1;readyState=0;send(){}close(){}};
 const played=[]; window.Audio=class{constructor(url){this.url=url;}play(){played.push(this.url);queueMicrotask(()=>this.onended?.());return Promise.resolve();}pause(){}};
-const paid={ok:true,paymentVerified:true,reportStatus:'READY',sessionId:'KSK-REPORT-TEST',customerData:{name:'Current Person',age:25,gender:'male'},healthData:{vitals:{height:172.3,weight:65.4,systolic:120,diastolic:80,bpm:72,oxygen:98,temperature:98.4},history:[],scanCount:1}};
+const longPaymentUrl = 'https://reliv7.vercel.app/pay#p=' + 'a'.repeat(2450);
+const paid={ok:true,paymentVerified:true,reportStatus:'READY',sessionId:'KSK-REPORT-TEST',customerData:{name:'Current Person',age:25,gender:'male'},healthData:{reportPaymentUrl:longPaymentUrl,vitals:{height:172.3,weight:65.4,systolic:120,diastolic:80,bpm:72,oxygen:98,temperature:98.4},history:[],scanCount:1}};
 let authorized=true,root;
 const requests=[];
 window.fetch=async(url,options={})=>{requests.push({url:String(url),token:options.headers?.['X-Reliv-Profile-Token']});if(String(url).endsWith('manifest.json'))return {ok:true,json:async()=>manifest};if(String(url).endsWith('/api/speech/audio'))return {ok:false,status:503};return {ok:true,json:async()=>String(url).includes('/report/data')?(authorized?paid:{ok:false}):{}};};
@@ -32,9 +33,13 @@ async function run(){
   await mount(p);assert([...document.querySelectorAll('h1')].at(-1).textContent===reportCopy.en.titles[p-1],`direct report ${p} opens its distinct screen`);
   assert(!document.body.textContent.includes('Previous Person'),'stale patient is cleared');
   assert(document.body.textContent.includes('Scan 1'),'first visit is labelled scan one');
-  if(p===1)assert(document.body.textContent.includes('cannot measure them reliably'),'no invented metabolic age');
+  if(p===1)assert(document.body.textContent.includes('These are years, not a score.'),'metabolic age and health score are clearly distinguished');
   if(p===2)assert(document.querySelector('[data-metric=height]').textContent.includes('172.3')&&document.querySelector('[data-metric=oxygen]').textContent.includes('98'),'today page includes actual measured values');
   if(p===3)assert(document.querySelectorAll('figure circle').length===6,'first scan has one point for each of six coloured measurements');
+  if(p===5) {
+   assert([...document.querySelectorAll('svg title')].some(el=>el.textContent==='Reopen your paid Reliv visit'),'long original payment URL renders a report QR');
+   assert(document.body.textContent.includes('Payment already completed'),'report makes clear no second payment is needed');
+  }
   if(p===4)assert(document.querySelectorAll('figure rect').length===6,'first scan has one bar for each of six measurements');
   const before=played.length;await click('Listen to this guide');assert(played.length>=before+2&&played[before].startsWith('/assets/audio/en/'),'recorded page and scan explanation play without speech engine');
   assert(!requests.some(x=>x.url.endsWith('/api/speech/audio')),'all report explanations and values are bundled for offline playback');
@@ -47,7 +52,13 @@ async function run(){
  assert(chartScans({scanCount:105,history:Array(100).fill({oxygen:98})})[0].scan===99,'recent chart keeps lifetime scan numbering');
  assert(requests.some(x=>x.token==='a'.repeat(64)),'private token protects history requests');
  assert(!requests.some(x=>x.url.includes('/reports/history/')),'no public email history lookup');
+ paid.healthData.reportPaymentUrl=null;await mount(5);
+ assert(![...document.querySelectorAll('svg title')].some(el=>el.textContent==='Reopen your paid Reliv visit'),'missing paid URL never becomes a generic payment QR');
+ assert(document.body.textContent.includes('Do not pay again'),'missing QR has safe recovery instructions');
+ paid.healthData.scanCount=4;paid.healthData.vitals={};paid.healthData.history=[];
+ await mount(1);assert(document.body.textContent.includes('Not available'),'missing body measurements stay unavailable');
  authorized=false;await mount(2);assert(!document.querySelector('[aria-label="Health screening report"]'),'unpaid response cannot show report');
  await act(async()=>root.unmount());document.getElementById('results').textContent=checks.join('\n')+'\nALL '+checks.length+' BROWSER CHECKS PASSED';
 }
 run().catch(e=>{document.getElementById('results').textContent=checks.join('\n')+'\nFAIL '+e.stack;});
+
