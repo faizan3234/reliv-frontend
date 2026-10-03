@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import WifiSettings from '../src/pages/WifiSettings';
+import { MemoryRouter } from 'react-router-dom';
+import App from '../src/App';
 
 const results = [];
 function record(ok, message) {
@@ -10,8 +10,7 @@ function record(ok, message) {
 }
 
 // Mock fetch for Wi-Fi endpoints in JSDOM
-const originalFetch = window.fetch;
-window.fetch = async (url, opts = {}) => {
+window.fetch = async (url) => {
   const urlStr = String(url);
   if (urlStr.includes('/api/wifi/status')) {
     return {
@@ -64,25 +63,24 @@ window.fetch = async (url, opts = {}) => {
 const root = createRoot(document.getElementById('app'));
 root.render(
   <MemoryRouter initialEntries={['/wifi']}>
-    <Routes>
-      <Route path="/wifi" element={<WifiSettings />} />
-    </Routes>
+    <App />
   </MemoryRouter>
 );
 
-// Wait for render and assert
+// Wait for Suspense / lazy load and assertions
 setTimeout(async () => {
   try {
     const text = document.body.textContent;
-    record(text.includes('Wi-Fi Settings'), 'renders Wi-Fi Settings header');
+    record(!text.includes('QR Code Expired'), 'does not show QR Code Expired message');
+    record(text.includes('Wi-Fi Settings'), 'renders Wi-Fi Settings header through App root');
     record(text.includes('192.168.50.1'), 'renders Kiosk AP 192.168.50.1 indicator');
     record(text.includes('Current Connection'), 'renders Current Connection section');
     record(text.includes('Reliv_Office_5GHz'), 'displays connected SSID');
     record(text.includes('Available Networks'), 'renders Available Networks list');
     record(text.includes('Join Other Network...'), 'renders Join Other Network button');
 
-    record(true, 'ALL 6 BROWSER CHECKS PASSED');
+    record(true, 'ALL 7 BROWSER CHECKS PASSED');
   } catch (err) {
     record(false, `Error: ${err.message}`);
   }
-}, 300);
+}, 400);

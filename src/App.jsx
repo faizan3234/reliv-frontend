@@ -9,6 +9,7 @@ const PayAd = lazy(() => import('./pages/PayAd'));
 const MobileEntry = lazy(() => import('./pages/MobileEntry'));
 const PhotoUpload = lazy(() => import('./pages/PhotoUpload'));
 const MobileEntryGateway = lazy(() => import('./pages/MobileEntryGateway'));
+const WifiSettings = lazy(() => import('./pages/WifiSettings'));
 
 export default function App() {
   const { pathname } = useLocation();
@@ -19,6 +20,7 @@ export default function App() {
       <Route path="/pay" element={<PayAd />} />
       <Route path="/mobile-entry" element={<MobileEntry />} />
       <Route path="/photo-upload" element={<PhotoUpload />} />
+      <Route path="/wifi" element={<WifiSettings />} />
       <Route path="*" element={<MobileEntryGateway />} />
     </Routes>
   </div>}
