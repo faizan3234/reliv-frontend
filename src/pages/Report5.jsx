@@ -591,38 +591,6 @@ export default function Report5() {
     };
   }, [vitals, patient]);
 
-  // Status functions
-  const getBPStatus = useCallback(() => {
-    if (!systolic || !diastolic) return { status: "N/A", color: "#888888", text: "Not recorded" };
-    if (systolic < 120 && diastolic < 80) return { status: "Optimal", color: "#22c55e", text: "Your blood pressure readings fall within a healthy range across recent measurements." };
-    if (systolic < 130 && diastolic < 85) return { status: "Normal", color: "#3b82f6", text: "Blood pressure is within normal range." };
-    return { status: "Needs Attention", color: "#ef4444", text: "Blood pressure readings show mild elevation and should be observed over time." };
-  }, [systolic, diastolic]);
-
-  const getOxygenStatus = () => {
-    if (!oxygen) return { status: "N/A", color: "#888888", text: "Not recorded" };
-    if (oxygen >= 95) return { status: "Excellent", color: "#22c55e", text: "Oxygen delivery appears efficient and consistent." };
-    if (oxygen >= 90) return { status: "Stable", color: "#3b82f6", text: "Oxygen levels are stable but may vary with activity or posture." };
-    return { status: "Low", color: "#ef4444", text: "Oxygen levels may need medical attention." };
-  };
-
-  const getPulseStatus = () => {
-    if (!bpm) return { status: "N/A", color: "#888888", text: "Not recorded" };
-    if (bpm >= 60 && bpm <= 100) return { status: "Normal", color: "#22c55e", text: "Heart rate reflects a balanced autonomic response." };
-    return { status: "Variable", color: "#f59e0b", text: "Heart rate shows variability that may reflect stress or activity." };
-  };
-
-  const getTemperatureStatus = () => {
-    if (!temperature) return { status: "N/A", color: "#888888", text: "Not recorded" };
-    if (temperature < 95) return { status: "Very Low", color: "#3b82f6", text: "Body temperature is unusually low and may need attention." };
-    if (temperature < 97) return { status: "Low", color: "#3b82f6", text: "Body temperature is slightly below normal range." };
-    if (temperature <= 98.9) return { status: "Normal", color: "#22c55e", text: "Body temperature is within healthy range." };
-    if (temperature <= 100) return { status: "Slightly Elevated", color: "#f59e0b", text: "Body temperature is slightly elevated but may be normal variation." };
-    if (temperature <= 101) return { status: "Fever", color: "#f97316", text: "Mild fever detected. Monitor and stay hydrated." };
-    if (temperature <= 104) return { status: "High Fever", color: "#ef4444", text: "High fever present. Consider medical consultation." };
-    return { status: "Very High Fever", color: "#dc2626", text: "Very high fever. Seek immediate medical attention." };
-  };
-
   // Progressive insights
   const insights = useMemo(() => {
     const list = [];
@@ -728,18 +696,7 @@ export default function Report5() {
       return;
     }
 
-    const textToRead = `
-      Comprehensive Health Report for ${patient?.name || "Patient"}.
-      ${narrativeSummary}
-      Blood Pressure: ${getBPStatus().status}. ${getBPStatus().text}
-      Oxygen Level: ${getOxygenStatus().status}. ${getOxygenStatus().text}
-      Pulse: ${getPulseStatus().status}. ${getPulseStatus().text}
-      Temperature: ${getTemperatureStatus().status}. ${getTemperatureStatus().text}
-      Body Weight: ${vitals.weight || "Not recorded"} kilograms.
-      Insights: ${insights.join(". ")}
-    `;
-
-    speakText(textToRead, { onEnd: () => setSpeechPlaying(false) });
+    speakChained(bundledReportNarration({...data, patient, vitals}, 5, reportSpeechLanguage), { onEnd: () => setSpeechPlaying(false) });
     setSpeechPlaying(true);
   };
 

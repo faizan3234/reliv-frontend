@@ -8,6 +8,7 @@ import ProtectedReportRoute from '../src/components/ProtectedReportRoute';
 import ReferenceReports from '../src/pages/ReferenceReports';
 
 
+import { personalizedReportCopy } from '../src/voice/personalizedReportCopy';
 import manifest from '../public/assets/audio/manifest.json';
 import '../src/i18n';
 window.IS_REACT_ACT_ENVIRONMENT = true;
@@ -35,9 +36,10 @@ async function run(){
   paid.healthData.visitSummary={scanCount:count};
   paid.healthData.history=Array.from({length:count},(_,i)=>({scanNumber:i+1,createdAt:`2026-09-${String(i+1).padStart(2,'0')}`,patient:{age:25,gender:'male'},...paid.healthData.vitals}));
   for(let page=1;page<=5;page++) {
-   const beforeAudio=played.length, beforeRequests=speechRequests.length;
+   const beforeAudio=played.length, beforeRequests=speechRequests.length, beforeSpoken=spoken.length;
    await mount(page);
    assert(played.length>beforeAudio && played.at(-1).startsWith("/assets/audio/"), `report ${page} automatically plays bundled audio`);
+   if(page===1){const items=spoken.slice(beforeSpoken);const index=items.indexOf(personalizedReportCopy.en.score);assert(index>=0 && document.body.textContent.includes(items[index+1]),'actual displayed score is spoken on report one');}
    assert(speechRequests.length===beforeRequests && spoken.includes(String(count)), `report ${page} narrates actual visit count without runtime TTS`);
    assert(document.querySelector('.reference-progress').textContent.includes(`Scan ${count}`),`original layout page ${page} keeps scan ${count}`);
    assert(Boolean(document.querySelector('.reference-back')) === (page>1&&page<5), 'Back available only on report pages 2–4');

@@ -1,16 +1,14 @@
 import { calc_fat_percent, calc_fat_mass, calc_water_percent, calc_bmr } from '../utils/bodyComposition.js';
-import { reportCopy } from './guidedReport.js';
-import { insightCopy, metricCopy, languageIndex } from './insightCopy.js';
-import { numberParts, audioUnits, metricAudio } from './reportAudio.js';
-import { reportInsights, reportRows, summaryAdvice } from '../utils/reportInsights.js';
-import { getScanCount } from '../utils/reportSnapshot.js';
+import { insightCopy } from './insightCopy.js';
+import { metricAudio, numberParts } from './reportAudio.js';
+import { buildPersonalizedReport, displayedReportScore, personalizedActions } from './personalizedReport.js';
+import { personalizedReportCopy } from './personalizedReportCopy.js';
+import { reportInsights } from '../utils/reportInsights.js';
 
 // Compose prerecorded words and numbers from actual readings. No runtime TTS,
 // sample patient recordings or network is needed for a report overview.
-export function bundledReportNarration(data, page, language='en') {
- const lang=['en','hi','bn'].includes(language)?language:'en';
- const w=reportCopy[lang],v=insightCopy[lang],i=languageIndex(lang);
- const all=reportInsights(data), fields=page===1?['height','weight','bmi']:page===2?['bodyFat','fatMass','fatFreeMass','bodyWater','restingEnergy']:page===3?['systolic','diastolic','bpm','oxygen','temperature']:['systolic','diastolic','bpm','oxygen'];
+function referenceMetrics(data, page) {
+ const all=reportInsights(data);
  // Use the same estimate formulas as the visible legacy report, not a second model.
  if(page===2) {
   const p=data.patient||{},vitals=data.vitals||{};
@@ -22,15 +20,35 @@ export function bundledReportNarration(data, page, language='en') {
   const values={bodyFat:fat,fatMass,fatFreeMass:valid?weight-fatMass:null,bodyWater:valid?calc_water_percent(weight,height,sex,age,0):null,restingEnergy:valid?calc_bmr(weight,height,sex,age):null};
   for(const metric of all)if(Object.hasOwn(values,metric.key))metric.value=values[metric.key]===null?null:Math.round(values[metric.key]*10)/10;
  }
- const messages=[w.scan,...numberParts(getScanCount(data),lang)];
- if(page===5) messages.push(v[summaryAdvice(all)],v.next,v.shareText);
- else {
-  messages.push(v.numbers,...all.filter(m=>fields.includes(m.key)).flatMap(m=>metricAudio(m,lang)));
-  if(page===4) {
-   const previous=reportRows(data).at(-2);
-   if(previous){messages.push(w.previous,w.scan,...numberParts(previous.scan,lang));for(const key of fields){const n=Number(previous[key]);messages.push(metricCopy[key][0][i],...(n>0?numberParts(n,lang):[v.missing]),audioUnits[lang][metricCopy[key][2]]);}}
-   messages.push(v.chart);
-  }
+ return all;
+}
+export function bundledReportNarration(data, page, language='en') {
+ const lang=['en','hi','bn'].includes(language)?language:'en';
+ const all=referenceMetrics(data,page);
+ const fields=['bodyFat','fatMass','fatFreeMass','bodyWater','restingEnergy'];
+ const c=personalizedReportCopy[lang];
+ const semanticPage=page===2?1:page===3?2:page;
+ const intro=[c.pages[0],c.estimates,c.pages[1],c.pages[3],c.pages[4]][page-1];
+ return buildPersonalizedReport({data,page:semanticPage,language:lang,score:data.bodyScore,
+  metricsOverride:all,intro,omitScore:page===2,
+  overviewFields:page===1?['height','weight','bmi']:page===2?fields:undefined
+ }).map(text=>({text,langHint:lang}));
+}
+
+// Tapping a card uses the same data and offline recordings as the overview.
+export function bundledMetricNarration(data, key, language='en') {
+ const lang=['en','hi','bn'].includes(language)?language:'en';
+ const c=personalizedReportCopy[lang], v=insightCopy[lang];
+ let parts;
+ if (key==='bodyScore') {
+  const score=displayedReportScore(data,data.bodyScore);
+  parts=[c.score,...(score===null?[v.missing]:[...numberParts(score,lang),c.scoreEnd])];
+ } else {
+  const aliases={pulse:'bpm',bodyFatPercent:'bodyFat',fatPercent:'bodyFat',bodyWaterPercent:'bodyWater',waterPercent:'bodyWater',bmr:'restingEnergy'};
+  const actual=aliases[key]||key;
+  const selected=referenceMetrics(data,2).filter(m=>key==='bloodPressure'?['systolic','diastolic'].includes(m.key):m.key===actual);
+  parts=selected.length?[...selected.flatMap(m=>metricAudio(m,lang)),...personalizedActions(selected,lang)]
+   :['metabolicAge','visceralFat'].includes(key)?[v.metabolic]:[v.missing,c.estimates];
  }
- return messages.filter(Boolean).map(text=>({text,langHint:lang}));
+ return parts.filter(Boolean).map(text=>({text,langHint:lang}));
 }

@@ -12,9 +12,10 @@ import manifest from '../public/assets/audio/manifest.json';
 import '../src/i18n';
 window.IS_REACT_ACT_ENVIRONMENT = true;
 const wait=window.setTimeout.bind(window);
-window.setTimeout=(fn,ms,...args)=>ms>=400?-1:wait(fn,ms,...args);
+window.setTimeout=(fn,ms,...args)=>ms===450?wait(fn,5,...args):ms>=400?-1:wait(fn,ms,...args);
 window.speechSynthesis={cancel(){},getVoices:()=>[],addEventListener(){},removeEventListener(){},speak(){throw new Error('No offline browser voice');}};
 window.WebSocket=class {static OPEN=1;readyState=0;send(){}close(){}};
+const spoken=[];window.addEventListener('reliv_spoken_text',e=>spoken.push(e.detail));
 const played=[]; window.Audio=class{constructor(url){this.url=url;}play(){played.push(this.url);queueMicrotask(()=>this.onended?.());return Promise.resolve();}pause(){}};
 const longPaymentUrl = 'https://reliv7.vercel.app/pay#p=' + 'a'.repeat(2450);
 const paid={ok:true,paymentVerified:true,reportStatus:'READY',sessionId:'KSK-REPORT-TEST',customerData:{name:'Current Person',age:25,gender:'male'},healthData:{reportPaymentUrl:longPaymentUrl,vitals:{height:172.3,weight:65.4,systolic:120,diastolic:80,bpm:72,oxygen:98,temperature:98.4},history:[],scanCount:1}};
@@ -30,7 +31,8 @@ async function run(){
  assert(getScanCount({history:Array(7).fill({})})===1,'only authoritative scan count sets visit number');
  assert(reportMeasurements({impedance:500}).every(x=>x.value===null),'raw impedance never substitutes for a measurement');
  for(let p=1;p<=5;p++){
-  await mount(p);assert([...document.querySelectorAll('h1')].at(-1).textContent===reportCopy.en.titles[p-1],`direct report ${p} opens its distinct screen`);
+  const autoBefore=played.length;
+  await mount(p);await flush();assert(played.length>autoBefore,`report ${p} speaks automatically after authorized data loads`);assert([...document.querySelectorAll('h1')].at(-1).textContent===reportCopy.en.titles[p-1],`direct report ${p} opens its distinct screen`);
   assert(!document.body.textContent.includes('Previous Person'),'stale patient is cleared');
   assert(document.body.textContent.includes('Scan 1'),'first visit is labelled scan one');
   if(p===1)assert(document.body.textContent.includes('These are years, not a score.'),'metabolic age and health score are clearly distinguished');
@@ -41,6 +43,7 @@ async function run(){
    assert(document.body.textContent.includes('Payment already completed'),'report makes clear no second payment is needed');
   }
   if(p===4)assert(document.body.textContent.includes('Trends appear after your next scan'),'first scan bar chart waits for a comparison');
+  if(p===1){const shown=document.querySelector('.report-score-ring strong').textContent;assert(spoken.includes(shown),'spoken score equals displayed score');}
   const before=played.length;await click('Listen to this guide');assert(played.length>=before+2&&played[before].startsWith('/assets/audio/en/'),'recorded page and scan explanation play without speech engine');
   assert(!requests.some(x=>x.url.endsWith('/api/speech/audio')),'all report explanations and values are bundled for offline playback');
  }

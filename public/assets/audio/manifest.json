@@ -6020,5 +6020,350 @@
   "Finger sensor में properly placed है? अगर help चाहिए तो मुझे बोलिए।": "e2fad584f6967ca7fb8df73c12ea038f.mp3",
   "Device connected নয়। একবার Refresh চাপুন। আমি এখানেই আছি।": "54324bb59630f39e1e6e617290264028.mp3",
   "Cuff পরে device ON করুন, তারপর Measure চাপুন।": "4104007b74f07506b377cba99ac3c0b0.mp3",
-  "আঙুল sensor-এ properly placed আছে? Help লাগলে আমাকে বলুন।": "5f9d8a2579b68ab5316835fb3f9a593f.mp3"
+  "আঙুল sensor-এ properly placed আছে? Help লাগলে আমাকে বলুন।": "5f9d8a2579b68ab5316835fb3f9a593f.mp3",
+  "Now let’s go through your actual readings and what they mean.": {
+    "en": {
+      "file": "personal-2baf5fc496c6a80055d26765.mp3"
+    }
+  },
+  "Let’s look at your body overview and today’s estimate.": {
+    "en": {
+      "file": "personal-d190c70d49404e8fac7ff578.mp3"
+    }
+  },
+  "This page shows how your own readings have changed over your visits.": {
+    "en": {
+      "file": "personal-94df48594b2c3b89833ef3ff.mp3"
+    }
+  },
+  "Here we compare today with your most recent matching scan, one measurement at a time.": {
+    "en": {
+      "file": "personal-1eb2356b2e8ee131d38854ca.mp3"
+    }
+  },
+  "Your estimated health score on this screen is": {
+    "en": {
+      "file": "personal-224b6758fba69c3cf882f9a6.mp3"
+    }
+  },
+  "Let’s put your results together and decide what deserves attention today.": {
+    "en": {
+      "file": "personal-7837720f7ca2f9ef8478369a.mp3"
+    }
+  },
+  "Your reading today is": {
+    "en": {
+      "file": "personal-7ccdb419e46869751bb9bed9.mp3"
+    }
+  },
+  "out of one hundred. This is a calculated screening summary, not a diagnosis. A high score does not cancel out an abnormal reading.": {
+    "en": {
+      "file": "personal-8a1aa7e1d853494a9ee8d52b.mp3"
+    }
+  },
+  "The earlier reading was": {
+    "en": {
+      "file": "personal-fc9f9a153304ea1d5a918a08.mp3"
+    }
+  },
+  "The reading is lower by": {
+    "en": {
+      "file": "personal-000b1557439d3fb810df97fb.mp3"
+    }
+  },
+  "The recorded value is unchanged.": {
+    "en": {
+      "file": "personal-75bf97c4ae8d15ea53f30d63.mp3"
+    }
+  },
+  "The reading is higher by": {
+    "en": {
+      "file": "personal-d302fd7cec1b3653ee6ff791.mp3"
+    }
+  },
+  "There is no earlier matching reading to compare yet.": {
+    "en": {
+      "file": "personal-9be0adcde4f8a057cfa63404.mp3"
+    }
+  },
+  "There is not enough measured information here to say your results are reassuring. Missing readings need to be checked; they do not mean zero or normal.": {
+    "en": {
+      "file": "personal-88c194b2ca14aa4f1efed0f2.mp3"
+    }
+  },
+  "The readings with applicable adult reference ranges are within those ranges today. This is reassuring for those readings, but it does not rule out illness.": {
+    "en": {
+      "file": "personal-412947d3aa2a60134e583941.mp3"
+    }
+  },
+  "For this blood pressure reading, sit quietly for five minutes, with your back supported, feet on the floor and arm supported at heart level. Repeat correctly and discuss a persistently unusual result with a clinician. Do not change your medicines yourself.": {
+    "en": {
+      "file": "personal-2eaee77675afe739998ed9a4.mp3"
+    }
+  },
+  "Check this temperature again using the device instructions. The measurement site affects the reading. Ask a clinician if it remains unusual or you feel unwell.": {
+    "en": {
+      "file": "personal-94a0145b20d7ad0f6a223ca4.mp3"
+    }
+  },
+  "For this oxygen reading, keep a warm finger still and check that the sensor fits properly. If it stays unusual, ask a clinician. Feeling breathless needs help even when the number looks normal.": {
+    "en": {
+      "file": "personal-8eae0042f91f2f6b834f9c97.mp3"
+    }
+  },
+  "For this pulse reading, rest quietly and check again. Activity and stress can change the number. If it stays unusual, or you feel unwell, ask a clinician.": {
+    "en": {
+      "file": "personal-24487088c78866184946482f.mp3"
+    }
+  },
+  "Your BMI is below the adult reference range. It is a weight-to-height calculation, not a diagnosis. Discuss your eating pattern and any unintended weight loss with a clinician or dietitian; avoid trying a quick weight-change plan.": {
+    "en": {
+      "file": "personal-a60fa0c58c8971429d3443e9.mp3"
+    }
+  },
+  "चलिए, पहले आपके शरीर की जानकारी और आज का अनुमान देखते हैं।": {
+    "hi": {
+      "file": "personal-d0003c2a8b0d2673d1a36fa0.mp3"
+    }
+  },
+  "Next time, these same measurements can be compared with today. Use similar timing and conditions. More records help show repeated changes; they do not automatically mean better health.": {
+    "en": {
+      "file": "personal-f77485dc98ad262573e7375e.mp3"
+    }
+  },
+  "These body fat and water values are estimates from your recorded details, not direct sensor measurements. They cannot tell us whether you are dehydrated or give you a food or water target.": {
+    "en": {
+      "file": "personal-5b0f4db8a764daa5ba30622a.mp3"
+    }
+  },
+  "Your BMI is above the adult reference range. It does not tell us how much muscle you have. A clinician or dietitian can help plan suitable meals and activity for you. Avoid crash diets.": {
+    "en": {
+      "file": "personal-fc5cecc474ff2bf37373e10c.mp3"
+    }
+  },
+  "अब आपकी रिपोर्ट को साथ में समझते हैं कि आज किस बात पर ध्यान देना है।": {
+    "hi": {
+      "file": "personal-092321c09b60afbd845411d8.mp3"
+    }
+  },
+  "यहाँ आज की रीडिंग को आपकी पिछली उपलब्ध रीडिंग से एक-एक करके मिलाते हैं।": {
+    "hi": {
+      "file": "personal-cae2555e332c6e611bfb22ce.mp3"
+    }
+  },
+  "अब आपकी असली रीडिंग और उनका मतलब एक-एक करके समझते हैं।": {
+    "hi": {
+      "file": "personal-6c0b791e6faa56cd557bafb2.mp3"
+    }
+  },
+  "इस पेज पर आपकी पिछली जाँचों से आज तक के बदलाव दिखते हैं।": {
+    "hi": {
+      "file": "personal-16f7ee691d4320458609c0f8.mp3"
+    }
+  },
+  "पिछली रीडिंग थी": {
+    "hi": {
+      "file": "personal-c973708c54053aa4beccf220.mp3"
+    }
+  },
+  "इस स्क्रीन पर आपकी सेहत का अनुमानित स्कोर है": {
+    "hi": {
+      "file": "personal-36c8a25adc519ea8b25ae06e.mp3"
+    }
+  },
+  "आज आपकी रीडिंग है": {
+    "hi": {
+      "file": "personal-86a6b68efb12f69e384b1bf5.mp3"
+    }
+  },
+  "सौ में से। यह हिसाब से बना स्कोर है, बीमारी की जाँच का फैसला नहीं। अच्छा स्कोर होने पर भी कोई गलत रीडिंग नजरअंदाज नहीं करनी है।": {
+    "hi": {
+      "file": "personal-781cd892260d5d0eb060598e.mp3"
+    }
+  },
+  "इस माप की पिछली रीडिंग अभी नहीं है, इसलिए तुलना नहीं कर सकते।": {
+    "hi": {
+      "file": "personal-68befaf31d9f08d20958dd38.mp3"
+    }
+  },
+  "रीडिंग इतनी बढ़ी है": {
+    "hi": {
+      "file": "personal-876d70c29edfcd404ffaa255.mp3"
+    }
+  },
+  "रीडिंग इतनी कम हुई है": {
+    "hi": {
+      "file": "personal-17979d9c3de958e4a64cdb05.mp3"
+    }
+  },
+  "दर्ज रीडिंग में बदलाव नहीं है।": {
+    "hi": {
+      "file": "personal-3fc321c25c265904587afabb.mp3"
+    }
+  },
+  "जिन रीडिंग पर बड़ों की सामान्य रेंज लागू होती है, वे आज उस रेंज में हैं। उन मापों के लिए यह अच्छी बात है, लेकिन इससे हर बीमारी खारिज नहीं होती।": {
+    "hi": {
+      "file": "personal-986c15c268fe6cbb5d5b1635.mp3"
+    }
+  },
+  "ऑक्सीजन के लिए उँगली गर्म और स्थिर रखें, सेंसर सही लगा हो। रीडिंग अलग बनी रहे तो डॉक्टर से बात करें। साँस लेने में दिक्कत हो तो नंबर ठीक दिखने पर भी मदद लें।": {
+    "hi": {
+      "file": "personal-f204c6c1492811be94ba8d83.mp3"
+    }
+  },
+  "इस बीपी के लिए पाँच मिनट आराम से बैठें। पीठ को सहारा दें, पैर जमीन पर रखें और हाथ दिल की ऊँचाई पर टिकाएँ। सही तरीके से फिर मापें। रीडिंग बार-बार अलग रहे तो डॉक्टर से बात करें। अपनी दवा खुद से न बदलें।": {
+    "hi": {
+      "file": "personal-ae2b904be18108869a818cf7.mp3"
+    }
+  },
+  "अभी इतने असली माप नहीं मिले कि सब ठीक है कह सकें। जो रीडिंग नहीं मिली, उसे जाँचना होगा। खाली जगह का मतलब शून्य या सब ठीक नहीं है।": {
+    "hi": {
+      "file": "personal-4a7e505d176c0e6a7a3b3377.mp3"
+    }
+  },
+  "धड़कन के लिए थोड़ा आराम करके फिर जाँचें। चलने-फिरने या टेंशन से नंबर बदल सकता है। रीडिंग अलग बनी रहे या तबीयत खराब हो तो डॉक्टर से बात करें।": {
+    "hi": {
+      "file": "personal-3e8cd272cfda4ccf0102d92b.mp3"
+    }
+  },
+  "डिवाइस के निर्देश के हिसाब से शरीर की गर्मी फिर जाँचें। सेंसर कहाँ लगाया है, उससे रीडिंग बदल सकती है। रीडिंग अलग बनी रहे या तबीयत खराब हो तो डॉक्टर से बात करें।": {
+    "hi": {
+      "file": "personal-658d818fc3e65b8e8177afa5.mp3"
+    }
+  },
+  "आपका बीएमआई बड़ों की सामान्य रेंज से ऊपर है। इससे मसल की मात्रा नहीं पता चलती। डॉक्टर या डाइटीशियन आपके लिए सही खाना और एक्टिविटी तय करने में मदद कर सकते हैं। क्रैश डाइट न करें।": {
+    "hi": {
+      "file": "personal-3d8eeda0815a7828d3afbab8.mp3"
+    }
+  },
+  "आपका बीएमआई बड़ों की सामान्य रेंज से कम है। यह लंबाई के हिसाब से वजन का हिसाब है, बीमारी का फैसला नहीं। खाने की आदतों और बिना कोशिश वजन घटने पर डॉक्टर या डाइटीशियन से बात करें। जल्दी वजन बदलने वाली योजना न अपनाएँ।": {
+    "hi": {
+      "file": "personal-2e3684ac40f9260e7da4b2be.mp3"
+    }
+  },
+  "চলুন, আগে আপনার শরীরের তথ্য আর আজকের অনুমান দেখি।": {
+    "bn": {
+      "file": "personal-3e8eb83302f42612d261e9f4.mp3"
+    }
+  },
+  "এবার আপনার আসল রিডিং আর তার মানে এক-এক করে বুঝি।": {
+    "bn": {
+      "file": "personal-937709ac1e7560bf87fea0e7.mp3"
+    }
+  },
+  "फैट और पानी की ये रीडिंग आपके दर्ज विवरण से निकले अनुमान हैं, सेंसर ने सीधे नहीं मापा। इनसे पानी की कमी या कितना खाना और पानी लेना है, यह तय नहीं होता।": {
+    "hi": {
+      "file": "personal-e7be509fbf9e82062dd5306a.mp3"
+    }
+  },
+  "अगली बार यही माप आज से मिलाकर देख सकते हैं। करीब वही समय और हालात रखें। ज्यादा रिकॉर्ड से बार-बार होने वाला बदलाव समझ आता है, अपने आप अच्छी सेहत का मतलब नहीं होता।": {
+    "hi": {
+      "file": "personal-1f6021d064abcaf0069530b6.mp3"
+    }
+  },
+  "এখানে আজকের রিডিং আপনার আগের পাওয়া রিডিংয়ের সঙ্গে এক-এক করে মেলাব।": {
+    "bn": {
+      "file": "personal-bbb47a08665f7db959e62439.mp3"
+    }
+  },
+  "এবার আপনার রিপোর্ট মিলিয়ে বুঝি, আজ কোন বিষয়ে খেয়াল রাখা দরকার।": {
+    "bn": {
+      "file": "personal-d03424e6163b352eaf9c652f.mp3"
+    }
+  },
+  "এই স্ক্রিনে আপনার স্বাস্থ্যের আনুমানিক স্কোর হল": {
+    "bn": {
+      "file": "personal-11a468f963aaae56824df0fb.mp3"
+    }
+  },
+  "এই পাতায় আপনার আগের পরীক্ষা থেকে আজ পর্যন্ত বদল দেখা যাচ্ছে।": {
+    "bn": {
+      "file": "personal-32b634619dd33d23ce1c659c.mp3"
+    }
+  },
+  "রিডিং এতটা বেড়েছে": {
+    "bn": {
+      "file": "personal-96f4eacd3a2ef6549d1da26e.mp3"
+    }
+  },
+  "আগের রিডিং ছিল": {
+    "bn": {
+      "file": "personal-462fd3dc39e11ba60fd68849.mp3"
+    }
+  },
+  "আজ আপনার রিডিং হল": {
+    "bn": {
+      "file": "personal-d317127dcb1170553c96d7f2.mp3"
+    }
+  },
+  "একশোর মধ্যে। এটি হিসাব করা স্কোর, রোগ নির্ণয় নয়। স্কোর ভালো হলেও অস্বাভাবিক রিডিং উপেক্ষা করবেন না।": {
+    "bn": {
+      "file": "personal-a3c5393b83243de60d90934d.mp3"
+    }
+  },
+  "রিডিং এতটা কমেছে": {
+    "bn": {
+      "file": "personal-b843791e2f27e5ea1f6796ad.mp3"
+    }
+  },
+  "নথিভুক্ত রিডিং একই আছে।": {
+    "bn": {
+      "file": "personal-5ce27781f0b5acb316aa9fa1.mp3"
+    }
+  },
+  "সব ঠিক আছে বলার মতো যথেষ্ট আসল মাপ পাওয়া যায়নি। যে রিডিং নেই তা মাপতে হবে। ফাঁকা মানে শূন্য বা স্বাভাবিক নয়।": {
+    "bn": {
+      "file": "personal-023e27744e861dd846af466b.mp3"
+    }
+  },
+  "এই মাপের আগের রিডিং নেই, তাই এখনও তুলনা করা যাচ্ছে না।": {
+    "bn": {
+      "file": "personal-b75f0a75f9459b5d4fbc9d4c.mp3"
+    }
+  },
+  "যে রিডিংগুলিতে বড়দের সাধারণ সীমা প্রযোজ্য, সেগুলি আজ সেই সীমায় আছে। ওই মাপগুলির জন্য এটি ভালো খবর, তবে এতে সব অসুখ নেই বলা যায় না।": {
+    "bn": {
+      "file": "personal-c2a4cd177e81cd4b9cffb6f0.mp3"
+    }
+  },
+  "অক্সিজেন মাপার সময় আঙুল গরম আর স্থির রাখুন, সেন্সর ঠিকমতো লাগান। রিডিং অস্বাভাবিক থাকলে ডাক্তারকে জানান। শ্বাস নিতে কষ্ট হলে নম্বর স্বাভাবিক দেখালেও সাহায্য নিন।": {
+    "bn": {
+      "file": "personal-105672110ebf3fccf0b97927.mp3"
+    }
+  },
+  "পালসের জন্য একটু বিশ্রাম নিয়ে আবার মাপুন। হাঁটাচলা বা টেনশনে নম্বর বদলাতে পারে। রিডিং অস্বাভাবিক থাকলে বা শরীর খারাপ লাগলে ডাক্তারের সঙ্গে কথা বলুন।": {
+    "bn": {
+      "file": "personal-95af42ea61c2bb28d1cb60fa.mp3"
+    }
+  },
+  "এই বিপির জন্য পাঁচ মিনিট শান্ত হয়ে বসুন। পিঠে ভর দিন, পা মেঝেতে রাখুন, হাত হার্টের উচ্চতায় ঠেকিয়ে রাখুন। ঠিকভাবে আবার মাপুন। রিডিং বারবার আলাদা থাকলে ডাক্তারের সঙ্গে কথা বলুন। নিজে থেকে ওষুধ বদলাবেন না।": {
+    "bn": {
+      "file": "personal-f1217a37da3edfccb8e946c9.mp3"
+    }
+  },
+  "যন্ত্রের নির্দেশ মেনে তাপমাত্রা আবার মাপুন। কোথায় মাপছেন তার ওপর রিডিং বদলাতে পারে। অস্বাভাবিক থাকলে বা শরীর খারাপ লাগলে ডাক্তারকে জানান।": {
+    "bn": {
+      "file": "personal-748aa0e8aa18e07000278ed0.mp3"
+    }
+  },
+  "আপনার বিএমআই বড়দের সাধারণ সীমার নিচে। এটি উচ্চতার তুলনায় ওজনের হিসাব, রোগ নির্ণয় নয়। খাবারের অভ্যাস বা চেষ্টা ছাড়াই ওজন কমলে ডাক্তার বা ডায়েটিশিয়ানের সঙ্গে কথা বলুন। তাড়াতাড়ি ওজন বদলানোর পরিকল্পনা এড়িয়ে চলুন।": {
+    "bn": {
+      "file": "personal-5f705a8b4c04d996dfae5e4d.mp3"
+    }
+  },
+  "ফ্যাট আর জলের এই মান আপনার নথিভুক্ত তথ্য থেকে করা অনুমান, সেন্সরে সরাসরি মাপা নয়। এতে জল কমে গেছে কি না, বা কতটা খাবার আর জল দরকার, তা ঠিক করা যায় না।": {
+    "bn": {
+      "file": "personal-8868ee2730df515ffc515f2e.mp3"
+    }
+  },
+  "আপনার বিএমআই বড়দের সাধারণ সীমার ওপরে। এতে মাসলের পরিমাণ বোঝা যায় না। ডাক্তার বা ডায়েটিশিয়ান আপনার উপযুক্ত খাবার আর চলাফেরার পরিকল্পনায় সাহায্য করতে পারেন। ক্র্যাশ ডায়েট করবেন না।": {
+    "bn": {
+      "file": "personal-b9dac8b64019ea0bb98fb5d2.mp3"
+    }
+  },
+  "পরের বার একই মাপ আজকের সঙ্গে মেলাতে পারবেন। একই রকম সময় আর পরিস্থিতি রাখুন। বেশি রেকর্ডে বারবার হওয়া বদল বোঝা যায়, নিজে থেকেই ভালো স্বাস্থ্য বোঝায় না।": {
+    "bn": {
+      "file": "personal-25c2dabdea2780311cbe1b7a.mp3"
+    }
+  }
 }
