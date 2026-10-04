@@ -22,6 +22,7 @@ let authorized=true,root;
 window.URL.createObjectURL=()=>"blob:personal-report";
 window.URL.revokeObjectURL=()=>{};
 const speechRequests=[];
+const spoken=[];window.addEventListener("reliv_spoken_text",e=>spoken.push(e.detail));
 const requests=[];
 window.fetch=async(url,options={})=>{requests.push({url:String(url),token:options.headers?.['X-Reliv-Profile-Token']});if(String(url).endsWith('manifest.json'))return {ok:true,json:async()=>manifest};if(String(url).endsWith('/api/speech/audio')){speechRequests.push(JSON.parse(options.body));return {ok:true,blob:async()=>new Blob(['wav'])};}return {ok:true,json:async()=>String(url).includes('/report/data')?(authorized?paid:{ok:false}):{}};};
 const checks=[];
@@ -36,8 +37,8 @@ async function run(){
   for(let page=1;page<=5;page++) {
    const beforeAudio=played.length, beforeRequests=speechRequests.length;
    await mount(page);
-   assert(played.length>beforeAudio && played.at(-1)==="blob:personal-report", `report ${page} automatically plays local generated audio`);
-   assert(speechRequests.length>beforeRequests && speechRequests.at(-1).text.includes(String(count)), `report ${page} narrates actual visit count`);
+   assert(played.length>beforeAudio && played.at(-1).startsWith("/assets/audio/"), `report ${page} automatically plays bundled audio`);
+   assert(speechRequests.length===beforeRequests && spoken.includes(String(count)), `report ${page} narrates actual visit count without runtime TTS`);
    assert(document.querySelector('.reference-progress').textContent.includes(`Scan ${count}`),`original layout page ${page} keeps scan ${count}`);
    assert(Boolean(document.querySelector('.reference-back')) === (page>1&&page<5), 'Back available only on report pages 2–4');
    if(page===4&&count>=6)assert(document.querySelectorAll('.journey-details tbody tr').length===7,'scan six adds seven bounded measured comparisons');

@@ -1,3 +1,4 @@
+import { bundledReportNarration } from '../voice/bundledReportNarration';
 import { useReportNarration } from '../hooks/useReportNarration';
 import { getScanCount } from '../utils/reportSnapshot';
 // src/pages/Report2.jsx
@@ -10,7 +11,6 @@ import Logo from "../components/Logo";
 import Confetti from "react-confetti";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { getReport2Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 // Helper: Extract first name
@@ -903,7 +903,7 @@ function getConfidenceStage(scanCount) {
 // MAIN REPORT COMPONENT
 // ============================================================================
 const Report2 = () => {
-  const { speakText } = useSpeech();
+  const { speakChained, speakText } = useSpeech();
   const { data } = useHealth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1142,8 +1142,7 @@ const Report2 = () => {
         patient,
         vitals,
       };
-      const text = getReport2Speech(speechPayload, reportSpeechLanguage);
-      speakText(text, { langHint: reportSpeechLanguage });
+      speakChained(bundledReportNarration(speechPayload, 2, reportSpeechLanguage));
 
   });
 
@@ -1153,9 +1152,8 @@ const Report2 = () => {
       patient,
       vitals,
     };
-    const text = getReport2Speech(speechPayload, reportSpeechLanguage);
-    speakText(text, { langHint: reportSpeechLanguage });
-  }, [data, patient, vitals, reportSpeechLanguage, speakText]);
+    speakChained(bundledReportNarration(speechPayload, 2, reportSpeechLanguage));
+  }, [data, patient, vitals, reportSpeechLanguage, speakChained]);
 
   const handleLanguageChange = useCallback((newLang) => {
     setReportSpeechLanguage(newLang);
@@ -1165,9 +1163,8 @@ const Report2 = () => {
       patient,
       vitals,
     };
-    const text = getReport2Speech(speechPayload, newLang);
-    speakText(text, { langHint: newLang });
-  }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
+    speakChained(bundledReportNarration(speechPayload, 2, newLang));
+  }, [data, patient, vitals, setReportSpeechLanguage, speakChained]);
   
   // Calculate control metrics separately (scan-wise unlock)
   const controlMetrics = useMemo(() => {

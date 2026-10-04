@@ -1,3 +1,4 @@
+import { bundledReportNarration } from '../voice/bundledReportNarration';
 import { useReportNarration } from '../hooks/useReportNarration';
 import { getScanCount } from '../utils/reportSnapshot';
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -9,7 +10,6 @@ import Confetti from "react-confetti";
 import { useSpeech } from "../context/SpeechContext";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { getReport1Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 import ChallengeComparison from "../components/ChallengeComparison";
 
@@ -34,7 +34,7 @@ const getGenderCompliment = (gender, tier = 'high') => {
 };
 
 const Report1 = () => {
-  const { speakText } = useSpeech();
+  const { speakChained, speakText } = useSpeech();
   const navigate = useNavigate();
   const location = useLocation();
   const { data: healthCtx } = useHealth();
@@ -129,8 +129,7 @@ const Report1 = () => {
         bodyScore: bodyScoreData.score,
         metabolicAge: bodyScoreData.metabolicAge,
       };
-      const text = getReport1Speech(speechPayload, reportSpeechLanguage);
-      speakText(text, { langHint: reportSpeechLanguage });
+      speakChained(bundledReportNarration(speechPayload, 1, reportSpeechLanguage));
 
   }, Boolean(reportData));
 
@@ -142,9 +141,8 @@ const Report1 = () => {
       bodyScore: bodyScoreData.score,
       metabolicAge: bodyScoreData.metabolicAge,
     };
-    const text = getReport1Speech(speechPayload, reportSpeechLanguage);
-    speakText(text, { langHint: reportSpeechLanguage });
-  }, [healthData, patient, vitals, bodyScoreData, reportSpeechLanguage, speakText]);
+    speakChained(bundledReportNarration(speechPayload, 1, reportSpeechLanguage));
+  }, [healthData, patient, vitals, bodyScoreData, reportSpeechLanguage, speakChained]);
 
   const handleLanguageChange = useCallback((newLang) => {
     setReportSpeechLanguage(newLang);
@@ -156,9 +154,8 @@ const Report1 = () => {
       bodyScore: bodyScoreData.score,
       metabolicAge: bodyScoreData.metabolicAge,
     };
-    const text = getReport1Speech(speechPayload, newLang);
-    speakText(text, { langHint: newLang });
-  }, [healthData, patient, vitals, bodyScoreData, setReportSpeechLanguage, speakText]);
+    speakChained(bundledReportNarration(speechPayload, 1, newLang));
+  }, [healthData, patient, vitals, bodyScoreData, setReportSpeechLanguage, speakChained]);
 
   const peersAverage = 72;
   const yearsYounger = bodyScoreData.metabolicAge
@@ -394,7 +391,7 @@ const Report1 = () => {
 
             <div className="relative w-[220px] h-[220px] mb-4">
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" role="img" aria-label={`Estimated body score ${bodyScoreData.score ?? "unavailable"} out of 100`}>
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#f3f3f3" strokeWidth="14" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#f3f3f3" strokeWidth="9" />
                 {bodyScoreData.score !== null && (
                   <circle
                     cx="50"
@@ -402,7 +399,7 @@ const Report1 = () => {
                     r="42"
                     fill="none"
                     stroke="#F28C38"
-                    strokeWidth="14"
+                    strokeWidth="9"
                     strokeLinecap="round"
                     transform="rotate(-90 50 50)"
                     strokeDasharray="263.89"
@@ -429,21 +426,21 @@ const Report1 = () => {
 
                         {showTooltip && (
                           <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-80 bg-gray-900 text-white text-sm rounded-lg p-4 shadow-xl z-10">
-                            This score changes with lifestyle, sleep, activity, and consistency over time.
+                            An estimate from body measurements, not a direct measurement of overall health.
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <span className="mt-3 text-xl uppercase tracking-widest font-semibold text-gray-500">
-                      Health Score
+                    <span className="mt-3 text-base uppercase tracking-wide font-semibold text-gray-500">
+                      Body score
                     </span>
                     <span className="mt-1.5 text-xs uppercase tracking-widest text-gray-400">
                       OUT OF 100
                     </span>
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200 mt-2 inline-flex group-hover:bg-orange-100 transition-colors">
                       <span>🔊</span>
-                      <span>Tap to listen</span>
+                      <span>Estimate</span>
                     </div>
                   </div>
                 ) : (
@@ -453,8 +450,8 @@ const Report1 = () => {
             </div>
 
             <p className="text-base text-gray-600 text-center max-w-3xl mb-12 leading-relaxed">
-              This score reflects how efficiently your heart, oxygen delivery, temperature balance, and
-              body composition are working together today.
+              This body-score estimate uses your height, weight and body-fat calculation. It is not a diagnosis.
+              Your blood pressure, oxygen and temperature are shown separately.
             </p>
 
             <h1 className="text-4xl font-semibold text-gray-900 text-center mb-16 leading-tight max-w-4xl">

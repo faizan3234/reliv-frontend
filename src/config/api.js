@@ -7,6 +7,11 @@ export const resolveApiBase = (env = {}, location = {}) => {
     hostname.startsWith('10.') ||
     hostname.endsWith('.local')
   );
+  if (isLocalKiosk && location.origin && (location.port === '' || location.protocol === 'https:')) {
+    // nginx already proxies /api. Same-origin avoids blocked ports, CORS and
+    // HTTPS-to-HTTP mixed content on local phones and installed PWAs.
+    return location.origin;
+  }
   if (isLocalKiosk) {
     return `http://${hostname}:5000`;
   }
@@ -20,3 +25,4 @@ export const resolveApiBase = (env = {}, location = {}) => {
 };
 
 export const API_BASE = resolveApiBase(import.meta.env, typeof window === 'undefined' ? {} : window.location);
+

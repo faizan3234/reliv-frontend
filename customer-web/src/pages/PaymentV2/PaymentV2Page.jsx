@@ -42,6 +42,7 @@ function PaymentAttempt({ sessionStore }) {
 
   // Receipt state: 'idle' | 'sending' | 'sent' | 'already_sent' | 'error'
   const [storyCard, setStoryCard] = useState(null);
+  const [storySummary, setStorySummary] = useState(null);
   const [receiptEmail, setReceiptEmail] = useState('');
   const [receiptStatus, setReceiptStatus] = useState('idle');
   const [receiptError, setReceiptError] = useState('');
@@ -88,6 +89,7 @@ function PaymentAttempt({ sessionStore }) {
           clearPendingVerification(payload.requestId);
           clearPaymentRecovery(encryptedPackage);
           setConfirmationCode(code);
+          setStorySummary(verifyRes.raw?.storySummary || null);
           setOrderData((prev) => ({
             ...(prev || {}),
             requestId: verifyRes.requestId || payload.requestId || prev?.requestId || '',
@@ -146,6 +148,7 @@ function PaymentAttempt({ sessionStore }) {
           clearPendingVerification(order.requestId);
           clearPaymentRecovery(encryptedPackage);
           setConfirmationCode(returnedCode);
+          setStorySummary(order.raw?.storySummary || null);
           setLoadingState('SUCCESS');
           return;
         }
@@ -160,6 +163,7 @@ function PaymentAttempt({ sessionStore }) {
               clearPendingVerification(order.requestId);
               clearPaymentRecovery(encryptedPackage);
               setConfirmationCode(String(recoverRes.confirmationCode));
+              setStorySummary(recoverRes.raw?.storySummary || recoverRes.storySummary || null);
               setLoadingState('SUCCESS');
               return;
             }
@@ -629,7 +633,7 @@ function PaymentAttempt({ sessionStore }) {
           )}
         </div>
 
-        {isHealthCheckup && <CheckinCard onChange={setStoryCard} />}
+        {isHealthCheckup && <CheckinCard onChange={setStoryCard} summary={storySummary} />}
         {/* Directly Underneath: Payment Receipt Section */}
         <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
           <div className="text-center space-y-0.5">
@@ -854,3 +858,4 @@ function PaymentAttempt({ sessionStore }) {
 }
 
 export default PaymentV2Page;
+

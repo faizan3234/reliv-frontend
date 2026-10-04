@@ -944,12 +944,12 @@ export default function PaymentGate() {
             </div>
 
             {/* Universal high-contrast QR: SVG stays sharp at every kiosk scale. */}
-            <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-orange-200 shadow-xl flex flex-col items-center w-full max-w-[460px]">
+            <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-orange-200 shadow-xl flex flex-col items-center w-full max-w-[560px]">
               {paymentQr ? (
                 <div className="bg-white p-3 rounded-2xl flex items-center justify-center shadow-inner border border-slate-100 w-full">
                   <QRCodeSVG
                     value={paymentQr.value}
-                    size={360}
+                    size={512}
                     level={paymentQr.level}
                     marginSize={4}
                     boostLevel={false}
@@ -957,7 +957,7 @@ export default function PaymentGate() {
                     bgColor="#FFFFFF"
                     style={{
                       width: "100%",
-                      maxWidth: "360px",
+                      maxWidth: "512px",
                       height: "auto",
                       aspectRatio: "1 / 1",
                       display: "block",
@@ -1181,3 +1181,4 @@ export default function PaymentGate() {
     </div>
   );
 }
+

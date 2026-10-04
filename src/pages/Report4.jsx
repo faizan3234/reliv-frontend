@@ -1,3 +1,4 @@
+import { bundledReportNarration } from '../voice/bundledReportNarration';
 import { useReportNarration } from '../hooks/useReportNarration';
 import ReportHistoryChart from "../components/ReportHistoryChart";
 import { getScanCount } from '../utils/reportSnapshot';
@@ -11,7 +12,6 @@ import Logo from "../components/Logo";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { getReport4Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 
@@ -317,7 +317,7 @@ function assessMetabolicAdvantage(vitals, patient, scanCount) {
 }
 
 export default function Report4() {
-  const { speakText } = useSpeech();
+  const { speakChained, speakText } = useSpeech();
   const { data } = useHealth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -382,8 +382,7 @@ export default function Report4() {
         patient,
         vitals,
       };
-      const text = getReport4Speech(speechPayload, reportSpeechLanguage);
-      speakText(text, { langHint: reportSpeechLanguage });
+      speakChained(bundledReportNarration(speechPayload, 4, reportSpeechLanguage));
 
   });
 
@@ -393,9 +392,8 @@ export default function Report4() {
       patient,
       vitals,
     };
-    const text = getReport4Speech(speechPayload, reportSpeechLanguage);
-    speakText(text, { langHint: reportSpeechLanguage });
-  }, [data, patient, vitals, reportSpeechLanguage, speakText]);
+    speakChained(bundledReportNarration(speechPayload, 4, reportSpeechLanguage));
+  }, [data, patient, vitals, reportSpeechLanguage, speakChained]);
 
   const handleLanguageChange = useCallback((newLang) => {
     setReportSpeechLanguage(newLang);
@@ -405,9 +403,8 @@ export default function Report4() {
       patient,
       vitals,
     };
-    const text = getReport4Speech(speechPayload, newLang);
-    speakText(text, { langHint: newLang });
-  }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
+    speakChained(bundledReportNarration(speechPayload, 4, newLang));
+  }, [data, patient, vitals, setReportSpeechLanguage, speakChained]);
 
   const handleCardSpeak = (metricKey) => {
     window.dispatchEvent(new CustomEvent('reliv_speak_metric', { detail: metricKey }));
