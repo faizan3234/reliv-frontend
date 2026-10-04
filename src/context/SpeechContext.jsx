@@ -265,35 +265,6 @@ export function SpeechProvider({ children }) {
           window.dispatchEvent(new CustomEvent('reliv_speech_error', { detail: targetLang }));
           callbacks.onError?.(error);
         };
-        const playFallbackAudio = () => {
-          if (finished || requestId !== playbackRequestRef.current) return false;
-          const fallbackPath = callbacks?.fallbackAudio;
-          if (!fallbackPath) return false;
-
-          audio = new Audio(fallbackPath);
-          audio.volume = volumeRef.current;
-          activeAudioRef.current = audio;
-          audio.onended = () => finish();
-          audio.onerror = () => {
-            playSynthesis();
-          };
-          const playFallback = () => {
-            if (!begin()) return;
-            audio.play().catch(error => {
-              if (finished || requestId !== playbackRequestRef.current) return;
-              if (error.name === 'NotAllowedError') {
-                clearTimeout(playbackTimeout); setSpeakerGate(false);
-                retryPlaybackRef.current = playFallback;
-                window.dispatchEvent(new CustomEvent('reliv_speech_blocked'));
-              } else {
-                playSynthesis();
-              }
-            });
-          };
-          playFallback();
-          return true;
-        };
-
         const playLocalAudio = async () => {
           if (finished) return;
           if (localFallbackStarted) {
@@ -620,4 +591,5 @@ export function usePageSpeech(pageKey) {
     };
   }, [pageKey]);
 }
+
 

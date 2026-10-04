@@ -39,3 +39,13 @@
 .reference-page-track span { flex:1; height:6px; border-radius:999px; background:#e2e8f0; transition:all 240ms ease; }
 .reference-page-track span[data-complete="true"] { background:#fed7aa; }
 .reference-page-track span[data-current="true"] { background:linear-gradient(90deg, #ea580c, #f97316); box-shadow:0 0 12px rgba(234,88,12,0.35); }
+
+/* Readable at 1280 × 800 without magnifying entire cards. */
+.reference-reports .text-6xl { font-size:clamp(40px,5vw,60px); line-height:1.05; font-variant-numeric:tabular-nums; }
+.reference-reports .text-gray-400 { color:#64646c; }
+.reference-reports .text-orange-600 { color:#b94b0b; }
+.reference-reports .bg-orange-50 { background:#fff6ed; }
+.reference-reports .tracking-widest { letter-spacing:.09em; }
+.reference-reports .rounded-xl { border-radius:18px; }
+.reference-reports .reference-page-track { position:relative; }
+@media(max-width:600px){ .reference-reports .text-6xl { font-size:40px; } }

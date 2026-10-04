@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useSpeech } from '../context/SpeechContext';
 
 const copy = {
@@ -7,7 +7,7 @@ const copy = {
   bn: { listen:'এই নির্দেশ শুনুন', stop:'কথা থামান', mute:'শব্দ বন্ধ আছে। আগে শব্দ চালু করুন।', unmute:'শব্দ চালু করুন', quiet:'শব্দের মাত্রা শূন্য।', volume:'শব্দ বাড়ান', error:'আওয়াজ পাওয়া যাচ্ছে না। নিচের লেখা পড়ুন অথবা কর্মীর সাহায্য নিন।', blocked:'শব্দ শুনতে শুনুন বোতাম চাপুন।', speaking:'বলা হচ্ছে…', ready:'শুনুন চাপুন। যে কোনও সময় থামাতে বা আবার শুনতে পারেন।' },
 };
 export default function SpokenGuide({ text, language = 'en', autoSpeak = false, messages, displayText }) {
-  const { speakText, speakChained, stop, muted, toggleMute, volume, setVolume } = useSpeech();
+  const { speakText, speakChained, stop, muted, toggleMute, volume, setVolume, enableReportAudio } = useSpeech();
   const [status, setStatus] = useState('ready');
   const [caption, setCaption] = useState('');
   const w = copy[language] || copy.en;
@@ -34,11 +34,14 @@ export default function SpokenGuide({ text, language = 'en', autoSpeak = false, 
       stop();
     };
   }, [stop]);
+  const playRef = useRef(play);
+  playRef.current = play;
+  useEffect(() => { if (autoSpeak) enableReportAudio(); }, [autoSpeak, enableReportAudio]);
   useEffect(() => {
     if (!autoSpeak || !text) return undefined;
-    const timer = setTimeout(play, 450);
+    const timer = setTimeout(() => playRef.current(), 450);
     return () => { clearTimeout(timer); stop(); };
-  }, [text, autoSpeak, play, stop]);
+  }, [text, language, messageKey, autoSpeak, stop]);
   return <aside className="my-4 rounded-2xl border border-orange-200 bg-orange-50 p-5" aria-label={w.listen}>
     <div className="flex flex-wrap gap-3">
       <button type="button" disabled={muted || volume === 0} onClick={play} className="min-h-12 rounded-xl bg-orange-700 px-5 font-bold text-white disabled:opacity-50">{w.listen}</button>
@@ -50,3 +53,4 @@ export default function SpokenGuide({ text, language = 'en', autoSpeak = false, 
     <p className="mt-3 whitespace-pre-line text-lg leading-relaxed text-slate-900">{caption || displayText || text}</p>
   </aside>;
 }
+

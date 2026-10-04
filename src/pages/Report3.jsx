@@ -1,3 +1,4 @@
+import { bundledReportNarration } from '../voice/bundledReportNarration';
 import { useReportNarration } from '../hooks/useReportNarration';
 import { getScanCount } from '../utils/reportSnapshot';
 import { useMemo, useState, useCallback } from "react";
@@ -9,7 +10,6 @@ import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
 import { useSpeech } from "../context/SpeechContext";
 import { useVoicePage } from "../hooks/useVoicePage";
-import { getReport3Speech } from "../voice/reportVoice";
 import ReportVoiceExplainer from "../components/ReportVoiceExplainer";
 
 // Helper: Extract first name
@@ -276,7 +276,7 @@ function assessSubcutaneousFat(vitals, patient, scanCount) {
 }
 
 export default function Report3() {
-  const { speakText } = useSpeech();
+  const { speakChained, speakText } = useSpeech();
   const { data } = useHealth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -371,8 +371,7 @@ export default function Report3() {
         patient,
         vitals,
       };
-      const text = getReport3Speech(speechPayload, reportSpeechLanguage);
-      speakText(text, { langHint: reportSpeechLanguage });
+      speakChained(bundledReportNarration(speechPayload, 3, reportSpeechLanguage));
 
   });
 
@@ -382,9 +381,8 @@ export default function Report3() {
       patient,
       vitals,
     };
-    const text = getReport3Speech(speechPayload, reportSpeechLanguage);
-    speakText(text, { langHint: reportSpeechLanguage });
-  }, [data, patient, vitals, reportSpeechLanguage, speakText]);
+    speakChained(bundledReportNarration(speechPayload, 3, reportSpeechLanguage));
+  }, [data, patient, vitals, reportSpeechLanguage, speakChained]);
 
   const handleLanguageChange = useCallback((newLang) => {
     setReportSpeechLanguage(newLang);
@@ -394,9 +392,8 @@ export default function Report3() {
       patient,
       vitals,
     };
-    const text = getReport3Speech(speechPayload, newLang);
-    speakText(text, { langHint: newLang });
-  }, [data, patient, vitals, setReportSpeechLanguage, speakText]);
+    speakChained(bundledReportNarration(speechPayload, 3, newLang));
+  }, [data, patient, vitals, setReportSpeechLanguage, speakChained]);
 
   const handleCardSpeak = (metricKey) => {
     window.dispatchEvent(new CustomEvent('reliv_speak_metric', { detail: metricKey }));
