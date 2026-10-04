@@ -108,6 +108,30 @@ async function run() {
   await emit(client, 'kiosk/sensor/temperature', { temperature_f: 99.1 });
   assert(requests.filter(url => url.endsWith('/measurements-complete')).length === 1, 'duplicate sensor packets submit completed measurements only once');
   const temperatureClient = client;
+  const normalFetch = window.fetch;
+  let attempts = 0;
+  window.fetch = async (url, options) => {
+    if (!String(url).endsWith('/measurements-complete')) return normalFetch(url, options);
+    attempts++;
+    return {ok:false,status:503,json:async()=>({ok:false,message:'Temporary storage problem'})};
+  };
+  client = await mount(BodyTemperature);
+  await click(/Measure Temperature/);
+  await emit(client,'kiosk/sensor/temperature',{temperature_f:99});
+  await flush(); await flush();
+  assert(attempts===1,'failed save does not automatically loop on rerender');
+  assert(document.getElementById('app').textContent.includes('Temporary storage problem'),'save failure shows the actual error');
+  window.fetch = async (url, options) => {
+    if (!String(url).endsWith('/measurements-complete')) return normalFetch(url, options);
+    attempts++;
+    return {ok:false,status:410,json:async()=>({ok:false,code:'SESSION_EXPIRED',message:'Session expired'})};
+  };
+  await click(/Save & Proceed/,true);
+  assert(attempts===2,'rapid explicit retry submits only once');
+  assert(!!button(/Start a new checkup/),'terminal expiry provides an explicit restart action');
+  assert(!button(/Save & Proceed/),'terminal expiry cannot keep retrying the dead session');
+  assert(document.getElementById('app').textContent.includes('99'),'failed save retains the measured temperature');
+  window.fetch = normalFetch;
   client = await mount(HealthCheckup);
   await checkConnection(client, /Measure Blood Pressure/);
   assert(temperatureClient.closed, 'navigation closes the temperature MQTT client');
