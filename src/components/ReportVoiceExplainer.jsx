@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Volume2, VolumeX, Sparkles, X, RotateCcw } from 'lucide-react';
+import { bundledMetricNarration } from '../voice/bundledReportNarration';
 import { useSpeech } from '../context/SpeechContext';
-import { METRIC_EXPLAINERS, getMetricLaymanExplainer, CANONICAL_METRIC_MAP } from '../voice/reportVoice';
+import { METRIC_EXPLAINERS, CANONICAL_METRIC_MAP } from '../voice/reportVoice';
 
 export default function ReportVoiceExplainer({
   reportSpeechLanguage = 'hi',
@@ -10,7 +11,7 @@ export default function ReportVoiceExplainer({
   healthData = {},
   onReplayOverview
 }) {
-  const { speakText, stop, speakingRef } = useSpeech();
+  const { speakChained, stop, speakingRef } = useSpeech();
   const [isSpeaking, setIsSpeaking] = useState(Boolean(speakingRef?.current));
   useEffect(() => {
     const onSpeaking = event => setIsSpeaking(Boolean(event.detail));
@@ -41,11 +42,8 @@ export default function ReportVoiceExplainer({
     const canonical = (CANONICAL_METRIC_MAP && CANONICAL_METRIC_MAP[normalized]) || metricKey;
     setActiveMetric(canonical);
     stop();
-    const explainerText = getMetricLaymanExplainer(canonical, healthData, lang);
-    if (explainerText) {
-      speakText(explainerText, { langHint: lang });
-    }
-  }, [healthData, lang, speakText, stop]);
+    speakChained(bundledMetricNarration(healthData, canonical, lang));
+  }, [healthData, lang, speakChained, stop]);
 
   useEffect(() => {
     const handleCustomMetric = (e) => {
@@ -67,10 +65,7 @@ export default function ReportVoiceExplainer({
   const handleReplayMetric = () => {
     if (!activeMetric) return;
     stop();
-    const explainerText = getMetricLaymanExplainer(activeMetric, healthData, lang);
-    if (explainerText) {
-      speakText(explainerText, { langHint: lang });
-    }
+    speakChained(bundledMetricNarration(healthData, activeMetric, lang));
   };
 
   const currentMetricData = activeMetric
@@ -246,7 +241,7 @@ export default function ReportVoiceExplainer({
 
               {/* Spoken Text in Simple Layman Words */}
               <div className="text-xs sm:text-sm text-slate-700 leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-200/60 font-medium">
-                {getMetricLaymanExplainer(activeMetric, healthData, lang)}
+                {bundledMetricNarration(healthData, activeMetric, lang).map(item=>item.text).join(' ')}
               </div>
 
               {/* Sub-badge */}

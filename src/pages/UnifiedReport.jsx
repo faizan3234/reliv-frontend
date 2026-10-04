@@ -13,7 +13,7 @@ import { readBrowserStorage, writeBrowserStorage } from '../utils/browserStorage
 import { getScanCount } from '../utils/reportSnapshot';
 import { reportCopy, reportStage } from '../voice/guidedReport';
 import { insightCopy, metricCopy, languageIndex } from '../voice/insightCopy';
-import { metricAudio, numberParts } from '../voice/reportAudio';
+import { buildPersonalizedReport, displayedReportScore, personalizedActions } from '../voice/personalizedReport';
 import { reportInsights, summaryAdvice, observationCount, reportRows, metricColours } from '../utils/reportInsights';
 import { compute120Biomarkers } from '../utils/comprehensiveBiomarkers';
 import * as bc from '../utils/bodyComposition';
@@ -52,40 +52,6 @@ const getGenderCompliment = (gender, tier = 'high') => {
     return isMale ? 'Keep pushing, champ!' : "You're doing amazing!";
   }
   return 'Keep it up!';
-};
-
-const getRemedies = (score) => {
-  if (score >= 70) {
-    return [
-      'Maintenance: Haldi doodh (turmeric milk) nightly for anti-inflammation',
-      'Triphala churna before bed for detox and digestive balance',
-      'Continue balanced diet with moderate ghee in dal and whole grains',
-      'Maintain 7-8 hours restful sleep and consistent daily movement'
-    ];
-  } else if (score >= 50) {
-    return [
-      'Methi (fenugreek) seeds soaked overnight to balance metabolism',
-      'Moong dal soup for balanced, light and restorative dinners',
-      'Jeera (cumin) water in morning on empty stomach for gut health',
-      'Add 30-minute daily walks, gradually increasing to 8,000–10,000 steps'
-    ];
-  } else if (score >= 30) {
-    return [
-      'Start with Jeera water empty stomach every morning for gentle detox',
-      'Add protein: Dal, paneer, sprouts or besan chilla daily',
-      'Warm haldi water before meals to ignite digestive fire (Agni)',
-      'Begin with 20-minute post-meal brisk walks',
-      'Replace white rice with brown rice or millets gradually'
-    ];
-  } else {
-    return [
-      '⚠️ Consult doctor before starting any vigorous regimen',
-      'If cleared: Gentle walks 15-20 minutes daily in fresh morning air',
-      'Increase hydration with nimbu pani (lemon water with rock salt)',
-      'Focus on home-cooked wholesome meals rich in seasonal vegetables',
-      'Minimize processed, deep-fried, and refined sugar foods'
-    ];
-  }
 };
 
 const getPersonalComment = (userName, score, gender) => {
@@ -200,28 +166,8 @@ export default function UnifiedReport() {
     ? metrics.filter((m) => m.kind === 'measured')
     : metrics.filter((m) => m.status !== 'neutral');
 
-  // Filter out metabolic age, height, and weight from voice narration as requested
-  const spokenMetrics = (page === 1 || page === 2
-    ? visible
-    : page === 5
-    ? visible.filter((m) => m.status !== 'good')
-    : metrics.filter((m) => field === 'all' ? ['systolic', 'diastolic', 'oxygen', 'temperature', 'bpm'].includes(m.key) : m.key === field)
-  ).filter((m) => !['height', 'weight', 'metabolicAge'].includes(m.key));
-
-  const messages = [
-    ...(page === 1 ? [stage] : page === 2 ? [stage, w.guides[1]] : page === 5 ? [v[advice], v.next] : [stage, v.chart]),
-    ...spokenMetrics.flatMap((m) => metricAudio(m, language))
-  ];
-
-  if ((page === 3 || page === 4) && rows.length > 1) {
-    for (const row of rows.slice(-3, -1)) {
-      messages.push(w.previous, w.scan, ...numberParts(row.scan, language));
-      for (const metric of spokenMetrics) {
-        const value = Number(row[metric.key]);
-        messages.push(metricCopy[metric.key][0][i], ...(value > 0 ? numberParts(value, language) : [v.missing]));
-      }
-    }
-  }
+  const healthScore = displayedReportScore(data, bio.keyMetrics.score);
+  const messages = buildPersonalizedReport({ data, page, language, field, score: healthScore });
 
   const narration = messages.join(' ');
   useVoicePage({
@@ -259,7 +205,6 @@ export default function UnifiedReport() {
 
   const qrTargetUrl = reportPaymentQr(data)?.value || null;
   const fat = metrics.find((m) => m.key === 'bodyFat')?.value || bio.keyMetrics.fatPct;
-  const healthScore = bio.keyMetrics.score || 82;
   const metabolicAgeVal = bio.keyMetrics.metabolicAge ?? null;
   const waterPctVal = bio.keyMetrics.waterPct || 58.2;
   const musclePctVal = bio.keyMetrics.musclePct || 36.5;
@@ -267,8 +212,8 @@ export default function UnifiedReport() {
   const userName = getFirstName(data.patient);
   const peersAverage = 72;
   
-  const remedies = getRemedies(healthScore);
-  const personalizedComment = getPersonalComment(userName, healthScore, data.patient?.gender);
+  const remedies = personalizedActions(metrics, language);
+  const personalizedComment = healthScore === null ? v.missing : getPersonalComment(userName, healthScore, data.patient?.gender);
 
   const badges = [];
   if (healthScore >= 80) {
@@ -408,7 +353,7 @@ export default function UnifiedReport() {
 
         {/* ── Spoken Guide Player (Visually Hidden per user request "listen to this guide remove") ── */}
         <div className="sr-only">
-          <SpokenGuide displayText={page === 5 ? v[advice] : stage} text={narration} messages={messages} language={language} autoSpeak={false} />
+          <SpokenGuide displayText={page === 5 ? v[advice] : stage} text={narration} messages={messages} language={language} autoSpeak />
         </div>
 
         {/* ════════════════════════════════════════════════════════════════
@@ -421,11 +366,11 @@ export default function UnifiedReport() {
             <section className="report-card">
               <div className="report-score-layout">
                 <div className="report-score-ring" role="img" aria-label={`Estimated health score ${healthScore} out of 100`} style={{ background: `conic-gradient(#d65a17 0 ${Math.min(100,Math.max(0,healthScore))}%, #eeeef1 0 100%)` }}>
-                  <div><strong>{healthScore}</strong><span>Health score</span><small>out of 100 · estimate</small></div>
+                  <div><strong>{healthScore ?? v.missing}</strong><span>Health score</span><small>out of 100 · estimate</small></div>
                 </div>
                 <div className="report-score-copy"><div className="report-eyebrow">Your current snapshot · Scan {count}</div><h2>{personalizedComment}</h2><p className="report-muted">An estimated summary, not your age or a diagnosis. Your measured readings are on the next page.</p>
                   <div className="report-score-bar" role="img" aria-label={`Your score ${healthScore}, illustrative reference ${peersAverage}`}><span style={{width:`${Math.min(100,Math.max(0,healthScore))}%`}}/><i style={{left:`${peersAverage}%`}}/></div>
-                  <div className="report-score-comparison"><div><span>Your score</span><strong>{healthScore}<small>/100</small></strong></div><div><span>Reference marker</span><strong>{peersAverage}<small>/100</small></strong></div></div>
+                  <div className="report-score-comparison"><div><span>Your score</span><strong>{healthScore ?? v.missing}<small>/100</small></strong></div><div><span>Reference marker</span><strong>{peersAverage}<small>/100</small></strong></div></div>
                   <p className="report-muted">Orange is your score. The grey 72 is an illustrative reference, not a measured average of people your age.</p>
                 </div>
               </div>
