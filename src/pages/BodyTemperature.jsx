@@ -10,6 +10,7 @@ import temperatureImg from "../assets/temperature.png";
 import { useHealth } from "../context/HealthContext";
 import { useSpeech, usePageSpeech } from "../context/SpeechContext";
 import { getMqttConfig } from "../config/mqtt";
+import { readKioskSession } from "../utils/kioskSession";
 import { requestJSON } from "../utils/request";
 import { API_BASE } from "../config/api";
 import { useVoicePage } from "../hooks/useVoicePage";
@@ -83,6 +84,7 @@ const BodyTemperaturePage = () => {
   const [isMqttConnected, setIsMqttConnected] = useState(false);
 
   const [autoProceeding, setAutoProceeding] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const { data, update } = useHealth();
   const navigate = useNavigate();
@@ -92,6 +94,7 @@ const BodyTemperaturePage = () => {
   const hasReceivedData = useRef(false);
   const measurementStarted = useRef(false);
   const completionController = useRef(null);
+  const completionSnapshot = useRef(null);
   useEffect(() => () => completionController.current?.abort(), []);
   const autoProceedTriggered = useRef(false);
 
@@ -219,7 +222,7 @@ const BodyTemperaturePage = () => {
 
   // ── Start measurement ────────────────────────────────────
   const startMeasurement = () => {
-    if (measurementStarted.current || completionController.current) return;
+    if (sessionExpired || measurementStarted.current || completionController.current) return;
     if (!isFullyConnected || !mqttClient.current?.connected) {
       setMeasurementState("error");
       setStatusMessage("Device not connected — cannot start measurement");
@@ -229,6 +232,8 @@ const BodyTemperaturePage = () => {
     setMeasurementState("measuring");
     setCountdown(COUNTDOWN_SECONDS);
     setTemperatureF(null);
+    completionSnapshot.current = null;
+    autoProceedTriggered.current = false;
     setStatusMessage("Starting measurement…");
     hasReceivedData.current = false;
     measurementStarted.current = true;
@@ -274,12 +279,7 @@ const BodyTemperaturePage = () => {
     try {
       setAutoProceeding(true);
 
-      const sessionId =
-        localStorage.getItem("reliv_session_id") ||
-        sessionStorage.getItem("reliv_session_id");
-
-      const pairingToken =
-        localStorage.getItem("reliv_pairing_token");
+      const { sessionId, pairingToken } = readKioskSession() || {};
 
       if (!sessionId || !pairingToken) {
         throw new Error("Missing Reliv session or pairing token");
@@ -287,7 +287,7 @@ const BodyTemperaturePage = () => {
 
       // Build the FINAL snapshot explicitly.
       // Do not read React state again after update(), because it may still be stale.
-      const finalHealthData = {
+      const finalHealthData = completionSnapshot.current || {
         ...data,
         vitals: {
           ...(data?.vitals || {}),
@@ -295,7 +295,8 @@ const BodyTemperaturePage = () => {
         },
       };
 
-      // Keep local report UI/context synchronized.
+      completionSnapshot.current = finalHealthData;
+      // Retain the identical snapshot on a lost-response retry.
       update(finalHealthData);
 
       setStatusMessage("✅ Measurements complete. Securing your results...");
@@ -333,20 +334,18 @@ const BodyTemperaturePage = () => {
 
     } catch (error) {
       if (controller.signal.aborted) return;
-      console.error(
-        "[Reliv] Measurements-complete failed:",
-        error
-      );
+      if (import.meta.env.DEV) console.warn('[Reliv] Measurements were not saved:', error.message);
 
-      setStatusMessage(
-        "Could not save your measurements. Please tap Proceed to retry."
-      );
+      const expired = error.status === 410 || error.data?.code === 'SESSION_EXPIRED';
+      setSessionExpired(expired);
+      setStatusMessage(expired
+        ? 'This checkup session has expired. Please start a new checkup; retrying this session will not work.'
+        : `${error.message || 'Could not save your measurements.'} Tap Save & Proceed to retry.`);
 
       setAutoProceeding(false);
 
-      // IMPORTANT:
-      // Allow the user to retry if the backend request failed.
-      autoProceedTriggered.current = false;
+      // Only an explicit tap retries. A rerender must not loop this mutation.
+      autoProceedTriggered.current = true;
     } finally {
       if (completionController.current === controller) completionController.current = null;
     }
@@ -354,7 +353,7 @@ const BodyTemperaturePage = () => {
 
   // ── Proceed ──────────────────────────────────────────────
   const handleProceed = async () => {
-    if (temperatureF === null || autoProceeding) {
+    if (temperatureF === null || autoProceeding || sessionExpired) {
       return;
     }
 
@@ -379,7 +378,7 @@ const BodyTemperaturePage = () => {
     }
   }, [measurementState, temperatureF, completeMeasurementsAndNavigate, stopSpeech]);
   const canProceed =
-    measurementState === "completed" && temperatureF !== null;
+    measurementState === "completed" && temperatureF !== null && !sessionExpired;
 
   // ── Button label ─────────────────────────────────────────
   const getButtonText = () => {
@@ -587,10 +586,10 @@ const BodyTemperaturePage = () => {
                 <button
                   onClick={startMeasurement}
                   disabled={
-                    measurementState === "measuring" || !isFullyConnected
+                    measurementState === "measuring" || !isFullyConnected || autoProceeding || sessionExpired
                   }
                   className={`w-full font-semibold text-lg py-4 px-6 rounded-full shadow-lg transition-all duration-300 ${
-                    measurementState === "measuring" || !isFullyConnected
+                    measurementState === "measuring" || !isFullyConnected || autoProceeding || sessionExpired
                       ? "bg-gray-400 text-white cursor-not-allowed opacity-70"
                       : "bg-gradient-to-r from-[#F06922] to-[#E85C25] hover:from-[#E85C25] hover:to-[#D45513] text-white transform hover:scale-105"
                   }`}
@@ -600,6 +599,11 @@ const BodyTemperaturePage = () => {
                     : getButtonText()}
                 </button>
 
+                {sessionExpired && (
+                  <button onClick={() => navigate('/')} className="w-full rounded-full bg-orange-600 px-6 py-4 text-lg font-semibold text-white">
+                    Start a new checkup
+                  </button>
+                )}
                 {canProceed && (
                   <button
                     onClick={handleProceed}
@@ -757,3 +761,4 @@ export default function BodyTemperature() {
     </>
   );
 }
+
