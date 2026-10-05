@@ -47,3 +47,36 @@ test('specific recommendations are selected only for actual concerns, and urgent
  const p=buildPersonalizedReport({data:{...data,vitals:{...vitals,oxygen:88}},page:5});
  assert.ok(p.indexOf(insightCopy.en.urgentAdvice)<p.indexOf(metricCopy.oxygen[0][0]));
 });
+
+for(const language of ['en','hi','bn']) {
+ test(`${language}: graph narration reads only real earlier scans once in visit order`,()=>{
+  const history=[
+   {scanNumber:1,systolic:120,diastolic:80,oxygen:97,bpm:70,temperature:98.2,weight:68},
+   {scanNumber:2,systolic:125,diastolic:82,oxygen:null,bpm:72,temperature:98.6,weight:67},
+   {scanNumber:3,systolic:118,diastolic:76,oxygen:99,bpm:74,temperature:98.4,weight:66},
+  ];
+  const parts=buildPersonalizedReport({data:{patient,vitals,reportScanNumber:3,history},page:4,language});
+  const c=personalizedReportCopy[language];
+  const first=parts.indexOf('1'),second=parts.indexOf('2');
+  assert.ok(first>0&&second>first,'earlier scans are spoken in order');
+  assert.ok(parts.includes('120')&&parts.includes('125')&&parts.includes('97'));
+  assert.ok(!parts.includes('118')&&!parts.includes('99'),'current scan values from prior-looking history are excluded');
+  assert.equal(parts.filter(x=>x===c.noEarlier).length,0,'available history is not called unavailable');
+  assert.equal(parts.filter(x=>x===c.pages[3]).length,1,'page introduction is not repeated per scan');
+  const scanTwo=parts.slice(second);assert.ok(!scanTwo.includes('97'),'a missing measurement is skipped, never carried forward');
+  for(const text of parts){const entry=manifest[text];const file=typeof entry==='string'?entry:entry?.[language]?.file;assert.ok(file,`Missing offline ${language} audio: ${text}`);}
+ });
+}
+
+test('graph narration includes historical body fat and water only when recorded or calculable',()=>{
+ const history=[
+  {scanNumber:1,weight:70,height:180,bodyFat:27.1,bodyWater:51.2,patient},
+  {scanNumber:2,weight:69,height:180,bodyFat:null,bodyWater:null,patient},
+  {scanNumber:3,...vitals,bodyFat:24,bodyWater:54,patient},
+ ];
+ const parts=buildPersonalizedReport({data:{...data,reportScanNumber:3,history},page:4,language:'en'});
+ assert.ok(parts.includes('27')&&parts.includes('51')&&parts.includes('point'));
+ assert.ok(parts.includes('1')&&parts.includes('2'));
+ assert.ok(parts.includes('Body fat estimate')&&parts.includes('Body water share'));
+ assert.ok(!parts.includes('24')&&!parts.includes('54'),'today values are not read again');
+});
