@@ -24,6 +24,13 @@ dom.window.TextEncoder = TextEncoder;
 dom.window.scrollTo = () => {};
 dom.window.HTMLMediaElement.prototype.play = async () => {};
 dom.window.HTMLMediaElement.prototype.pause = () => {};
+dom.window.__renderedCanvasText = [];
+dom.window.HTMLCanvasElement.prototype.toBlob = function (callback) { callback(new dom.window.Blob(['synthetic-png'], { type: 'image/png' })); };
+dom.window.URL.createObjectURL = () => 'blob:reliv-card-test';
+dom.window.URL.revokeObjectURL = () => {};
+dom.window.HTMLAnchorElement.prototype.click = function () { dom.window.__downloadedCard = this.download; };
+// Keep artwork unavailable so payment success tests the immediate branded fallback.
+dom.window.Image = class { constructor() { this.width = 300; this.height = 200; } set src(value) { this._src = value; } };
 dom.window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 // jsdom has no graphics device. Keep report animations mounted while replacing
 // only canvas drawing; page state, hooks, effects and API handling remain real.
@@ -32,10 +39,10 @@ dom.window.HTMLCanvasElement.prototype.getContext = function (type) {
   return {
     canvas: this,
     createLinearGradient() { return { addColorStop() {} }; },
-    clearRect() {}, fillRect() {}, beginPath() {}, closePath() {},
+    clearRect() {}, fillRect() {}, strokeRect() {}, beginPath() {}, closePath() {},
     moveTo() {}, lineTo() {}, arc() {}, ellipse() {}, fill() {}, stroke() {},
     save() {}, restore() {}, translate() {}, rotate() {}, scale() {},
-    setTransform() {}, resetTransform() {}, fillText() {},
+    setTransform() {}, resetTransform() {}, fillText(text) { dom.window.__renderedCanvasText.push(String(text)); },
     measureText: (text) => ({ width: text.length * 6 }),
   };
 };
