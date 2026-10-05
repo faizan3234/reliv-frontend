@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { Suspense, lazy, useState } from 'react';
+const PaymentScanner = lazy(() => import('./components/PaymentScanner').then(m => ({ default: m.PaymentScanner })));
 import { useSessionStore } from './state/sessionStore';
 import { Header } from './components/Header';
 import { StartPage } from './pages/Start/StartPage';
@@ -7,6 +8,7 @@ import { ErrorPage } from './pages/Error/ErrorPage';
 import { extractPaymentPackage, getPendingVerification, getPaymentRecovery } from './services/session';
 
 export function App() {
+  const [scanning, setScanning] = useState(window.location.pathname === '/scan');
   const sessionStore = useSessionStore();
   const { state } = sessionStore;
 
@@ -53,7 +55,10 @@ export function App() {
       
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 space-y-4">
         <div className="pb-8">
-          {renderActiveScreen()}
+          {scanning ? <Suspense fallback={<p role="status">Loading scanner…</p>}><PaymentScanner onClose={() => setScanning(false)} /></Suspense> : <>
+            {renderActiveScreen()}
+            <button type="button" onClick={() => setScanning(true)} className="mt-5 min-h-12 w-full rounded-2xl bg-orange-600 px-4 py-3 font-semibold text-white shadow-sm">Scan kiosk payment QR</button>
+          </>}
         </div>
       </main>
 
