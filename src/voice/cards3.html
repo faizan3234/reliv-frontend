@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <title>Our Today's Check at Reliv - Couple Edition</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- html2canvas for High-Res PNG & Instagram Story export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Google Fonts: Caveat, Fredoka, Quicksand, Plus Jakarta Sans, Patrick Hand -->
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&amp;family=Fredoka:wght@600;700;800&amp;family=Patrick+Hand&amp;family=Plus+Jakarta+Sans:wght@400;600;700;800;900&amp;family=Quicksand:wght@500;600;700&amp;display=swap"
+        rel="stylesheet">
+    <style data-purpose="custom-typography">
+        .font-handwriting {
+            font-family: 'Caveat', cursive;
+        }
+
+        .font-display {
+            font-family: 'Fredoka', 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .font-round {
+            font-family: 'Quicksand', sans-serif;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+    <style data-purpose="layout-and-decorative">
+        /* Flat-lay warm background styling with subtle organic lighting & dapples */
+        .flatlay-bg {
+            background-color: #f7ede2;
+            background-image:
+                radial-gradient(circle at 10% 8%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 38%),
+                radial-gradient(circle at 90% 12%, rgba(255, 235, 215, 0.6) 0%, rgba(255, 245, 235, 0) 30%),
+                radial-gradient(circle at 50% 50%, #fcf7f2 0%, #f6e8da 100%);
+        }
+
+        /* Paper texture & subtle drop shadow */
+        .clipboard-paper {
+            background: #fffdf9;
+            box-shadow: 0 16px 36px -10px rgba(139, 94, 60, 0.16), 0 0 0 1px rgba(222, 197, 172, 0.45);
+            border-radius: 28px;
+        }
+
+        /* Paper clip styling */
+        .paper-clip {
+            width: 14px;
+            height: 38px;
+            border: 3px solid #b8915b;
+            border-radius: 9999px;
+            position: absolute;
+            top: -12px;
+            left: 36px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+            z-index: 25;
+        }
+
+        .paper-clip::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 2px;
+            right: 2px;
+            bottom: 6px;
+            border: 2px solid #b8915b;
+            border-radius: 9999px;
+        }
+
+        /* Washi tape strips */
+        .washi-tape-pink {
+            background: rgba(247, 198, 196, 0.75);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        .washi-tape-green {
+            background: rgba(188, 206, 185, 0.75);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Brush stroke pill tags */
+        .brush-pill-orange {
+            background: linear-gradient(135deg, #ffd3a5 0%, #fedac2 100%);
+        }
+
+        .brush-pill-pink {
+            background: #fde1dd;
+        }
+
+        .brush-pill-green {
+            background: #d8e5d6;
+        }
+
+        .brush-pill-yellow {
+            background: #fde8b3;
+        }
+
+        /* Input focus styling */
+        input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+
+<body class="flatlay-bg min-h-screen text-stone-800 antialiased font-round flex justify-center selection:bg-orange-200">
+    <!-- Mobile Screen Container -->
+    <main
+        class="w-full max-w-[430px] min-h-screen relative overflow-hidden px-4 pt-3 pb-8 flex flex-col justify-between"
+        data-purpose="mobile-card-screen">
+        <!-- BEGIN: DecorativeBackgroundElements -->
+        <!-- Top-Right: Coffee Mug with Latte Art -->
+        <div class="absolute -top-3 -right-6 pointer-events-none select-none z-10 opacity-95">
+            <div class="relative w-36 h-36 rounded-full bg-[#d6ad85] p-2 shadow-xl flex items-center justify-center">
+                <!-- Saucer -->
+                <div
+                    class="w-full h-full rounded-full border-4 border-[#c5966a] bg-[#e6c9a8] flex items-center justify-center p-2.5">
+                    <!-- Ceramic Cup Rim -->
+                    <div
+                        class="w-full h-full rounded-full bg-white border-2 border-stone-200 flex items-center justify-center p-2 shadow-inner">
+                        <!-- Coffee & Foam Heart -->
+                        <div
+                            class="w-full h-full rounded-full bg-[#9e623b] flex items-center justify-center relative overflow-hidden">
+                            <div
+                                class="w-10 h-10 rounded-full bg-[#edd5be] opacity-90 blur-[1px] transform rotate-45 scale-90 flex items-center justify-center">
+                                <span class="text-xs text-[#8c4b24]">☕</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Top-Left: Flowers & Foliage Illustration Accent -->
+        <div class="absolute -top-2 -left-6 pointer-events-none select-none opacity-85 z-0">
+            <svg fill="none" height="150" viewBox="0 0 130 150" width="130" xmlns="http://www.w3.org/2000/svg">
+                <path d="M-10 10C25 15 50 45 42 75C28 100 10 90 -5 95" stroke="#718663" stroke-linecap="round"
+                    stroke-width="2.5"></path>
+                <path d="M12 32C24 25 35 28 32 40C22 43 14 36 12 32Z" fill="#8da47e" opacity="0.8"></path>
+                <path d="M35 52C46 48 55 56 48 65C38 67 32 58 35 52Z" fill="#718663" opacity="0.8"></path>
+                <circle cx="20" cy="85" fill="#fdfbf7" r="4"></circle>
+                <circle cx="28" cy="95" fill="#fdfbf7" r="5"></circle>
+                <circle cx="15" cy="100" fill="#fdfbf7" r="3.5"></circle>
+                <circle cx="38" cy="82" fill="#fdfbf7" r="4.5"></circle>
+                <circle cx="48" cy="94" fill="#fdfbf7" r="3"></circle>
+                <path d="M15 15C38 35 70 25 75 10" stroke="#8da47e" stroke-linecap="round" stroke-width="2"></path>
+            </svg>
+        </div>
+        <!-- Bottom-Left: Hanging Greenery -->
+        <div class="absolute -bottom-8 -left-8 pointer-events-none select-none opacity-90 z-20">
+            <svg fill="none" height="150" viewBox="0 0 150 150" width="150" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 140C25 100 50 80 80 50" stroke="#4a6344" stroke-linecap="round" stroke-width="3"></path>
+                <path d="M30 120C45 95 65 110 50 128C40 134 32 128 30 120Z" fill="#587950"></path>
+                <path d="M55 90C72 70 90 85 78 102C68 106 58 98 55 90Z" fill="#718e69"></path>
+                <path d="M75 60C92 42 108 55 98 70C88 75 78 68 75 60Z" fill="#587950"></path>
+            </svg>
+        </div>
+        <!-- Bottom-Right: Knitted Blanket Cozy Edge -->
+        <div class="absolute -bottom-6 -right-6 pointer-events-none select-none opacity-80 z-20">
+            <div
+                class="w-36 h-36 rounded-tl-[80px] bg-[#dfd3c3] border-4 border-[#d0c2af] opacity-90 shadow-2xl flex items-center justify-center transform rotate-6">
+                <div class="w-24 h-24 rounded-tl-[60px] border-2 border-dashed border-[#c2b29d]"></div>
+            </div>
+        </div>
+        <!-- END: DecorativeBackgroundElements -->
+
+        <!-- BEGIN: TopBar -->
+        <header class="relative z-20 flex flex-col items-center mt-2 mb-3" data-purpose="header-section">
+            <!-- Handwritten quote top-left -->
+            <div
+                class="absolute left-1 top-1 text-stone-700 font-handwriting text-lg leading-tight transform -rotate-6 select-none">
+                Little<br><span class="pl-2">steps.</span><br><span class="pl-1">Big love. ♡</span>
+            </div>
+            <!-- Reliv Logo matching brand with Orange Tittle on i -->
+            <header class="flex items-center justify-center gap-0.5 pt-1" data-purpose="reliv-logo">
+                <h1 class="text-[34px] tracking-tight font-black leading-none flex items-baseline font-display">
+                    <span class="text-[#f26222]">Re</span><span class="text-[#141414]">l<span class="relative inline-block">ı<span class="absolute left-1/2" style="top: 0.08em; transform: translateX(-51%); width: 0.20em; height: 0.20em; background-color: #f26222; border-radius: 50%;"></span></span>v</span>
+                    <span class="text-[10px] font-sans text-stone-500 self-start ml-0.5 mt-0.5 font-bold">TM</span>
+                </h1>
+                <span class="text-amber-500 font-handwriting text-xl ml-1 animate-pulse">☼</span>
+            </header>
+            <!-- Top Sticky Note: "A Healthier us Starts here ♡" -->
+            <div class="absolute right-0 top-0 washi-tape-pink px-3 py-2 rounded-sm shadow-md transform rotate-6 border border-rose-200/60 max-w-[100px] text-center"
+                data-purpose="sticky-note-top-right">
+                <div class="w-8 h-2.5 washi-tape-green mx-auto -mt-3.5 mb-1 opacity-70"></div>
+                <p class="font-handwriting text-stone-800 text-sm leading-tight font-bold">
+                    A<br>Healthier<br>us<br>starts<br>here ♡
+                </p>
+            </div>
+            <!-- Main Headline: OUR TODAY'S CHECK AT RELIV -->
+            <div class="mt-4 text-center">
+                <div class="inline-flex items-center justify-center gap-1.5">
+                    <span class="text-stone-400 font-handwriting text-sm">˗ˏˋ</span>
+                    <h1 class="font-display font-black text-[22px] tracking-tight text-stone-900 uppercase">
+                        OUR TODAY'S<br>
+                        CHECK AT <span class="text-[#f26222]">RELIV</span>
+                    </h1>
+                    <span class="text-stone-400 font-handwriting text-sm">ˎˊ˗</span>
+                </div>
+            </div>
+            <!-- Sage green pill badge: Better habits together. ♡ -->
+            <div
+                class="mt-1.5 inline-block bg-[#cfdfce] px-4 py-1 rounded-full shadow-sm border border-[#bdd1bc]/80 transform -rotate-1">
+                <span class="font-handwriting text-stone-800 text-base font-bold tracking-wide">
+                    Better habits together. ♡
+                </span>
+            </div>
+        </header>
+        <!-- END: TopBar -->
+
+        <!-- BEGIN: MainClipboardCard -->
+        <section class="relative z-20 clipboard-paper p-4 pt-5 pb-5 border border-[#ecdac8]/70 flex flex-col gap-3.5"
+            data-purpose="couples-score-card">
+            <div class="paper-clip"></div>
+            <div class="w-24 h-4 washi-tape-pink mx-auto -mt-6 rounded-sm opacity-85 shadow-sm"></div>
+
+            <!-- Card Subtitle: This check belongs to: -->
+            <div class="text-center -mt-1">
+                <p class="font-handwriting text-stone-700 text-lg font-bold">This check belongs to:</p>
+            </div>
+
+            <!-- Me & My Partner Name inputs -->
+            <div class="grid grid-cols-2 gap-3 items-center relative px-1">
+                <!-- Me Name Box -->
+                <div class="flex flex-col items-center">
+                    <span class="font-handwriting text-stone-700 text-sm font-semibold mb-0.5">Me:</span>
+                    <div
+                        class="w-full bg-[#fce5e1] rounded-xl px-2.5 py-1.5 border border-rose-200/80 shadow-inner flex items-center">
+                        <input id="me-name-input"
+                            class="w-full bg-transparent border-0 p-0 text-center font-handwriting text-base font-bold text-stone-800 focus:ring-0 placeholder:text-stone-400"
+                            placeholder="Your name" type="text" value="Sarah">
+                    </div>
+                </div>
+                <!-- Heart separator doodle in between -->
+                <div
+                    class="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-0.5 text-rose-400 font-handwriting text-lg pointer-events-none select-none">
+                    ♡
+                </div>
+                <!-- Partner Name Box -->
+                <div class="flex flex-col items-center">
+                    <span class="font-handwriting text-stone-700 text-sm font-semibold mb-0.5">My Partner:</span>
+                    <div
+                        class="w-full bg-[#dbe8d8] rounded-xl px-2.5 py-1.5 border border-emerald-200/80 shadow-inner flex items-center">
+                        <input id="partner-name-input"
+                            class="w-full bg-transparent border-0 p-0 text-center font-handwriting text-base font-bold text-stone-800 focus:ring-0 placeholder:text-stone-400"
+                            placeholder="Partner's name" type="text" value="Alex">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health Scores Header -->
+            <div class="text-center relative my-0.5">
+                <div class="inline-flex items-center gap-2">
+                    <span class="text-amber-500 font-handwriting text-xs">ˏˋ</span>
+                    <h2 class="font-display font-extrabold text-stone-900 text-lg tracking-tight">Our Health Scores</h2>
+                    <span class="text-amber-500 font-handwriting text-xs">ˊˎ</span>
+                </div>
+                <div class="text-amber-600 font-handwriting text-sm leading-none -mt-0.5">♡</div>
+            </div>
+
+            <!-- Scores Dual Badge Circles with Dynamic Range Badges -->
+            <div class="grid grid-cols-2 gap-3 items-center justify-items-center relative px-1">
+                <!-- Left Leafy Branch decoration -->
+                <div
+                    class="absolute -left-3 top-2 pointer-events-none select-none text-emerald-700/60 font-handwriting text-xs">
+                    <svg fill="none" height="42" viewBox="0 0 22 42" width="22">
+                        <path d="M18 2C15 15 6 26 2 40" stroke="#68845e" stroke-linecap="round" stroke-width="1.8">
+                        </path>
+                        <path d="M16 8C20 6 22 10 18 13C15 14 13 11 16 8Z" fill="#819d77"></path>
+                        <path d="M12 20C17 18 18 23 14 26C11 27 10 23 12 20Z" fill="#819d77"></path>
+                        <path d="M6 31C10 29 12 34 8 37C6 38 4 34 6 31Z" fill="#819d77"></path>
+                    </svg>
+                </div>
+
+                <!-- Left Circle: Me -->
+                <div class="flex flex-col items-center">
+                    <div id="me-score-circle" class="w-28 h-28 rounded-full border-[3px] border-[#68b663] bg-[#fff5f2] p-1.5 flex flex-col items-center justify-center relative shadow-sm transition-all duration-300"
+                        data-purpose="me-score-badge">
+                        <div
+                            class="bg-[#ffd9d2] text-stone-800 text-[11px] font-bold font-handwriting px-3 py-0.5 rounded-full border border-rose-200">
+                            Me
+                        </div>
+                        <div class="flex items-baseline justify-center gap-0.5 mt-0.5">
+                            <input id="me-score-input"
+                                class="w-11 text-center font-display font-extrabold text-stone-800 text-xl border-b-2 border-stone-800/40 bg-transparent p-0 focus:ring-0 focus:border-[#f26222]"
+                                max="100" min="0" type="number" value="92">
+                            <span class="font-display font-bold text-stone-700 text-xs">/ 100</span>
+                        </div>
+                    </div>
+                    <!-- Me Dynamic Vitality Status Pill -->
+                    <div id="me-status-pill"
+                        class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold font-handwriting shadow-xs border mt-1.5 transition-all bg-[#d5e7d2] text-[#2c5324] border-[#b8d6b4] text-center max-w-[130px]">
+                        <span id="me-status-icon">⭐</span>
+                        <span id="me-status-text">Excellent vitality!</span>
+                    </div>
+                </div>
+
+                <!-- Right Leafy Branch decoration -->
+                <div
+                    class="absolute -right-3 top-2 pointer-events-none select-none text-emerald-700/60 font-handwriting text-xs">
+                    <svg fill="none" height="42" viewBox="0 0 22 42" width="22">
+                        <path d="M4 2C7 15 16 26 20 40" stroke="#68845e" stroke-linecap="round" stroke-width="1.8">
+                        </path>
+                        <path d="M6 8C2 6 0 10 4 13C7 14 9 11 6 8Z" fill="#819d77"></path>
+                        <path d="M10 20C5 18 4 23 8 26C11 27 12 23 10 20Z" fill="#819d77"></path>
+                        <path d="M16 31C12 29 10 34 14 37C16 38 18 34 16 31Z" fill="#819d77"></path>
+                    </svg>
+                </div>
+
+                <!-- Right Circle: My Partner -->
+                <div class="flex flex-col items-center">
+                    <div id="partner-score-circle" class="w-28 h-28 rounded-full border-[3px] border-[#68b663] bg-[#f8faf4] p-1.5 flex flex-col items-center justify-center relative shadow-sm transition-all duration-300"
+                        data-purpose="partner-score-badge">
+                        <div
+                            class="bg-[#dbe8d8] text-stone-800 text-[11px] font-bold font-handwriting px-2.5 py-0.5 rounded-full border border-emerald-200">
+                            My Partner
+                        </div>
+                        <div class="flex items-baseline justify-center gap-0.5 mt-0.5">
+                            <input id="partner-score-input"
+                                class="w-11 text-center font-display font-extrabold text-stone-800 text-xl border-b-2 border-stone-800/40 bg-transparent p-0 focus:ring-0 focus:border-[#f26222]"
+                                max="100" min="0" type="number" value="88">
+                            <span class="font-display font-bold text-stone-700 text-xs">/ 100</span>
+                        </div>
+                    </div>
+                    <!-- Partner Dynamic Vitality Status Pill -->
+                    <div id="partner-status-pill"
+                        class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold font-handwriting shadow-xs border mt-1.5 transition-all bg-[#d5e7d2] text-[#2c5324] border-[#b8d6b4] text-center max-w-[130px]">
+                        <span id="partner-status-icon">⭐</span>
+                        <span id="partner-status-text">Excellent vitality!</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Win Section -->
+            <div class="mt-1 flex flex-col items-center w-full" data-purpose="todays-win">
+                <div
+                    class="brush-pill-yellow px-4 py-0.5 rounded-full border border-amber-200 shadow-sm flex items-center gap-1.5 -mb-2 z-10">
+                    <span class="text-amber-600 text-xs">✧</span>
+                    <span class="font-handwriting font-bold text-stone-800 text-sm">Today's Win:</span>
+                    <span class="text-amber-600 text-xs">✧</span>
+                </div>
+                <div
+                    class="w-full bg-[#dce7db] rounded-2xl p-2.5 pt-3.5 border border-emerald-200/90 shadow-inner flex items-center justify-between">
+                    <input id="win-input"
+                        class="w-full bg-transparent border-0 p-0 text-center font-handwriting text-stone-800 text-base font-bold focus:ring-0"
+                        placeholder="Type your shared win..." type="text"
+                        value="Morning 5k walk &amp; cook healthy meal">
+                    <span class="text-rose-400 font-handwriting text-sm ml-1 select-none">♡</span>
+                </div>
+            </div>
+
+            <!-- Our Goal Section -->
+            <div class="flex flex-col items-center w-full" data-purpose="our-goal">
+                <div
+                    class="brush-pill-pink px-4 py-0.5 rounded-full border border-rose-200 shadow-sm flex items-center gap-1.5 -mb-2 z-10">
+                    <span class="text-rose-400 text-xs font-handwriting">˗ˏ</span>
+                    <span class="font-handwriting font-bold text-stone-800 text-sm">Our Goal:</span>
+                    <span class="text-rose-400 text-xs font-handwriting">ˎ˗</span>
+                </div>
+                <div
+                    class="w-full bg-[#fde8e3] rounded-2xl p-2.5 pt-3.5 border border-rose-200/90 shadow-inner flex items-center justify-between">
+                    <input id="goal-input"
+                        class="w-full bg-transparent border-0 p-0 text-center font-handwriting text-stone-800 text-base font-bold focus:ring-0"
+                        placeholder="What's your couple goal?" type="text"
+                        value="8 glasses of water &amp; 8h sleep tonight!">
+                    <span class="text-rose-400 font-handwriting text-sm ml-1 select-none">♡</span>
+                </div>
+            </div>
+
+            <!-- Brush Stroke Banner: Same journey, healthier together. ♡ -->
+            <div class="mt-1 text-center">
+                <div
+                    class="inline-block brush-pill-orange px-5 py-1 rounded-full shadow-sm border border-amber-200 transform -rotate-1">
+                    <p class="font-handwriting text-stone-800 text-sm font-bold tracking-wide">
+                        Same journey, healthier together. ♡
+                    </p>
+                </div>
+            </div>
+        </section>
+        <!-- END: MainClipboardCard -->
+
+        <!-- BEGIN: OuterSideNotesAndPolaroid -->
+        <div class="relative z-20 flex items-end justify-between mt-2 px-1" data-purpose="floating-memorabilia">
+            <div class="flex items-center gap-2">
+                <div
+                    class="bg-white p-1.5 pb-3 rounded-sm shadow-md border border-stone-200/80 transform -rotate-6 w-24">
+                    <div
+                        class="w-full h-16 bg-gradient-to-tr from-amber-600 via-rose-500 to-indigo-900 rounded-[2px] overflow-hidden flex items-center justify-center relative">
+                        <div class="text-amber-200 text-2xl filter drop-shadow">🫶</div>
+                        <div class="absolute inset-0 bg-yellow-400/20 mix-blend-overlay"></div>
+                    </div>
+                    <div class="text-center mt-1">
+                        <span class="font-handwriting text-stone-500 text-xs">♡</span>
+                    </div>
+                </div>
+                <div class="font-handwriting text-stone-700 text-xs leading-tight -rotate-3 select-none">
+                    <p class="font-bold">Healthy<br>Habits<br>Happier<br>Us ♡</p>
+                </div>
+            </div>
+            <div class="flex flex-col items-end">
+                <div
+                    class="washi-tape-pink px-2.5 py-1.5 rounded-sm shadow-md transform rotate-3 border border-rose-200 text-center max-w-[125px]">
+                    <div class="w-6 h-2 washi-tape-green mx-auto -mt-2.5 mb-1 opacity-75"></div>
+                    <p class="font-handwriting text-stone-800 text-xs leading-tight font-bold">
+                        Same journey,<br>healthier<br>together. ♡
+                    </p>
+                </div>
+                <div class="text-right font-handwriting text-stone-700 text-[11px] leading-tight mt-1 select-none">
+                    <span>Support each other.</span><br>
+                    <span class="font-bold">Be proud together. ♡</span>
+                </div>
+            </div>
+        </div>
+        <!-- END: OuterSideNotesAndPolaroid -->
+
+        <!-- BEGIN: Footer -->
+        <footer class="relative z-20 mt-3 pt-1 flex items-center justify-center" data-purpose="social-footer">
+            <div
+                class="inline-flex items-center gap-2 bg-[#d7e6d5]/90 backdrop-blur-sm px-4 py-1.5 rounded-full border border-[#c1d6bf] shadow-sm">
+                <span class="font-handwriting font-bold text-stone-800 text-sm tracking-wide">
+                    #RelivTogether
+                </span>
+                <span class="text-stone-400 text-xs">|</span>
+                <span class="font-handwriting font-bold text-stone-800 text-sm tracking-wide">
+                    @reliv_care ♡
+                </span>
+            </div>
+        </footer>
+        <!-- END: Footer -->
+
+        <!-- BEGIN: Save for Instagram Story Action -->
+        <div class="w-full mt-4 z-20 flex flex-col items-center" data-purpose="save-action-section">
+            <button id="save-story-btn" type="button"
+                class="w-full max-w-[280px] bg-gradient-to-r from-[#f26222] to-[#e04f0f] hover:from-[#e04f0f] hover:to-[#c83e05] text-white font-display font-bold text-sm tracking-wide py-2.5 px-5 rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-orange-400/40 select-none">
+                <span id="save-btn-icon" class="text-base">📸</span>
+                <span id="save-btn-text">Save for Instagram Story</span>
+            </button>
+            <p class="text-[11px] text-stone-500 font-medium mt-1.5 flex items-center gap-1 select-none">
+                <span>✨</span> 1080×1920 (9:16 PNG) • Borders removed
+            </p>
+        </div>
+        <!-- END: Save for Instagram Story Action -->
+    </main>
+
+    <!-- BEGIN: Instagram Story Preview Modal -->
+    <div id="story-modal" class="fixed inset-0 z-50 bg-stone-900/70 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-5 transition-opacity" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="relative w-full max-w-sm bg-[#faf6f0] rounded-3xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="px-5 pt-4 pb-3 flex items-center justify-between border-b border-stone-200/80 bg-white/70">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🎉</span>
+                    <h3 id="modal-title" class="font-display font-bold text-stone-900 text-base">Your Story is Ready!</h3>
+                </div>
+                <button id="close-modal-btn" type="button" aria-label="Close modal"
+                    class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center text-sm font-bold transition-colors cursor-pointer">
+                    ✕
+                </button>
+            </div>
+            <div class="p-4 flex flex-col items-center overflow-y-auto flex-1 bg-gradient-to-b from-[#faf6f0] to-[#f2ecdf]">
+                <p class="text-xs text-stone-600 mb-3 text-center">
+                    Borders removed • 1080×1920 9:16 PNG format for Instagram Story
+                </p>
+                <div class="relative w-48 shadow-2xl rounded-2xl overflow-hidden border border-stone-300/80 aspect-[9/16] bg-stone-100 flex items-center justify-center">
+                    <img id="story-preview-img" alt="Reliv Instagram Story Preview" class="w-full h-full object-cover" />
+                </div>
+                <p id="download-status-note" class="text-xs text-[#2c5324] font-semibold mt-3 flex items-center gap-1">
+                    <span>✓</span> Saved as 1080×1920 PNG!
+                </p>
+            </div>
+            <div class="p-4 bg-white/80 border-t border-stone-200/80 flex flex-col gap-2">
+                <div class="flex gap-2">
+                    <button id="download-again-btn" type="button"
+                        class="flex-1 bg-[#f26222] hover:bg-[#e04f0f] text-white font-display font-bold text-xs py-2.5 px-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                        <span>📥</span> Download Again
+                    </button>
+                    <button id="share-story-btn" type="button"
+                        class="flex-1 border border-stone-300 hover:bg-stone-100 text-stone-800 font-display font-bold text-xs py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                        <span>📲</span> Share Story
+                    </button>
+                </div>
+                <button id="dismiss-modal-btn" type="button"
+                    class="text-xs text-stone-500 hover:text-stone-800 font-medium py-1 transition-colors text-center cursor-pointer">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- END: Instagram Story Preview Modal -->
+
+    <!-- BEGIN: Interactive Support Script -->
+    <script data-purpose="interactive-enhancements">
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Dynamic health tier range evaluator: All cannot be good; supports Bad, Average, Good, and Excellent
+        function getVitalityData(val) {
+            const num = parseInt(val, 10);
+            if (isNaN(num) || num === null || num === undefined) {
+                return {
+                    icon: '✨',
+                    text: 'Score pending',
+                    bg: '#fedec9',
+                    color: '#8b4513',
+                    border: '#f5c3ab',
+                    ring: '#e59740'
+                };
+            }
+            if (num >= 85) {
+                return {
+                    icon: '⭐',
+                    text: 'Excellent vitality!',
+                    bg: '#d5e7d2',
+                    color: '#2c5324',
+                    border: '#b8d6b4',
+                    ring: '#68b663'
+                };
+            }
+            if (num >= 70) {
+                return {
+                    icon: '✨',
+                    text: 'Strong & balanced!',
+                    bg: '#fde9b5',
+                    color: '#7a520a',
+                    border: '#f7d47e',
+                    ring: '#eab308'
+                };
+            }
+            if (num >= 50) {
+                return {
+                    icon: '🌱',
+                    text: 'Building habits!',
+                    bg: '#fedec9',
+                    color: '#9a4216',
+                    border: '#f5c3ab',
+                    ring: '#f97316'
+                };
+            }
+            return {
+                icon: '💪',
+                text: 'Needs attention!',
+                bg: '#fcd9d3',
+                color: '#9a2b16',
+                border: '#f5b8ae',
+                ring: '#ef4444'
+            };
+        }
+
+        function updateDuoScoreUI(role, val) {
+            const circle = document.getElementById(`${role}-score-circle`);
+            const pill = document.getElementById(`${role}-status-pill`);
+            const text = document.getElementById(`${role}-status-text`);
+            const icon = document.getElementById(`${role}-status-icon`);
+            if (!circle || !pill || !text || !icon) return;
+
+            const data = getVitalityData(val);
+            icon.textContent = data.icon;
+            text.textContent = data.text;
+            pill.style.backgroundColor = data.bg;
+            pill.style.color = data.color;
+            pill.style.borderColor = data.border;
+            circle.style.borderColor = data.ring;
+        }
+
+        // Build exact 1080x1920 Instagram Story DOM element with vanished borders
+        function buildInstagramStoryStage(data) {
+            const stage = document.createElement('div');
+            stage.id = 'export-instagram-story-stage';
+            stage.setAttribute('aria-hidden', 'true');
+            
+            stage.style.cssText = `
+                position: fixed;
+                left: -9999px;
+                top: 0;
+                width: 1080px;
+                height: 1920px;
+                background-color: #f7ede2;
+                background-image:
+                    radial-gradient(ellipse at 85% 10%, rgba(255, 255, 255, 0.85) 0%, transparent 60%),
+                    radial-gradient(circle at 15% 90%, rgba(230, 215, 195, 0.6) 0%, transparent 50%),
+                    linear-gradient(135deg, #fcf7f2 0%, #f6e8da 100%);
+                font-family: 'Quicksand', sans-serif;
+                color: #292524;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: space-between;
+                padding: 130px 70px 140px 70px;
+                box-sizing: border-box;
+                overflow: hidden;
+                z-index: -9999;
+                border: none;
+                outline: none;
+            `;
+
+            stage.innerHTML = `
+                <!-- Background foliage & tea flat-lay elements -->
+                <div style="position: absolute; top: -30px; left: -30px; width: 340px; height: 340px; opacity: 0.32; pointer-events: none; transform: rotate(-12deg);">
+                    <svg style="width: 100%; height: 100%; filter: blur(0.5px);" fill="#4d693a" viewBox="0 0 100 100">
+                        <path d="M10,80 Q30,40 85,20 C70,45 50,75 10,80 Z"></path>
+                        <path d="M25,60 Q55,45 80,45 C65,65 40,75 25,60 Z" opacity="0.8"></path>
+                        <path d="M5,95 Q25,80 50,75 C35,90 20,95 5,95 Z" opacity="0.6"></path>
+                    </svg>
+                </div>
+
+                <div style="position: absolute; top: 15px; right: 15px; width: 240px; height: 240px; pointer-events: none;">
+                    <div style="position: relative; width: 100%; height: 100%;">
+                        <div style="position: absolute; right: 0; top: 0; width: 210px; height: 210px; border-radius: 9999px; background: #d6ad84; box-shadow: 0 10px 25px rgba(0,0,0,0.12); border: 4px solid #b88c60;"></div>
+                        <div style="position: absolute; right: 18px; top: 18px; width: 174px; height: 174px; border-radius: 9999px; background: #fdfaf3; padding: 12px; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 100%; height: 100%; border-radius: 9999px; background: #9e673a; display: flex; align-items: center; justify-content: center; border: 2px solid #7a4e28;">
+                                <div style="width: 76px; height: 76px; border-radius: 9999px; background: #f2e6d6; opacity: 0.92; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #ab7242;">☕</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Header Section with Official Reliv Logo -->
+                <header style="width: 100%; position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center;">
+                    <div style="color: #dda035; font-size: 40px; line-height: 1; font-weight: bold; margin-bottom: 4px;">☼</div>
+                    <div style="display: flex; align-items: baseline; justify-content: center; margin-bottom: 8px;">
+                        <span style="font-family: 'Fredoka', sans-serif; font-size: 80px; font-weight: 900; line-height: 1; color: #f26222;">Re</span>
+                        <span style="font-family: 'Fredoka', sans-serif; font-size: 80px; font-weight: 900; line-height: 1; color: #141414;">l<span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: 50%; top: 0.08em; transform: translateX(-51%); width: 0.20em; height: 0.20em; background-color: #f26222; border-radius: 50%;"></span></span>v</span>
+                        <span style="font-family: 'Quicksand', sans-serif; font-size: 24px; font-weight: 700; color: #78716c; margin-left: 6px;">TM</span>
+                    </div>
+
+                    <div style="position: absolute; left: 10px; top: 15px; transform: rotate(-10deg); width: 230px; text-align: center; pointer-events: none;">
+                        <p style="font-family: 'Patrick Hand', cursive; font-size: 30px; line-height: 1.2; color: #44403c; font-weight: bold;">
+                            Little<br/>steps.<br/>Big love.
+                        </p>
+                        <span style="font-size: 24px; color: #57534e;">♡</span>
+                    </div>
+
+                    <div style="position: absolute; right: 20px; top: 15px; transform: rotate(6deg); background: #feded9; padding: 14px 22px; border-radius: 8px; box-shadow: 2px 6px 16px rgba(180, 120, 100, 0.22); text-align: center; width: 190px; pointer-events: none;">
+                        <p style="font-family: 'Patrick Hand', cursive; font-size: 24px; line-height: 1.25; color: #1c1917; font-weight: 600;">
+                            A<br/>Healthier<br/>us<br/>starts<br/>here <span style="color: #44403c;">♡</span>
+                        </p>
+                    </div>
+
+                    <div style="margin-top: 8px; text-align: center;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            <span style="font-family: 'Patrick Hand', cursive; font-size: 32px; color: #57534e; transform: rotate(-6deg);">♡</span>
+                            <h2 style="font-family: 'Fredoka', sans-serif; font-size: 46px; letter-spacing: 0.05em; color: #1c1917; text-transform: uppercase; margin: 0; font-weight: 700;">
+                                OUR TODAY'S
+                            </h2>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 4px;">
+                            <span style="color: #44403c; font-size: 28px; font-weight: 900; transform: rotate(-12deg);">\\\\</span>
+                            <h2 style="font-family: 'Fredoka', sans-serif; font-size: 50px; letter-spacing: 0.05em; color: #1c1917; text-transform: uppercase; margin: 0; font-weight: 700;">
+                                CHECK AT <span style="color: #f26222; font-weight: 900;">RELIV</span>
+                            </h2>
+                            <span style="color: #44403c; font-size: 28px; font-weight: 900; transform: rotate(12deg);">//</span>
+                        </div>
+                        <div style="display: inline-flex; align-items: center; gap: 10px; background: #cfdfce; color: #2C4A34; padding: 6px 34px; border-radius: 9999px; margin-top: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transform: rotate(-1deg); font-family: 'Patrick Hand', cursive; font-size: 28px; font-weight: 600;">
+                            <span>Better habits together.</span>
+                            <span style="color: #3e5336; font-size: 24px;">♡</span>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Central Paper Card (Clean, borderless outside) -->
+                <article style="position: relative; width: 880px; background: #fffdf9; border-radius: 46px; padding: 42px 48px; box-shadow: 0 25px 60px -10px rgba(160, 130, 109, 0.32); display: flex; flex-direction: column; align-items: center; z-index: 10; border: none;">
+                    <div style="position: absolute; -top: 18px; left: 45px; width: 24px; height: 58px; border: 4px solid #b59f77; border-bottom: none; border-radius: 20px 20px 0 0; box-shadow: 2px 2px 5px rgba(0,0,0,0.15); pointer-events: none;">
+                        <div style="width: 14px; height: 38px; margin: 6px auto 0 auto; border: 4px solid #9e8864; border-top: none; border-radius: 0 0 14px 14px;"></div>
+                    </div>
+                    <div style="position: absolute; -top: 15px; left: 50%; transform: translateX(-50%); width: 220px; height: 34px; background: rgba(247, 198, 196, 0.85); clip-path: polygon(3% 0%, 97% 0%, 100% 100%, 0% 100%); pointer-events: none;"></div>
+
+                    <!-- Names Box -->
+                    <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                        <div style="font-family: 'Caveat', cursive; font-size: 32px; font-weight: 700; color: #292524; margin-bottom: 8px;">
+                            This check belongs to:
+                        </div>
+                        <div style="width: 100%; max-width: 640px; background: #fce5e1; border-radius: 28px; padding: 14px 40px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06); display: flex; justify-content: space-around; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; color: #292524;">Me:</span>
+                                <span style="font-family: 'Caveat', cursive; font-size: 38px; font-weight: 700; color: #1c1917;">${escapeHtml(data.meName)}</span>
+                            </div>
+                            <span style="font-size: 26px; color: #e77063;">♡</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; color: #292524;">Partner:</span>
+                                <span style="font-family: 'Caveat', cursive; font-size: 38px; font-weight: 700; color: #1c1917;">${escapeHtml(data.partnerName)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dual Health Scores Section -->
+                    <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin: 24px 0 16px 0;">
+                        <div style="display: inline-flex; align-items: center; gap: 8px; background: #fde8b3; padding: 6px 36px; border-radius: 9999px; margin-bottom: 20px;">
+                            <span style="font-family: 'Fredoka', sans-serif; font-size: 24px; font-weight: 700; color: #1c1917;">Our Health Scores</span>
+                        </div>
+                        <div style="width: 100%; display: flex; justify-content: space-around; align-items: flex-start; padding: 0 40px;">
+                            <!-- Me Score -->
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 220px; height: 220px; border-radius: 9999px; border: 6px solid ${data.meVitality.ring}; background: #fff5f2; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.06);">
+                                    <span style="font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; color: #44403c;">Me</span>
+                                    <div style="display: flex; align-items: baseline; gap: 4px; margin-top: 4px;">
+                                        <span style="font-family: 'Fredoka', sans-serif; font-size: 68px; font-weight: 900; color: #1c1917; line-height: 1;">${escapeHtml(data.meScore)}</span>
+                                        <span style="font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; color: #78716c;">/ 100</span>
+                                    </div>
+                                </div>
+                                <div style="display: inline-flex; align-items: center; gap: 6px; background: ${data.meVitality.bg}; color: ${data.meVitality.color}; border: 2px solid ${data.meVitality.border}; padding: 6px 20px; border-radius: 9999px; font-family: 'Patrick Hand', cursive; font-size: 22px; font-weight: bold; margin-top: 12px;">
+                                    <span>${data.meVitality.icon}</span>
+                                    <span>${data.meVitality.text}</span>
+                                </div>
+                            </div>
+
+                            <!-- Partner Score -->
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 220px; height: 220px; border-radius: 9999px; border: 6px solid ${data.partnerVitality.ring}; background: #f8faf4; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.06);">
+                                    <span style="font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; color: #44403c;">My Partner</span>
+                                    <div style="display: flex; align-items: baseline; gap: 4px; margin-top: 4px;">
+                                        <span style="font-family: 'Fredoka', sans-serif; font-size: 68px; font-weight: 900; color: #1c1917; line-height: 1;">${escapeHtml(data.partnerScore)}</span>
+                                        <span style="font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; color: #78716c;">/ 100</span>
+                                    </div>
+                                </div>
+                                <div style="display: inline-flex; align-items: center; gap: 6px; background: ${data.partnerVitality.bg}; color: ${data.partnerVitality.color}; border: 2px solid ${data.partnerVitality.border}; padding: 6px 20px; border-radius: 9999px; font-family: 'Patrick Hand', cursive; font-size: 22px; font-weight: bold; margin-top: 12px;">
+                                    <span>${data.partnerVitality.icon}</span>
+                                    <span>${data.partnerVitality.text}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wins & Goals -->
+                    <div style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 8px;">
+                        <div style="width: 100%; max-width: 680px; display: flex; flex-direction: column; align-items: center;">
+                            <div style="background: #fde8b3; padding: 4px 28px; border-radius: 9999px; font-family: 'Fredoka', sans-serif; font-size: 22px; font-weight: 700; color: #1c1917; margin-bottom: 6px;">
+                                Today's Win:
+                            </div>
+                            <div style="width: 100%; background: #dce7db; border-radius: 9999px; padding: 10px 36px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
+                                <span style="font-family: 'Caveat', cursive; font-size: 32px; font-weight: 700; color: #1c1917;">${escapeHtml(data.win)}</span>
+                            </div>
+                        </div>
+
+                        <div style="width: 100%; max-width: 680px; display: flex; flex-direction: column; align-items: center;">
+                            <div style="background: #fde1dd; padding: 4px 28px; border-radius: 9999px; font-family: 'Fredoka', sans-serif; font-size: 22px; font-weight: 700; color: #1c1917; margin-bottom: 6px;">
+                                Our Goal:
+                            </div>
+                            <div style="width: 100%; background: #fde8e3; border-radius: 9999px; padding: 10px 36px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);">
+                                <span style="font-family: 'Caveat', cursive; font-size: 32px; font-weight: 700; color: #1c1917;">${escapeHtml(data.goal)}</span>
+                            </div>
+                        </div>
+
+                        <div style="background: linear-gradient(135deg, #ffd3a5 0%, #fedac2 100%); padding: 8px 36px; border-radius: 9999px; margin-top: 10px;">
+                            <span style="font-family: 'Caveat', cursive; font-size: 32px; font-weight: 700; color: #1c1917;">
+                                Same journey, healthier together. ♡
+                            </span>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Footer Section -->
+                <footer style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 20px; z-index: 10; margin-top: 8px;">
+                    <div style="background: #d7e6d5; color: #1c1917; padding: 10px 32px; border-radius: 9999px; font-size: 24px; font-weight: bold; font-family: 'Fredoka', sans-serif;">
+                        #RelivTogether
+                    </div>
+                    <span style="color: #a8a29e; font-size: 28px; font-weight: 700;">|</span>
+                    <div style="background: #fedbc9; color: #1c1917; padding: 10px 34px; border-radius: 9999px; font-size: 24px; font-weight: bold; display: flex; align-items: center; gap: 8px; font-family: 'Fredoka', sans-serif;">
+                        <span>@reliv_care</span>
+                        <span style="color: #f26222; font-size: 24px;">♡</span>
+                    </div>
+                </footer>
+
+                <!-- Bottom Accents -->
+                <div style="position: absolute; bottom: 20px; left: -10px; width: 250px; height: 250px; background: #fff; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.12); border: 2px solid #ddd; transform: rotate(-6deg); pointer-events: none; padding: 14px; display: flex; flex-direction: column; align-items: center;">
+                    <div style="width: 100%; height: 160px; background: linear-gradient(135deg, #ea580c 0%, #f43f5e 50%, #4338ca 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 48px;">
+                        🫶
+                    </div>
+                    <span style="font-family: 'Caveat', cursive; font-size: 26px; font-weight: 700; color: #78716c; margin-top: 8px;">Healthy Habits Happier Us ♡</span>
+                </div>
+
+                <div style="position: absolute; bottom: -20px; right: -20px; width: 220px; height: 220px; border-radius: 9999px; background: #ecdcc9; opacity: 0.7; pointer-events: none;"></div>
+            `;
+
+            return stage;
+        }
+
+        let currentStoryBlob = null;
+        let currentStoryFilename = 'reliv-together.png';
+        let currentStoryDataUrl = null;
+
+        async function exportInstagramStory() {
+            const saveBtn = document.getElementById('save-story-btn');
+            const saveIcon = document.getElementById('save-btn-icon');
+            const saveText = document.getElementById('save-btn-text');
+
+            if (saveBtn) saveBtn.disabled = true;
+            if (saveIcon) saveIcon.textContent = '⏳';
+            if (saveText) saveText.textContent = 'Generating 9:16 PNG...';
+
+            let stage = null;
+            try {
+                if (document.fonts && document.fonts.ready) {
+                    await document.fonts.ready;
+                }
+
+                const meNameVal = document.getElementById('me-name-input')?.value?.trim() || 'Sarah';
+                const partnerNameVal = document.getElementById('partner-name-input')?.value?.trim() || 'Alex';
+                const meScoreVal = document.getElementById('me-score-input')?.value || '92';
+                const partnerScoreVal = document.getElementById('partner-score-input')?.value || '88';
+                const winVal = document.getElementById('win-input')?.value?.trim() || 'Morning 5k walk & cook healthy meal';
+                const goalVal = document.getElementById('goal-input')?.value?.trim() || '8 glasses of water & 8h sleep tonight!';
+
+                const meVitality = getVitalityData(meScoreVal);
+                const partnerVitality = getVitalityData(partnerScoreVal);
+
+                stage = buildInstagramStoryStage({
+                    meName: meNameVal,
+                    partnerName: partnerNameVal,
+                    meScore: meScoreVal,
+                    partnerScore: partnerScoreVal,
+                    meVitality: meVitality,
+                    partnerVitality: partnerVitality,
+                    win: winVal,
+                    goal: goalVal
+                });
+                document.body.appendChild(stage);
+
+                await new Promise(resolve => setTimeout(resolve, 150));
+
+                if (typeof html2canvas !== 'function') {
+                    throw new Error('html2canvas library is not loaded');
+                }
+
+                const canvas = await html2canvas(stage, {
+                    width: 1080,
+                    height: 1920,
+                    scale: 1,
+                    useCORS: true,
+                    backgroundColor: '#f7ede2',
+                    logging: false,
+                    allowTaint: true
+                });
+
+                const pngDataUrl = canvas.toDataURL('image/png', 1.0);
+                const safeMe = meNameVal.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'me';
+                const safePartner = partnerNameVal.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'partner';
+                currentStoryFilename = `reliv-together-${safeMe}-${safePartner}.png`;
+                currentStoryDataUrl = pngDataUrl;
+
+                canvas.toBlob((blob) => {
+                    currentStoryBlob = blob;
+                }, 'image/png');
+
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.href = pngDataUrl;
+                downloadAnchor.download = currentStoryFilename;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+
+                const modal = document.getElementById('story-modal');
+                const previewImg = document.getElementById('story-preview-img');
+                if (previewImg) previewImg.src = pngDataUrl;
+                if (modal) modal.classList.remove('hidden');
+
+            } catch (err) {
+                console.error('Failed to export story:', err);
+                alert('Could not save Instagram Story image. Please check your browser permissions.');
+            } finally {
+                if (stage && stage.parentNode) {
+                    stage.parentNode.removeChild(stage);
+                }
+                if (saveBtn) saveBtn.disabled = false;
+                if (saveIcon) saveIcon.textContent = '📸';
+                if (saveText) saveText.textContent = 'Save for Instagram Story';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const meInput = document.getElementById('me-score-input');
+            const partnerInput = document.getElementById('partner-score-input');
+
+            if (meInput) {
+                updateDuoScoreUI('me', meInput.value);
+                meInput.addEventListener('input', (e) => {
+                    let val = parseInt(e.target.value, 10);
+                    if (val > 100) e.target.value = 100;
+                    if (val < 0) e.target.value = 0;
+                    updateDuoScoreUI('me', e.target.value);
+                });
+            }
+
+            if (partnerInput) {
+                updateDuoScoreUI('partner', partnerInput.value);
+                partnerInput.addEventListener('input', (e) => {
+                    let val = parseInt(e.target.value, 10);
+                    if (val > 100) e.target.value = 100;
+                    if (val < 0) e.target.value = 0;
+                    updateDuoScoreUI('partner', e.target.value);
+                });
+            }
+
+            const saveBtn = document.getElementById('save-story-btn');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', exportInstagramStory);
+            }
+
+            const modal = document.getElementById('story-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const dismissModalBtn = document.getElementById('dismiss-modal-btn');
+            const downloadAgainBtn = document.getElementById('download-again-btn');
+            const shareStoryBtn = document.getElementById('share-story-btn');
+
+            function closeModal() {
+                if (modal) modal.classList.add('hidden');
+            }
+
+            if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+            if (dismissModalBtn) dismissModalBtn.addEventListener('click', closeModal);
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeModal();
+                });
+            }
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            });
+
+            if (downloadAgainBtn) {
+                downloadAgainBtn.addEventListener('click', () => {
+                    if (!currentStoryDataUrl) return;
+                    const a = document.createElement('a');
+                    a.href = currentStoryDataUrl;
+                    a.download = currentStoryFilename || 'reliv-together.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                });
+            }
+
+            if (shareStoryBtn) {
+                shareStoryBtn.addEventListener('click', async () => {
+                    if (currentStoryBlob && navigator.canShare) {
+                        const file = new File([currentStoryBlob], currentStoryFilename || 'reliv-together.png', { type: 'image/png' });
+                        if (navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: "Our Today's Check at Reliv - Couple Edition",
+                                    text: "Our Today's Check at Reliv! 🌿 #RelivTogether @reliv_care"
+                                });
+                                return;
+                            } catch (shareErr) {
+                                if (shareErr.name !== 'AbortError') {
+                                    console.warn('Share cancelled or failed:', shareErr);
+                                }
+                            }
+                        }
+                    }
+                    alert('Story image is saved in your device downloads! You can now upload it directly to Instagram Stories.');
+                });
+            }
+        });
+    </script>
+    <!-- END: Interactive Support Script -->
+</body>
+
+</html>
