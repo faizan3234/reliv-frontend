@@ -6365,5 +6365,305 @@
     "bn": {
       "file": "personal-25c2dabdea2780311cbe1b7a.mp3"
     }
+  },
+  "Your weight reference": {
+    "en": {
+      "file": "personal-cdc05d9b5a144146f4d339da.mp3"
+    }
+  },
+  "Report review mode · No new payment or measurement": {
+    "en": {
+      "file": "personal-5de024d8e1aa43fe2f387a44.mp3"
+    }
+  },
+  "There is no completed paid report saved for this profile. Ask staff to restore normal check-in if you need a new checkup.": {
+    "en": {
+      "file": "personal-d382d7b74d8e85b2cc4fa317.mp3"
+    }
+  },
+  "Enter your saved name and six-digit PIN. We will open your latest completed paid report. This does not start a new scan or charge you again.": {
+    "en": {
+      "file": "personal-1dd5442b9cf20f67ceff8f47.mp3"
+    }
+  },
+  "Your weight is above that upper boundary by about": {
+    "en": {
+      "file": "personal-bbfff050d59133ba95a46104.mp3"
+    }
+  },
+  "For your recorded height, the approximate adult BMI weight range starts at": {
+    "en": {
+      "file": "personal-4574ac027a26d793395df1ad.mp3"
+    }
+  },
+  "and stays below": {
+    "en": {
+      "file": "personal-22828e89749d66326c32f6e0.mp3"
+    }
+  },
+  "Your weight is below that lower boundary by about": {
+    "en": {
+      "file": "personal-50819a15961390e60d05d880.mp3"
+    }
+  },
+  "Your weight is at the upper boundary of this reference range.": {
+    "en": {
+      "file": "personal-e442be6b5023e39a868e408b.mp3"
+    }
+  },
+  "Your weight is within this adult BMI reference range. You do not need to aim for one exact ideal weight.": {
+    "en": {
+      "file": "personal-b44f4eb823e059d880fcdc98.mp3"
+    }
+  },
+  "An adult weight range needs a valid height, weight and age of at least twenty. We cannot give this range from the details available.": {
+    "en": {
+      "file": "personal-0dc1bf8804ae3f725b0a9486.mp3"
+    }
+  },
+  "This is a screening reference, not a personal weight prescription. Pregnancy, muscle, age and medical conditions can change what is appropriate for you.": {
+    "en": {
+      "file": "personal-b31839feb56de3d621c9833e.mp3"
+    }
+  },
+  "Your previous comparable estimate was": {
+    "en": {
+      "file": "personal-df78d6510598720af396f98f.mp3"
+    }
+  },
+  "Compared with that scan, your estimate increased by": {
+    "en": {
+      "file": "personal-0d8312e4a98b15c87cbf58f1.mp3"
+    }
+  },
+  "Your body-fat value is a formula estimate. It cannot confirm excess fat on its own. Your weight-to-height result and any repeated change can help you discuss it with a clinician.": {
+    "en": {
+      "file": "personal-56e7d97e28a4b66bb44b84a1.mp3"
+    }
+  },
+  "Your body-water percentage is an estimate, not a test for dehydration. Do not force extra water because of this number. Follow any fluid advice already given by your clinician.": {
+    "en": {
+      "file": "personal-428c57b038d24db6b9642980.mp3"
+    }
+  },
+  "Your estimate is unchanged from the previous comparable scan.": {
+    "en": {
+      "file": "personal-2bd84e41cce7065fcc743272.mp3"
+    }
+  },
+  "percentage points": {
+    "en": {
+      "file": "personal-e30096444331794823051225.mp3"
+    }
+  },
+  "Compared with that scan, your estimate decreased by": {
+    "en": {
+      "file": "personal-365593cb90a0828c87e4bd84.mp3"
+    }
+  },
+  "A change in a formula estimate is not proof of a change in body fat or hydration. Compare under similar conditions and discuss a persistent change if you are concerned.": {
+    "en": {
+      "file": "personal-5601860f62cb218a8a014616.mp3"
+    }
+  },
+  "पुरानी रिपोर्ट देखें · नई पेमेंट या जाँच नहीं": {
+    "hi": {
+      "file": "personal-9232cc48423fe5ceb80f78fb.mp3"
+    }
+  },
+  "आपके वजन की रेंज": {
+    "hi": {
+      "file": "personal-351cb8341b7ad0f8638e1b5c.mp3"
+    }
+  },
+  "इस प्रोफाइल में पूरी हुई पेड रिपोर्ट नहीं मिली। नई जाँच चाहिए तो स्टाफ से सामान्य चेक-इन चालू करवाएँ।": {
+    "hi": {
+      "file": "personal-78bf80848db267a3d0828b30.mp3"
+    }
+  },
+  "अपना पहले वाला नाम और छह अंकों का पिन डालें। आपकी आखिरी पूरी हुई पेड रिपोर्ट खुलेगी। नई जाँच शुरू नहीं होगी और दोबारा पैसे नहीं लगेंगे।": {
+    "hi": {
+      "file": "personal-ab4d4aa857e85d1b5db63cdd.mp3"
+    }
+  },
+  "और इससे कम रहती है": {
+    "hi": {
+      "file": "personal-362a028f025768fbc240a65c.mp3"
+    }
+  },
+  "आपका वजन ऊपरी सीमा से करीब इतना ज्यादा है": {
+    "hi": {
+      "file": "personal-0845447ee3970ebed4d2b017.mp3"
+    }
+  },
+  "आपका वजन निचली सीमा से करीब इतना कम है": {
+    "hi": {
+      "file": "personal-8cb1fd3ef4c841330e6d88d0.mp3"
+    }
+  },
+  "आपकी दर्ज लंबाई के हिसाब से बड़ों की बीएमआई वाली अनुमानित वजन रेंज यहाँ से शुरू होती है": {
+    "hi": {
+      "file": "personal-b088a0427f290c35bb26833b.mp3"
+    }
+  },
+  "आपका वजन बड़ों की इस बीएमआई रेंज में है। किसी एक बिल्कुल तय आदर्श वजन तक पहुँचने की जरूरत नहीं है।": {
+    "hi": {
+      "file": "personal-e153010e0adb13a66e4d302e.mp3"
+    }
+  },
+  "आपका वजन इस रेंज की ऊपरी सीमा पर है।": {
+    "hi": {
+      "file": "personal-e51b97d280a228f8e179b4e1.mp3"
+    }
+  },
+  "यह रेंज बताने के लिए सही लंबाई, वजन और कम से कम बीस साल की उम्र चाहिए। अभी मिली जानकारी से यह रेंज नहीं बता सकते।": {
+    "hi": {
+      "file": "personal-0a5f0ad63131a8f154d65455.mp3"
+    }
+  },
+  "यह जाँच की सामान्य रेंज है, आपके वजन का निजी टारगेट नहीं। प्रेग्नेंसी, मसल, उम्र और बीमारी के हिसाब से सही वजन अलग हो सकता है।": {
+    "hi": {
+      "file": "personal-fc04a94ada2a84ae3d91331b.mp3"
+    }
+  },
+  "पिछली तुलना वाली जाँच में आपका अनुमान था": {
+    "hi": {
+      "file": "personal-052fc276588a5a57e3b891be.mp3"
+    }
+  },
+  "उस जाँच से आपका अनुमान इतना बढ़ा है": {
+    "hi": {
+      "file": "personal-db87580390465fc6ee352d1a.mp3"
+    }
+  },
+  "शरीर में पानी का प्रतिशत एक अनुमान है, पानी की कमी की जाँच नहीं। इस नंबर के कारण जबरदस्ती ज्यादा पानी न पिएँ। डॉक्टर ने पानी की कोई सलाह दी है तो उसे मानें।": {
+    "hi": {
+      "file": "personal-881c524237d09d961987c556.mp3"
+    }
+  },
+  "शरीर के फैट का यह नंबर फॉर्मूले से निकला अनुमान है। अकेले इससे ज्यादा फैट की पुष्टि नहीं होती। लंबाई के हिसाब से वजन और बार-बार का बदलाव डॉक्टर से बात करने में मदद कर सकते हैं।": {
+    "hi": {
+      "file": "personal-a7630cf101f95b1ed234c3ea.mp3"
+    }
+  },
+  "प्रतिशत अंक": {
+    "hi": {
+      "file": "personal-8542b865742a6eee7d85ce5c.mp3"
+    }
+  },
+  "पिछली तुलना वाली जाँच से इस अनुमान में बदलाव नहीं है।": {
+    "hi": {
+      "file": "personal-35d18d93e76a236d3c6f7c1d.mp3"
+    }
+  },
+  "उस जाँच से आपका अनुमान इतना कम हुआ है": {
+    "hi": {
+      "file": "personal-b871f9638a1cebb5d53f4818.mp3"
+    }
+  },
+  "फॉर्मूले के अनुमान में बदलाव से फैट या पानी सच में बदला है, यह पक्का नहीं होता। मिलते-जुलते हालात में तुलना करें। बदलाव बना रहे और चिंता हो तो डॉक्टर से बात करें।": {
+    "hi": {
+      "file": "personal-4c791255dec4f40ecdef77c3.mp3"
+    }
+  },
+  "আপনার ওজনের রেফারেন্স সীমা": {
+    "bn": {
+      "file": "personal-66d6e508bb6018c1e4e5740c.mp3"
+    }
+  },
+  "আগের রিপোর্ট দেখুন · নতুন পেমেন্ট বা পরীক্ষা নয়": {
+    "bn": {
+      "file": "personal-8386c119f66f52c1c190d715.mp3"
+    }
+  },
+  "এই প্রোফাইলে সম্পূর্ণ পেড রিপোর্ট পাওয়া যায়নি। নতুন পরীক্ষা দরকার হলে কর্মীকে সাধারণ চেক-ইন চালু করতে বলুন।": {
+    "bn": {
+      "file": "personal-fc7c8ec5c0fbae6992598bd1.mp3"
+    }
+  },
+  "আপনার আগের নাম আর ছয় অঙ্কের পিন দিন। সর্বশেষ সম্পূর্ণ পেড রিপোর্ট খুলবে। নতুন পরীক্ষা শুরু হবে না, আবার টাকাও লাগবে না।": {
+    "bn": {
+      "file": "personal-d376ccf6e729109e823688c3.mp3"
+    }
+  },
+  "আর এর নিচে থাকে": {
+    "bn": {
+      "file": "personal-6a10da3123502c5adc3e9f52.mp3"
+    }
+  },
+  "আপনার ওজন উপরের সীমা থেকে প্রায় এতটা বেশি": {
+    "bn": {
+      "file": "personal-1bc681ed469168c27581c321.mp3"
+    }
+  },
+  "আপনার নথিভুক্ত উচ্চতার জন্য বড়দের বিএমআই অনুযায়ী আনুমানিক ওজনের সীমা শুরু হয়": {
+    "bn": {
+      "file": "personal-a89dda924ad759617f72a922.mp3"
+    }
+  },
+  "আপনার ওজন নিচের সীমা থেকে প্রায় এতটা কম": {
+    "bn": {
+      "file": "personal-94830bb354b7a86609191b23.mp3"
+    }
+  },
+  "আপনার ওজন এই রেফারেন্সের উপরের সীমায় আছে।": {
+    "bn": {
+      "file": "personal-01fa0fbd1d03e5decf546679.mp3"
+    }
+  },
+  "এই সীমা বলতে সঠিক উচ্চতা, ওজন আর অন্তত কুড়ি বছর বয়স দরকার। এখন পাওয়া তথ্য দিয়ে এই সীমা বলা যাচ্ছে না।": {
+    "bn": {
+      "file": "personal-4537c36b7703e46f46d13b69.mp3"
+    }
+  },
+  "আপনার ওজন বড়দের এই বিএমআই সীমার মধ্যে আছে। একটিমাত্র নির্দিষ্ট আদর্শ ওজনে পৌঁছনোর প্রয়োজন নেই।": {
+    "bn": {
+      "file": "personal-85876893deb328029b5e7f5e.mp3"
+    }
+  },
+  "এটি পরীক্ষার সাধারণ রেফারেন্স, আপনার ব্যক্তিগত ওজনের লক্ষ্য নয়। প্রেগন্যান্সি, মাসল, বয়স আর অসুখ অনুযায়ী উপযুক্ত ওজন বদলাতে পারে।": {
+    "bn": {
+      "file": "personal-9889b6850aedf84c24d3b566.mp3"
+    }
+  },
+  "আগের তুলনাযোগ্য পরীক্ষায় আপনার অনুমান ছিল": {
+    "bn": {
+      "file": "personal-84a7dedcdb55084eafd66bcb.mp3"
+    }
+  },
+  "সেই পরীক্ষা থেকে আপনার অনুমান এতটা বেড়েছে": {
+    "bn": {
+      "file": "personal-39a96f3c386c89d5cd5e73e9.mp3"
+    }
+  },
+  "শরীরে জলের শতাংশ একটি অনুমান, ডিহাইড্রেশনের পরীক্ষা নয়। এই নম্বর দেখে জোর করে বেশি জল খাবেন না। ডাক্তার জল নিয়ে কোনও পরামর্শ দিয়ে থাকলে তা মেনে চলুন।": {
+    "bn": {
+      "file": "personal-6ba370e9a75898ee39363c70.mp3"
+    }
+  },
+  "শরীরের ফ্যাটের এই মান ফর্মুলা থেকে পাওয়া অনুমান। শুধু এতে বাড়তি ফ্যাট নিশ্চিত হয় না। উচ্চতার তুলনায় ওজন আর বারবার হওয়া বদল নিয়ে ডাক্তারের সঙ্গে আলোচনা করতে পারেন।": {
+    "bn": {
+      "file": "personal-63115bd0544702a1b5860fa1.mp3"
+    }
+  },
+  "আগের তুলনাযোগ্য পরীক্ষা থেকে এই অনুমান বদলায়নি।": {
+    "bn": {
+      "file": "personal-c7977a18d75a8e2dbeecb7d4.mp3"
+    }
+  },
+  "সেই পরীক্ষা থেকে আপনার অনুমান এতটা কমেছে": {
+    "bn": {
+      "file": "personal-c8727a33a18ca1a4a0484696.mp3"
+    }
+  },
+  "শতাংশ পয়েন্ট": {
+    "bn": {
+      "file": "personal-dcb2f5a83700abba8ae2385c.mp3"
+    }
+  },
+  "ফর্মুলার অনুমানে বদল মানেই শরীরের ফ্যাট বা জল সত্যিই বদলেছে, এমন নয়। একই রকম পরিস্থিতিতে তুলনা করুন। বদল থেকে গেলে আর চিন্তা হলে ডাক্তারের সঙ্গে কথা বলুন।": {
+    "bn": {
+      "file": "personal-e90d322a42f32a51acfd00d7.mp3"
+    }
   }
 }
