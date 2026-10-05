@@ -44,19 +44,39 @@ export function buildPersonalizedReport({data = {}, page = 1, language = 'en', f
     messages.push(...measured.flatMap(m => read(m)));
     messages.push(...personalizedActions(measured, language).filter(text => text !== v.urgentAdvice));
   } else if (page === 3 || page === 4) {
-    const selected = metrics.filter(m => field === 'all' ? core.includes(m.key) : m.key === field);
+    const historySummary = new Set([...core,'height','bmi','bodyFat','bodyWater','fatMass','fatFreeMass','bsa','ffmi','restingEnergy','bodyWaterLitres']);
+    const selected = metrics.filter(m => field === 'all' ? (page === 4 ? historySummary.has(m.key) : core.includes(m.key)) : m.key === field);
     // Only earlier scans are eligible. Never call today's row "previous".
     const prior = reportRows(data).filter(row => row.scan < count);
     messages.push(reportStage(data, language));
-    for (const m of selected) {
-      messages.push(...read(m, false));
-      const available = prior.filter(row => valid(row[m.key]));
-      const rows = page === 3 ? available.slice(-2) : available.slice(-1);
-      if (!rows.length || m.value === null) { messages.push(c.noEarlier); continue; }
-      for (const row of rows) messages.push(w.previous, w.scan, ...numberParts(row.scan, language), c.previous, ...numberParts(row[m.key], language), audioUnits[language][m.unit]);
-      if (page === 4) {
-        const difference = Number((m.value - Number(rows[0][m.key])).toFixed(2));
-        messages.push(...(difference === 0 ? [c.same] : [difference > 0 ? c.higher : c.lower, ...numberParts(Math.abs(difference), language), audioUnits[language][m.unit]]));
+    if (page === 4 && field === 'all') {
+      // The graph page's automatic guide reads real prior rows chronologically,
+      // one scan heading followed by its available measurements. Today's values
+      // were already explained on the preceding page, so do not repeat them.
+      let spokenScans = 0;
+      const narratedMetrics = selected.filter(m => prior.some(row => valid(row[m.key])));
+      for (const row of prior) {
+        const available = narratedMetrics.filter(m => valid(row[m.key]));
+        if (!available.length) continue;
+        messages.push(w.previous, w.scan, ...numberParts(row.scan, language));
+        for (const m of available) {
+          const copy = metricCopy[m.key];
+          messages.push(copy[0][i], ...numberParts(Number(row[m.key]), language), audioUnits[language][m.unit]);
+        }
+        spokenScans += 1;
+      }
+      if (!spokenScans) messages.push(c.noEarlier);
+    } else {
+      for (const m of selected) {
+        messages.push(...read(m, false));
+        const available = prior.filter(row => valid(row[m.key]));
+        const rows = page === 3 ? available.slice(-2) : available.slice(-1);
+        if (!rows.length || m.value === null) { messages.push(c.noEarlier); continue; }
+        for (const row of rows) messages.push(w.previous, w.scan, ...numberParts(row.scan, language), c.previous, ...numberParts(row[m.key], language), audioUnits[language][m.unit]);
+        if (page === 4) {
+          const difference = Number((m.value - Number(rows[0][m.key])).toFixed(2));
+          messages.push(...(difference === 0 ? [c.same] : [difference > 0 ? c.higher : c.lower, ...numberParts(Math.abs(difference), language), audioUnits[language][m.unit]]));
+        }
       }
     }
   } else {

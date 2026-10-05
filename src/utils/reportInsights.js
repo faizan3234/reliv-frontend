@@ -38,7 +38,7 @@ export function reportRows(data) {
   if (a.scanNumber && b.scanNumber) return a.scanNumber-b.scanNumber;
   const first=Date.parse(a.createdAt),second=Date.parse(b.createdAt);
   return Number.isFinite(first)&&Number.isFinite(second)?first-second:0;
- }).map((row,index)=>({...row,...bodyEstimates(row,row.patient||{}),scan:Number.isSafeInteger(row.scanNumber)&&row.scanNumber>0?row.scanNumber:Math.max(1,count-source.length+1)+index}));
+ }).map((row,index)=>({...bodyEstimates(row,row.patient||{}),...row,scan:Number.isSafeInteger(row.scanNumber)&&row.scanNumber>0?row.scanNumber:Math.max(1,count-source.length+1)+index}));
 }
 export function observationCount(data) {
  // Count actual retained observations, never multiply visit count by potential fields.
