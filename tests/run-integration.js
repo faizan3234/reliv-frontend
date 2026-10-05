@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 const bundle = await build({
   entryPoints: [process.argv[2] || 'tests/browser.jsx'], bundle: true, write: false, format: 'iife', jsx: 'automatic',
   define: { 'import.meta.env': JSON.stringify({ VITE_MQTT_BROKER: 'wss://example.invalid/mqtt', VITE_MQTT_USERNAME: 'synthetic', VITE_MQTT_PASSWORD: 'synthetic' }), 'process.env.NODE_ENV': '"development"' },
-  alias: { ...(process.argv[2]?.endsWith('payment-identity-browser.jsx') ? {html2canvas:resolve('tests/story-capture-fixture.js')} : {}), mqtt: resolve('tests/mqtt-fixture.js') },
+  alias: { ...(process.argv[2]?.endsWith('payment-identity-browser.jsx') ? {html2canvas:resolve('tests/story-capture-fixture.js'), 'html-to-image':resolve('tests/story-capture-fixture.js')} : {}), mqtt: resolve('tests/mqtt-fixture.js') },
   loader: { '.mp4': 'empty', '.png': 'dataurl', '.jpeg': 'dataurl', '.svg': 'dataurl', '.css': 'empty' },
 });
 const console = new VirtualConsole();
