@@ -192,22 +192,22 @@
             </header>
             <!-- Handwritten Left Note (Editable with fallback) -->
             <aside aria-label="Affirmation"
-                class="absolute left-1 top-4 -rotate-12 w-28 text-center z-30">
-                <p id="note-top-left" contenteditable="true" spellcheck="false" class="editable-note font-hand text-[15px] leading-tight text-stone-700 font-semibold tracking-wide p-0.5 rounded"
+                class="absolute left-0.5 top-0.5 -rotate-12 max-w-[95px] text-center z-30">
+                <p id="note-top-left" contenteditable="true" spellcheck="false" class="editable-note font-hand text-[13px] leading-tight text-stone-700 font-semibold tracking-wide p-0.5 rounded"
                     data-default="Today<br />I chose<br />my health. ♡">
                     Today<br />I chose<br />my health. <span class="text-xs text-stone-600 block mt-0.5">♡</span>
                 </p>
             </aside>
             <!-- Sticky Note Top Right (Editable with fallback) -->
             <aside aria-label="Motivational Sticky Note"
-                class="absolute right-2 top-3 rotate-6 bg-[#feded9] px-3 py-2 rounded-sm shadow-sticky border-t border-white/50 text-center w-28 z-30">
-                <p id="note-top-right" contenteditable="true" spellcheck="false" class="editable-note font-hand text-xs text-stone-800 leading-tight font-medium p-0.5 rounded"
+                class="absolute right-0.5 top-0.5 rotate-6 bg-[#feded9] px-2.5 py-1.5 rounded-sm shadow-sticky border-t border-white/50 text-center max-w-[95px] z-30">
+                <p id="note-top-right" contenteditable="true" spellcheck="false" class="editable-note font-hand text-[12px] text-stone-800 leading-tight font-medium p-0.5 rounded"
                     data-default="A<br />Healthier<br />Me<br />Starts<br />Here ♡">
                     A<br />Healthier<br />Me<br />Starts<br />Here <span class="text-stone-700">♡</span>
                 </p>
             </aside>
             <!-- Main Title Banner -->
-            <div class="mt-4 text-center">
+            <div class="mt-6 text-center">
                 <div class="flex items-center justify-center gap-1.5">
                     <span class="text-stone-600 font-hand text-base -rotate-6">♡</span>
                     <h2
@@ -273,38 +273,38 @@
             <div class="relative w-full flex items-center justify-center my-3.5" data-purpose="score-badge-container">
                 <!-- Left Sub-Doodle: Smiling Sun & Affirmation -->
                 <div
-                    class="absolute left-0 top-1/2 transform -translate-y-1/2 w-24 text-center pl-1 pointer-events-none">
+                    class="absolute left-0 top-1/2 transform -translate-y-1/2 w-20 text-center pl-0.5 pointer-events-none">
                     <div
-                        class="w-7 h-7 mx-auto mb-1 rounded-full bg-[#fde9b5] border border-[#f6cb76] flex items-center justify-center shadow-xs">
+                        class="w-6 h-6 mx-auto mb-1 rounded-full bg-[#fde9b5] border border-[#f6cb76] flex items-center justify-center shadow-xs">
                         <span class="text-xs leading-none">😊</span>
                     </div>
-                    <p class="font-hand text-xs text-stone-700 leading-tight font-semibold">
+                    <p class="font-hand text-[11px] text-stone-700 leading-tight font-semibold">
                         Small<br />steps.<br />Real<br />change.
                     </p>
-                    <span class="text-[11px] text-stone-600 block">♡</span>
+                    <span class="text-[10px] text-stone-600 block mt-0.5">♡</span>
                 </div>
                 <!-- Big Circular Watercolor Health Score Badge -->
                 <div
-                    class="w-52 h-52 rounded-full bg-gradient-to-tr from-[#ffe4d1] via-[#fff1da] to-[#f9ded3] p-2.5 shadow-lg flex flex-col items-center justify-center text-center relative border-2 border-[#f8d0b8]/80 hover:shadow-xl transition-all">
+                    class="w-44 h-44 rounded-full bg-gradient-to-tr from-[#ffe4d1] via-[#fff1da] to-[#f9ded3] p-2 shadow-md flex flex-col items-center justify-center text-center relative border-2 border-[#f8d0b8]/80 hover:shadow-xl transition-all">
                     <!-- Inner circle outline -->
                     <div
-                        class="w-full h-full rounded-full border-2 border-dashed border-[#e6a88b]/80 flex flex-col items-center justify-center px-2 py-2 bg-[#fff8ee]/85 backdrop-blur-xs">
+                        class="w-full h-full rounded-full border-2 border-dashed border-[#e6a88b]/80 flex flex-col items-center justify-center px-1.5 py-1.5 bg-[#fff8ee]/85 backdrop-blur-xs">
                         <!-- Header with sparkles around "Health Score" -->
-                        <div class="flex items-center gap-1.5 mb-1 select-none">
-                            <span class="text-[#f26222] text-xs font-bold -rotate-12">✧</span>
-                            <h3 class="font-heading text-xs uppercase tracking-widest font-black text-stone-800">Health Score</h3>
-                            <span class="text-[#f26222] text-xs font-bold rotate-12">✧</span>
+                        <div class="flex items-center gap-1 mb-0.5 select-none">
+                            <span class="text-[#f26222] text-[10px] font-bold -rotate-12">✧</span>
+                            <h3 class="font-heading text-[11px] uppercase tracking-wider font-black text-stone-800">Health Score</h3>
+                            <span class="text-[#f26222] text-[10px] font-bold rotate-12">✧</span>
                         </div>
                         <!-- Giant Bold High-Contrast Health Score -->
-                        <div class="flex items-baseline justify-center gap-1 my-0.5 w-full">
+                        <div class="flex items-baseline justify-center gap-0.5 my-0.5 w-full">
                             <input aria-label="Health score out of 100"
-                                class="score-input text-5xl sm:text-[54px] font-black text-stone-900 w-24 text-center bg-transparent border-b-2 border-stone-800/40 focus:border-[#f26222] outline-none p-0 leading-none drop-shadow-sm select-all cursor-text hover:text-[#f26222] transition-colors"
+                                class="score-input text-4xl sm:text-[44px] font-black text-stone-900 w-20 text-center bg-transparent border-b-2 border-stone-800/40 focus:border-[#f26222] outline-none p-0 leading-none drop-shadow-sm select-all cursor-text hover:text-[#f26222] transition-colors"
                                 id="health-score-input" max="100" min="0" placeholder="--" type="number" value="87" />
-                            <span class="font-heading text-xl sm:text-2xl font-black text-[#f26222] select-none leading-none">/ 100</span>
+                            <span class="font-heading text-lg sm:text-xl font-black text-[#f26222] select-none leading-none">/ 100</span>
                         </div>
                         <!-- Dynamic Vitality Status Pill -->
                         <div id="score-status-pill"
-                            class="inline-flex items-center gap-1 bg-[#d5e7d2] text-[#2c5324] px-3 py-0.5 rounded-full text-xs font-bold font-hand shadow-xs border border-[#b8d6b4] mt-1 select-none transition-all">
+                            class="inline-flex items-center gap-1 bg-[#d5e7d2] text-[#2c5324] px-2.5 py-0.5 rounded-full text-[11px] font-bold font-hand shadow-xs border border-[#b8d6b4] mt-0.5 select-none transition-all">
                             <span id="score-status-icon">⭐</span>
                             <span id="score-status-text">Excellent vitality!</span>
                         </div>
@@ -312,17 +312,17 @@
                 </div>
                 <!-- Right Botanical Leaf Sprig & Sticky Note -->
                 <div
-                    class="absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col items-end pr-1 pointer-events-none">
+                    class="absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col items-end pr-0.5 pointer-events-none">
                     <!-- Botanical sprig -->
-                    <div class="text-[#4b663b] text-base mb-1 self-center rotate-12">🌿</div>
+                    <div class="text-[#4b663b] text-sm mb-1 self-center rotate-12">🌿</div>
                     <!-- Sticky Note -->
                     <div
-                        class="bg-[#fed0c8] p-2 rounded-xs shadow-sticky rotate-3 w-20 text-center border-t border-white/60">
-                        <p class="font-hand text-[11px] text-stone-800 leading-tight font-medium">
+                        class="bg-[#fed0c8] p-1.5 rounded-xs shadow-sticky rotate-3 w-[74px] text-center border-t border-white/60">
+                        <p class="font-hand text-[10px] text-stone-800 leading-tight font-medium">
                             Better habits.<br />Better me. ♡
                         </p>
                     </div>
-                    <span class="text-[#ca6a54] text-xs mt-1 mr-1">♡</span>
+                    <span class="text-[#ca6a54] text-[10px] mt-0.5 mr-1">♡</span>
                 </div>
             </div>
             <!-- Field 2: "Today's Win:" -->
@@ -353,6 +353,30 @@
             </div>
         </article>
         <!-- END: Central Paper Card -->
+
+        <!-- BEGIN: FloatingMemorabiliaRow -->
+        <div class="relative z-20 flex items-end justify-between w-full mt-3 px-2" data-purpose="floating-memorabilia">
+            <!-- Left: Kraft Notebook Note (Editable with fallback) -->
+            <div
+                class="relative w-28 bg-[#f5ede2] rounded-xl shadow-md border border-[#e1d5c2] rotate-[-3deg] flex flex-col p-2 z-30">
+                <div class="w-full border-b border-stone-300 h-2.5"></div>
+                <div class="w-full border-b border-stone-300 h-2.5"></div>
+                <div class="w-full border-b border-stone-300 h-2.5"></div>
+                <p id="note-notebook-bottom" contenteditable="true" spellcheck="false"
+                    class="editable-note font-hand text-[12px] text-stone-700 mt-1 font-semibold leading-tight p-0.5 rounded text-center"
+                    data-default="Healthy<br />Habits<br />Happier<br />Me ♡">
+                    Healthy<br />Habits<br />Happier<br />Me ♡
+                </p>
+            </div>
+            <!-- Right: Cheerful Heart & Sticker Vignette -->
+            <div class="relative flex flex-col items-end pr-1 z-30">
+                <div class="bg-[#fed0c8] px-3 py-1.5 rounded-sm shadow-md rotate-[4deg] border border-rose-200 text-center font-hand text-xs font-semibold text-stone-800">
+                    <span class="text-xs">✨</span> Grateful for today <span class="text-rose-500 font-bold">♡</span>
+                </div>
+            </div>
+        </div>
+        <!-- END: FloatingMemorabiliaRow -->
+
         <!-- BEGIN: Bottom Footer Note & Social Tags -->
         <footer class="w-full mt-4 flex items-center justify-center gap-2 z-10" data-purpose="card-footer-tags">
             <!-- Tag 1: Hashtag badge -->
@@ -381,18 +405,6 @@
             </p>
         </div>
         <!-- END: Save for Instagram Story Action -->
-        <!-- Decorative Kraft Notebook Element Bottom-Left (Editable with fallback) -->
-        <div
-            class="absolute -bottom-4 -left-7 w-28 h-28 bg-[#f5ede2] rounded-xl shadow-lg border border-[#e1d5c2] rotate-12 flex flex-col p-2 z-30">
-            <div class="w-full border-b border-stone-300 h-3"></div>
-            <div class="w-full border-b border-stone-300 h-3"></div>
-            <div class="w-full border-b border-stone-300 h-3"></div>
-            <p id="note-notebook-bottom" contenteditable="true" spellcheck="false"
-                class="editable-note font-hand text-[10px] text-stone-600 mt-1 leading-tight p-0.5 rounded"
-                data-default="Healthy<br />Habits<br />Happier<br />Me ♡">
-                Healthy<br />Habits<br />Happier<br />Me ♡
-            </p>
-        </div>
         <!-- Decorative Warm Knit Blanket Texture Bottom-Right -->
         <div aria-hidden="true"
             class="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-[#ecdcc9] shadow-inner opacity-70 pointer-events-none z-0">
