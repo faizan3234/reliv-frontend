@@ -1,0 +1,29 @@
+.reliv-story { color:#292524; background:#f7f2ea; border-radius:2rem; overflow:hidden; }
+.reliv-story main { margin:0 auto; width:100%; }
+.reliv-story .story-value { display:block; width:100%; overflow-wrap:anywhere; white-space:normal; line-height:1.35; font-weight:700; }
+.reliv-story [data-field="score"],.reliv-story [data-field="partnerScore"] { font-size:2.5rem; width:auto; }
+.reliv-story [data-field="name"],.reliv-story [data-field="partner"] { font-size:1.2rem; }
+.reliv-story .paperclip { border:3px solid #b59f77; border-bottom:0; border-radius:14px 14px 0 0; }
+.reliv-story .washi-tape { background:#ebbed0; opacity:.7; }
+.reliv-story .shadow-paper { box-shadow:0 8px 22px #a0826d33; }
+.reliv-story .shadow-sticky { box-shadow:2px 4px 12px #b478642e; }
+.reliv-story .sunlight-overlay { background-color:#f7f2ea; }
+.reliv-story .editable-note { overflow-wrap:anywhere; }
+.reliv-story [id$="status-pill"] { background:#f5eee3; color:#57473d; border-color:#ded2bc; }
+.reliv-story { width:420px; min-width:420px; transform-origin:top left; }
+.reliv-story [data-purpose="header-section"] { padding-top:65px; }
+.reliv-story [data-field="name"],.reliv-story [data-field="partner"] { text-align:center; }
+.reliv-story [data-field="win"],.reliv-story [data-field="goal"] { font-size:15px; }
+.reliv-story [data-purpose="brand-header"] { padding-top:90px; }
+.reliv-story [data-field="score"],.reliv-story [data-field="partnerScore"] { white-space:nowrap; overflow-wrap:normal; flex-shrink:0; line-height:1.4; }
+.reliv-story:not([data-design="solo"]) [data-field="score"],.reliv-story:not([data-design="solo"]) [data-field="partnerScore"] { font-size:26px; }
+.reliv-story [class~="-mb-2"] { margin-bottom:6px; }
+.reliv-story #note-pill { display:block; line-height:1.5; }
+.reliv-story #note-top-right { font-size:12px; overflow-wrap:normal; }
+.reliv-story [data-field="name"],.reliv-story [data-field="partner"],.reliv-story [data-field="win"],.reliv-story [data-field="goal"] { line-height:1.6; padding-bottom:3px; }
+.reliv-story[data-design="friends"] [data-field="win"] { background:#d6e3d1; border-radius:12px; padding:6px 22px 8px 10px; }
+.reliv-story[data-design="friends"] [data-field="goal"] { background:#fce2df; border-radius:12px; padding:6px 22px 8px 10px; }
+.reliv-story * { font-family:Arial,sans-serif !important; }
+.reliv-story #note-pill { position:relative; z-index:40; }
+.reliv-story h1,.reliv-story h2,.reliv-story h3,.reliv-story h4 { line-height:1.3; }
+.reliv-story [class~="-mb-1"] { margin-bottom:8px; }

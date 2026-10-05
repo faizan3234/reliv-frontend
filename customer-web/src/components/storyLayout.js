@@ -6,7 +6,7 @@ export const storyLayouts = {
 };
 export function storyFields(card,summary) {
  const score=typeof summary?.score==='number'&&Number.isFinite(summary.score)&&summary.score>=0&&summary.score<=100?String(Math.round(summary.score)):'—';
- const win=typeof summary?.win==='string'&&summary.win.trim()?summary.win:'Completed my check-in';
+ const win=typeof summary?.win==='string'&&summary.win.trim()?summary.win.trim().slice(0,120):'Completed my check-in';
  const solo=card.relationship==='solo';
- return {name:card.alias||'Your name',partner:card.partner||'Their name',score,partnerScore:'—',win:solo?win:`${card.alias||'Me'}: ${win}`,winNote:solo?'': 'Second scan not linked',goal:'Make time for our next check'};
+ return {name:card.alias||'Your name',partner:card.partner||'Their name',score,partnerScore:'—',win:solo?win:`${card.alias||'Me'}: ${win}`,winNote:solo?'': 'Second scan not linked',goal:typeof summary?.focus==='string'&&summary.focus.trim()?summary.focus.trim().slice(0,160):'Review my report and choose one next step'};
 }

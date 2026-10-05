@@ -34,9 +34,9 @@ export function bundledReportNarration(data, page, language='en') {
  const intro=[c.pages[0],c.estimates,c.pages[1],c.pages[3],c.pages[4]][page-1];
  const narration=buildPersonalizedReport({data,page:semanticPage,language:lang,score:data.bodyScore,
   metricsOverride:all,intro,omitScore:page===2,
-  overviewFields:page===1?['height','weight','bmi']:page===2?fields:undefined
+  overviewFields:page===1?[]:page===2?fields:undefined
  });
- if(page===2||page===5) narration.push(...compositionGuidance(data,lang));
+ if(page===2) narration.push(...compositionGuidance(data,lang));
  return narration.map(text=>({text,langHint:lang}));
 }
 

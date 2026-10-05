@@ -6,6 +6,7 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: { hand: ["cursive"], script: ["cursive"], heading: ["sans-serif"] },
       colors: {
         brand: {
           50: '#fff7ed',
