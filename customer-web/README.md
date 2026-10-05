@@ -20,3 +20,28 @@ Copy `.env.example` to `.env` and set:
 - `VITE_PAYMENT_BRIDGE_URL`
 - `VITE_RAZORPAY_KEY_ID`
 - `VITE_KIOSK_FALLBACK_URL`
+
+## Built-in kiosk scanner
+
+Open **Scan kiosk payment QR**, or `/scan`, in the customer app. The rear camera
+starts after browser permission. Live scanning uses native QR detection where
+available and a bundled worker decoder otherwise. No camera frames are uploaded.
+A photo picker is available if camera permission is denied. Camera capture stops
+on close, backgrounding, and successful detection.
+
+Only `/pay#p=...` links from the current origin or `https://reliv7.vercel.app`
+are accepted. The scanner transfers the package to same-origin `/pay`, leaving
+signature, expiry, price, payment recovery, confirmation code, report and card
+handling to the existing checkout and bridge. Other QR destinations are rejected.
+If the official payment hostname changes, update `src/services/paymentQr.js`.
+External phone-camera scans still open the original HTTPS link normally.
+
+The manifest supplies standalone installation and `/` scope. On iPhone, use
+Safari's Add to Home Screen. Camera access requires HTTPS and user permission;
+UPI provider apps may open externally, as before. Payment needs Internet.
+Recognition speed depends on focus, lighting, QR density and hardware. Test the
+actual kiosk screen and installed app on physical iPhone and Android before
+release; desktop browser emulation cannot verify camera optics or UPI returns.
+The service worker caches only the shell/static scripts; never payment APIs.
+
+Validation: `node --test test/payment-qr.test.js` and `npm run build`.
