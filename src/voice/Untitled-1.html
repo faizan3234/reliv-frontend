@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+    <title>My Today's Check at Reliv</title>
+    <!-- Tailwind CSS CDN with plugins -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Google Fonts for Handcrafted Wellness Stationery Feel -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&amp;family=Fredoka:wght@600;700&amp;family=Patrick+Hand&amp;family=Quicksand:wght@500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        reliv: {
+                            orange: '#f26222',
+                            black: '#111111',
+                            sage: '#d4ded2',
+                            peach: '#fed8c9',
+                            softPink: '#f9d8d6',
+                            softYellow: '#fde9b5',
+                            cream: '#fdfbf7',
+                        }
+                    },
+                    fontFamily: {
+                        hand: ['"Patrick Hand"', 'cursive'],
+                        script: ['"Caveat"', 'cursive'],
+                        heading: ['"Fredoka"', 'sans-serif'],
+                        sans: ['"Quicksand"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'paper': '0 10px 25px -5px rgba(160, 130, 109, 0.25), 0 8px 10px -6px rgba(160, 130, 109, 0.2)',
+                        'sticky': '2px 4px 12px rgba(180, 120, 100, 0.18)',
+                        'pin': 'inset 0 1px 2px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.08)'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- BEGIN: Custom Styling Blocks -->
+    <style data-purpose="background-and-shadows">
+        body {
+            background-color: #f3ede2;
+            background-image:
+                radial-gradient(ellipse at 80% 10%, rgba(255, 255, 255, 0.75) 0%, transparent 60%),
+                radial-gradient(circle at 10% 85%, rgba(230, 215, 195, 0.5) 0%, transparent 50%),
+                linear-gradient(135deg, #f5efe6 0%, #ede3d4 100%);
+            min-height: 100vh;
+            font-family: 'Quicksand', sans-serif;
+        }
+
+        /* Soft natural dappled sunlight overlays */
+        .sunlight-overlay {
+            background: radial-gradient(circle at 25% 15%, rgba(255, 255, 255, 0.45) 0%, transparent 45%),
+                radial-gradient(circle at 75% 70%, rgba(210, 185, 160, 0.15) 0%, transparent 50%);
+        }
+
+        /* Washi tape textured strip */
+        .washi-tape {
+            background: rgba(235, 190, 180, 0.75);
+            backdrop-filter: blur(1px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            clip-path: polygon(3% 0%, 97% 0%, 100% 100%, 0% 100%);
+        }
+    </style>
+    <style data-purpose="handwritten-inputs">
+        /* Realistic interactive inputs with pen aesthetic */
+        .hand-input {
+            font-family: 'Caveat', cursive;
+            color: #27221f;
+            background: transparent;
+            border: none;
+            outline: none;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .hand-input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        .hand-input::placeholder {
+            color: #9c9187;
+            opacity: 0.6;
+            font-family: 'Patrick Hand', cursive;
+        }
+
+        /* Prevent number spinners and ensure clean high-legibility typography */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .score-input {
+            font-family: 'Fredoka', 'Quicksand', sans-serif;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Metallic paperclip */
+        .paperclip {
+            border: 3px solid #b59f77;
+            border-bottom: none;
+            border-radius: 14px 14px 0 0;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        .paperclip-inner {
+            border: 3px solid #9e8864;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+        }
+    </style>
+    <!-- END: Custom Styling Blocks -->
+</head>
+
+<body
+    class="p-2 sm:p-4 flex items-center justify-center min-h-screen text-stone-800 antialiased selection:bg-orange-200">
+    <!-- BEGIN: Phone Screen Container -->
+    <main
+        class="relative w-full max-w-[420px] bg-[#f7f2ea] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-[#eeddcb] sunlight-overlay flex flex-col items-center px-4 pt-6 pb-7"
+        data-purpose="mobile-card-canvas">
+        <!-- Atmospheric Dappled Shadows & Foliage Background Accents -->
+        <div aria-hidden="true"
+            class="absolute -top-10 -left-10 w-36 h-36 opacity-35 pointer-events-none transform -rotate-12">
+            <svg class="w-full h-full filter blur-[0.4px]" fill="#4d693a" viewbox="0 0 100 100">
+                <path d="M10,80 Q30,40 85,20 C70,45 50,75 10,80 Z"></path>
+                <path d="M25,60 Q55,45 80,45 C65,65 40,75 25,60 Z" opacity="0.8"></path>
+                <path d="M5,95 Q25,80 50,75 C35,90 20,95 5,95 Z" opacity="0.6"></path>
+            </svg>
+        </div>
+        <!-- Top Right Coffee Cup Flat-Lay Element -->
+        <div aria-hidden="true" class="absolute -top-4 -right-4 w-28 h-28 pointer-events-none z-0">
+            <div class="relative w-full h-full">
+                <!-- Saucer -->
+                <div
+                    class="absolute right-0 top-0 w-24 h-24 rounded-full bg-[#d6ad84] shadow-md border-2 border-[#b88c60]">
+                </div>
+                <!-- Ceramic Mug -->
+                <div
+                    class="absolute right-2 top-2 w-20 h-20 rounded-full bg-[#fdfaf3] shadow-inner p-1.5 flex items-center justify-center">
+                    <!-- Coffee & Latte Art Heart -->
+                    <div
+                        class="w-full h-full rounded-full bg-[#9e673a] shadow-inner flex items-center justify-center overflow-hidden border border-[#7a4e28]">
+                        <div
+                            class="w-8 h-8 rounded-full bg-[#f2e6d6] opacity-90 filter blur-[0.5px] transform rotate-45 scale-90 flex items-center justify-center">
+                            <span class="text-[#ab7242] text-[10px]">☕</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- BEGIN: Top Section - Logo & Sticky Notes -->
+        <section class="w-full relative z-10 flex flex-col items-center mt-1" data-purpose="header-section">
+            <!-- Sun rays sparkle top center -->
+            <div class="text-[#dda035] text-lg leading-none -mb-1 select-none font-bold">☼</div>
+            <!-- Reliv Logo Header -->
+            <header class="flex items-center justify-center gap-0.5 mb-2.5">
+                <h1 class="text-[34px] tracking-tight font-black leading-none flex items-baseline">
+                    <span class="text-[#f26222]">Re</span><span class="text-[#141414]">liv</span>
+                    <span class="text-[10px] font-sans text-stone-500 self-start ml-0.5 mt-0.5">TM</span>
+                </h1>
+            </header>
+            <!-- Handwritten Left Note -->
+            <aside aria-label="Affirmation"
+                class="absolute left-1 top-4 -rotate-12 w-28 text-center pointer-events-none">
+                <p class="font-hand text-[15px] leading-tight text-stone-700 font-semibold tracking-wide">
+                    Today<br />I chose<br />my health.
+                </p>
+                <span class="text-xs text-stone-600 block mt-0.5">♡</span>
+            </aside>
+            <!-- Sticky Note Top Right -->
+            <aside aria-label="Motivational Sticky Note"
+                class="absolute right-2 top-3 rotate-6 bg-[#feded9] px-3 py-2 rounded-sm shadow-sticky border-t border-white/50 text-center w-24 pointer-events-none">
+                <p class="font-hand text-xs text-stone-800 leading-tight font-medium">
+                    A<br />Healthier<br />Me<br />Starts<br />Here <span class="text-stone-700">♡</span>
+                </p>
+            </aside>
+            <!-- Main Title Banner -->
+            <div class="mt-4 text-center">
+                <div class="flex items-center justify-center gap-1.5">
+                    <span class="text-stone-600 font-hand text-base -rotate-6">♡</span>
+                    <h2
+                        class="font-heading text-2xl sm:text-[27px] tracking-wide text-stone-900 leading-none uppercase">
+                        MY TODAY'S
+                    </h2>
+                </div>
+                <div class="flex items-center justify-center gap-2 mt-1">
+                    <!-- Left handburst tick marks -->
+                    <span class="text-stone-700 text-sm font-black -rotate-12 tracking-tighter">\\</span>
+                    <h2
+                        class="font-heading text-2xl sm:text-[29px] tracking-wide text-stone-900 leading-none uppercase">
+                        CHECK AT <span class="text-[#f26222] font-black drop-shadow-sm">RELIV</span>
+                    </h2>
+                    <!-- Right handburst tick marks -->
+                    <span class="text-stone-700 text-sm font-black rotate-12 tracking-tighter">//</span>
+                </div>
+                <!-- Better Habits For Me Pill Banner -->
+                <div
+                    class="inline-flex items-center gap-1.5 bg-[#dbe4d5] text-[#2f3d2a] px-5 py-1 rounded-full mt-2 shadow-sm border border-[#c9d4c2] rotate-[-1deg]">
+                    <span class="font-hand text-base font-semibold tracking-wide">Better habits for me.</span>
+                    <span class="text-xs font-bold text-[#3e5336]">♡</span>
+                </div>
+            </div>
+        </section>
+        <!-- END: Top Section -->
+        <!-- BEGIN: Central Paper Card (Check Sheet) -->
+        <article
+            class="relative w-full bg-[#fdfbf6] rounded-3xl mt-4 p-4 pt-5 shadow-paper border border-[#ede3cf] flex flex-col items-center z-10"
+            data-purpose="health-check-card">
+            <!-- Paperclip Decor on Top-Left -->
+            <div class="absolute -top-3 left-7 w-4 h-9 paperclip z-20 pointer-events-none">
+                <div class="w-2.5 h-6 mx-auto mt-1 paperclip-inner"></div>
+            </div>
+            <!-- Washi Tape Decor on Top-Center -->
+            <div
+                class="absolute -top-2.5 left-1/2 transform -translate-x-1/2 w-28 h-5 washi-tape rounded-xs z-20 opacity-90 pointer-events-none">
+            </div>
+            <!-- Leaflet Doodle Top Left inside sheet -->
+            <div
+                class="absolute top-9 left-3 text-[#587349] opacity-75 pointer-events-none text-sm select-none rotate-[-25deg]">
+                🍃
+            </div>
+            <!-- Heart Doodle Top Right inside sheet -->
+            <div class="absolute top-8 right-5 text-[#d87c69] font-hand text-lg pointer-events-none select-none">
+                ♡
+            </div>
+            <!-- Field 1: "This check belongs to:" -->
+            <div class="w-full flex flex-col items-center mt-1">
+                <label class="font-sans text-[15px] font-bold text-stone-800 tracking-wide mb-1.5 cursor-pointer"
+                    for="owner-name">
+                    This check belongs to:
+                </label>
+                <div
+                    class="w-full max-w-[270px] bg-[#f8dad9] rounded-2xl px-4 py-1.5 shadow-inner border border-[#f3c2c1]/80 flex flex-col items-center">
+                    <input aria-label="User name input"
+                        class="hand-input w-full text-center text-xl font-bold py-0 h-7 border-b border-stone-800 focus:border-[#f26222]"
+                        id="owner-name" name="owner-name" placeholder="Type your name..." type="text"
+                        value="Emma Watson" />
+                </div>
+            </div>
+            <!-- Central Health Score Circular Badge & Surrounding Vignettes -->
+            <div class="relative w-full flex items-center justify-center my-3.5" data-purpose="score-badge-container">
+                <!-- Left Sub-Doodle: Smiling Sun & Affirmation -->
+                <div
+                    class="absolute left-0 top-1/2 transform -translate-y-1/2 w-24 text-center pl-1 pointer-events-none">
+                    <div
+                        class="w-7 h-7 mx-auto mb-1 rounded-full bg-[#fde9b5] border border-[#f6cb76] flex items-center justify-center shadow-xs">
+                        <span class="text-xs leading-none">😊</span>
+                    </div>
+                    <p class="font-hand text-xs text-stone-700 leading-tight font-semibold">
+                        Small<br />steps.<br />Real<br />change.
+                    </p>
+                    <span class="text-[11px] text-stone-600 block">♡</span>
+                </div>
+                <!-- Big Circular Watercolor Health Score Badge -->
+                <div
+                    class="w-52 h-52 rounded-full bg-gradient-to-tr from-[#ffe4d1] via-[#fff1da] to-[#f9ded3] p-2.5 shadow-lg flex flex-col items-center justify-center text-center relative border-2 border-[#f8d0b8]/80 hover:shadow-xl transition-all">
+                    <!-- Inner circle outline -->
+                    <div
+                        class="w-full h-full rounded-full border-2 border-dashed border-[#e6a88b]/80 flex flex-col items-center justify-center px-2 py-2 bg-[#fff8ee]/85 backdrop-blur-xs">
+                        <!-- Header with sparkles around "Health Score" -->
+                        <div class="flex items-center gap-1.5 mb-1 select-none">
+                            <span class="text-[#f26222] text-xs font-bold -rotate-12">✧</span>
+                            <h3 class="font-heading text-xs uppercase tracking-widest font-black text-stone-800">Health Score</h3>
+                            <span class="text-[#f26222] text-xs font-bold rotate-12">✧</span>
+                        </div>
+                        <!-- Giant Bold High-Contrast Health Score -->
+                        <div class="flex items-baseline justify-center gap-1 my-0.5 w-full">
+                            <input aria-label="Health score out of 100"
+                                class="score-input text-5xl sm:text-[54px] font-black text-stone-900 w-24 text-center bg-transparent border-b-2 border-stone-800/40 focus:border-[#f26222] outline-none p-0 leading-none drop-shadow-sm select-all cursor-text hover:text-[#f26222] transition-colors"
+                                id="health-score-input" max="100" min="0" placeholder="--" type="number" value="87" />
+                            <span class="font-heading text-xl sm:text-2xl font-black text-[#f26222] select-none leading-none">/ 100</span>
+                        </div>
+                        <!-- Dynamic Vitality Status Pill -->
+                        <div id="score-status-pill"
+                            class="inline-flex items-center gap-1 bg-[#d5e7d2] text-[#2c5324] px-3 py-0.5 rounded-full text-xs font-bold font-hand shadow-xs border border-[#b8d6b4] mt-1 select-none transition-all">
+                            <span id="score-status-icon">⭐</span>
+                            <span id="score-status-text">Excellent vitality!</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Botanical Leaf Sprig & Sticky Note -->
+                <div
+                    class="absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col items-end pr-1 pointer-events-none">
+                    <!-- Botanical sprig -->
+                    <div class="text-[#4b663b] text-base mb-1 self-center rotate-12">🌿</div>
+                    <!-- Sticky Note -->
+                    <div
+                        class="bg-[#fed0c8] p-2 rounded-xs shadow-sticky rotate-3 w-20 text-center border-t border-white/60">
+                        <p class="font-hand text-[11px] text-stone-800 leading-tight font-medium">
+                            Better habits.<br />Better me. ♡
+                        </p>
+                    </div>
+                    <span class="text-[#ca6a54] text-xs mt-1 mr-1">♡</span>
+                </div>
+            </div>
+            <!-- Field 2: "Today's Win:" -->
+            <div class="w-full flex flex-col items-center mt-0.5" data-purpose="todays-win-section">
+                <!-- Banner Title with sparkle doodles -->
+                <div
+                    class="relative inline-flex items-center justify-center gap-1.5 bg-[#fde199] px-4 py-0.5 rounded-full shadow-xs border border-[#fad067] rotate-[-0.5deg]">
+                    <span class="text-xs text-[#b87c14] font-bold">✧</span>
+                    <h4 class="font-hand text-base font-bold text-stone-900">Today's Win:</h4>
+                    <span class="text-xs text-[#b87c14] font-bold">✧</span>
+                </div>
+                <!-- Win Input Pill Box -->
+                <div
+                    class="w-full max-w-[270px] bg-[#d9e5d4] rounded-2xl px-3 py-1.5 mt-1.5 shadow-inner border border-[#c3d5bd] flex items-center justify-between">
+                    <input aria-label="Today's win description"
+                        class="hand-input w-full text-base font-bold py-0 h-6 text-stone-800" id="todays-win-input"
+                        name="todays-win" placeholder="Drank 2L water &amp; 30 min walk" type="text"
+                        value="Morning yoga + 8,000 steps" />
+                    <span class="text-[#c8624e] text-sm font-hand ml-1">♡</span>
+                </div>
+            </div>
+            <!-- Bottom Banner: "Same me, a healthier tomorrow." -->
+            <div
+                class="w-full max-w-[270px] bg-[#f8cfcb] rounded-2xl py-1 px-3 mt-3 text-center shadow-xs border border-[#f3b5af]">
+                <p class="font-script text-base font-bold text-stone-800 leading-snug">
+                    Same me, a healthier tomorrow. <span class="text-[#d45640]">♡</span>
+                </p>
+            </div>
+        </article>
+        <!-- END: Central Paper Card -->
+        <!-- BEGIN: Bottom Footer Note & Social Tags -->
+        <footer class="w-full mt-4 flex items-center justify-center gap-2 z-10" data-purpose="card-footer-tags">
+            <!-- Tag 1: Hashtag badge -->
+            <div
+                class="bg-[#d2ded0] text-stone-800 px-3 py-1 rounded-full text-xs font-bold shadow-xs border border-[#bdccba]">
+                #MyRelivCheck
+            </div>
+            <span class="text-stone-400 font-semibold text-sm">|</span>
+            <!-- Tag 2: Reliv handle badge -->
+            <div
+                class="bg-[#fedbc9] text-stone-800 px-3.5 py-1 rounded-full text-xs font-bold shadow-xs border border-[#f5c3ab] flex items-center gap-1">
+                <span>@reliv_care</span>
+                <span class="text-[#f26222] font-black text-xs">♡</span>
+            </div>
+        </footer>
+        <!-- END: Bottom Footer Note & Social Tags -->
+        <!-- Decorative Kraft Notebook Element Bottom-Left -->
+        <div aria-hidden="true"
+            class="absolute -bottom-4 -left-7 w-28 h-28 bg-[#f5ede2] rounded-xl shadow-lg border border-[#e1d5c2] rotate-12 pointer-events-none flex flex-col p-2 z-0">
+            <div class="w-full border-b border-stone-300 h-3"></div>
+            <div class="w-full border-b border-stone-300 h-3"></div>
+            <div class="w-full border-b border-stone-300 h-3"></div>
+            <div class="font-hand text-[10px] text-stone-500 mt-1 leading-tight">
+                Healthy<br />Habits<br />Happier<br />Me ♡
+            </div>
+        </div>
+        <!-- Decorative Warm Knit Blanket Texture Bottom-Right -->
+        <div aria-hidden="true"
+            class="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-[#ecdcc9] shadow-inner opacity-70 pointer-events-none z-0">
+        </div>
+    </main>
+    <!-- END: Phone Screen Container -->
+    <!-- BEGIN: Interactive Support Script -->
+    <script data-purpose="interactive-enhancements">
+        // Dynamic vitality status updater
+        function updateScoreStatus(val) {
+            const pill = document.getElementById('score-status-pill');
+            const text = document.getElementById('score-status-text');
+            const icon = document.getElementById('score-status-icon');
+            if (!pill || !text || !icon) return;
+            const num = parseInt(val, 10);
+            if (isNaN(num) || num === null || num === undefined) {
+                icon.textContent = '✨';
+                text.textContent = 'Enter your score';
+                pill.className = 'inline-flex items-center gap-1 bg-[#fedec9]/90 text-[#8b4513] px-3 py-0.5 rounded-full text-xs font-bold font-hand shadow-xs border border-[#f5c3ab] mt-1 select-none transition-all';
+                return;
+            }
+            if (num >= 85) {
+                icon.textContent = '⭐';
+                text.textContent = 'Excellent vitality!';
+                pill.className = 'inline-flex items-center gap-1 bg-[#d5e7d2] text-[#2c5324] px-3 py-0.5 rounded-full text-xs font-bold font-hand shadow-xs border border-[#b8d6b4] mt-1 select-none transition-all';
+            } else if (num >= 70) {
+                icon.textContent = '✨';
+                text.textContent = 'Strong & balanced!';
+                pill.className = 'inline-flex items-center gap-1 bg-[#fde9b5] text-[#7a520a] px-3 py-0.5 rounded-full text-xs font-bold font-hand shadow-xs border border-[#f7d47e] mt-1 select-none transition-all';
+            } else if (num >= 50) {
+                icon.textContent = '🌱';
+                text.textContent = 'Good foundation!';
+                pill.className = 'inline-flex items-center gap-1 bg-[#fcd9d3]/95 text-[#9a2b16] px-3 py-0.5 rounded-full text-xs font-bold font-hand shadow-xs border border-[#f5b8ae] mt-1 select-none transition-all';
+            } else {
+                icon.textContent = '💪';
+                text.textContent = 'Your journey starts!';
+                pill.className = 'inline-flex items-center gap-1 bg-[#fedec9] text-[#a04020] px-3 py-0.5 rounded-full text-xs font-bold font-hand shadow-xs border border-[#f5c3ab] mt-1 select-none transition-all';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const scoreInput = document.getElementById('health-score-input');
+            const nameInput = document.getElementById('owner-name');
+
+            // 1. URL Query parameters (?score=87&name=Faizan or ?s=87&n=Faizan)
+            const params = new URLSearchParams(window.location.search);
+            const paramScore = params.get('score') || params.get('healthScore') || params.get('bodyScore') || params.get('s');
+            const paramName = params.get('name') || params.get('userName') || params.get('patient') || params.get('n');
+
+            // 2. Storage parameters from Reliv kiosk/phone session
+            let storedScore = null;
+            let storedName = null;
+            try {
+                const rawHealth = localStorage.getItem('healthData') || sessionStorage.getItem('healthData');
+                if (rawHealth) {
+                    const parsed = JSON.parse(rawHealth);
+                    storedScore = parsed.bodyScore ?? parsed.vitals?.bodyScore ?? parsed.score ?? null;
+                    storedName = parsed.patient?.name ?? null;
+                }
+                if (!storedScore) {
+                    storedScore = localStorage.getItem('reliv_body_score') || sessionStorage.getItem('reliv_body_score');
+                }
+                if (!storedName) {
+                    storedName = localStorage.getItem('reliv_patient_name') || sessionStorage.getItem('reliv_patient_name');
+                }
+            } catch (e) { /* ignore storage errors */ }
+
+            const finalScore = paramScore || storedScore;
+            const finalName = paramName || storedName;
+
+            if (nameInput && finalName) {
+                nameInput.value = finalName.trim();
+            }
+
+            if (scoreInput) {
+                if (finalScore !== null && finalScore !== undefined && finalScore !== '') {
+                    const parsed = parseInt(finalScore, 10);
+                    if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+                        scoreInput.value = parsed;
+                    }
+                }
+                updateScoreStatus(scoreInput.value);
+
+                scoreInput.addEventListener('input', (e) => {
+                    let val = parseInt(e.target.value, 10);
+                    if (val > 100) e.target.value = 100;
+                    if (val < 0) e.target.value = 0;
+                    updateScoreStatus(e.target.value);
+                });
+            }
+        });
+    </script>
+    <!-- END: Interactive Support Script -->
+</body>
+
+</html>
