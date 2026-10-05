@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Volume2, VolumeX, Sparkles, X, RotateCcw } from 'lucide-react';
-import { bundledMetricNarration } from '../voice/bundledReportNarration';
+import { bundledMetricNarration, supportsMetricNarration } from '../voice/bundledReportNarration';
 import { useSpeech } from '../context/SpeechContext';
 import { METRIC_EXPLAINERS, CANONICAL_METRIC_MAP } from '../voice/reportVoice';
 
@@ -184,7 +184,7 @@ export default function ReportVoiceExplainer({
           <div className="flex flex-wrap gap-2">
             {availableMetrics.map((key) => {
               const item = METRIC_EXPLAINERS[key];
-              if (!item) return null;
+              if (!item || !supportsMetricNarration((CANONICAL_METRIC_MAP && CANONICAL_METRIC_MAP[String(key).toLowerCase().replace(/[^a-z0-9_]/g, '')]) || key)) return null;
               const isSelected = activeMetric === key;
               return (
                 <button

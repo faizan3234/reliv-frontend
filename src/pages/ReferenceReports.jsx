@@ -1,3 +1,5 @@
+import {useEffect,useState} from 'react';
+import WeightReferenceCard from '../components/WeightReferenceCard';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealth } from '../context/HealthContext';
 import { getScanCount } from '../utils/reportSnapshot';
@@ -14,6 +16,8 @@ export default function ReferenceReports() {
  const {data}=useHealth();
  const navigate=useNavigate();
  const lang=data.language || "en";
+ const [spokenLanguage,setSpokenLanguage]=useState(data.reportSpeechLanguage||lang);
+ useEffect(()=>{const changed=event=>{if(['en','hi','bn'].includes(event.detail))setSpokenLanguage(event.detail);};window.addEventListener('reliv_report_language_change',changed);return()=>window.removeEventListener('reliv_report_language_change',changed);},[]);
  const {pathname}=useLocation();
  const page=Math.min(5,Math.max(1,Number(pathname.match(/report-(\d)/)?.[1])||1));
  const count=getScanCount(data);
@@ -23,6 +27,7 @@ export default function ReferenceReports() {
   <div className="reference-page-track" role="img" aria-label={`Report page ${page} of 5`}>{[1,2,3,4,5].map(step=><span key={step} data-current={step===page} data-complete={step<page}/>)}</div>
   {page>1 && page<5 && <nav className="reference-back"><button type="button" onClick={()=>{navigate(`/report-${page-1}`);window.scrollTo(0,0);}}>← {lang==="hi"?"पिछला पेज":lang==="bn"?"আগের পাতা":"Previous page"}</button></nav>}
   <p className="reference-note">Measured readings and calculated estimates are different. Body score, bone mass, body fat, muscle and calorie estimates are screening information—not diagnoses or direct tissue measurements.</p>
+  {(page===1||page===2||page===5)&&<WeightReferenceCard data={data} language={spokenLanguage}/>}
   <Page key={`${data.sessionId}-${page}`} />
  </main>;
 }

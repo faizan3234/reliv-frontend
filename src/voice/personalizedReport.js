@@ -1,3 +1,4 @@
+import { weightGuidance } from './weightGuidance.js';
 import { reportCopy, reportStage } from './guidedReport.js';
 import { insightCopy, metricCopy, languageIndex } from './insightCopy.js';
 import { personalizedReportCopy } from './personalizedReportCopy.js';
@@ -69,5 +70,7 @@ export function buildPersonalizedReport({data = {}, page = 1, language = 'en', f
     if (metrics.some(m => m.kind === 'measured' && m.value === null)) messages.push(c.noAssessment);
     messages.push(c.next);
   }
+  if (page===1 || page===5) messages.push(...weightGuidance(data, language));
+  if(page===1)messages.push(...personalizedActions(metrics.filter(m=>m.key==='bmi'),language));
   return messages.filter(Boolean);
 }

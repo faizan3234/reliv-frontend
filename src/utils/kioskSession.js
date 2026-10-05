@@ -29,6 +29,7 @@ export function clearKioskSession() {
     storage.removeItem(TOKEN_KEY);
   }
   sessionStorage.removeItem(PROFILE_ACCESS_KEY);
+  sessionStorage.removeItem("reliv_report_review");
 }
 
 export function readProfileAccess(sessionId) {
@@ -75,6 +76,7 @@ async function post(base, path, body) {
     if (!response.ok || result?.success === false || result?.ok === false) {
       const error = new Error(result?.error || result?.message || "The kiosk request failed. Please retry.");
       error.status = response.status;
+      error.code = result?.code;
       throw error;
     }
     return result;
@@ -121,4 +123,21 @@ export async function saveKioskCustomer(base, patient) {
 export function isCurrentKioskSession(session) {
   const current = readKioskSession();
   return current?.sessionId === session.sessionId && current?.pairingToken === session.pairingToken;
+}
+
+export function readReportReviewSession() {
+  try {
+    const saved=JSON.parse(sessionStorage.getItem('reliv_report_review')||'null');
+    return saved?.expiresAt>Date.now() && typeof saved.sessionId==='string' ? saved.sessionId : null;
+  } catch { return null; }
+}
+export async function openKioskReportReview(base, details) {
+  clearKioskSession();
+  const generation=sessionGeneration;
+  const result=await post(base,'/api/health-profiles/review',details);
+  if(generation!==sessionGeneration)throw new Error('The kiosk session was reset. Please retry.');
+  if(!result.sessionId || !/^[a-f0-9]{64}$/.test(result.accessToken) || !(result.expiresAt>Date.now()))throw new Error('Invalid review response.');
+  sessionStorage.setItem(PROFILE_ACCESS_KEY,JSON.stringify({sessionId:result.sessionId,token:result.accessToken}));
+  sessionStorage.setItem('reliv_report_review',JSON.stringify({sessionId:result.sessionId,expiresAt:result.expiresAt}));
+  return result;
 }

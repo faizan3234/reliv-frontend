@@ -5,7 +5,7 @@ import { API_BASE } from "../config/api";
 import { useHealth } from "../context/HealthContext";
 import { requestJSON } from "../utils/request";
 import { readBrowserStorage } from '../utils/browserStorage';
-import { readProfileAccess } from '../utils/kioskSession';
+import { readProfileAccess, readReportReviewSession, clearKioskSession } from '../utils/kioskSession';
 
 const ProtectedReportRoute = ({ children }) => {
   const navigate = useNavigate();
@@ -29,6 +29,7 @@ const ProtectedReportRoute = ({ children }) => {
 
   const sessionId =
     location.state?.sessionId ||
+    readReportReviewSession() ||
     readBrowserStorage("reliv_session_id") ||
     readBrowserStorage("reliv_session_id", "sessionStorage") ||
     "";
@@ -153,13 +154,13 @@ const ProtectedReportRoute = ({ children }) => {
           <button
             type="button"
             onClick={() =>
-              navigate("/payment", {
+              (clearKioskSession(), navigate("/", {
                 replace: true,
-              })
+              }))
             }
             className="mt-8 bg-[#F28C38] text-white font-semibold text-lg px-10 py-4 rounded-2xl cursor-pointer"
           >
-            Return to Payment
+            Return to start
           </button>
         </div>
       </div>
