@@ -180,19 +180,8 @@
         <!-- BEGIN: DecorativeBackgroundElements -->
         <!-- Top-Right: Coffee Mug with Latte Art -->
         <div class="draggable-card-item absolute -top-3 -right-6 select-none z-10 opacity-95" data-drag-id="coffee-mug" data-rotation="rotate(0deg)" data-tx="-8" data-ty="1" style="transform: translate(-8px, 1px) rotate(0deg);">
-            <div class="relative w-36 h-36 rounded-full bg-[#d6ad85] p-2 shadow-xl flex items-center justify-center">
-                <!-- Saucer -->
-                <div class="w-full h-full rounded-full border-4 border-[#c5966a] bg-[#e6c9a8] flex items-center justify-center p-2.5">
-                    <!-- Ceramic Cup Rim -->
-                    <div class="w-full h-full rounded-full bg-white border-2 border-stone-200 flex items-center justify-center p-2 shadow-inner">
-                        <!-- Coffee & Foam Heart -->
-                        <div class="w-full h-full rounded-full bg-[#9e623b] flex items-center justify-center relative overflow-hidden">
-                            <div class="w-10 h-10 rounded-full bg-[#edd5be] opacity-90 blur-[1px] transform rotate-45 scale-90 flex items-center justify-center">
-                                <span class="text-xs text-[#8c4b24]">☕</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="relative w-36 h-36 rounded-full overflow-hidden shadow-2xl border-4 border-[#e6c9a8] bg-[#f7f2ea]">
+                <img src="assets/coffee-latte.jpg" alt="Cozy Latte Art" class="w-full h-full object-cover scale-110" />
             </div>
         </div>
         <!-- Top-Left: Flowers & Foliage Illustration Accent -->
@@ -219,9 +208,9 @@
             </svg>
         </div>
         <!-- Bottom-Right: Knitted Blanket Cozy Edge -->
-        <div class="absolute -bottom-6 -right-6 pointer-events-none select-none opacity-80 z-0">
-            <div class="w-36 h-36 rounded-tl-[80px] bg-[#dfd3c3] border-4 border-[#d0c2af] opacity-90 shadow-2xl flex items-center justify-center transform rotate-6">
-                <div class="w-24 h-24 rounded-tl-[60px] border-2 border-dashed border-[#c2b29d]"></div>
+        <div class="absolute -bottom-6 -right-6 pointer-events-none select-none opacity-85 z-0">
+            <div class="w-36 h-36 rounded-tl-[60px] overflow-hidden shadow-2xl border-2 border-[#dfd3c3]">
+                <img src="assets/knit-blanket.jpg" alt="Cozy Knit Blanket" class="w-full h-full object-cover scale-110" />
             </div>
         </div>
         <!-- END: DecorativeBackgroundElements -->
@@ -241,7 +230,7 @@
                 <span class="text-amber-500 font-handwriting text-xl ml-1 animate-pulse">☼</span>
             </header>
             <!-- Top Sticky Note: "A Healthier us Starts here ♡" (Editable with default fallback) -->
-            <div class="draggable-card-item absolute right-0.5 top-0 washi-tape-pink px-2.5 py-1.5 rounded-sm shadow-md transform rotate-6 border border-rose-200/60 max-w-[95px] text-center z-30" data-purpose="sticky-note-top-right" data-drag-id="note-top-right" data-rotation="rotate(6deg)" data-tx="-219" data-ty="50" style="transform: translate(-219px, 50px) rotate(6deg);">
+            <div class="draggable-card-item absolute right-0.5 top-0 washi-tape-pink px-2.5 py-1.5 rounded-sm shadow-md transform rotate-6 border border-rose-200/60 max-w-[95px] text-center z-30" data-purpose="sticky-note-top-right" data-drag-id="note-top-right" data-rotation="rotate(6deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(6deg);">
                 <div class="w-7 h-2 washi-tape-green mx-auto -mt-3 mb-1 opacity-70"></div>
                 <p id="note-top-right" contenteditable="true" spellcheck="false" class="editable-note font-handwriting text-stone-800 text-[13px] leading-tight font-bold p-0.5 rounded" data-default="A&lt;br&gt;Healthier&lt;br&gt;us&lt;br&gt;starts&lt;br&gt;here ♡">A<br>Healthier<br>us<br>starts<br>here ♡</p>
             </div>
@@ -404,13 +393,12 @@
         <!-- BEGIN: OuterSideNotesAndPolaroid -->
         <div class="relative z-20 flex items-end justify-between mt-3.5 px-1.5" data-purpose="floating-memorabilia">
             <div class="draggable-card-item flex items-center gap-2" data-drag-id="polaroid-memorabilia" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
-                <div class="bg-white p-1.5 pb-3 rounded-sm shadow-md border border-stone-200/80 transform -rotate-6 w-24">
-                    <div class="w-full h-16 bg-gradient-to-tr from-amber-600 via-rose-500 to-indigo-900 rounded-[2px] overflow-hidden flex items-center justify-center relative">
-                        <div class="text-amber-200 text-2xl filter drop-shadow">🫶</div>
-                        <div class="absolute inset-0 bg-yellow-400/20 mix-blend-overlay"></div>
+                <div class="bg-white p-1.5 pb-2.5 rounded-sm shadow-md border border-stone-200/80 transform -rotate-6 w-24">
+                    <div class="w-full h-16 rounded-[2px] overflow-hidden relative shadow-inner">
+                        <img src="assets/polaroid-couple.jpg" alt="Romantic Couple Holding Hands at Sunset" class="w-full h-full object-cover" />
                     </div>
                     <div class="text-center mt-1">
-                        <span class="font-handwriting text-stone-500 text-xs">♡</span>
+                        <span class="font-handwriting text-stone-600 text-xs font-bold">forever us ♡</span>
                     </div>
                 </div>
                 <div class="font-handwriting text-stone-700 text-xs leading-tight -rotate-3 z-30">
