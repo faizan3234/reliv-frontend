@@ -14,7 +14,7 @@ test('every automatic report phrase has an offline recording in each language',(
 test('report narration changes with the actual reading and retained scan count',()=>{
  const text=data=>bundledReportNarration(data,3,'en').map(x=>x.text);
  assert.notDeepEqual(text(sample),text({...sample,vitals:{...sample.vitals,systolic:121}}));
- assert.equal(text(sample)[text(sample).indexOf('Scan')+1],'4');
+ assert.ok(!text(sample).includes('Scan'),'vitals page does not repeat visit number');
 });
 test('body fat narration uses the visible report formula',()=>{
  const spoken=bundledReportNarration(sample,2,'en').map(x=>x.text);

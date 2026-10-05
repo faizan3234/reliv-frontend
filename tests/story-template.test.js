@@ -12,3 +12,9 @@ test('selected templates bind verified score/highlight only to their owner',()=>
  assert.equal(storyFields({relationship:'solo'},{score:Infinity}).score,'—');
  assert.equal(storyFields({relationship:'solo'},{score:0}).score,'0');
 });
+
+test('missing and out-of-range scores stay unavailable; focus is server supplied',()=>{
+ for(const score of [null,undefined,NaN,-1,101,'98'])assert.equal(storyFields({relationship:'solo'},{score}).score,'—');
+ assert.equal(storyFields({relationship:'solo'},{focus:'Review my oxygen guidance'}).goal,'Review my oxygen guidance');
+ assert.equal(storyFields({relationship:'solo'},{focus:'   '}).goal,'Review my report and choose one next step');
+});

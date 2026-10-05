@@ -80,3 +80,15 @@ test('graph narration includes historical body fat and water only when recorded 
  assert.ok(parts.includes('Body fat estimate')&&parts.includes('Body water share'));
  assert.ok(!parts.includes('24')&&!parts.includes('54'),'today values are not read again');
 });
+
+test('summary highlights an actual new positive without repeating the scan heading',()=>{
+ for(const language of ['en','hi','bn']){
+  const old={...vitals,oxygen:93,scanNumber:1};
+  const parts=buildPersonalizedReport({data:{...data,scanCount:2,history:[old]},page:5,language});
+  const i=['en','hi','bn'].indexOf(language);
+  assert.ok(parts.includes(metricCopy.oxygen[0][i]));
+  assert.ok(parts.includes('98'));
+  const missing=buildPersonalizedReport({data:{},page:5,language});
+  assert.equal(missing.filter(text=>text===personalizedReportCopy[language].noAssessment).length,1);
+ }
+});

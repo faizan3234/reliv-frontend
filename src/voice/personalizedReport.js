@@ -30,13 +30,14 @@ export function buildPersonalizedReport({data = {}, page = 1, language = 'en', f
   language = ['en','hi','bn'].includes(language) ? language : 'en';
   const c = personalizedReportCopy[language], w = reportCopy[language], v = insightCopy[language], i = languageIndex(language);
   const metrics = metricsOverride || reportInsights(data), count = getScanCount(data);
-  const messages = [intro || c.pages[page - 1], w.scan, ...numberParts(count, language)];
+  const messages = [intro || c.pages[page - 1]];
+  if(page===1&&!omitScore)messages.push(w.scan,...numberParts(count,language));
   const read = (m, explain = true) => explain ? metricAudio(m, language) : [metricCopy[m.key][0][i], c.today, ...(m.value === null ? [v.missing] : [...numberParts(m.value, language), audioUnits[language][m.unit]]), v[m.status]];
   if (page === 1) {
     const value = displayedReportScore(data, score);
     if (!omitScore) messages.push(c.score, ...(value === null ? [v.missing] : [...numberParts(value, language), c.scoreEnd]));
     messages.push(reportStage(data, language));
-    if (intro !== c.estimates) messages.push(c.estimates);
+    if (intro !== c.estimates && overviewFields?.length !== 0) messages.push(c.estimates);
     messages.push(...metrics.filter(m => overviewFields ? overviewFields.includes(m.key) : !['systolic','diastolic','oxygen','temperature','bpm'].includes(m.key)).flatMap(m => read(m)));
   } else if (page === 2) {
     const measured = metrics.filter(m => m.kind === 'measured');
@@ -80,17 +81,26 @@ export function buildPersonalizedReport({data = {}, page = 1, language = 'en', f
       }
     }
   } else {
-    const concerns = metrics.filter(flagged), good = metrics.filter(m => m.status === 'good');
+    const previous=reportRows(data).filter(row=>row.scan<count).at(-1);
+    const earlier=previous?reportInsights({patient:previous.patient||data.patient,vitals:previous}):[];
+    const wasGood=m=>earlier.find(old=>old.key===m.key)?.status==='good';
+    const severity={urgent:0,review:1,caution:2};
+    const concerns = metrics.filter(flagged).sort((a,b)=>severity[a.status]-severity[b.status]||Number(wasGood(b))-Number(wasGood(a)));
+    const positives=metrics.filter(m=>m.status==='good');
+    // Prefer a newly positive observation. Otherwise vary the truthful highlight
+    // by visit; never manufacture improvement to make the report sound different.
+    const improved=positives.filter(m=>earlier.some(old=>old.key===m.key&&flagged(old)));
+    const good=improved.length?improved.slice(0,1):positives.length?[positives[(count-1)%positives.length]]:[];
     // Urgent action precedes a long list of numbers. Never reassure on an empty report.
     if (concerns.some(m => m.status === 'urgent')) messages.push(v.urgentAdvice);
-    messages.push(...concerns.flatMap(m => read(m, false)));
+    messages.push(...concerns.slice(0,2).flatMap(m => read(m, false)));
     messages.push(...personalizedActions(metrics, language).filter(text => text !== v.urgentAdvice));
     if (good.length) messages.push(...good.flatMap(m => read(m, false)));
     if (!concerns.length) messages.push(good.length ? c.noFlags : c.noAssessment);
-    if (metrics.some(m => m.kind === 'measured' && m.value === null)) messages.push(c.noAssessment);
+    if (metrics.some(m => m.kind === 'measured' && m.value === null) && !messages.includes(c.noAssessment)) messages.push(c.noAssessment);
     messages.push(c.next);
   }
-  if (page===1 || page===5) messages.push(...weightGuidance(data, language));
-  if(page===1)messages.push(...personalizedActions(metrics.filter(m=>m.key==='bmi'),language));
+  if (page===5) messages.push(...weightGuidance(data, language));
+  if(page===1 && overviewFields?.length !== 0)messages.push(...personalizedActions(metrics.filter(m=>m.key==='bmi'),language));
   return messages.filter(Boolean);
 }

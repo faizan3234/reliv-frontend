@@ -34,13 +34,14 @@ async function run(){
  assert(document.body.textContent.includes('Your Reliv share card'),'share card is directly below the paid kiosk code');
  const nameInput=document.querySelector('[aria-label="Name to show on the card"]');assert(nameInput,'customer can easily edit the name shown on the card');
  assert(nameInput.value==='Asha','card name is prefilled from this paid check-in');
- assert(window.__renderedCanvasText?.includes('Asha')&&window.__renderedCanvasText?.includes('98')&&window.__renderedCanvasText?.includes('Good oxygen level'),'live card preview uses the paid name, score and actual highlight');
+ assert(document.querySelector('[data-field=name]').textContent==='Asha'&&document.querySelector('[data-field=score]').textContent==='98'&&document.querySelector('[data-field=win]').textContent==='Good oxygen level','live card preview uses the paid name, score and actual highlight');
  const consent=document.querySelector('[aria-label="Optional Reliv story card"] input[type="checkbox"]');await act(async()=>consent.click());await flush();
- const save=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Save card image'));assert(save&&!save.disabled,'card can be saved immediately even while artwork is loading');await act(async()=>save.click());await flush();
- assert(window.__downloadedCard==='Reliv-Together.png','customer can save the generated card image');
+ const save=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Save card image'));assert(save&&!save.disabled,'card can be saved immediately without an external artwork request');await act(async()=>save.click());await flush();
+ assert(document.querySelector('[data-field=score]').textContent==='98'&&document.querySelector('[data-field=name]').textContent==='Asha','consent and export state changes preserve real card values');
+ assert(window.__downloadedCard==='Reliv-solo-Story.png','customer can save the generated card image');
  const email=document.querySelector('input[type="email"]');await act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(email,'asha@example.com');email.dispatchEvent(new Event('input',{bubbles:true}));});await flush();
  const send=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Send My Health Report'));await act(async()=>send.click());await flush();
- const mailCall=calls.find(c=>c.url.endsWith('/email-health-report'));assert(mailCall?.body.storyCard?.alias==='Asha'&&mailCall.body.storyCard.consent===true,'report email includes the opted-in card for the backend PNG attachment');
+ const mailCall=calls.find(c=>c.url.endsWith('/email-health-report'));assert(mailCall&&mailCall.body.storyCard===null,'report email avoids attaching the different legacy card');
  await scan('ad');assert(!document.body.textContent.includes('0088')&&document.body.textContent.includes('Advertising'),'hash navigation clears prior success and uses ad order');
  await scan('slow');await scan('newer');await act(async()=>resolveOld());await flush();
  assert(!document.body.textContent.includes('1111'),'late old-QR response cannot reveal a code on new QR');
