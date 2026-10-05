@@ -7,7 +7,7 @@ import { useLocation } from "react-router-dom";
  * Blends with the Reliv orange theme. Tap to mute/unmute, long-press or
  * tap the expand arrow to reveal a volume slider.
  */
-export default function SpeechControl({ className = "" }) {
+export default function SpeechControl({ className = "", inline = false }) {
   const { muted, toggleMute, volume, setVolume } = useSpeech();
   const { pathname } = useLocation();
   const [expanded, setExpanded] = useState(false);
@@ -28,12 +28,12 @@ export default function SpeechControl({ className = "" }) {
     return () => document.removeEventListener("pointerdown", handleClickOutside);
   }, [expanded]);
 
-  if (isAdminPage) return null;
+  if (isAdminPage || (pathname.startsWith('/report-') && !inline)) return null;
 
   return (
     <div
       ref={panelRef}
-      className={`fixed ${pathname.startsWith('/report-') ? 'bottom-28' : 'bottom-6'} right-6 z-[9999] flex flex-col items-end gap-2 ${className}`}
+      className={`${inline ? 'relative shrink-0' : 'fixed bottom-6 right-6 z-[9999]'} flex flex-col items-end gap-2 ${className}`}
     >
       {/* Volume slider panel */}
       {expanded && (

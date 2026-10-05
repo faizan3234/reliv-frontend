@@ -276,7 +276,7 @@ const Report1 = () => {
     return pool[0];
   };
 
-  const comment = bodyScoreData.score !== null ? getComment(bodyScoreData.score) : `Analyzing your latest health scan, ${userName}...`;
+  const comment = bodyScoreData.score !== null ? getComment(bodyScoreData.score) : `Body score unavailable, ${userName}. Some required measurements are missing.`;
   const remedies = bodyScoreData.score !== null ? getRemedies(bodyScoreData.score) : [];
 
   const badges = [];
@@ -375,10 +375,6 @@ const Report1 = () => {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, ease: "easeOut" }}
-          onClick={() => handleCardSpeak('bodyScore')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('bodyScore'); }}
           className="bg-white rounded-xl shadow-[0_15px_50px_-15px_rgba(0,0,0,0.07)] p-5 relative cursor-pointer hover:shadow-2xl hover:scale-[1.008] transition-all group"
         >
           <div className="flex flex-col items-center">
@@ -389,7 +385,11 @@ const Report1 = () => {
               TODAY • 2 min scan • No needles
             </p>
 
-            <div className="relative w-[220px] h-[220px] mb-4">
+            <div className="relative w-[220px] h-[220px] mb-4" role="button" tabIndex={0}
+              aria-label="Explain my estimated body score"
+              onClick={() => handleCardSpeak('bodyScore')}
+              onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleCardSpeak('bodyScore');}}}
+            >
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" role="img" aria-label={`Estimated body score ${bodyScoreData.score ?? "unavailable"} out of 100`}>
                 <circle cx="50" cy="50" r="42" fill="none" stroke="#f3f3f3" strokeWidth="9" />
                 {bodyScoreData.score !== null && (
@@ -444,7 +444,7 @@ const Report1 = () => {
                     </div>
                   </div>
                 ) : (
-                  <span className="text-5xl font-medium text-gray-300">Calculating...</span>
+                  <span className="text-5xl font-medium text-gray-300">Unavailable</span>
                 )}
               </div>
             </div>
