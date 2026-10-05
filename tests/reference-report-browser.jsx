@@ -15,6 +15,7 @@ const wait=window.setTimeout.bind(window);
 window.setTimeout=(fn,ms,...args)=>ms>=400?-1:wait(fn,ms,...args);
 window.speechSynthesis={cancel(){},getVoices:()=>[],addEventListener(){},removeEventListener(){},speak(){throw new Error('No offline browser voice');}};
 window.WebSocket=class {static OPEN=1;readyState=0;send(){}close(){}};
+const scrollTargets=[];window.HTMLElement.prototype.scrollIntoView=function(options){scrollTargets.push({node:this,options});};
 const played=[]; window.Audio=class{constructor(url){this.url=url;}play(){played.push(this.url);queueMicrotask(()=>this.onended?.());return Promise.resolve();}pause(){}};
 const longPaymentUrl = 'https://reliv7.vercel.app/pay#p=' + 'a'.repeat(2450);
 const paid={ok:true,paymentVerified:true,reportStatus:'READY',sessionId:'KSK-REPORT-TEST',customerData:{name:'Current Person',age:25,gender:'male'},healthData:{reportPaymentUrl:longPaymentUrl,vitals:{height:172.3,weight:65.4,systolic:120,diastolic:80,bpm:72,oxygen:98,temperature:98.4},history:[],scanCount:1}};
@@ -44,8 +45,26 @@ async function run(){
  }
  assert(!requests.some(r=>r.url.includes('/reports/history/')||r.url.includes('supabase')||r.url.includes('/save-report')),'no online history, duplicate report saves or leaderboard calls');
  assert(requests.some(r=>r.token==='a'.repeat(64)),'PIN credential still authorizes report access');
+ await mount(1);
+ const volumeButton=document.querySelector('.reference-progress button[aria-label="Show volume"]');
+ assert(Boolean(volumeButton),'report volume controls stay in the header');
+ await act(async()=>volumeButton.click());
+ assert(Boolean(document.querySelector('.reference-progress input[type="range"]')),'header volume slider opens');
+ let metricEvents=0;const metricListener=()=>metricEvents++;
+ window.addEventListener('reliv_speak_metric',metricListener);
+ const next=[...document.querySelectorAll('button')].find(e=>e.textContent==='Continue to Next Screen');
+ assert(!next.closest('[role="button"]'),'navigation is not nested inside a speech button');
+ const beforeScroll=scrollTargets.length;
+ await act(async()=>next.click());await flush();
+ assert(document.querySelector('.reference-progress').textContent.includes('Report 2 / 5'),'next opens report two');
+ assert(scrollTargets.length>beforeScroll&&scrollTargets.at(-1).options.block==='start','next report resets scroll before paint');
+ assert(metricEvents===0,'next page does not trigger previous score narration');
+ const beforeBack=scrollTargets.length;
+ await act(async()=>document.querySelector('.reference-back button').click());await flush();
+ assert(document.querySelector('.reference-progress').textContent.includes('Report 1 / 5')&&scrollTargets.length>beforeBack,'previous report also resets scroll');
+ window.removeEventListener('reliv_speak_metric',metricListener);
  paid.healthData.vitals={};paid.healthData.history=[];
- for(let page=1;page<=5;page++){await mount(page);assert(document.querySelector('.reference-progress'),'missing measurements do not crash original layout '+page);}
+ for(let page=1;page<=5;page++){await mount(page);assert(document.querySelector('.reference-progress'),'missing measurements do not crash original layout '+page);if(page===1)assert(!document.body.textContent.includes('Calculating...')&&!document.body.textContent.includes('Analyzing your latest'),'missing score is not an endless calculation');}
  authorized=false;await mount(1);assert(!document.querySelector('.reference-reports'),'unpaid response cannot open restored layouts');
  await act(async()=>root.unmount());document.getElementById('results').textContent=checks.join('\n')+'\nALL '+checks.length+' BROWSER CHECKS PASSED';
 }
