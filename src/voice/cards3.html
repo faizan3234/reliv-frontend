@@ -111,14 +111,36 @@
             outline: none;
             box-shadow: none;
         }
+
+        /* Soft natural dappled sunlight overlays */
+        .sunlight-overlay {
+            background: radial-gradient(circle at 25% 15%, rgba(255, 255, 255, 0.45) 0%, transparent 45%),
+                radial-gradient(circle at 75% 70%, rgba(210, 185, 160, 0.15) 0%, transparent 50%);
+        }
+
+        /* Editable handwritten notes styling */
+        .editable-note {
+            cursor: text;
+            transition: all 0.15s ease;
+            outline: none;
+        }
+        .editable-note:hover {
+            outline: 1.5px dashed rgba(242, 98, 34, 0.4);
+            border-radius: 4px;
+        }
+        .editable-note:focus {
+            outline: 2px solid #f26222;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+        }
     </style>
 </head>
 
-<body class="flatlay-bg min-h-screen text-stone-800 antialiased font-round flex justify-center selection:bg-orange-200">
-    <!-- Mobile Screen Container -->
+<body class="p-2 sm:p-4 flex items-center justify-center min-h-screen text-stone-800 antialiased font-round selection:bg-orange-200 bg-[#ede4d8]">
+    <!-- Mobile Screen Container matching Card 1 big frame -->
     <main
-        class="w-full max-w-[430px] min-h-screen relative overflow-hidden px-4 pt-3 pb-8 flex flex-col justify-between"
-        data-purpose="mobile-card-screen">
+        class="relative w-full max-w-[420px] bg-[#f7f2ea] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-[#eeddcb] sunlight-overlay flex flex-col items-center px-4 pt-6 pb-7 my-2 sm:my-6"
+        data-purpose="mobile-card-canvas">
         <!-- BEGIN: DecorativeBackgroundElements -->
         <!-- Top-Right: Coffee Mug with Latte Art -->
         <div class="absolute -top-3 -right-6 pointer-events-none select-none z-10 opacity-95">
@@ -176,10 +198,12 @@
 
         <!-- BEGIN: TopBar -->
         <header class="relative z-20 flex flex-col items-center mt-2 mb-3" data-purpose="header-section">
-            <!-- Handwritten quote top-left -->
+            <!-- Handwritten quote top-left (Editable with default fallback) -->
             <div
-                class="absolute left-1 top-1 text-stone-700 font-handwriting text-lg leading-tight transform -rotate-6 select-none">
-                Little<br><span class="pl-2">steps.</span><br><span class="pl-1">Big love. ♡</span>
+                class="absolute left-1 top-1 text-stone-700 font-handwriting text-lg leading-tight transform -rotate-6 z-30"
+                data-purpose="note-top-left-container">
+                <p id="note-top-left" contenteditable="true" spellcheck="false" class="editable-note p-0.5 rounded"
+                    data-default="Little<br>steps.<br>Big love. ♡">Little<br><span class="pl-2">steps.</span><br><span class="pl-1">Big love. ♡</span></p>
             </div>
             <!-- Reliv Logo matching brand with Orange Tittle on i -->
             <header class="flex items-center justify-center gap-0.5 pt-1" data-purpose="reliv-logo">
@@ -189,11 +213,12 @@
                 </h1>
                 <span class="text-amber-500 font-handwriting text-xl ml-1 animate-pulse">☼</span>
             </header>
-            <!-- Top Sticky Note: "A Healthier us Starts here ♡" -->
-            <div class="absolute right-0 top-0 washi-tape-pink px-3 py-2 rounded-sm shadow-md transform rotate-6 border border-rose-200/60 max-w-[100px] text-center"
+            <!-- Top Sticky Note: "A Healthier us Starts here ♡" (Editable with default fallback) -->
+            <div class="absolute right-0 top-0 washi-tape-pink px-3 py-2 rounded-sm shadow-md transform rotate-6 border border-rose-200/60 max-w-[105px] text-center z-30"
                 data-purpose="sticky-note-top-right">
                 <div class="w-8 h-2.5 washi-tape-green mx-auto -mt-3.5 mb-1 opacity-70"></div>
-                <p class="font-handwriting text-stone-800 text-sm leading-tight font-bold">
+                <p id="note-top-right" contenteditable="true" spellcheck="false" class="editable-note font-handwriting text-stone-800 text-sm leading-tight font-bold p-0.5 rounded"
+                    data-default="A<br>Healthier<br>us<br>starts<br>here ♡">
                     A<br>Healthier<br>us<br>starts<br>here ♡
                 </p>
             </div>
@@ -208,10 +233,11 @@
                     <span class="text-stone-400 font-handwriting text-sm">ˎˊ˗</span>
                 </div>
             </div>
-            <!-- Sage green pill badge: Better habits together. ♡ -->
+            <!-- Sage green pill badge: Better habits together. ♡ (Editable with default fallback) -->
             <div
-                class="mt-1.5 inline-block bg-[#cfdfce] px-4 py-1 rounded-full shadow-sm border border-[#bdd1bc]/80 transform -rotate-1">
-                <span class="font-handwriting text-stone-800 text-base font-bold tracking-wide">
+                class="mt-1.5 inline-block bg-[#cfdfce] px-4 py-1 rounded-full shadow-sm border border-[#bdd1bc]/80 transform -rotate-1 z-30">
+                <span id="note-pill" contenteditable="true" spellcheck="false" class="editable-note font-handwriting text-stone-800 text-base font-bold tracking-wide px-1 rounded"
+                    data-default="Better habits together. ♡">
                     Better habits together. ♡
                 </span>
             </div>
@@ -377,11 +403,13 @@
                 </div>
             </div>
 
-            <!-- Brush Stroke Banner: Same journey, healthier together. ♡ -->
+            <!-- Brush Stroke Banner: Same journey, healthier together. ♡ (Editable with fallback) -->
             <div class="mt-1 text-center">
                 <div
                     class="inline-block brush-pill-orange px-5 py-1 rounded-full shadow-sm border border-amber-200 transform -rotate-1">
-                    <p class="font-handwriting text-stone-800 text-sm font-bold tracking-wide">
+                    <p id="note-banner" contenteditable="true" spellcheck="false"
+                        class="editable-note font-handwriting text-stone-800 text-sm font-bold tracking-wide px-1 rounded"
+                        data-default="Same journey, healthier together. ♡">
                         Same journey, healthier together. ♡
                     </p>
                 </div>
@@ -403,21 +431,26 @@
                         <span class="font-handwriting text-stone-500 text-xs">♡</span>
                     </div>
                 </div>
-                <div class="font-handwriting text-stone-700 text-xs leading-tight -rotate-3 select-none">
-                    <p class="font-bold">Healthy<br>Habits<br>Happier<br>Us ♡</p>
+                <div class="font-handwriting text-stone-700 text-xs leading-tight -rotate-3 z-30">
+                    <p id="note-polaroid" contenteditable="true" spellcheck="false"
+                        class="editable-note font-bold px-1 rounded"
+                        data-default="Healthy<br>Habits<br>Happier<br>Us ♡">Healthy<br>Habits<br>Happier<br>Us ♡</p>
                 </div>
             </div>
             <div class="flex flex-col items-end">
                 <div
-                    class="washi-tape-pink px-2.5 py-1.5 rounded-sm shadow-md transform rotate-3 border border-rose-200 text-center max-w-[125px]">
+                    class="washi-tape-pink px-2.5 py-1.5 rounded-sm shadow-md transform rotate-3 border border-rose-200 text-center max-w-[125px] z-30">
                     <div class="w-6 h-2 washi-tape-green mx-auto -mt-2.5 mb-1 opacity-75"></div>
-                    <p class="font-handwriting text-stone-800 text-xs leading-tight font-bold">
+                    <p id="note-sticky-bottom" contenteditable="true" spellcheck="false"
+                        class="editable-note font-handwriting text-stone-800 text-xs leading-tight font-bold px-1 rounded"
+                        data-default="Same journey,<br>healthier<br>together. ♡">
                         Same journey,<br>healthier<br>together. ♡
                     </p>
                 </div>
-                <div class="text-right font-handwriting text-stone-700 text-[11px] leading-tight mt-1 select-none">
-                    <span>Support each other.</span><br>
-                    <span class="font-bold">Be proud together. ♡</span>
+                <div class="text-right font-handwriting text-stone-700 text-[11px] leading-tight mt-1 z-30">
+                    <p id="note-affirmation" contenteditable="true" spellcheck="false"
+                        class="editable-note px-1 rounded"
+                        data-default="Support each other.<br>Be proud together. ♡"><span>Support each other.</span><br><span class="font-bold">Be proud together. ♡</span></p>
                 </div>
             </div>
         </div>
@@ -640,14 +673,13 @@
 
                     <div style="position: absolute; left: 10px; top: 15px; transform: rotate(-10deg); width: 230px; text-align: center; pointer-events: none;">
                         <p style="font-family: 'Patrick Hand', cursive; font-size: 30px; line-height: 1.2; color: #44403c; font-weight: bold;">
-                            Little<br/>steps.<br/>Big love.
+                            ${data.noteTopLeft || 'Little<br/>steps.<br/>Big love. ♡'}
                         </p>
-                        <span style="font-size: 24px; color: #57534e;">♡</span>
                     </div>
 
                     <div style="position: absolute; right: 20px; top: 15px; transform: rotate(6deg); background: #feded9; padding: 14px 22px; border-radius: 8px; box-shadow: 2px 6px 16px rgba(180, 120, 100, 0.22); text-align: center; width: 190px; pointer-events: none;">
                         <p style="font-family: 'Patrick Hand', cursive; font-size: 24px; line-height: 1.25; color: #1c1917; font-weight: 600;">
-                            A<br/>Healthier<br/>us<br/>starts<br/>here <span style="color: #44403c;">♡</span>
+                            ${data.noteTopRight || 'A<br/>Healthier<br/>us<br/>starts<br/>here ♡'}
                         </p>
                     </div>
 
@@ -666,8 +698,7 @@
                             <span style="color: #44403c; font-size: 28px; font-weight: 900; transform: rotate(12deg);">//</span>
                         </div>
                         <div style="display: inline-flex; align-items: center; gap: 10px; background: #cfdfce; color: #2C4A34; padding: 6px 34px; border-radius: 9999px; margin-top: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transform: rotate(-1deg); font-family: 'Patrick Hand', cursive; font-size: 28px; font-weight: 600;">
-                            <span>Better habits together.</span>
-                            <span style="color: #3e5336; font-size: 24px;">♡</span>
+                            <span>${data.notePill || 'Better habits together. ♡'}</span>
                         </div>
                     </div>
                 </header>
@@ -757,7 +788,7 @@
 
                         <div style="background: linear-gradient(135deg, #ffd3a5 0%, #fedac2 100%); padding: 8px 36px; border-radius: 9999px; margin-top: 10px;">
                             <span style="font-family: 'Caveat', cursive; font-size: 32px; font-weight: 700; color: #1c1917;">
-                                Same journey, healthier together. ♡
+                                ${data.noteBanner || 'Same journey, healthier together. ♡'}
                             </span>
                         </div>
                     </div>
@@ -780,13 +811,21 @@
                     <div style="width: 100%; height: 160px; background: linear-gradient(135deg, #ea580c 0%, #f43f5e 50%, #4338ca 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 48px;">
                         🫶
                     </div>
-                    <span style="font-family: 'Caveat', cursive; font-size: 26px; font-weight: 700; color: #78716c; margin-top: 8px;">Healthy Habits Happier Us ♡</span>
+                    <span style="font-family: 'Caveat', cursive; font-size: 26px; font-weight: 700; color: #78716c; margin-top: 8px;">${data.notePolaroid || 'Healthy Habits Happier Us ♡'}</span>
                 </div>
 
                 <div style="position: absolute; bottom: -20px; right: -20px; width: 220px; height: 220px; border-radius: 9999px; background: #ecdcc9; opacity: 0.7; pointer-events: none;"></div>
             `;
 
             return stage;
+        }
+
+        function getNoteHtml(id, fallbackHtml) {
+            const el = document.getElementById(id);
+            if (!el) return fallbackHtml;
+            const txt = el.innerText?.trim();
+            if (!txt) return fallbackHtml;
+            return escapeHtml(txt).replace(/\n/g, '<br/>');
         }
 
         let currentStoryBlob = null;
@@ -818,6 +857,12 @@
                 const meVitality = getVitalityData(meScoreVal);
                 const partnerVitality = getVitalityData(partnerScoreVal);
 
+                const noteTopLeftVal = getNoteHtml('note-top-left', 'Little<br/>steps.<br/>Big love. ♡');
+                const noteTopRightVal = getNoteHtml('note-top-right', 'A<br/>Healthier<br/>us<br/>starts<br/>here ♡');
+                const notePillVal = getNoteHtml('note-pill', 'Better habits together. ♡');
+                const noteBannerVal = getNoteHtml('note-banner', 'Same journey, healthier together. ♡');
+                const notePolaroidVal = getNoteHtml('note-polaroid', 'Healthy Habits Happier Us ♡');
+
                 stage = buildInstagramStoryStage({
                     meName: meNameVal,
                     partnerName: partnerNameVal,
@@ -826,7 +871,12 @@
                     meVitality: meVitality,
                     partnerVitality: partnerVitality,
                     win: winVal,
-                    goal: goalVal
+                    goal: goalVal,
+                    noteTopLeft: noteTopLeftVal,
+                    noteTopRight: noteTopRightVal,
+                    notePill: notePillVal,
+                    noteBanner: noteBannerVal,
+                    notePolaroid: notePolaroidVal
                 });
                 document.body.appendChild(stage);
 
@@ -967,6 +1017,17 @@
                     alert('Story image is saved in your device downloads! You can now upload it directly to Instagram Stories.');
                 });
             }
+
+            // Editable notes fallback listener: if cleared or empty, restore default text
+            document.querySelectorAll('.editable-note').forEach(noteEl => {
+                noteEl.addEventListener('blur', () => {
+                    const text = noteEl.innerText.trim();
+                    if (text === '') {
+                        const def = noteEl.getAttribute('data-default');
+                        if (def) noteEl.innerHTML = def;
+                    }
+                });
+            });
         });
     </script>
     <!-- END: Interactive Support Script -->

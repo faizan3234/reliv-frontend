@@ -90,14 +90,36 @@
         input[type="number"] {
             -moz-appearance: textfield;
         }
+
+        /* Soft natural dappled sunlight overlays */
+        .sunlight-overlay {
+            background: radial-gradient(circle at 25% 15%, rgba(255, 255, 255, 0.45) 0%, transparent 45%),
+                radial-gradient(circle at 75% 70%, rgba(210, 185, 160, 0.15) 0%, transparent 50%);
+        }
+
+        /* Editable handwritten notes styling */
+        .editable-note {
+            cursor: text;
+            transition: all 0.15s ease;
+            outline: none;
+        }
+        .editable-note:hover {
+            outline: 1.5px dashed rgba(242, 98, 34, 0.4);
+            border-radius: 4px;
+        }
+        .editable-note:focus {
+            outline: 2px solid #f26222;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+        }
     </style>
 </head>
 
-<body class="bg-[#F8EFE4] text-charcoal min-h-screen flex items-center justify-center p-0 sm:p-4 select-none">
-    <!-- BEGIN: MobileContainer -->
+<body class="p-2 sm:p-4 flex items-center justify-center min-h-screen text-stone-800 antialiased selection:bg-orange-200 bg-[#ede4d8]">
+    <!-- BEGIN: MobileContainer matching Card 1 big frame -->
     <main
-        class="w-full max-w-[430px] min-h-screen relative overflow-hidden bg-[#FAF2E8] shadow-2xl flex flex-col justify-between"
-        data-purpose="mobile-card-wrapper">
+        class="relative w-full max-w-[420px] bg-[#f7f2ea] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-[#eeddcb] sunlight-overlay flex flex-col items-center px-4 pt-6 pb-7 my-2 sm:my-6"
+        data-purpose="mobile-card-canvas">
         <!-- BEGIN: BackgroundAestheticLayers -->
         <div aria-hidden="true" class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
             <!-- Top-right Leaves shadow & light -->
@@ -124,15 +146,15 @@
         <!-- END: BackgroundAestheticLayers -->
 
         <!-- BEGIN: MainContent -->
-        <div class="relative z-10 flex flex-col items-center px-4 pt-4 pb-4">
+        <div class="relative z-10 flex flex-col items-center w-full">
             <!-- BEGIN: TopBrandingHeader -->
             <header class="w-full relative flex flex-col items-center pt-1" data-purpose="brand-header">
-                <!-- Top Left Sticky Note / Note text -->
-                <div class="absolute left-1 top-2 max-w-[125px] rotate-[-7deg] font-['Caveat'] text-[15px] leading-tight text-gray-800"
+                <!-- Top Left Sticky Note / Note text (Editable with fallback) -->
+                <div class="absolute left-1 top-2 max-w-[130px] rotate-[-7deg] font-['Caveat'] text-[15px] leading-tight text-gray-800 z-30"
                     data-purpose="left-glowup-note">
-                    <p class="">Friends<br>who check in,<br><span
-                            class="inline-block bg-[#FDE2D6]/80 px-1 rounded-sm">glow up.</span></p>
-                    <span class="inline-block text-base ml-14 -mt-1 font-bold">♡</span>
+                    <p id="note-top-left" contenteditable="true" spellcheck="false" class="editable-note p-0.5 rounded"
+                        data-default="Friends<br>who check in,<br>glow up. ♡">Friends<br>who check in,<br><span
+                            class="inline-block bg-[#FDE2D6]/80 px-1 rounded-sm">glow up.</span> <span class="inline-block text-base font-bold">♡</span></p>
                 </div>
                 <!-- Central Reliv Logo with Official Orange Tittle on i -->
                 <header class="flex items-center justify-center gap-0.5 -mt-1 mb-1">
@@ -141,11 +163,12 @@
                         <span class="text-[10px] font-sans text-stone-500 self-start ml-0.5 mt-0.5">TM</span>
                     </h1>
                 </header>
-                <!-- Top Right Sticky Note -->
-                <div class="absolute right-2 -top-1 w-[110px] bg-[#FFD5D2] px-3 py-2.5 rounded shadow-sticky rotate-[6deg] font-['Caveat'] text-center leading-tight text-gray-800"
+                <!-- Top Right Sticky Note (Editable with fallback) -->
+                <div class="absolute right-2 -top-1 w-[110px] bg-[#FFD5D2] px-3 py-2.5 rounded shadow-sticky rotate-[6deg] font-['Caveat'] text-center leading-tight text-gray-800 z-30"
                     data-purpose="right-pink-sticky-top">
                     <div class="w-2.5 h-2.5 mx-auto -mt-3.5 mb-1 bg-white/50 rounded-full border border-black/20"></div>
-                    <p class="text-[17px] font-semibold tracking-wide">Healthier<br>Friends<br>Happier<br>Us <span
+                    <p id="note-top-right" contenteditable="true" spellcheck="false" class="editable-note text-[17px] font-semibold tracking-wide p-0.5 rounded"
+                        data-default="Healthier<br>Friends<br>Happier<br>Us ♡">Healthier<br>Friends<br>Happier<br>Us <span
                             class="font-bold">♡</span></p>
                 </div>
                 <!-- Title: OUR TODAY'S CHECK AT RELIV -->
@@ -170,11 +193,11 @@
                             </span>
                         </h1>
                     </div>
-                    <!-- Green Banner Badge: "Better habits with friends. ♡" -->
+                    <!-- Green Banner Badge: "Better habits with friends. ♡" (Editable with fallback) -->
                     <div
-                        class="mt-1 inline-flex items-center justify-center px-4 py-0.5 rounded-full bg-[#CCDDC7] text-[#2C4A34] font-['Caveat'] text-[19px] font-bold shadow-sm">
-                        <span class="">Better habits with friends.</span>
-                        <span class="ml-1 text-base">♡</span>
+                        class="mt-1 inline-flex items-center justify-center px-4 py-0.5 rounded-full bg-[#CCDDC7] text-[#2C4A34] font-['Caveat'] text-[19px] font-bold shadow-sm z-30">
+                        <span id="note-pill" contenteditable="true" spellcheck="false" class="editable-note px-1 rounded"
+                            data-default="Better habits with friends. ♡">Better habits with friends. ♡</span>
                     </div>
                 </div>
             </header>
@@ -355,14 +378,17 @@
                     </svg>
                 </div>
             </div>
-            <div class="absolute right-0.5 top-[44%] -translate-y-1/2 w-[100px] bg-[#FFD1CF] p-2 rounded shadow-sticky rotate-[5deg] z-20 font-['Caveat'] text-center pointer-events-none"
+            <!-- Mid-Right Pink Sticky (Editable with fallback) -->
+            <div class="absolute right-0.5 top-[44%] -translate-y-1/2 w-[105px] bg-[#FFD1CF] p-2 rounded shadow-sticky rotate-[5deg] z-30 font-['Caveat'] text-center"
                 data-purpose="right-pink-sticky-mid">
                 <div class="w-7 h-2.5 -mt-3.5 mx-auto bg-[#ADC8A9]/80 rounded-xs mb-1 rotate-[-2deg]"></div>
-                <p class="text-[15px] font-semibold text-gray-800 leading-tight">Same goals.<br>Brighter days
+                <p id="note-sticky-mid" contenteditable="true" spellcheck="false" class="editable-note text-[15px] font-semibold text-gray-800 leading-tight p-0.5 rounded"
+                    data-default="Same goals.<br>Brighter days together. ♡">Same goals.<br>Brighter days
                     together.<br><span class="text-base font-bold text-gray-900">♡</span></p>
             </div>
+            <!-- Bottom-Left Spiral Notebook Note (Editable with fallback) -->
             <div
-                class="absolute -bottom-1 -left-2 w-28 bg-[#FFF8EE] border border-[#D5C2AF] rounded-r-lg p-2 pt-3 shadow-notebook rotate-[-4deg] z-20 font-['Caveat'] text-center">
+                class="absolute -bottom-1 -left-2 w-28 bg-[#FFF8EE] border border-[#D5C2AF] rounded-r-lg p-2 pt-3 shadow-notebook rotate-[-4deg] z-30 font-['Caveat'] text-center">
                 <div class="absolute -left-1.5 top-0 bottom-0 flex flex-col justify-around py-1">
                     <div class="w-3 h-1.5 bg-[#4A3C31] rounded-full"></div>
                     <div class="w-3 h-1.5 bg-[#4A3C31] rounded-full"></div>
@@ -370,7 +396,8 @@
                     <div class="w-3 h-1.5 bg-[#4A3C31] rounded-full"></div>
                     <div class="w-3 h-1.5 bg-[#4A3C31] rounded-full"></div>
                 </div>
-                <p class="text-[14px] leading-tight font-semibold text-gray-800 pl-1">
+                <p id="note-spiral-bottom" contenteditable="true" spellcheck="false" class="editable-note text-[14px] leading-tight font-semibold text-gray-800 pl-1 rounded"
+                    data-default="Healthy<br>Friends<br>Happier<br>Lives ♡">
                     Healthy<br>Friends<br>Happier<br>Lives<br><span class="text-base font-bold">♡</span>
                 </p>
             </div>
@@ -596,14 +623,13 @@
 
                     <div style="position: absolute; left: 10px; top: 15px; transform: rotate(-10deg); width: 230px; text-align: center; pointer-events: none;">
                         <p style="font-family: 'Patrick Hand', cursive; font-size: 30px; line-height: 1.2; color: #44403c; font-weight: bold;">
-                            Friends<br/>who check in,<br/>glow up.
+                            ${data.noteTopLeft || 'Friends<br/>who check in,<br/>glow up. ♡'}
                         </p>
-                        <span style="font-size: 24px; color: #57534e;">♡</span>
                     </div>
 
                     <div style="position: absolute; right: 20px; top: 15px; transform: rotate(6deg); background: #feded9; padding: 14px 22px; border-radius: 8px; box-shadow: 2px 6px 16px rgba(180, 120, 100, 0.22); text-align: center; width: 190px; pointer-events: none;">
                         <p style="font-family: 'Patrick Hand', cursive; font-size: 24px; line-height: 1.25; color: #1c1917; font-weight: 600;">
-                            Healthier<br/>Friends<br/>Happier<br/>Us <span style="color: #44403c;">♡</span>
+                            ${data.noteTopRight || 'Healthier<br/>Friends<br/>Happier<br/>Us ♡'}
                         </p>
                     </div>
 
@@ -622,8 +648,7 @@
                             <span style="color: #44403c; font-size: 28px; font-weight: 900; transform: rotate(12deg);">//</span>
                         </div>
                         <div style="display: inline-flex; align-items: center; gap: 10px; background: #CCDDC7; color: #2C4A34; padding: 6px 34px; border-radius: 9999px; margin-top: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transform: rotate(-1deg); font-family: 'Patrick Hand', cursive; font-size: 28px; font-weight: 600;">
-                            <span>Better habits with friends.</span>
-                            <span style="color: #3e5336; font-size: 24px;">♡</span>
+                            <span>${data.notePill || 'Better habits with friends. ♡'}</span>
                         </div>
                     </div>
                 </header>
@@ -736,7 +761,7 @@
                     <div style="border-bottom: 2px solid #d6d3d1; height: 24px;"></div>
                     <div style="border-bottom: 2px solid #d6d3d1; height: 24px;"></div>
                     <div style="font-family: 'Patrick Hand', cursive; font-size: 22px; color: #78716c; margin-top: 14px; line-height: 1.25;">
-                        Healthy<br/>Friends<br/>Happier Lives ♡
+                        ${data.noteSpiralBottom || 'Healthy<br/>Friends<br/>Happier Lives ♡'}
                     </div>
                 </div>
 
@@ -744,6 +769,14 @@
             `;
 
             return stage;
+        }
+
+        function getNoteHtml(id, fallbackHtml) {
+            const el = document.getElementById(id);
+            if (!el) return fallbackHtml;
+            const txt = el.innerText?.trim();
+            if (!txt) return fallbackHtml;
+            return escapeHtml(txt).replace(/\n/g, '<br/>');
         }
 
         let currentStoryBlob = null;
@@ -775,6 +808,11 @@
                 const meVitality = getVitalityData(meScoreVal);
                 const friendVitality = getVitalityData(friendScoreVal);
 
+                const noteTopLeftVal = getNoteHtml('note-top-left', 'Friends<br/>who check in,<br/>glow up. ♡');
+                const noteTopRightVal = getNoteHtml('note-top-right', 'Healthier<br/>Friends<br/>Happier<br/>Us ♡');
+                const notePillVal = getNoteHtml('note-pill', 'Better habits with friends. ♡');
+                const noteSpiralVal = getNoteHtml('note-spiral-bottom', 'Healthy<br/>Friends<br/>Happier Lives ♡');
+
                 stage = buildInstagramStoryStage({
                     meName: meNameVal,
                     friendName: friendNameVal,
@@ -783,7 +821,11 @@
                     meVitality: meVitality,
                     friendVitality: friendVitality,
                     win: winVal,
-                    habit: habitVal
+                    habit: habitVal,
+                    noteTopLeft: noteTopLeftVal,
+                    noteTopRight: noteTopRightVal,
+                    notePill: notePillVal,
+                    noteSpiralBottom: noteSpiralVal
                 });
                 document.body.appendChild(stage);
 
@@ -924,6 +966,17 @@
                     alert('Story image is saved in your device downloads! You can now upload it directly to Instagram Stories.');
                 });
             }
+
+            // Editable notes fallback listener: if cleared or empty, restore default text
+            document.querySelectorAll('.editable-note').forEach(noteEl => {
+                noteEl.addEventListener('blur', () => {
+                    const text = noteEl.innerText.trim();
+                    if (text === '') {
+                        const def = noteEl.getAttribute('data-default');
+                        if (def) noteEl.innerHTML = def;
+                    }
+                });
+            });
         });
     </script>
     <!-- END: Interactive Support Script -->
