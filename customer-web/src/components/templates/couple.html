@@ -1,8 +1,8 @@
 <main class="relative w-full max-w-none bg-[#f7f2ea] overflow-hidden sunlight-overlay flex flex-col items-center justify-between px-3.5 pt-6 pb-4 reference-art h-full min-h-full" data-purpose="mobile-card-canvas">
         <!-- BEGIN: DecorativeBackgroundElements -->
         <!-- Top-Right: Coffee Mug with Latte Art -->
-        <div class="draggable-card-item absolute -top-4 -right-4 select-none z-10 opacity-95" data-drag-id="coffee-mug" data-rotation="rotate(0deg)" data-tx="-8" data-ty="1" style="transform: translate(-8px, 1px) rotate(0deg);">
-            <div class="relative w-36 h-36 rounded-full overflow-hidden shadow-2xl border-4 border-[#e6c9a8] bg-[#f7f2ea]">
+        <div class="draggable-card-item absolute -top-3 -right-4 select-none z-10 opacity-95" data-drag-id="coffee-mug" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
+            <div class="relative w-28 h-28 rounded-full overflow-hidden shadow-2xl border-4 border-[#e6c9a8] bg-[#f7f2ea]">
                 <img src="/assets/coffee-latte.jpg" alt="Cozy Latte Art" class="w-full h-full object-cover scale-110">
             </div>
         </div>
@@ -38,26 +38,26 @@
         <!-- END: DecorativeBackgroundElements -->
 
         <!-- BEGIN: TopBar -->
-        <header class="relative z-20 flex flex-col items-center mt-0.5 mb-1" data-purpose="header-section">
+        <header class="w-full relative z-20 flex flex-col items-center mt-0.5 mb-1" data-purpose="header-section">
             <!-- Handwritten quote top-left (Editable with default fallback) -->
-            <div class="draggable-card-item absolute left-0.5 top-0 text-stone-700 font-handwriting text-[14px] leading-tight transform -rotate-6 z-30 max-w-[95px]" data-purpose="note-top-left-container" data-drag-id="note-top-left" data-rotation="rotate(-6deg)" data-tx="-28" data-ty="-3" style="transform: translate(-28px, -3px) rotate(-6deg);">
+            <div class="draggable-card-item absolute left-0.5 top-0 text-stone-700 font-handwriting text-[14px] leading-tight transform -rotate-6 z-30 max-w-[95px]" data-purpose="note-top-left-container" data-drag-id="note-top-left" data-rotation="rotate(-6deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(-6deg);">
                 <p id="note-top-left" class="editable-note p-0.5 rounded" data-default="Little<br>steps.<br>Big love. ♡">Little<br><span class="pl-1">steps.</span><br><span class="pl-0.5">Big love. ♡</span></p>
             </div>
             <!-- Reliv Logo matching brand with Orange Tittle on i -->
             <header class="flex items-center justify-center gap-0.5 pt-0.5" data-purpose="reliv-logo">
-                <h1 class="text-[36px] tracking-tight font-black leading-none flex items-baseline font-display">
+                <h1 class="text-[34px] tracking-tight font-black leading-none flex items-baseline font-display">
                     <span class="text-[#f26222]">Re</span><span class="text-[#141414]">l<span class="relative inline-block">ı<span class="absolute left-1/2" style="top: 0.08em; transform: translateX(-51%); width: 0.20em; height: 0.20em; background-color: #f26222; border-radius: 50%;"></span></span>v</span>
                     <span class="text-[10px] font-sans text-stone-500 self-start ml-0.5 mt-0.5 font-bold">TM</span>
                 </h1>
                 <span class="text-amber-500 font-handwriting text-xl ml-1 animate-pulse">☼</span>
             </header>
             <!-- Top Sticky Note: "A Healthier us Starts here ♡" (Editable with default fallback) -->
-            <div class="draggable-card-item absolute right-1 top-0 washi-tape-pink px-2.5 py-1.5 rounded-sm shadow-md transform rotate-3 border border-rose-200/60 max-w-[92px] text-center z-30" data-purpose="sticky-note-top-right" data-drag-id="note-top-right" data-rotation="rotate(3deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(3deg);">
+            <div class="draggable-card-item absolute right-1 top-16 washi-tape-pink px-2.5 py-1.5 rounded-sm shadow-md transform rotate-3 border border-rose-200/60 max-w-[85px] text-center z-30" data-purpose="sticky-note-top-right" data-drag-id="note-top-right" data-rotation="rotate(3deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(3deg);">
                 <div class="w-7 h-2 washi-tape-green mx-auto -mt-3 mb-1 opacity-70"></div>
                 <p id="note-top-right" class="editable-note font-handwriting text-stone-800 text-[12px] leading-tight font-bold p-0.5 rounded" data-default="A<br>Healthier<br>us<br>starts<br>here ♡">A<br>Healthier<br>us<br>starts<br>here ♡</p>
             </div>
             <!-- Main Headline: OUR TODAY'S CHECK AT RELIV -->
-            <div class="mt-5 text-center">
+            <div class="mt-5 text-center max-w-[210px] mx-auto">
                 <div class="inline-flex items-center justify-center gap-1.5">
                     <span class="text-stone-400 font-handwriting text-sm">˗ˏˋ</span>
                     <h1 class="font-display font-black text-[25px] sm:text-[27px] tracking-tight text-stone-900 uppercase">
@@ -191,24 +191,25 @@
 
         <!-- BEGIN: OuterSideNotesAndPolaroid -->
         <div class="relative z-20 flex items-end justify-between w-full max-w-[390px] mt-2 px-1" data-purpose="floating-memorabilia">
-            <div class="draggable-card-item flex items-center gap-2" data-drag-id="polaroid-memorabilia" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
-                <div class="bg-white p-1.5 pb-2 rounded-sm shadow-md border border-stone-200/80 transform -rotate-6 w-24">
-                    <div class="w-full h-16 rounded-[2px] overflow-hidden relative shadow-inner">
-                        <img src="/assets/polaroid-couple.jpg" alt="Romantic Couple Holding Hands at Sunset" class="w-full h-full object-cover">
-                    </div>
-                    <div class="text-center mt-1">
-                        <span class="font-handwriting text-stone-600 text-xs font-bold">forever us ♡</span>
-                    </div>
+            <!-- Left: Romantic Couple Polaroid -->
+            <div class="draggable-card-item bg-white p-1.5 pb-2 rounded-sm shadow-md border border-stone-200/80 transform -rotate-4 w-24 z-30" data-purpose="couple-polaroid" data-drag-id="couple-polaroid" data-rotation="rotate(-4deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(-4deg);">
+                <div class="w-full h-16 rounded-[2px] overflow-hidden relative shadow-inner">
+                    <img src="/assets/polaroid-couple.jpg" alt="Romantic Couple Holding Hands at Sunset" class="w-full h-full object-cover">
                 </div>
-                <div class="font-handwriting text-stone-700 text-xs leading-tight -rotate-3 z-30">
-                    <p id="note-polaroid" class="editable-note font-bold px-1 rounded" data-default="Healthy<br>Habits<br>Happier<br>Us ♡">Healthy<br>Habits<br>Happier<br>Us ♡</p>
+                <div class="text-center mt-1">
+                    <span class="font-handwriting text-stone-600 text-xs font-bold">forever us ♡</span>
                 </div>
             </div>
-            <div class="draggable-card-item flex flex-col items-end" data-drag-id="sticky-affirmation" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
-                <div class="washi-tape-pink px-3 py-2 rounded-sm shadow-md transform rotate-3 border border-rose-200 text-center max-w-[130px] z-30">
-                    <div class="w-6 h-2 washi-tape-green mx-auto -mt-3 mb-1 opacity-75"></div>
-                    <p id="note-sticky-bottom" class="editable-note font-handwriting text-stone-800 text-xs leading-tight font-bold px-1 rounded" data-default="Support each other.<br>Be proud together. ♡">Support each other.<br><span class="font-bold">Be proud together. ♡</span></p>
-                </div>
+
+            <!-- Center: Sweet Kraft Note -->
+            <div class="draggable-card-item relative bg-[#FFF8EE] border border-[#D5C2AF] rounded-lg p-1.5 shadow-sm rotate-[-2deg] z-30 font-handwriting text-center max-w-[85px]" data-drag-id="note-polaroid-text" data-rotation="rotate(-2deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(-2deg);">
+                <p id="note-polaroid" class="editable-note text-stone-700 text-xs font-bold leading-tight p-0.5 rounded" data-default="Healthy<br>Habits<br>Happier<br>Us ♡">Healthy<br>Habits<br>Happier<br>Us ♡</p>
+            </div>
+
+            <!-- Right: Support Affirmation Sticky Note -->
+            <div class="draggable-card-item relative washi-tape-pink px-2.5 py-1.5 rounded-sm shadow-md transform rotate-3 border border-rose-200 text-center max-w-[110px] z-30" data-drag-id="sticky-affirmation" data-rotation="rotate(3deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(3deg);">
+                <div class="w-6 h-2 washi-tape-green mx-auto -mt-2.5 mb-1 opacity-75"></div>
+                <p id="note-sticky-bottom" class="editable-note font-handwriting text-stone-800 text-[11px] leading-tight font-bold px-0.5 rounded" data-default="Support each other.<br>Be proud together. ♡">Support each other.<br><span class="font-bold">Be proud together. ♡</span></p>
             </div>
         </div>
         <!-- END: OuterSideNotesAndPolaroid -->
