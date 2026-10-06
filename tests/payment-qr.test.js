@@ -22,7 +22,7 @@ test('payment QR rejects credentials, private gateways, and unsupported schemes'
 
 test('exact QR capacities choose the matching correction level without a render exception', () => {
   const prefix = 'https://example.com/pay#p=';
-  for (const [size, level] of [[2201, 'M'], [PAYMENT_QR_MEDIUM_BYTES, 'M'], [PAYMENT_QR_MEDIUM_BYTES + 1, 'L'], [PAYMENT_QR_MAX_BYTES, 'L']]) {
+  for (const [size, level] of [[1200, 'M'], [1201, 'L'], [2201, 'L'], [PAYMENT_QR_MEDIUM_BYTES, 'L'], [PAYMENT_QR_MEDIUM_BYTES + 1, 'L'], [PAYMENT_QR_MAX_BYTES, 'L']]) {
     const value = prefix + 'x'.repeat(size - prefix.length);
     const config = getPaymentQrConfig(value);
     assert.equal(config.level, level);
@@ -49,7 +49,7 @@ test('actual backend requests using standard 4096-bit keys render without changi
       assert.equal(config.value, value, key);
       assert.match(renderToStaticMarkup(React.createElement(QRCodeSVG, { ...config, marginSize: 4, boostLevel: false })), /<svg/);
     }
-    assert.equal(getPaymentQrConfig(fixture.paymentUrl).level, 'M');
+    assert.equal(getPaymentQrConfig(fixture.paymentUrl).level, fixture.paymentUrl.length <= 1200 ? 'M' : 'L');
   }
 });
 

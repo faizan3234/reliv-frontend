@@ -1,6 +1,7 @@
 // Never navigate to a scanned host. Transfer only a recognized payment package
 // to our own checkout; the bridge still verifies its signature and expiry.
 export function paymentPathFromQr(value, origin) {
+  if (typeof value === 'string') value = value.trim();
   if (typeof value !== 'string' || value.length > 24000 || /[\s\\]/.test(value)) throw new Error('Scan the payment QR shown on a Reliv kiosk.');
   let url;
   try { url = new URL(value); } catch { throw new Error('This is not a Reliv payment link.'); }

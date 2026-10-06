@@ -16,7 +16,8 @@ export function PaymentScanner({ onClose }) {
   const [flashOn, setFlashOn] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
 
-  const accept = (value) => {
+  const rejected = useRef({ value: null, count: 0 });
+  const accept = (value, fromPhoto = false) => {
     if (!mounted.current || accepted.current) return;
     try {
       const path = paymentPathFromQr(value, window.location.origin);
@@ -27,7 +28,13 @@ export function PaymentScanner({ onClose }) {
       // Same-origin navigation preserves standalone PWA mode and initializes
       // the existing recovery/session boundary exactly like an external QR.
       window.location.assign(path);
-    } catch (err) { setError(err.message); }
+    } catch (err) {
+      const last = rejected.current;
+      rejected.current = { value, count: last.value === value ? last.count + 1 : 1 };
+      // A noisy camera frame is not evidence that the kiosk QR is invalid.
+      if (fromPhoto || rejected.current.count >= 3) setError(err.message);
+      else setError('');
+    }
   };
 
   useEffect(() => {
@@ -41,12 +48,12 @@ export function PaymentScanner({ onClose }) {
     const instance = new QrScanner(video.current, result => {
       if (!disposed) accept(result.data);
     }, {
-      preferredCamera: 'environment', maxScansPerSecond: 15,
+      preferredCamera: 'environment', maxScansPerSecond: 20,
       returnDetailedScanResult: true, onDecodeError: () => {},
       // Dense encrypted kiosk QRs need more pixels than the 400px default.
       calculateScanRegion: v => {
         const size = Math.min(v.videoWidth, v.videoHeight);
-        const resolution = Math.min(size, 1024);
+        const resolution = Math.min(size, 1280);
         return { x: (v.videoWidth-size)/2, y: (v.videoHeight-size)/2,
           width: size, height: size, downScaledWidth: resolution, downScaledHeight: resolution };
       },
@@ -55,6 +62,13 @@ export function PaymentScanner({ onClose }) {
     // Defer capture until StrictMode has completed its setup/cleanup probe.
     Promise.resolve().then(() => disposed ? undefined : instance.start()).then(async () => {
       if (disposed) { instance.destroy(); return; }
+      const track = video.current?.srcObject?.getVideoTracks()[0];
+      if (track?.applyConstraints) {
+        const caps = track.getCapabilities?.() || {};
+        await track.applyConstraints({ width: { ideal: 1920 }, height: { ideal: 1080 },
+          ...(caps.focusMode?.includes('continuous') ? { advanced: [{ focusMode: 'continuous' }] } : {}) }).catch(() => {});
+      }
+      if (disposed) return;
       setStatus('Point at the kiosk payment QR');
       const available = await instance.hasFlash().catch(() => false);
       if (!disposed) setFlash(available);
@@ -91,7 +105,7 @@ export function PaymentScanner({ onClose }) {
     setImageBusy(true); setError('');
     try {
       const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
-      accept(result.data);
+      accept(result.data, true);
     } catch { if (mounted.current) setError('No readable QR found. Choose a clear photo containing the entire kiosk QR.'); }
     finally { if (mounted.current) setImageBusy(false); }
   };
@@ -101,7 +115,7 @@ export function PaymentScanner({ onClose }) {
       <h1 className="text-xl font-bold">Scan kiosk QR</h1>
       <button type="button" onClick={onClose} className="min-h-11 px-4 rounded-xl border border-orange-200 bg-white">Close</button>
     </div>
-    <p className="text-sm text-slate-600">Fit the whole QR in the camera view. Your payment opens here automatically.</p>
+    <p className="text-sm text-slate-600">Keep the whole QR and its white border visible. Hold steady; avoid screen reflections. Your payment opens here automatically.</p>
     <div className="relative overflow-hidden rounded-3xl bg-slate-950 aspect-square">
       <video ref={video} muted playsInline autoPlay aria-label="Live camera preview" className="w-full h-full object-cover" />
       <div className="absolute inset-3 border-2 border-white/70 rounded-2xl pointer-events-none" aria-hidden="true" />

@@ -2,11 +2,12 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx,html}",
   ],
   theme: {
     extend: {
-      fontFamily: { hand: ["cursive"], script: ["cursive"], heading: ["sans-serif"] },
+      fontFamily: { handwriting: ['Caveat', 'cursive'], display: ['Fredoka', 'sans-serif'], hand: ['Patrick Hand', 'cursive'], script: ['Caveat', 'cursive'], handwritten: ['Caveat', 'cursive'], heading: ['Fredoka', 'sans-serif'] },
+      boxShadow: { paper: '0 10px 25px -5px rgba(160,130,109,.25)', sticky: '2px 4px 12px rgba(180,120,100,.18)', card: '0 18px 45px -10px rgba(112,79,56,.16)' },
       colors: {
         brand: {
           50: '#fff7ed',

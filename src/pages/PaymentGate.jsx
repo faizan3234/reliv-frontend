@@ -64,6 +64,7 @@ export default function PaymentGate() {
 
   // Component UI state: 'PREPARING' | 'QR_READY' | 'VERIFYING' | 'WRONG_CODE' | 'LOCKED' | 'EXPIRED' | 'SUCCESS' | 'ERROR' | 'SESSION_INVALID'
   const [uiState, setUiState] = useState("PREPARING");
+  const [qrExpanded, setQrExpanded] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState("");
   const paymentQr = React.useMemo(() => getPaymentQrConfig(paymentUrl), [paymentUrl]);
   const [authoritativeAmount, setAuthoritativeAmount] = useState(null);
@@ -943,21 +944,27 @@ export default function PaymentGate() {
               )}
             </div>
 
+            {qrExpanded && paymentQr && <div role="dialog" aria-modal="true" aria-label="Large payment QR" className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center gap-3 p-4" onKeyDown={e => { if (e.key === 'Escape') setQrExpanded(false); }}>
+              <button autoFocus type="button" onClick={() => setQrExpanded(false)} className="px-6 py-3 rounded-xl border border-slate-300 font-bold">Close large QR</button>
+              <QRCodeSVG value={paymentQr.value} size={900} level={paymentQr.level} marginSize={6} boostLevel={false} fgColor="#000000" bgColor="#ffffff" style={{ width:'min(90vw, 72vh, 900px)', height:'auto', flexShrink:0 }} />
+              <p className="text-center text-slate-700">Keep the entire QR and white border inside your phone camera.</p>
+            </div>}
+            <button type="button" onClick={() => setQrExpanded(true)} className="px-5 py-3 rounded-xl bg-orange-600 text-white font-bold">Enlarge QR for easier scanning</button>
             {/* Universal high-contrast QR: SVG stays sharp at every kiosk scale. */}
-            <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-orange-200 shadow-xl flex flex-col items-center w-full max-w-[560px]">
+            <div className="bg-white p-2 rounded-2xl border border-orange-200 flex flex-col items-center w-full max-w-[680px]">
               {paymentQr ? (
-                <div className="bg-white p-3 rounded-2xl flex items-center justify-center shadow-inner border border-slate-100 w-full">
+                <div className="bg-white w-full">
                   <QRCodeSVG
                     value={paymentQr.value}
-                    size={512}
+                    size={768}
                     level={paymentQr.level}
-                    marginSize={4}
+                    marginSize={6}
                     boostLevel={false}
                     fgColor="#000000"
                     bgColor="#FFFFFF"
                     style={{
                       width: "100%",
-                      maxWidth: "512px",
+                      maxWidth: "640px",
                       height: "auto",
                       aspectRatio: "1 / 1",
                       display: "block",
