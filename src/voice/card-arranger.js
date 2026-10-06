@@ -65,9 +65,13 @@
                 <span id="arrange-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>Drag: <strong id="arrange-mode-label">ON</strong></span>
             </button>
-            <button id="btn-save-lock-layout" type="button" class="px-3.5 py-1 rounded-full bg-gradient-to-r from-[#f26222] to-[#e04f0f] hover:from-[#e04f0f] hover:to-[#c83e05] text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95">
+            <button id="btn-save-story-image" type="button" class="px-3.5 py-1 rounded-full bg-gradient-to-r from-[#f26222] to-[#e04f0f] hover:from-[#e04f0f] hover:to-[#c83e05] text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95" title="Export 1080x1920 Instagram Story image with all pictures">
+                <span>📸</span>
+                <span>Save Image Card</span>
+            </button>
+            <button id="btn-save-lock-layout" type="button" class="px-2.5 py-1 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-200 font-semibold transition cursor-pointer text-[11px] flex items-center gap-1">
                 <span>💾</span>
-                <span>Save & Lock</span>
+                <span>Lock Layout</span>
             </button>
             <button id="btn-reset-layout" type="button" class="px-2 py-1 rounded-full text-stone-400 hover:text-stone-200 hover:bg-stone-800 transition cursor-pointer text-[11px]">
                 Reset
@@ -95,6 +99,17 @@
             showToast(isArrangeMode ? '✋ Move Mode Enabled: Drag any note or card freely' : '👁️ Preview Mode: Dragging disabled');
         });
 
+        const btnSaveImg = document.getElementById('btn-save-story-image');
+        if (btnSaveImg) {
+            btnSaveImg.addEventListener('click', () => {
+                if (typeof window.exportInstagramStory === 'function') {
+                    window.exportInstagramStory();
+                } else {
+                    const saveBtn = document.getElementById('save-story-btn');
+                    if (saveBtn) saveBtn.click();
+                }
+            });
+        }
         document.getElementById('btn-save-lock-layout').addEventListener('click', saveLayout);
         document.getElementById('btn-reset-layout').addEventListener('click', resetLayout);
         document.getElementById('btn-copy-layout').addEventListener('click', copyLayoutJSON);
@@ -212,8 +227,22 @@
     // Read stored layout from localStorage
     function getSavedLayout() {
         try {
+            // Version check: clear legacy uncalibrated coordinates
+            if (localStorage.getItem('reliv_layout_v') !== '2.0') {
+                ['Untitled-1', 'cards2', 'cards3'].forEach(id => localStorage.removeItem('reliv_layout_' + id));
+                localStorage.setItem('reliv_layout_v', '2.0');
+                return null;
+            }
             const raw = localStorage.getItem('reliv_layout_' + CARD_ID);
-            return raw ? JSON.parse(raw) : null;
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            // Sanitize: any item with extreme translation (>180px) is discarded to prevent overlaps
+            for (const key in parsed) {
+                if (parsed[key] && Math.abs(parsed[key].tx || 0) > 180) {
+                    delete parsed[key];
+                }
+            }
+            return parsed;
         } catch (_) {
             return null;
         }
@@ -314,22 +343,38 @@
         });
     }
 
+    function resolveAssets() {
+        if (!window.RELIV_ASSETS) return;
+        document.querySelectorAll('img').forEach(img => {
+            const src = img.getAttribute('src');
+            if (src && !src.startsWith('data:')) {
+                const filename = src.split('/').pop().split('?')[0];
+                if (window.RELIV_ASSETS[filename]) {
+                    img.src = window.RELIV_ASSETS[filename];
+                }
+            }
+        });
+    }
+
     // Expose helpers on window
     window.RelivCardArranger = {
         saveLayout,
         resetLayout,
         collectCurrentLayout,
-        getSavedLayout
+        getSavedLayout,
+        resolveAssets
     };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
+            resolveAssets();
             injectStyles();
             createToolbar();
             setupDraggables();
             setupPasteHandling();
         });
     } else {
+        resolveAssets();
         injectStyles();
         createToolbar();
         setupDraggables();
