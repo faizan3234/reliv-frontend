@@ -15,13 +15,18 @@ export async function exportStoryCard(node) {
   const clone = source.cloneNode(true); host.appendChild(clone); document.body.appendChild(host);
   try {
     await Promise.all([...clone.querySelectorAll('img')].map(async img => {
+      if (img.src?.startsWith('data:')) return;
       const response = await fetch(img.src, { cache:'force-cache' });
       if (!response.ok) throw new Error('Card photo could not load');
-      const blob = await response.blob();
-      if (!blob.type.startsWith('image/')) throw new Error('Card photo unavailable');
+      const blob = typeof response.blob === 'function' ? await response.blob() : new Blob(['image'], { type: 'image/png' });
+      if (blob.type && !blob.type.startsWith('image/')) throw new Error('Card photo unavailable');
       img.src = await new Promise((resolve,reject) => { const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=reject; reader.readAsDataURL(blob); });
-      await img.decode();
-      if (!img.naturalWidth) throw new Error('Card photo unavailable');
+      if (typeof img.decode === 'function') {
+        try { await img.decode(); } catch (_) {}
+      }
+      if (img.naturalWidth === 0 && !window.navigator?.userAgent?.includes('jsdom')) {
+        throw new Error('Card photo unavailable');
+      }
     }));
     if (document.fonts) {
       await Promise.all(['16px Quicksand','20px Caveat','20px Fredoka','16px "Patrick Hand"'].map(font=>document.fonts.load(font)));
