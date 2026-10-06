@@ -1,4 +1,4 @@
-<main class="relative w-full max-w-none bg-[#f7f2ea] overflow-hidden sunlight-overlay flex flex-col items-center justify-between px-3.5 pt-6 pb-4 reference-art h-full min-h-full" data-purpose="mobile-card-canvas">
+<main class="relative w-full max-w-none bg-[#f7f2ea] overflow-hidden sunlight-overlay flex flex-col items-center justify-between px-3 pt-4 pb-2.5 reference-art h-full min-h-full" data-purpose="mobile-card-canvas">
         <!-- BEGIN: DecorativeBackgroundElements -->
         <!-- Top-Right: Coffee Mug with Latte Art -->
         <div class="draggable-card-item absolute -top-3 -right-4 select-none z-10 opacity-95" data-drag-id="coffee-mug" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
@@ -6,19 +6,9 @@
                 <img src="/assets/coffee-latte.jpg" alt="Cozy Latte Art" class="w-full h-full object-cover scale-110">
             </div>
         </div>
-        <!-- Top-Left: Flowers & Foliage Illustration Accent -->
-        <div class="absolute -top-2 -left-6 pointer-events-none select-none opacity-85 z-0">
-            <svg fill="none" height="150" viewBox="0 0 130 150" width="130" xmlns="http://www.w3.org/2000/svg">
-                <path d="M-10 10C25 15 50 45 42 75C28 100 10 90 -5 95" stroke="#718663" stroke-linecap="round" stroke-width="2.5"></path>
-                <path d="M12 32C24 25 35 28 32 40C22 43 14 36 12 32Z" fill="#8da47e" opacity="0.8"></path>
-                <path d="M35 52C46 48 55 56 48 65C38 67 32 58 35 52Z" fill="#718663" opacity="0.8"></path>
-                <circle cx="20" cy="85" fill="#fdfbf7" r="4"></circle>
-                <circle cx="28" cy="95" fill="#fdfbf7" r="5"></circle>
-                <circle cx="15" cy="100" fill="#fdfbf7" r="3.5"></circle>
-                <circle cx="38" cy="82" fill="#fdfbf7" r="4.5"></circle>
-                <circle cx="48" cy="94" fill="#fdfbf7" r="3"></circle>
-                <path d="M15 15C38 35 70 25 75 10" stroke="#8da47e" stroke-linecap="round" stroke-width="2"></path>
-            </svg>
+        <!-- Top-Left Botanical Foliage Background Accent -->
+        <div aria-hidden="true" class="absolute top-10 -left-6 w-24 h-32 rounded-full overflow-hidden opacity-65 pointer-events-none z-0">
+            <img src="/assets/pothos-leaves.jpg" alt="Botanical Foliage" class="w-full h-full object-cover">
         </div>
         <!-- Bottom-Left: Hanging Greenery -->
         <div class="absolute -bottom-8 -left-8 pointer-events-none select-none opacity-90 z-0">
@@ -57,7 +47,7 @@
                 <p id="note-top-right" class="editable-note font-handwriting text-stone-800 text-[12px] leading-tight font-bold p-0.5 rounded" data-default="A<br>Healthier<br>us<br>starts<br>here ♡">A<br>Healthier<br>us<br>starts<br>here ♡</p>
             </div>
             <!-- Main Headline: OUR TODAY'S CHECK AT RELIV -->
-            <div class="mt-5 text-center max-w-[210px] mx-auto">
+            <div class="mt-2.5 text-center max-w-[210px] mx-auto">
                 <div class="inline-flex items-center justify-center gap-1.5">
                     <span class="text-stone-400 font-handwriting text-sm">˗ˏˋ</span>
                     <h1 class="font-display font-black text-[25px] sm:text-[27px] tracking-tight text-stone-900 uppercase">
@@ -75,7 +65,7 @@
         <!-- END: TopBar -->
 
         <!-- BEGIN: MainClipboardCard -->
-        <section class="draggable-card-item relative z-20 w-full max-w-[390px] clipboard-paper p-3.5 pt-4 pb-3 border border-[#ecdac8]/70 flex flex-col gap-2.5" data-purpose="couples-score-card" data-drag-id="clipboard-card" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
+        <section class="draggable-card-item relative z-20 w-full max-w-[390px] clipboard-paper p-3 pt-3 pb-2 border border-[#ecdac8]/70 flex flex-col gap-1.5" data-purpose="couples-score-card" data-drag-id="clipboard-card" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
             <div class="paper-clip"></div>
             <div class="w-24 h-4 washi-tape-pink mx-auto -mt-6 rounded-sm opacity-85 shadow-sm"></div>
 
@@ -131,13 +121,13 @@
 
                 <!-- Left Circle: Me -->
                 <div class="flex flex-col items-center">
-                    <div id="me-score-circle" class="w-24 h-24 rounded-full border-[3px] border-[#68b663] bg-[#fff5f2] p-1.5 flex flex-col items-center justify-center relative shadow-sm transition-all duration-300" data-purpose="me-score-badge">
-                        <div class="bg-[#ffd9d2] text-stone-800 text-[11px] font-bold font-handwriting px-3 py-0.5 rounded-full border border-rose-200">
+                    <div id="me-score-circle" class="w-20 h-20 rounded-full border-[3px] border-[#68b663] bg-[#fff5f2] p-1 flex flex-col items-center justify-center relative shadow-sm transition-all duration-300" data-purpose="me-score-badge">
+                        <div class="bg-[#ffd9d2] text-stone-800 text-[10px] font-bold font-handwriting px-2.5 py-0.5 rounded-full border border-rose-200">
                             Me
                         </div>
                         <div class="flex items-baseline justify-center gap-0.5 mt-0.5">
-                            <span data-field="score" class="w-11 text-center font-display font-extrabold text-stone-800 text-xl border-b-2 border-stone-800/40 bg-transparent p-0 focus:ring-0 focus:border-[#f26222] reference-value"></span>
-                            <span class="font-display font-bold text-stone-700 text-xs">/ 100</span>
+                            <span data-field="score" class="w-10 text-center font-display font-extrabold text-stone-800 text-lg border-b-2 border-stone-800/40 bg-transparent p-0 focus:ring-0 focus:border-[#f26222] reference-value"></span>
+                            <span class="font-display font-bold text-stone-700 text-[11px]">/ 100</span>
                         </div>
                     </div>
                 </div>
@@ -161,7 +151,7 @@
                     <span class="font-handwriting font-bold text-stone-800 text-sm">Today's Win:</span>
                     <span class="text-amber-600 text-xs">✧</span>
                 </div>
-                <div class="max-w-[330px] mx-auto w-full bg-[#dce7db] rounded-2xl p-1.5 pt-2 border border-emerald-200/90 shadow-inner flex items-center justify-between">
+                <div class="max-w-[330px] mx-auto w-full bg-[#dce7db] rounded-2xl p-1 pt-1.5 border border-emerald-200/90 shadow-inner flex items-center justify-between">
                     <span data-field="win" class="w-full bg-transparent border-0 p-0 text-center font-handwriting text-stone-800 text-base font-bold focus:ring-0 reference-value"></span>
                     <span class="text-rose-400 font-handwriting text-sm ml-1 select-none">♡</span>
                 </div>
@@ -174,7 +164,7 @@
                     <span class="font-handwriting font-bold text-stone-800 text-sm">Our Goal:</span>
                     <span class="text-rose-400 text-xs font-handwriting">ˎ˗</span>
                 </div>
-                <div class="max-w-[330px] mx-auto w-full bg-[#fde8e3] rounded-2xl p-1.5 pt-2 border border-rose-200/90 shadow-inner flex items-center justify-between">
+                <div class="max-w-[330px] mx-auto w-full bg-[#fde8e3] rounded-2xl p-1 pt-1.5 border border-rose-200/90 shadow-inner flex items-center justify-between">
                     <span data-field="focus" class="w-full bg-transparent border-0 p-0 text-center font-handwriting text-stone-800 text-base font-bold focus:ring-0 reference-value"></span>
                     <span class="text-rose-400 font-handwriting text-sm ml-1 select-none">♡</span>
                 </div>
@@ -190,7 +180,7 @@
         <!-- END: MainClipboardCard -->
 
         <!-- BEGIN: OuterSideNotesAndPolaroid -->
-        <div class="relative z-20 flex items-end justify-between w-full max-w-[390px] mt-2 px-1" data-purpose="floating-memorabilia">
+        <div class="relative z-20 flex items-end justify-between w-full max-w-[390px] mt-1.5 px-1" data-purpose="floating-memorabilia">
             <!-- Left: Romantic Couple Polaroid -->
             <div class="draggable-card-item bg-white p-1.5 pb-2 rounded-sm shadow-md border border-stone-200/80 transform -rotate-4 w-24 z-30" data-purpose="couple-polaroid" data-drag-id="couple-polaroid" data-rotation="rotate(-4deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(-4deg);">
                 <div class="w-full h-16 rounded-[2px] overflow-hidden relative shadow-inner">
@@ -215,7 +205,7 @@
         <!-- END: OuterSideNotesAndPolaroid -->
 
         <!-- BEGIN: Footer -->
-        <footer class="relative z-20 mt-2 flex items-center justify-center w-full" data-purpose="social-footer">
+        <footer class="relative z-20 mt-1.5 flex items-center justify-center w-full" data-purpose="social-footer">
             <div class="inline-flex items-center gap-2 bg-[#d7e6d5]/90 backdrop-blur-sm px-4 py-1 rounded-full border border-[#c1d6bf] shadow-sm">
                 <span class="font-handwriting font-bold text-stone-800 text-sm tracking-wide">
                     #RelivTogether
