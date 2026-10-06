@@ -1,6 +1,6 @@
-<main class="relative w-full max-w-[420px] bg-[#f7f2ea] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-[#eeddcb] sunlight-overlay flex flex-col items-center px-4 pt-6 pb-7 my-2 sm:my-6 reference-art" data-purpose="mobile-card-canvas" style="">
+<main class="relative w-full max-w-none bg-[#f7f2ea] overflow-hidden sunlight-overlay flex flex-col items-center justify-between px-3.5 pt-6 pb-4 reference-art h-full min-h-full" data-purpose="mobile-card-canvas">
         <!-- Atmospheric Dappled Shadows & Foliage Background Accents -->
-        <div aria-hidden="true" class="absolute -top-10 -left-10 w-36 h-36 opacity-35 pointer-events-none transform -rotate-12">
+        <div aria-hidden="true" class="absolute -top-6 -left-6 w-36 h-36 opacity-35 pointer-events-none transform -rotate-12">
             <svg class="w-full h-full filter blur-[0.4px]" fill="#4d693a" viewBox="0 0 100 100">
                 <path d="M10,80 Q30,40 85,20 C70,45 50,75 10,80 Z"></path>
                 <path d="M25,60 Q55,45 80,45 C65,65 40,75 25,60 Z" opacity="0.8"></path>
@@ -8,16 +8,16 @@
             </svg>
         </div>
         <!-- Top Right Coffee Cup Flat-Lay Element -->
-        <div class="draggable-card-item absolute -top-3 -right-4 w-28 h-28 rounded-full overflow-hidden shadow-xl border-4 border-[#d6ad84] z-10" data-drag-id="coffee-latte" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
+        <div class="draggable-card-item absolute -top-4 -right-4 w-32 h-32 rounded-full overflow-hidden shadow-xl border-4 border-[#d6ad84] z-10" data-drag-id="coffee-latte" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
             <img src="/assets/coffee-latte.jpg" alt="Cozy Latte Art" class="w-full h-full object-cover scale-110">
         </div>
         <!-- BEGIN: Top Section - Logo & Sticky Notes -->
-        <section class="w-full relative z-10 flex flex-col items-center mt-1" data-purpose="header-section">
+        <section class="w-full relative z-10 flex flex-col items-center mt-0.5" data-purpose="header-section">
             <!-- Sun rays sparkle top center -->
             <div class="text-[#dda035] text-lg leading-none -mb-1 select-none font-bold">☼</div>
             <!-- Reliv Logo Header -->
-            <header class="flex items-center justify-center gap-0.5 mb-2.5">
-                <h1 class="text-[34px] tracking-tight font-black leading-none flex items-baseline">
+            <header class="flex items-center justify-center gap-0.5 mb-2">
+                <h1 class="text-[38px] tracking-tight font-black leading-none flex items-baseline">
                     <span class="text-[#f26222]">Re</span><span class="text-[#141414]">l<span class="relative inline-block">ı<span class="absolute left-1/2" style="top: 0.08em; transform: translateX(-51%); width: 0.20em; height: 0.20em; background-color: #f26222; border-radius: 50%;"></span></span>v</span>
                     <span class="text-[10px] font-sans text-stone-500 self-start ml-0.5 mt-0.5">TM</span>
                 </h1>
@@ -31,7 +31,7 @@
                 <p id="note-top-right" class="editable-note font-hand text-[12px] text-stone-800 leading-tight font-medium p-0.5 rounded" data-default="A<br />Healthier<br />Me<br />Starts<br />Here ♡">A<br>Healthier<br>Me<br>Starts<br>Here <span class="text-stone-700">♡</span></p>
             </aside>
             <!-- Main Title Banner -->
-            <div class="mt-6 text-center">
+            <div class="mt-4 text-center">
                 <div class="flex items-center justify-center gap-1.5">
                     <span class="text-stone-600 font-hand text-base -rotate-6">♡</span>
                     <h2 class="font-heading text-2xl sm:text-[27px] tracking-wide text-stone-900 leading-none uppercase">
@@ -48,14 +48,14 @@
                     <span class="text-stone-700 text-sm font-black rotate-12 tracking-tighter">//</span>
                 </div>
                 <!-- Better Habits For Me Pill Banner (Editable with fallback) -->
-                <div class="draggable-card-item inline-flex items-center gap-1.5 bg-[#dbe4d5] text-[#2f3d2a] px-5 py-1 rounded-full mt-2 shadow-sm border border-[#c9d4c2] rotate-[-1deg] z-30" data-drag-id="note-pill" data-rotation="rotate(-1deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(-1deg);">
+                <div class="draggable-card-item inline-flex items-center gap-1.5 bg-[#dbe4d5] text-[#2f3d2a] px-5 py-1 rounded-full mt-1.5 shadow-sm border border-[#c9d4c2] rotate-[-1deg] z-30" data-drag-id="note-pill" data-rotation="rotate(-1deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(-1deg);">
                     <span id="note-pill" class="editable-note font-hand text-base font-semibold tracking-wide px-1 rounded" data-default="Better habits for me. ♡">Better habits for me. ♡</span>
                 </div>
             </div>
         </section>
         <!-- END: Top Section -->
         <!-- BEGIN: Central Paper Card (Check Sheet) -->
-        <article class="draggable-card-item relative w-full bg-[#fdfbf6] rounded-3xl mt-4 p-4 pt-5 shadow-paper border border-[#ede3cf] flex flex-col items-center z-10" data-purpose="health-check-card" data-drag-id="health-check-card" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
+        <article class="draggable-card-item relative w-full max-w-[390px] bg-[#fdfbf6] rounded-3xl mt-2.5 p-3.5 pt-4 shadow-paper border border-[#ede3cf] flex flex-col items-center z-10" data-purpose="health-check-card" data-drag-id="health-check-card" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
             <!-- Paperclip Decor on Top-Left -->
             <div class="absolute -top-3 left-7 w-4 h-9 paperclip z-20 pointer-events-none">
                 <div class="w-2.5 h-6 mx-auto mt-1 paperclip-inner"></div>
@@ -72,16 +72,16 @@
                 ♡
             </div>
             <!-- Field 1: "This check belongs to:" -->
-            <div class="w-full flex flex-col items-center mt-1">
-                <label class="font-sans text-[15px] font-bold text-stone-800 tracking-wide mb-1.5 cursor-pointer" for="owner-name">
+            <div class="w-full flex flex-col items-center mt-0.5">
+                <label class="font-sans text-[15px] font-bold text-stone-800 tracking-wide mb-1 cursor-pointer" for="owner-name">
                     This check belongs to:
                 </label>
-                <div class="w-full max-w-[270px] bg-[#f8dad9] rounded-2xl px-4 py-1.5 shadow-inner border border-[#f3c2c1]/80 flex flex-col items-center">
+                <div class="w-full max-w-[320px] bg-[#f8dad9] rounded-2xl px-4 py-1.5 shadow-inner border border-[#f3c2c1]/80 flex flex-col items-center">
                     <span data-field="name" class="hand-input w-full text-center text-xl font-bold py-0 h-7 border-b border-stone-800 focus:border-[#f26222] reference-value"></span>
                 </div>
             </div>
             <!-- Central Health Score Circular Badge & Surrounding Vignettes -->
-            <div class="relative w-full flex items-center justify-center my-3.5" data-purpose="score-badge-container">
+            <div class="relative w-full flex items-center justify-center my-2.5" data-purpose="score-badge-container">
                 <!-- Left Sub-Doodle: Smiling Sun & Affirmation -->
                 <div class="draggable-card-item absolute left-0 top-1/2 transform -translate-y-1/2 w-20 text-center pl-0.5 z-20" data-drag-id="sun-doodle" data-rotation="rotate(0deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(0deg);">
                     <div class="w-6 h-6 mx-auto mb-1 rounded-full bg-[#fde9b5] border border-[#f6cb76] flex items-center justify-center shadow-xs">
@@ -107,8 +107,6 @@
                             <span data-field="score" class="score-input text-4xl sm:text-[44px] font-black text-stone-900 w-20 text-center bg-transparent border-b-2 border-stone-800/40 focus:border-[#f26222] outline-none p-0 leading-none drop-shadow-sm select-all cursor-text hover:text-[#f26222] transition-colors reference-value"></span>
                             <span class="font-heading text-lg sm:text-xl font-black text-[#f26222] select-none leading-none">/ 100</span>
                         </div>
-                        <!-- Dynamic Vitality Status Pill -->
-                        
                     </div>
                 </div>
                 <!-- Right Botanical Leaf Sprig & Sticky Note -->
@@ -133,22 +131,23 @@
                     <span class="text-xs text-[#b87c14] font-bold">✧</span>
                 </div>
                 <!-- Win Input Pill Box -->
-                <div class="w-full max-w-[270px] bg-[#d9e5d4] rounded-2xl px-3 py-1.5 mt-1.5 shadow-inner border border-[#c3d5bd] flex items-center justify-between">
+                <div class="w-full max-w-[320px] bg-[#d9e5d4] rounded-2xl px-3 py-1.5 mt-1 shadow-inner border border-[#c3d5bd] flex items-center justify-between">
                     <span data-field="win" class="hand-input w-full text-base font-bold py-0 h-6 text-stone-800 reference-value"></span>
                     <span class="text-[#c8624e] text-sm font-hand ml-1">♡</span>
                 </div>
             </div>
             <!-- Bottom Banner: "Same me, a healthier tomorrow." -->
-            <div class="w-full max-w-[270px] bg-[#f8cfcb] rounded-2xl py-1 px-3 mt-3 text-center shadow-xs border border-[#f3b5af]">
+            <div class="w-full max-w-[320px] bg-[#f8cfcb] rounded-2xl py-1 px-3 mt-2 text-center shadow-xs border border-[#f3b5af]">
                 <p data-field="quote" class="font-script text-base font-bold text-stone-800 leading-snug">
                     Same me, a healthier tomorrow. <span class="text-[#d45640]">♡</span>
                 </p>
             </div>
-        <div class="reference-focus"><strong>My Next Focus</strong><span data-field="focus" class="reference-value"></span></div></article>
+            <div class="reference-focus"><strong>My Next Focus</strong><span data-field="focus" class="reference-value"></span></div>
+        </article>
         <!-- END: Central Paper Card -->
 
         <!-- BEGIN: FloatingMemorabiliaRow -->
-        <div class="relative z-20 flex items-end justify-between w-full mt-3 px-1 gap-1" data-purpose="floating-memorabilia">
+        <div class="relative z-20 flex items-end justify-between w-full max-w-[390px] mt-2 px-1 gap-1" data-purpose="floating-memorabilia">
             <!-- Left: Kraft Notebook Note (Editable with fallback) -->
             <div class="draggable-card-item relative w-24 bg-[#f5ede2] rounded-xl shadow-md border border-[#e1d5c2] rotate-[-3deg] flex flex-col p-2 z-30" data-drag-id="kraft-notebook" data-rotation="rotate(-3deg)" data-tx="0" data-ty="0" style="transform: translate(0px, 0px) rotate(-3deg);">
                 <div class="w-full border-b border-stone-300 h-2"></div>
@@ -177,7 +176,7 @@
         <!-- END: FloatingMemorabiliaRow -->
 
         <!-- BEGIN: Bottom Footer Note & Social Tags -->
-        <footer class="w-full mt-4 flex items-center justify-center gap-2 z-10" data-purpose="card-footer-tags">
+        <footer class="w-full mt-2.5 flex items-center justify-center gap-2 z-10" data-purpose="card-footer-tags">
             <!-- Tag 1: Hashtag badge -->
             <div class="bg-[#d2ded0] text-stone-800 px-3 py-1 rounded-full text-xs font-bold shadow-xs border border-[#bdccba]">
                 #MyRelivCheck
@@ -192,7 +191,7 @@
         <!-- END: Bottom Footer Note & Social Tags -->
 
         <!-- Decorative Warm Knit Blanket Texture Bottom-Right -->
-        <div aria-hidden="true" class="absolute -bottom-6 -right-6 w-24 h-24 rounded-tl-[50px] overflow-hidden shadow-inner opacity-75 pointer-events-none z-0 border border-[#ecdcc9]">
+        <div aria-hidden="true" class="absolute -bottom-6 -right-6 w-32 h-32 rounded-tl-[55px] overflow-hidden shadow-inner opacity-80 pointer-events-none z-0 border border-[#ecdcc9]">
             <img src="/assets/knit-blanket.jpg" alt="Cozy Knit Blanket" class="w-full h-full object-cover">
         </div>
-    </main>
+</main>

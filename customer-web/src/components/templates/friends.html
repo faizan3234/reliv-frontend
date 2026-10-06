@@ -1,18 +1,18 @@
-<main class="relative w-full max-w-[420px] bg-[#f7f2ea] rounded-[2.5rem] shadow-2xl overflow-hidden border-[6px] border-[#eeddcb] sunlight-overlay flex flex-col items-center px-4 pt-6 pb-7 my-2 sm:my-6 reference-art" data-purpose="mobile-card-canvas" style="">
+<main class="relative w-full max-w-none bg-[#f7f2ea] overflow-hidden sunlight-overlay flex flex-col items-center justify-between px-3.5 pt-6 pb-4 reference-art h-full min-h-full" data-purpose="mobile-card-canvas">
         <!-- BEGIN: BackgroundAestheticLayers -->
         <div aria-hidden="true" class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
             <!-- Top-right Leaves shadow & light -->
             <div class="absolute -top-10 -right-12 w-48 h-48 opacity-25 rounded-full bg-emerald-800 blur-2xl"></div>
             <!-- Latte Cup Top Right -->
-            <div class="draggable-card-item absolute top-[115px] -right-5 w-24 h-24 rounded-full overflow-hidden border-4 border-[#E8D4C0] shadow-md z-10" data-drag-id="coffee-latte" data-rotation="rotate(0deg)">
+            <div class="draggable-card-item absolute -top-4 -right-4 w-32 h-32 rounded-full overflow-hidden border-4 border-[#E8D4C0] shadow-md z-10" data-drag-id="coffee-latte" data-rotation="rotate(0deg)">
                 <img src="/assets/coffee-latte.jpg" alt="Cozy Latte" class="w-full h-full object-cover scale-110">
             </div>
             <!-- Left White Floral Accents (Baby's Breath) -->
-            <div class="absolute top-16 -left-8 w-24 h-32 rounded-full overflow-hidden opacity-60 pointer-events-none z-0">
+            <div class="absolute top-14 -left-6 w-24 h-32 rounded-full overflow-hidden opacity-60 pointer-events-none z-0">
                 <img src="/assets/botanical-flowers.jpg" alt="Baby's Breath" class="w-full h-full object-cover">
             </div>
             <!-- Bottom Right Cozy Knitted Blanket Texture Accent -->
-            <div class="absolute -bottom-8 -right-8 w-36 h-36 rounded-tl-[60px] overflow-hidden opacity-75 shadow-md border border-[#DDCBB8] z-0">
+            <div class="absolute -bottom-6 -right-6 w-32 h-32 rounded-tl-[60px] overflow-hidden opacity-75 shadow-md border border-[#DDCBB8] z-0">
                 <img src="/assets/knit-blanket.jpg" alt="Cozy Knit Blanket" class="w-full h-full object-cover">
             </div>
             <!-- Bottom Left Notebook Shadow -->
@@ -23,14 +23,14 @@
         <!-- BEGIN: MainContent -->
         <div class="relative z-10 flex flex-col items-center w-full">
             <!-- BEGIN: TopBrandingHeader -->
-            <header class="w-full relative flex flex-col items-center pt-1" data-purpose="brand-header">
+            <header class="w-full relative flex flex-col items-center pt-0.5" data-purpose="brand-header">
                 <!-- Top Left Sticky Note / Note text (Editable with fallback) -->
                 <div class="draggable-card-item absolute left-0 top-0 max-w-[95px] rotate-[-5deg] font-['Caveat'] text-[13px] leading-tight text-gray-800 z-30" data-purpose="left-glowup-note" data-drag-id="note-top-left" data-rotation="rotate(-5deg)">
                     <p id="note-top-left" class="editable-note p-0.5 rounded" data-default="Friends<br>who check in,<br>glow up. ♡">Friends<br>who check in,<br><span class="inline-block bg-[#FDE2D6]/80 px-1 rounded-sm">glow up.</span> <span class="inline-block text-base font-bold">♡</span></p>
                 </div>
                 <!-- Central Reliv Logo with Official Orange Tittle on i -->
                 <header class="flex items-center justify-center gap-0.5 -mt-0.5 mb-0.5">
-                    <h1 class="text-[32px] tracking-tight font-black leading-none flex items-baseline font-['Fredoka']">
+                    <h1 class="text-[36px] tracking-tight font-black leading-none flex items-baseline font-['Fredoka']">
                         <span class="text-[#f26222]">Re</span><span class="text-[#141414]">l<span class="relative inline-block">ı<span class="absolute left-1/2" style="top: 0.08em; transform: translateX(-51%); width: 0.20em; height: 0.20em; background-color: #f26222; border-radius: 50%;"></span></span>v</span>
                         <span class="text-[10px] font-sans text-stone-500 self-start ml-0.5 mt-0.5">TM</span>
                     </h1>
@@ -41,11 +41,11 @@
                     <p id="note-top-right" class="editable-note text-[14px] font-semibold tracking-wide p-0.5 rounded" data-default="Healthier<br>Friends<br>Happier<br>Us ♡">Healthier<br>Friends<br>Happier<br>Us <span class="font-bold">♡</span></p>
                 </div>
                 <!-- Title: OUR TODAY'S CHECK AT RELIV -->
-                <div class="mt-6 text-center">
+                <div class="mt-4 text-center">
                     <div class="relative inline-block">
                         <!-- Left doodle heart -->
                         <span class="absolute -left-6 top-1 text-black font-['Caveat'] text-xl font-bold">♡</span>
-                        <h1 class="text-[25px] sm:text-[27px] font-['Fredoka'] font-black tracking-tight leading-none text-charcoal">
+                        <h1 class="text-[26px] sm:text-[28px] font-['Fredoka'] font-black tracking-tight leading-none text-charcoal">
                             OUR TODAY'S<br>
                             <span class="flex items-center justify-center gap-1.5 tracking-normal mt-0.5">
                                 <!-- Sparkle doodles left -->
@@ -62,13 +62,13 @@
                         </h1>
                     </div>
                     <!-- Green Banner Badge: "Better habits with friends. ♡" (Editable with fallback) -->
-                    <p class="relative mt-1.5 mx-auto w-fit px-4 py-1 rounded-full bg-[#CCDDC7] text-[#2C4A34] font-['Caveat'] text-[18px] font-bold">Better habits with friends. ♡</p>
+                    <p class="relative mt-1 mx-auto w-fit px-4 py-1 rounded-full bg-[#CCDDC7] text-[#2C4A34] font-['Caveat'] text-[18px] font-bold">Better habits with friends. ♡</p>
                 </div>
             </header>
             <!-- END: TopBrandingHeader -->
 
             <!-- BEGIN: CentralClipboardCard -->
-            <section class="draggable-card-item w-full relative mt-3 bg-[#FFFCF8] rounded-[30px] p-4 pt-5 pb-4 border-[1.5px] border-[#DFD3C4] shadow-card flex flex-col gap-3" data-purpose="clipboard-sheet" data-drag-id="clipboard-sheet" data-rotation="rotate(0deg)">
+            <section class="draggable-card-item w-full max-w-[390px] relative mt-2 bg-[#FFFCF8] rounded-[28px] p-3.5 pt-4 pb-3 border-[1.5px] border-[#DFD3C4] shadow-card flex flex-col gap-2.5" data-purpose="clipboard-sheet" data-drag-id="clipboard-sheet" data-rotation="rotate(0deg)">
                 <!-- Gold paperclip at top-left -->
                 <div class="absolute -top-3 left-7 w-5 h-9 border-[2.5px] border-[#C89B58] rounded-full rotate-[-12deg] z-20 pointer-events-none shadow-sm">
                 </div>
@@ -78,11 +78,11 @@
 
                 <!-- Section: This check belongs to -->
                 <div class="w-full text-center">
-                    <p class="font-['Caveat'] text-[19px] font-semibold text-gray-800 -mb-1">This check belongs to:</p>
+                    <p class="font-['Caveat'] text-[19px] font-semibold text-gray-800 -mb-0.5">This check belongs to:</p>
                     <!-- Soft Pink Box for Me & Friend names -->
-                    <div class="relative mt-1 bg-[#FDE2DB] rounded-2xl px-4 py-2 text-left font-['Caveat'] text-[17px]">
+                    <div class="relative mt-1 max-w-[330px] mx-auto w-full bg-[#FDE2DB] rounded-2xl px-4 py-1.5 text-left font-['Caveat'] text-[17px]">
                         <!-- Decorative heart on right edge -->
-                        <div class="absolute right-2.5 top-3 flex gap-0.5 text-[#F28277] text-lg select-none">
+                        <div class="absolute right-2.5 top-2.5 flex gap-0.5 text-[#F28277] text-lg select-none">
                             <span class="">♡</span>
                             <span class="">♡</span>
                         </div>
@@ -108,33 +108,28 @@
                     </div>
 
                     <!-- Dual Circular Score Badges with Dynamic Range Indicators -->
-                    <div class="w-full flex items-center justify-around px-1 mt-1">
+                    <div class="w-full flex items-center justify-around px-1 mt-0.5">
                         <!-- Left Circle: Me -->
                         <div class="flex flex-col items-center">
                             <div id="me-score-circle" class="w-24 h-24 rounded-full border-[3px] border-[#68b663] bg-[#FFF8EB] flex flex-col items-center justify-center relative shadow-sm transition-all duration-300">
                                 <!-- Sun burst doodle accents -->
                                 <div class="absolute -top-1.5 left-3 text-xs text-[#E59740]">╲</div>
                                 <div class="absolute -top-1.5 right-3 text-xs text-[#E59740]">╱</div>
-                                <span class="font-['Fredoka'] font-bold text-[17px] text-gray-800 mt-1">Me</span>
+                                <span class="font-['Fredoka'] font-bold text-[17px] text-gray-800 mt-0.5">Me</span>
                                 <div class="flex items-baseline mt-0.5">
                                     <span data-field="score" class="w-11 text-center font-['Fredoka'] font-black text-xl text-gray-900 bg-transparent border-b-2 border-charcoal/50 p-0 h-6 focus:border-[#f26222] reference-value"></span>
                                     <span class="font-['Fredoka'] font-bold text-sm text-gray-700 ml-0.5">/100</span>
                                 </div>
                             </div>
-                            <!-- Me Dynamic Vitality Pill -->
-                            
                         </div>
-
-                        <!-- Right Circle: Friend -->
-                        
                     </div>
                     <!-- Small center heart beneath circles -->
-                    <div class="text-[#D87D75] text-xs mt-1">♡</div>
+                    <div class="text-[#D87D75] text-xs mt-0.5">♡</div>
                 </div>
                 <!-- END: HealthScoresSection -->
 
                 <!-- BEGIN: WinsAndHabitsSection -->
-                <div class="flex flex-col gap-2 w-full mt-0.5">
+                <div class="flex flex-col gap-1.5 w-full mt-0.5">
                     <!-- Today's Win Header + Input Pill -->
                     <div class="flex flex-col items-center w-full">
                         <div class="flex items-center gap-1.5">
@@ -144,9 +139,9 @@
                             </div>
                             <span class="text-[#D7943A] text-xs">✦</span>
                         </div>
-                        <div class="relative w-full mt-1">
-                            <span data-field="win" class="w-full bg-[#D6E3D1] text-gray-800 rounded-full py-2 px-4 pr-8 font-['Caveat'] text-[17px] font-bold border-none shadow-inner focus:ring-2 focus:ring-[#8EAA86] reference-value"></span>
-                            <span class="absolute right-3.5 top-2 text-[#E77063] font-['Caveat'] text-lg font-bold">♡</span>
+                        <div class="relative max-w-[330px] mx-auto w-full mt-0.5">
+                            <span data-field="win" class="w-full bg-[#D6E3D1] text-gray-800 rounded-full py-1.5 px-4 pr-8 font-['Caveat'] text-[17px] font-bold border-none shadow-inner focus:ring-2 focus:ring-[#8EAA86] reference-value"></span>
+                            <span class="absolute right-3.5 top-1.5 text-[#E77063] font-['Caveat'] text-lg font-bold">♡</span>
                         </div>
                     </div>
                     <!-- Our Habit Header + Input Pill -->
@@ -154,14 +149,14 @@
                         <div class="brush-pill-pink px-4 py-0.5 font-['Fredoka'] font-bold text-[16px] text-gray-800">
                             Our Habit:
                         </div>
-                        <div class="relative w-full mt-1">
-                            <span data-field="focus" class="w-full bg-[#FCE2DF] text-gray-800 rounded-full py-2 px-4 pr-8 font-['Caveat'] text-[17px] font-bold border-none shadow-inner focus:ring-2 focus:ring-[#ECA39A] reference-value"></span>
-                            <span class="absolute right-3.5 top-2 text-[#E77063] font-['Caveat'] text-lg font-bold">♡</span>
+                        <div class="relative max-w-[330px] mx-auto w-full mt-0.5">
+                            <span data-field="focus" class="w-full bg-[#FCE2DF] text-gray-800 rounded-full py-1.5 px-4 pr-8 font-['Caveat'] text-[17px] font-bold border-none shadow-inner focus:ring-2 focus:ring-[#ECA39A] reference-value"></span>
+                            <span class="absolute right-3.5 top-1.5 text-[#E77063] font-['Caveat'] text-lg font-bold">♡</span>
                         </div>
                     </div>
                     <!-- Cheering Each Other On Pill Banner -->
-                    <div class="mt-1 w-full flex justify-center">
-                        <div class="brush-pill-green px-4 py-1 flex items-center justify-center gap-1 font-['Caveat'] text-[18px] font-bold text-[#233F2B] shadow-sm">
+                    <div class="mt-0.5 w-full flex justify-center">
+                        <div class="brush-pill-green px-4 py-0.5 flex items-center justify-center gap-1 font-['Caveat'] text-[17px] font-bold text-[#233F2B] shadow-sm">
                             <span class="text-xs">˗ˏˋ</span>
                             <span data-field="quote">Cheering each other on.</span>
                             <span class="text-base ml-0.5 font-black">♡</span>
@@ -174,9 +169,9 @@
             <!-- END: CentralClipboardCard -->
 
             <!-- BEGIN: BottomFloatingNotesAndMemorabilia -->
-            <div class="relative z-20 flex items-end justify-between w-full mt-3 px-0.5 gap-1" data-purpose="floating-memorabilia">
+            <div class="relative z-20 flex items-end justify-between w-full max-w-[390px] mt-2 px-0.5 gap-1" data-purpose="floating-memorabilia">
                 <!-- Left: Spiral Notebook Note -->
-                <div class="draggable-card-item relative w-28 bg-[#FFF8EE] border border-[#D5C2AF] rounded-r-xl p-2 pt-2.5 shadow-md rotate-[-3deg] z-30 font-['Caveat'] text-center" data-drag-id="spiral-note" data-rotation="rotate(-3deg)">
+                <div class="draggable-card-item relative w-28 bg-[#FFF8EE] border border-[#D5C2AF] rounded-r-xl p-2 pt-2 shadow-md rotate-[-3deg] z-30 font-['Caveat'] text-center" data-drag-id="spiral-note" data-rotation="rotate(-3deg)">
                     <div class="absolute -left-1.5 top-0 bottom-0 flex flex-col justify-around py-1">
                         <div class="w-2.5 h-1.5 bg-[#4A3C31] rounded-full"></div>
                         <div class="w-2.5 h-1.5 bg-[#4A3C31] rounded-full"></div>
@@ -210,7 +205,7 @@
             <!-- END: BottomFloatingNotesAndMemorabilia -->
 
             <!-- BEGIN: BottomSocialFooter -->
-            <footer class="mt-4 flex items-center justify-center gap-2 z-10 w-full" data-purpose="card-footer">
+            <footer class="mt-2.5 flex items-center justify-center gap-2 z-10 w-full" data-purpose="card-footer">
                 <div class="bg-[#D3E3CE] px-3.5 py-1 rounded-full text-charcoal font-['Fredoka'] font-bold text-[14px] shadow-sm">
                     #RelivFriends
                 </div>
@@ -222,7 +217,6 @@
             </footer>
             <!-- END: BottomSocialFooter -->
 
-
         </div>
         <!-- END: MainContent -->
-    </main>
+</main>

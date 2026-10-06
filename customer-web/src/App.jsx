@@ -5,7 +5,7 @@ import { Header } from './components/Header';
 import { StartPage } from './pages/Start/StartPage';
 import { PaymentV2Page } from './pages/PaymentV2/PaymentV2Page';
 import { ErrorPage } from './pages/Error/ErrorPage';
-import { extractPaymentPackage, getPendingVerification, getPaymentRecovery } from './services/session';
+import { extractPaymentPackage, getPendingVerification, getPaymentRecovery, getPaidSession } from './services/session';
 
 export function App() {
   const [scanning, setScanning] = useState(window.location.pathname === '/scan');
@@ -20,21 +20,24 @@ export function App() {
     );
   }
 
-  // Detect Payment V2 URL route /pay, #p=..., active pending verification, or stored recovery session
+  // Detect Payment V2 URL route /pay, #p=..., active pending verification, stored recovery session, or active 3-min paid session
   const pendingVerification = getPendingVerification();
   const paymentRecovery = getPaymentRecovery();
+  const paidSession = getPaidSession();
   const hasPackage = Boolean(
     state.encryptedPackage ||
     extractPaymentPackage() ||
     pendingVerification ||
-    paymentRecovery?.encryptedPackage
+    paymentRecovery?.encryptedPackage ||
+    paidSession?.confirmationCode
   );
   const isPayRoute = typeof window !== 'undefined' && (
     window.location.pathname.startsWith('/pay') ||
     hasPackage ||
     state.paymentState === 'PAYMENT_V2_FLOW' ||
     Boolean(pendingVerification) ||
-    Boolean(paymentRecovery)
+    Boolean(paymentRecovery) ||
+    Boolean(paidSession)
   );
 
   const renderActiveScreen = () => {

@@ -1,19 +1,98 @@
-.story-preview-container { width:100%; max-width:390px; margin:0 auto; border-radius:18px; overflow:hidden; background:#f7f2ea; position:relative; }
-.story-preview-inner { width:1080px; height:1920px; transform-origin:top left; position:absolute; top:0; left:0; pointer-events:none; }
-.story-card { width:1080px; height:1920px; position:relative; overflow:hidden; background:#f7f2ea; color:#292524; }
-.reference-position { position:absolute; top:0; left:0; width:420px; transform-origin:top left; }
-.reliv-reference .reference-art { width:420px!important; max-width:none!important; margin:0!important; box-sizing:border-box; font-family:'Quicksand',sans-serif; }
-.reliv-reference .reference-value { display:block; min-width:0; height:auto!important; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
-.reliv-reference [data-field="name"], .reliv-reference [data-field="partner"] { font-family:'Caveat',cursive; font-size:20px; flex:1 1 0%; }
-.reliv-reference [data-field="score"] { white-space:nowrap; }
-.reliv-reference .reference-focus { width:100%; margin-top:10px; text-align:center; font-family:'Patrick Hand',cursive; }
-.reliv-reference .reference-focus span { background:#fde8e3; padding:8px; border-radius:12px; }
-.reliv-reference .reference-quote { margin-top:12px; text-align:center; font-family:'Caveat',cursive; font-size:18px; }
-.reliv-reference img { object-fit:cover; }
-
-/* Reserve room for wrapped names and keep labels clear in canvas exports. */
-.reliv-reference [data-field="name"], .reliv-reference [data-field="partner"] { padding:3px 4px 5px; line-height:1.4; }
-.reliv-reference [data-field="win"], .reliv-reference [data-field="focus"] { line-height:1.5; }
-.reliv-reference h4 { line-height:1.5; }
-
-.reliv-reference .reference-art { min-height:0!important; }
+.story-preview-container {
+  width: 100%;
+  max-width: 390px;
+  margin: 0 auto;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #f7f2ea;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+.story-preview-inner {
+  width: 1080px;
+  height: 1920px;
+  transform-origin: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.story-card {
+  width: 1080px;
+  height: 1920px;
+  position: relative;
+  overflow: hidden;
+  background: #f7f2ea;
+  color: #292524;
+}
+.reference-position {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 420px;
+  height: 746.67px;
+  transform-origin: top left;
+  transform: scale(2.57142857);
+}
+.reliv-reference .reference-art {
+  width: 420px !important;
+  height: 746.67px !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box;
+  font-family: 'Quicksand', sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  position: relative;
+}
+.reliv-reference .reference-value {
+  display: block;
+  min-width: 0;
+  height: auto !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+.reliv-reference [data-field="name"],
+.reliv-reference [data-field="partner"] {
+  font-family: 'Caveat', cursive;
+  font-size: 20px;
+  flex: 1 1 0%;
+  padding: 2px 4px 4px;
+  line-height: 1.35;
+}
+.reliv-reference [data-field="score"] {
+  white-space: nowrap;
+}
+.reliv-reference .reference-focus {
+  width: 100%;
+  margin-top: 4px;
+  text-align: center;
+  font-family: 'Patrick Hand', cursive;
+}
+.reliv-reference .reference-focus span {
+  background: #fde8e3;
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+.reliv-reference .reference-quote {
+  margin-top: 6px;
+  text-align: center;
+  font-family: 'Caveat', cursive;
+  font-size: 18px;
+}
+.reliv-reference img {
+  object-fit: cover;
+}
+.reliv-reference [data-field="win"],
+.reliv-reference [data-field="focus"] {
+  line-height: 1.4;
+}
+.reliv-reference h4 {
+  line-height: 1.4;
+}

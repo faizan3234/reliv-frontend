@@ -14,10 +14,9 @@ export function PaymentScanner({ onClose }) {
   const [failed, setFailed] = useState(false);
   const [flash, setFlash] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
-  const [imageBusy, setImageBusy] = useState(false);
 
   const rejected = useRef({ value: null, count: 0 });
-  const accept = (value, fromPhoto = false) => {
+  const accept = (value) => {
     if (!mounted.current || accepted.current) return;
     try {
       const path = paymentPathFromQr(value, window.location.origin);
@@ -32,7 +31,7 @@ export function PaymentScanner({ onClose }) {
       const last = rejected.current;
       rejected.current = { value, count: last.value === value ? last.count + 1 : 1 };
       // A noisy camera frame is not evidence that the kiosk QR is invalid.
-      if (fromPhoto || rejected.current.count >= 3) setError(err.message);
+      if (rejected.current.count >= 3) setError(err.message);
       else setError('');
     }
   };
@@ -42,7 +41,7 @@ export function PaymentScanner({ onClose }) {
     setFailed(false); setError(''); setFlash(false); setFlashOn(false);
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       setFailed(true); setStatus('Camera unavailable');
-      setError('Open Reliv over HTTPS in Safari or Chrome, or choose a QR photo below.');
+      setError('Open Reliv over HTTPS in Safari or Chrome.');
       return;
     }
     const instance = new QrScanner(video.current, result => {
@@ -75,7 +74,7 @@ export function PaymentScanner({ onClose }) {
     }).catch(() => {
       if (disposed) return;
       setFailed(true); setStatus('Camera could not start');
-      setError('Allow camera access in your browser settings, then retry. If the camera is busy, close other camera apps. You can also choose a QR photo.');
+      setError('Allow camera access in your browser settings, then retry. If the camera is busy, close other camera apps.');
     });
     // Never keep a camera running while the app is backgrounded or in checkout.
     const pause = () => { instance.stop(); setStatus('Camera paused'); setFlashOn(false); };
@@ -98,18 +97,6 @@ export function PaymentScanner({ onClose }) {
     };
   }, [attempt]);
 
-  const readImage = async event => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file || imageBusy || accepted.current) return;
-    setImageBusy(true); setError('');
-    try {
-      const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
-      accept(result.data, true);
-    } catch { if (mounted.current) setError('No readable QR found. Choose a clear photo containing the entire kiosk QR.'); }
-    finally { if (mounted.current) setImageBusy(false); }
-  };
-
   return <section className="space-y-4" aria-label="Reliv payment QR scanner">
     <div className="flex items-center justify-between gap-3">
       <h1 className="text-xl font-bold">Scan kiosk QR</h1>
@@ -128,11 +115,7 @@ export function PaymentScanner({ onClose }) {
         try { await scanner.current?.toggleFlash(); setFlashOn(Boolean(scanner.current?.isFlashOn())); }
         catch { setError('Torch is unavailable on this camera.'); }
       }}>{flashOn ? 'Turn off torch' : 'Turn on torch'}</button>}
-      <label className="min-h-11 px-4 py-3 rounded-xl border border-orange-200 bg-white cursor-pointer">
-        {imageBusy ? 'Reading photo…' : 'Choose QR photo'}
-        <input aria-label="Choose QR photo" type="file" accept="image/*" className="block max-w-full mt-2 text-xs" disabled={imageBusy} onChange={readImage} />
-      </label>
     </div>
-    <p className="text-xs text-slate-500">Camera permission is required for live scanning. Images are decoded on your device. Internet is needed to pay.</p>
+    <p className="text-xs text-slate-500">Camera permission is required for live scanning. Frames are decoded on your device. Internet is needed to pay.</p>
   </section>;
 }

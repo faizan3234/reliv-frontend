@@ -17,6 +17,9 @@ import {
   savePaymentRecovery,
   getPaymentRecovery,
   clearPaymentRecovery,
+  savePaidSession,
+  getPaidSession,
+  clearPaidSession,
 } from '../../services/session';
 import { Button } from '../../components/Button';
 import { Logo } from '../../components/Logo';
@@ -29,16 +32,40 @@ export function PaymentV2Page({ sessionStore }) {
 function PaymentAttempt({ sessionStore }) {
   const { state, updateState, resetSession } = sessionStore;
 
-  // Extract encrypted package from URL hash first, then state, then recovery
+  // Extract encrypted package from URL hash first, then state, then recovery, then active paid session
   const urlPackage = extractPaymentPackage();
   const recoverySession = getPaymentRecovery(urlPackage || state.encryptedPackage);
-  const encryptedPackage = urlPackage || state.encryptedPackage || recoverySession?.encryptedPackage;
+  const activePaidSession = !urlPackage ? getPaidSession() : getPaidSession(urlPackage);
+  const encryptedPackage = urlPackage || state.encryptedPackage || recoverySession?.encryptedPackage || activePaidSession?.encryptedPackage;
 
-  const [loadingState, setLoadingState] = useState('INIT'); // 'INIT' | 'ORDER_READY' | 'PAYING' | 'VERIFYING' | 'SUCCESS' | 'ERROR' | 'IDLE'
-  const [orderData, setOrderData] = useState(null);
-  const [confirmationCode, setConfirmationCode] = useState(''); // in-memory only; never stored in localStorage
+  const [loadingState, setLoadingState] = useState(() => {
+    if (!urlPackage && activePaidSession?.confirmationCode) return 'SUCCESS';
+    return 'INIT';
+  });
+  const [orderData, setOrderData] = useState(() => {
+    if (!urlPackage && activePaidSession) {
+      return {
+        requestId: activePaidSession.requestId,
+        orderId: activePaidSession.orderId,
+        amount: activePaidSession.amount,
+        serviceType: activePaidSession.serviceType,
+      };
+    }
+    return null;
+  });
+  const [confirmationCode, setConfirmationCode] = useState(() => {
+    if (!urlPackage && activePaidSession?.confirmationCode) {
+      return activePaidSession.confirmationCode;
+    }
+    return '';
+  });
   const [errorMessage, setErrorMessage] = useState('');
-  const [activeRequestId, setActiveRequestId] = useState('');
+  const [activeRequestId, setActiveRequestId] = useState(() => {
+    if (!urlPackage && activePaidSession?.requestId) {
+      return activePaidSession.requestId;
+    }
+    return '';
+  });
 
   // Receipt state: 'idle' | 'sending' | 'sent' | 'already_sent' | 'error'
   const [storyCard, setStoryCard] = useState(null);
@@ -54,6 +81,8 @@ function PaymentAttempt({ sessionStore }) {
   const isSyncingRef = useRef(false);
   const checkoutOpenRef = useRef(false);
   const emailSendingRef = useRef(false);
+  const orderDataRef = useRef(orderData);
+  orderDataRef.current = orderData;
 
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -88,6 +117,15 @@ function PaymentAttempt({ sessionStore }) {
           // Success: Clear temporary recovery state only AFTER confirmation code is received
           clearPendingVerification(payload.requestId);
           clearPaymentRecovery(encryptedPackage);
+          savePaidSession({
+            confirmationCode: code,
+            requestId: verifyRes.requestId || payload.requestId || '',
+            orderId: payload.orderId || '',
+            encryptedPackage,
+            amount: payload.amount || orderDataRef.current?.amount || 0,
+            serviceType: payload.serviceType || orderDataRef.current?.serviceType || 'HEALTH_CHECKUP',
+            storySummary: verifyRes.raw?.storySummary || null,
+          });
           setConfirmationCode(code);
           setStorySummary(verifyRes.raw?.storySummary || null);
           setOrderData((prev) => ({
@@ -147,6 +185,15 @@ function PaymentAttempt({ sessionStore }) {
         if (/^\d{4}$/.test(returnedCode)) {
           clearPendingVerification(order.requestId);
           clearPaymentRecovery(encryptedPackage);
+          savePaidSession({
+            confirmationCode: returnedCode,
+            requestId: order.requestId,
+            orderId: order.orderId,
+            encryptedPackage,
+            amount: order.amount,
+            serviceType: order.serviceType,
+            storySummary: order.raw?.storySummary || null,
+          });
           setConfirmationCode(returnedCode);
           setStorySummary(order.raw?.storySummary || null);
           setLoadingState('SUCCESS');
@@ -162,7 +209,17 @@ function PaymentAttempt({ sessionStore }) {
             if (recoverRes.paid === true && /^\d{4}$/.test(String(recoverRes.confirmationCode || ''))) {
               clearPendingVerification(order.requestId);
               clearPaymentRecovery(encryptedPackage);
-              setConfirmationCode(String(recoverRes.confirmationCode));
+              const recoveredCode = String(recoverRes.confirmationCode);
+              savePaidSession({
+                confirmationCode: recoveredCode,
+                requestId: order.requestId,
+                orderId: order.orderId,
+                encryptedPackage,
+                amount: order.amount,
+                serviceType: order.serviceType,
+                storySummary: recoverRes.raw?.storySummary || recoverRes.storySummary || null,
+              });
+              setConfirmationCode(recoveredCode);
               setStorySummary(recoverRes.raw?.storySummary || recoverRes.storySummary || null);
               setLoadingState('SUCCESS');
               return;
@@ -422,7 +479,23 @@ function PaymentAttempt({ sessionStore }) {
     }
   };
 
+  // 3-minute hard deadline: clear session when user stays for 3 mins after payment
+  useEffect(() => {
+    if (loadingState !== 'SUCCESS') return;
+    const interval = setInterval(() => {
+      const current = getPaidSession(encryptedPackage);
+      if (!current) {
+        clearPaidSession(encryptedPackage);
+        setConfirmationCode('');
+        resetSession();
+        setLoadingState('IDLE');
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [loadingState, encryptedPackage, resetSession]);
+
   const handleDone = () => {
+    clearPaidSession(encryptedPackage);
     clearPendingVerification(activeRequestId || orderData?.requestId);
     clearPaymentRecovery(encryptedPackage);
     resetSession();
