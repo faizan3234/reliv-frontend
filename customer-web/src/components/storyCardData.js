@@ -1,6 +1,6 @@
 // Data for the 1080 × 1920 Instagram Story card shown under the paid kiosk code.
-// Only verified report values are shown. Anything missing is hidden, never
-// replaced with placeholders such as "—", "Not linked" or invented scores.
+// Only verified report scores are shown; a missing score is displayed as —.
+// A second person’s name never implies access to their health report.
 
 export const STORY_WIDTH = 1080;
 export const STORY_HEIGHT = 1920;

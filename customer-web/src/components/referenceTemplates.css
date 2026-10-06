@@ -1,0 +1,280 @@
+
+        .reliv-reference[data-design="solo"] .reference-art {
+            background-color: #f3ede2;
+            background-image:
+                radial-gradient(ellipse at 80% 10%, rgba(255, 255, 255, 0.75) 0%, transparent 60%),
+                radial-gradient(circle at 10% 85%, rgba(230, 215, 195, 0.5) 0%, transparent 50%),
+                linear-gradient(135deg, #f5efe6 0%, #ede3d4 100%);
+            min-height: 100vh;
+            font-family: 'Quicksand', sans-serif;
+        }
+
+        /* Soft natural dappled sunlight overlays */
+        .reliv-reference[data-design="solo"] .sunlight-overlay {
+            background: radial-gradient(circle at 25% 15%, rgba(255, 255, 255, 0.45) 0%, transparent 45%),
+                radial-gradient(circle at 75% 70%, rgba(210, 185, 160, 0.15) 0%, transparent 50%);
+        }
+
+        /* Washi tape textured strip */
+        .reliv-reference[data-design="solo"] .washi-tape {
+            background: rgba(235, 190, 180, 0.75);
+            backdrop-filter: blur(1px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            clip-path: polygon(3% 0%, 97% 0%, 100% 100%, 0% 100%);
+        }
+    
+
+        /* Realistic interactive inputs with pen aesthetic */
+        .reliv-reference[data-design="solo"] .hand-input {
+            font-family: 'Caveat', cursive;
+            color: #27221f;
+            background: transparent;
+            border: none;
+            outline: none;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .reliv-reference[data-design="solo"] .hand-input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        .reliv-reference[data-design="solo"] .hand-input::placeholder {
+            color: #9c9187;
+            opacity: 0.6;
+            font-family: 'Patrick Hand', cursive;
+        }
+
+        /* Prevent number spinners and ensure clean high-legibility typography */
+        .reliv-reference[data-design="solo"] input[type="number"]::-webkit-inner-spin-button,
+        .reliv-reference[data-design="solo"] input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .reliv-reference[data-design="solo"] input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .reliv-reference[data-design="solo"] .score-input {
+            font-family: 'Fredoka', 'Quicksand', sans-serif;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Metallic paperclip */
+        .reliv-reference[data-design="solo"] .paperclip {
+            border: 3px solid #b59f77;
+            border-bottom: none;
+            border-radius: 14px 14px 0 0;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        .reliv-reference[data-design="solo"] .paperclip-inner {
+            border: 3px solid #9e8864;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+        }
+
+        /* Editable handwritten notes styling */
+        .reliv-reference[data-design="solo"] .editable-note {
+            cursor: text;
+            transition: all 0.15s ease;
+            outline: none;
+        }
+        .reliv-reference[data-design="solo"] .editable-note:hover {
+            outline: 1.5px dashed rgba(242, 98, 34, 0.4);
+            border-radius: 4px;
+        }
+        .reliv-reference[data-design="solo"] .editable-note:focus {
+            outline: 2px solid #f26222;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+        }
+    
+
+        /* Hand-drawn style lines and accents */
+        .reliv-reference[data-design="friends"] .brush-pill-green {
+            background: #D5E2D0;
+            border-radius: 9999px;
+        }
+
+        .reliv-reference[data-design="friends"] .brush-pill-yellow {
+            background: #FFE3AB;
+            border-radius: 9999px;
+        }
+
+        .reliv-reference[data-design="friends"] .brush-pill-pink {
+            background: #F8D3CE;
+            border-radius: 9999px;
+        }
+
+        /* Subtle paper texture simulation */
+        .reliv-reference[data-design="friends"] .paper-surface {
+            background: radial-gradient(circle at 50% 30%, #FFFDF9 0%, #FAF3EA 100%);
+        }
+
+        /* Hand-drawn border simulation */
+        .reliv-reference[data-design="friends"] .sketch-border {
+            border: 1.5px solid rgba(180, 160, 140, 0.45);
+            border-radius: 28px;
+        }
+
+        /* Remove default appearance for clean interactive handwritten look */
+        .reliv-reference[data-design="friends"] input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        .reliv-reference[data-design="friends"] .scribble-underline {
+            border-bottom: 1.5px solid #2A2A2A;
+        }
+
+        .reliv-reference[data-design="friends"] input[type="number"]::-webkit-inner-spin-button,
+        .reliv-reference[data-design="friends"] input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .reliv-reference[data-design="friends"] input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* Soft natural dappled sunlight overlays */
+        .reliv-reference[data-design="friends"] .sunlight-overlay {
+            background: radial-gradient(circle at 25% 15%, rgba(255, 255, 255, 0.45) 0%, transparent 45%),
+                radial-gradient(circle at 75% 70%, rgba(210, 185, 160, 0.15) 0%, transparent 50%);
+        }
+
+        /* Editable handwritten notes styling */
+        .reliv-reference[data-design="friends"] .editable-note {
+            cursor: text;
+            transition: all 0.15s ease;
+            outline: none;
+        }
+        .reliv-reference[data-design="friends"] .editable-note:hover {
+            outline: 1.5px dashed rgba(242, 98, 34, 0.4);
+            border-radius: 4px;
+        }
+        .reliv-reference[data-design="friends"] .editable-note:focus {
+            outline: 2px solid #f26222;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+        }
+    
+
+        .reliv-reference[data-design="couple"] .font-handwriting {
+            font-family: 'Caveat', cursive;
+        }
+
+        .reliv-reference[data-design="couple"] .font-display {
+            font-family: 'Fredoka', 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .reliv-reference[data-design="couple"] .font-round {
+            font-family: 'Quicksand', sans-serif;
+        }
+
+        .reliv-reference[data-design="couple"] input[type="number"]::-webkit-inner-spin-button,
+        .reliv-reference[data-design="couple"] input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .reliv-reference[data-design="couple"] input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    
+
+        /* Flat-lay warm background styling with subtle organic lighting & dapples */
+        .reliv-reference[data-design="couple"] .flatlay-bg {
+            background-color: #f7ede2;
+            background-image:
+                radial-gradient(circle at 10% 8%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 38%),
+                radial-gradient(circle at 90% 12%, rgba(255, 235, 215, 0.6) 0%, rgba(255, 245, 235, 0) 30%),
+                radial-gradient(circle at 50% 50%, #fcf7f2 0%, #f6e8da 100%);
+        }
+
+        /* Paper texture & subtle drop shadow */
+        .reliv-reference[data-design="couple"] .clipboard-paper {
+            background: #fffdf9;
+            box-shadow: 0 16px 36px -10px rgba(139, 94, 60, 0.16), 0 0 0 1px rgba(222, 197, 172, 0.45);
+            border-radius: 28px;
+        }
+
+        /* Paper clip styling */
+        .reliv-reference[data-design="couple"] .paper-clip {
+            width: 14px;
+            height: 38px;
+            border: 3px solid #b8915b;
+            border-radius: 9999px;
+            position: absolute;
+            top: -12px;
+            left: 36px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+            z-index: 25;
+        }
+
+        .reliv-reference[data-design="couple"] .paper-clip::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 2px;
+            right: 2px;
+            bottom: 6px;
+            border: 2px solid #b8915b;
+            border-radius: 9999px;
+        }
+
+        /* Washi tape strips */
+        .reliv-reference[data-design="couple"] .washi-tape-pink {
+            background: rgba(247, 198, 196, 0.75);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        .reliv-reference[data-design="couple"] .washi-tape-green {
+            background: rgba(188, 206, 185, 0.75);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Brush stroke pill tags */
+        .reliv-reference[data-design="couple"] .brush-pill-orange {
+            background: linear-gradient(135deg, #ffd3a5 0%, #fedac2 100%);
+        }
+
+        .reliv-reference[data-design="couple"] .brush-pill-pink {
+            background: #fde1dd;
+        }
+
+        .reliv-reference[data-design="couple"] .brush-pill-green {
+            background: #d8e5d6;
+        }
+
+        .reliv-reference[data-design="couple"] .brush-pill-yellow {
+            background: #fde8b3;
+        }
+
+        /* Input focus styling */
+        .reliv-reference[data-design="couple"] input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        /* Soft natural dappled sunlight overlays */
+        .reliv-reference[data-design="couple"] .sunlight-overlay {
+            background: radial-gradient(circle at 25% 15%, rgba(255, 255, 255, 0.45) 0%, transparent 45%),
+                radial-gradient(circle at 75% 70%, rgba(210, 185, 160, 0.15) 0%, transparent 50%);
+        }
+
+        /* Editable handwritten notes styling */
+        .reliv-reference[data-design="couple"] .editable-note {
+            cursor: text;
+            transition: all 0.15s ease;
+            outline: none;
+        }
+        .reliv-reference[data-design="couple"] .editable-note:hover {
+            outline: 1.5px dashed rgba(242, 98, 34, 0.4);
+            border-radius: 4px;
+        }
+        .reliv-reference[data-design="couple"] .editable-note:focus {
+            outline: 2px solid #f26222;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+        }
+    

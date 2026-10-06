@@ -49,7 +49,8 @@ export function getPaymentQrConfig(value) {
   if (!url) return null;
   return {
     value: url,
-    level: new TextEncoder().encode(url).length <= PAYMENT_QR_MEDIUM_BYTES ? 'M' : 'L',
+    // Dense offline packages benefit from larger modules; keep M for short links.
+    level: new TextEncoder().encode(url).length <= 1200 ? 'M' : 'L',
   };
 }
 

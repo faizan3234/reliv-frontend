@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { toPng } from 'html-to-image';
-import html2canvas from 'html2canvas';
+import { exportStoryCard } from './exportStoryCard';
 import { InstagramStoryCard } from './InstagramStoryCard';
 import { buildStoryCard } from './storyCardData';
 import './storyCard.css';
@@ -71,41 +70,7 @@ export function CheckinCard({ onChange, summary }) {
     setError('');
 
     try {
-      if (document.fonts && document.fonts.ready) {
-        await document.fonts.ready;
-      }
-      const node = cardRef.current;
-      if (!node) throw new Error('Card element unavailable');
-
-      let blob;
-      try {
-        const dataUrl = await toPng(node, {
-          width: 1080,
-          height: 1920,
-          canvasWidth: 1080,
-          canvasHeight: 1920,
-          pixelRatio: 1,
-          cacheBust: true,
-          backgroundColor: '#fffaf1',
-        });
-        const res = await fetch(dataUrl);
-        blob = await res.blob();
-      } catch (toImgErr) {
-        console.warn('[CheckinCard] html-to-image fallback to html2canvas:', toImgErr);
-        const canvas = await html2canvas(node, {
-          scale: 1,
-          width: 1080,
-          height: 1920,
-          backgroundColor: '#fffaf1',
-          logging: false,
-        });
-        blob = await new Promise((resolve, reject) => {
-          canvas.toBlob(
-            (b) => (b ? resolve(b) : reject(new Error('Export unavailable'))),
-            'image/png'
-          );
-        });
-      }
+      const blob = await exportStoryCard(cardRef.current);
 
       const filename = `Reliv-${relationship}-Story.png`;
       const file = new File([blob], filename, { type: 'image/png' });
@@ -122,7 +87,7 @@ export function CheckinCard({ onChange, summary }) {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) {
       if (e.name !== 'AbortError') {
         console.error('[CheckinCard] Save error:', e);
@@ -182,9 +147,9 @@ export function CheckinCard({ onChange, summary }) {
 
         {!solo && (
           <label className="block text-xs font-semibold text-slate-700">
-            Friend or partner name
+            {relationship === 'friends' ? 'Friend’s name' : 'Partner’s name'}
             <input
-              aria-label="Friend or partner name"
+              aria-label={relationship === 'friends' ? 'Friend’s name' : 'Partner’s name'}
               placeholder="Type their name"
               maxLength={30}
               value={partner}
@@ -274,8 +239,7 @@ export function CheckinCard({ onChange, summary }) {
         </div>
 
         <p className="text-[11px] text-slate-500 leading-normal text-center">
-          Exact 1080 × 1920 Instagram Story format. No blurry text, no cut-off edges, perfectly sized for
-          direct sharing.
+          1080 × 1920 image with the complete card and photos. Your original quote is used when the note is blank.
         </p>
 
         {error && <p className="text-xs text-red-600 text-center font-medium" role="alert">{error}</p>}
