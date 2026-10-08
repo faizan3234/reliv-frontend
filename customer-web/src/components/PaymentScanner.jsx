@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import QrScanner from 'qr-scanner';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import QrScanner from '../services/paymentScannerEngine';
 import { paymentPathFromQr } from '../services/paymentQr';
+import { densePaymentScanRegion, acknowledgePaymentScan } from '../services/scannerTuning';
 
-export function PaymentScanner({ onClose }) {
+export function PaymentScanner({ onClose, onScan }) {
   const video = useRef(null);
   const scanner = useRef(null);
   const accepted = useRef(false);
@@ -16,17 +17,19 @@ export function PaymentScanner({ onClose }) {
   const [flashOn, setFlashOn] = useState(false);
 
   const rejected = useRef({ value: null, count: 0 });
-  const accept = (value) => {
+  const accept = useCallback((value) => {
     if (!mounted.current || accepted.current) return;
     try {
       const path = paymentPathFromQr(value, window.location.origin);
       accepted.current = true;
       scanner.current?.destroy();
       scanner.current = null;
-      setStatus('Opening your payment…');
+      setStatus('QR captured. Opening your payment…');
+      acknowledgePaymentScan(navigator);
       // Same-origin navigation preserves standalone PWA mode and initializes
       // the existing recovery/session boundary exactly like an external QR.
-      window.location.assign(path);
+      if (onScan) onScan(path);
+      else window.location.assign(path);
     } catch (err) {
       const last = rejected.current;
       rejected.current = { value, count: last.value === value ? last.count + 1 : 1 };
@@ -34,7 +37,7 @@ export function PaymentScanner({ onClose }) {
       if (rejected.current.count >= 3) setError(err.message);
       else setError('');
     }
-  };
+  }, [onScan]);
 
   useEffect(() => {
     let disposed = false;
@@ -47,15 +50,10 @@ export function PaymentScanner({ onClose }) {
     const instance = new QrScanner(video.current, result => {
       if (!disposed) accept(result.data);
     }, {
-      preferredCamera: 'environment', maxScansPerSecond: 20,
+      preferredCamera: 'environment', maxScansPerSecond: 25,
       returnDetailedScanResult: true, onDecodeError: () => {},
       // Dense encrypted kiosk QRs need more pixels than the 400px default.
-      calculateScanRegion: v => {
-        const size = Math.min(v.videoWidth, v.videoHeight);
-        const resolution = Math.min(size, 1280);
-        return { x: (v.videoWidth-size)/2, y: (v.videoHeight-size)/2,
-          width: size, height: size, downScaledWidth: resolution, downScaledHeight: resolution };
-      },
+      calculateScanRegion: densePaymentScanRegion,
     });
     scanner.current = instance;
     // Defer capture until StrictMode has completed its setup/cleanup probe.
@@ -67,7 +65,7 @@ export function PaymentScanner({ onClose }) {
         await track.applyConstraints({ width: { ideal: 1920 }, height: { ideal: 1080 },
           ...(caps.focusMode?.includes('continuous') ? { advanced: [{ focusMode: 'continuous' }] } : {}) }).catch(() => {});
       }
-      if (disposed) return;
+      if (disposed || accepted.current) return;
       setStatus('Point at the kiosk payment QR');
       const available = await instance.hasFlash().catch(() => false);
       if (!disposed) setFlash(available);
@@ -95,16 +93,16 @@ export function PaymentScanner({ onClose }) {
       instance.destroy();
       if (scanner.current === instance) scanner.current = null;
     };
-  }, [attempt]);
+  }, [attempt, accept]);
 
   return <section className="space-y-4" aria-label="Reliv payment QR scanner">
     <div className="flex items-center justify-between gap-3">
       <h1 className="text-xl font-bold">Scan kiosk QR</h1>
       <button type="button" onClick={onClose} className="min-h-11 px-4 rounded-xl border border-orange-200 bg-white">Close</button>
     </div>
-    <p className="text-sm text-slate-600">Keep the whole QR and its white border visible. Hold steady; avoid screen reflections. Your payment opens here automatically.</p>
+    <p className="text-sm text-slate-600">Fit the kiosk QR and its white border inside the frame. Tap “Enlarge QR” on the kiosk for dense codes; avoid screen reflections. Your payment opens here automatically.</p>
     <div className="relative overflow-hidden rounded-3xl bg-slate-950 aspect-square">
-      <video ref={video} muted playsInline autoPlay aria-label="Live camera preview" className="w-full h-full object-cover" />
+      <video ref={video} muted playsInline autoPlay aria-label="Live camera preview" className="w-full h-full object-contain" />
       <div className="absolute inset-3 border-2 border-white/70 rounded-2xl pointer-events-none" aria-hidden="true" />
     </div>
     <p role="status" className="text-sm font-semibold text-center">{status}</p>

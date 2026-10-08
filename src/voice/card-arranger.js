@@ -199,7 +199,7 @@
 
                 function onPointerUp(upEvent) {
                     if (hasMoved) {
-                        try { el.releasePointerCapture(upEvent.pointerId); } catch (_) {}
+                        try { el.releasePointerCapture(upEvent.pointerId); } catch {}
                         el.classList.remove('is-dragging');
                         saveToLocalStorageOnly();
                     }
@@ -243,7 +243,7 @@
                 }
             }
             return parsed;
-        } catch (_) {
+        } catch {
             return null;
         }
     }
@@ -253,7 +253,7 @@
         const layout = collectCurrentLayout();
         try {
             localStorage.setItem('reliv_layout_' + CARD_ID, JSON.stringify(layout.items));
-        } catch (_) {}
+        } catch {}
     }
 
     // Collect all coordinates and content

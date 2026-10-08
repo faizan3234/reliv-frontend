@@ -53,7 +53,7 @@ export async function exportStoryCard(node) {
         reader.readAsDataURL(blob);
       });
       if (typeof img.decode === 'function') {
-        try { await img.decode(); } catch (_) {}
+        try { await img.decode(); } catch {}
       }
       if (img.naturalWidth === 0 && !window.navigator?.userAgent?.includes('jsdom')) {
         throw new Error('Card photo unavailable');
