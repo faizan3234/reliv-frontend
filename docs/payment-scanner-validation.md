@@ -31,3 +31,23 @@ browser automation was unavailable in this environment. Safari may not provide
 vibration; visual feedback remains. A half-hidden QR or severe motion blur cannot
 be guaranteed recoverable. Native Apple scanning has camera/OS capabilities a
 PWA cannot require. No live payment or physical Pi test was performed.
+
+## Follow-up: demo QR misreported as a scanning failure
+
+User screenshots from 2026-10-08 show `DEMO QR · NOT PAYABLE` on the kiosk.
+Three supplied PWA screenshots decoded to a 2048-character JSON object with
+`type: RELIV_DEMO_SAMPLE` and `status: NOT_PAYABLE`. The previous URL validator
+rejected its spaces before URL parsing, displayed a generic instruction after
+three detections, and kept scanning indefinitely. This was successful decoding
+followed by rejection, not an unreadable QR in those frames. A more blurred PWA
+screenshot and the supplied native scanner photo did not decode as still images.
+These still-image results do not measure native/PWA camera speed.
+
+Demo recognition now immediately stops scanning and shows a success explanation,
+with one optional vibration and a Scan another QR button. Demo contents are never
+rendered as HTML, sent to the bridge, or accepted by paymentPathFromQr. Unrelated
+QR rejection now explicitly says the QR was read but its payment link was not
+recognized. The production payment URL validation remains unchanged.
+
+Follow-up checks: 8 Node checks, 17 browser lifecycle checks, zero lint findings,
+and customer-web production build pass. Real-phone timing remains unverified.

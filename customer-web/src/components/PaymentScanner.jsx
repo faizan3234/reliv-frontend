@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import QrScanner from '../services/paymentScannerEngine';
-import { paymentPathFromQr } from '../services/paymentQr';
+import { paymentPathFromQr, isDemoPaymentQr } from '../services/paymentQr';
 import { densePaymentScanRegion, acknowledgePaymentScan } from '../services/scannerTuning';
 
 export function PaymentScanner({ onClose, onScan }) {
@@ -10,6 +10,7 @@ export function PaymentScanner({ onClose, onScan }) {
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [attempt, setAttempt] = useState(0);
+  const [demoDetected, setDemoDetected] = useState(false);
   const [status, setStatus] = useState('Starting camera…');
   const [error, setError] = useState('');
   const [failed, setFailed] = useState(false);
@@ -19,6 +20,15 @@ export function PaymentScanner({ onClose, onScan }) {
   const rejected = useRef({ value: null, count: 0 });
   const accept = useCallback((value) => {
     if (!mounted.current || accepted.current) return;
+    if (isDemoPaymentQr(value)) {
+      accepted.current = true;
+      scanner.current?.destroy();
+      scanner.current = null;
+      setError('');
+      setDemoDetected(true);
+      acknowledgePaymentScan(navigator);
+      return;
+    }
     try {
       const path = paymentPathFromQr(value, window.location.origin);
       accepted.current = true;
@@ -34,7 +44,10 @@ export function PaymentScanner({ onClose, onScan }) {
       const last = rejected.current;
       rejected.current = { value, count: last.value === value ? last.count + 1 : 1 };
       // A noisy camera frame is not evidence that the kiosk QR is invalid.
-      if (rejected.current.count >= 3) setError(err.message);
+      if (rejected.current.count >= 3) {
+        setStatus('QR read — payment link not recognized');
+        setError(err.message);
+      }
       else setError('');
     }
   }, [onScan]);
@@ -100,6 +113,18 @@ export function PaymentScanner({ onClose, onScan }) {
       <h1 className="text-xl font-bold">Scan kiosk QR</h1>
       <button type="button" onClick={onClose} className="min-h-11 px-4 rounded-xl border border-orange-200 bg-white">Close</button>
     </div>
+    {demoDetected ? <div role="status" className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 space-y-4">
+      <h2 className="text-xl font-bold text-emerald-900">✓ Demo QR scanned successfully</h2>
+      <p className="text-emerald-950">Your scanner is working. This is a test QR marked “NOT PAYABLE”, so it cannot open a payment or give an activation code.</p>
+      <p className="text-sm text-emerald-950">For payment, start a real checkup or medicine purchase on the kiosk and scan its payment QR.</p>
+      <button type="button" className="min-h-12 rounded-xl bg-emerald-800 px-5 py-3 font-semibold text-white" onClick={() => {
+        accepted.current = false;
+        rejected.current = {value:null,count:0};
+        setDemoDetected(false);
+        setStatus('Starting camera…');
+        setAttempt(value => value + 1);
+      }}>Scan another QR</button>
+    </div> : <>
     <p className="text-sm text-slate-600">Fit the kiosk QR and its white border inside the frame. Tap “Enlarge QR” on the kiosk for dense codes; avoid screen reflections. Your payment opens here automatically.</p>
     <div className="relative overflow-hidden rounded-3xl bg-slate-950 aspect-square">
       <video ref={video} muted playsInline autoPlay aria-label="Live camera preview" className="w-full h-full object-contain" />
@@ -114,6 +139,7 @@ export function PaymentScanner({ onClose, onScan }) {
         catch { setError('Torch is unavailable on this camera.'); }
       }}>{flashOn ? 'Turn off torch' : 'Turn on torch'}</button>}
     </div>
+    </>}
     <p className="text-xs text-slate-500">Camera permission is required for live scanning. Frames are decoded on your device. Internet is needed to pay.</p>
   </section>;
 }

@@ -36,6 +36,17 @@ async function run(){
  assert(button('Retry camera'),'permission failure offers retry');
  window.__denyCamera=false;await act(async()=>button('Retry camera').click());await wait();
  scanner=window.__scanners.at(-1);assert(scanner.starts===1&&!scanner.destroyed,'retry creates a fresh camera instance');
+ const beforeDemoOrders=orders.length, beforeDemoVibrations=vibrations.length;
+ const demo=JSON.stringify({type:'RELIV_DEMO_SAMPLE',status:'NOT_PAYABLE',padding:'x'.repeat(1900)});
+ await act(async()=>{scanner.onDecode({data:demo});scanner.onDecode({data:demo});});
+ assert(document.body.textContent.includes('Demo QR scanned successfully'),'demo immediately confirms decoding rather than claiming scan failure');
+ assert(scanner.destroyed&&vibrations.length===beforeDemoVibrations+1,'demo releases camera and acknowledges exactly once');
+ assert(orders.length===beforeDemoOrders,'demo never creates a payment order');
+ await act(async()=>scanner.onDecode({data:qr}));
+ assert(orders.length===beforeDemoOrders,'late frame after demo cannot initiate payment');
+ await act(async()=>button('Scan another QR').click());await wait();
+ scanner=window.__scanners.at(-1);
+ assert(scanner.starts===1&&!scanner.destroyed&&!document.body.textContent.includes('Demo QR scanned successfully'),'scan another QR resets demo state and restarts camera');
  await act(async()=>root.unmount());assert(scanner.destroyed,'unmount releases camera');
  document.getElementById('results').textContent=checks.join('\n')+'\nALL '+checks.length+' BROWSER CHECKS PASSED';
 }
