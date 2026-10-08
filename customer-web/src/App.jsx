@@ -1,5 +1,27 @@
-import React, { Suspense, lazy, useState } from 'react';
-const PaymentScanner = lazy(() => import('./components/PaymentScanner').then(m => ({ default: m.PaymentScanner })));
+import React, { useState, useEffect, useCallback } from 'react';
+let scannerModule;
+const loadScanner = () => {
+  if (!scannerModule) scannerModule = import('./components/PaymentScanner').then(m => ({ default: m.PaymentScanner })).catch(error => { scannerModule = null; throw error; });
+  return scannerModule;
+};
+function ScannerPanel({onScan,onClose}) {
+  const [Scanner,setScanner] = useState(null);
+  const [error,setError] = useState(false);
+  const [attempt,setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setError(false);
+    loadScanner().then(module => { if (active) setScanner(() => module.default); })
+      .catch(() => { if (active) setError(true); });
+    return () => { active = false; };
+  }, [attempt]);
+  if (Scanner) return <Scanner onScan={onScan} onClose={onClose}/>;
+  return <section className="space-y-3">
+    <p role={error ? 'alert' : 'status'}>{error ? 'Scanner could not load. Check your connection and retry.' : 'Loading scanner…'}</p>
+    {error && <button type="button" className="min-h-12 rounded-xl bg-orange-600 px-4 text-white" onClick={() => setAttempt(value => value+1)}>Retry scanner</button>}
+    <button type="button" className="min-h-12 rounded-xl border px-4" onClick={onClose}>Close</button>
+  </section>;
+}
 import { useSessionStore } from './state/sessionStore';
 import { Header } from './components/Header';
 import { StartPage } from './pages/Start/StartPage';
@@ -11,6 +33,25 @@ export function App() {
   const [scanning, setScanning] = useState(window.location.pathname === '/scan');
   const sessionStore = useSessionStore();
   const { state } = sessionStore;
+  const [scanNotice, setScanNotice] = useState(false);
+  // Warm only code, not the camera. A user action still opens the scanner.
+  useEffect(() => {
+    const timer = setTimeout(() => { loadScanner().catch(() => {}); }, 400);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!scanNotice) return;
+    const timer = setTimeout(() => setScanNotice(false), 3000);
+    return () => clearTimeout(timer);
+  }, [scanNotice]);
+  const scanned = useCallback(path => {
+    // Keep the PWA document alive (and vibration running). Both payment stores
+    // already listen for hashchange and resolve this package before recovery.
+    window.history.pushState(null, '', path);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    setScanNotice(true);
+    setScanning(false);
+  }, []);
 
   if (!state.isLoaded) {
     return (
@@ -58,9 +99,10 @@ export function App() {
       
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 space-y-4">
         <div className="pb-8">
-          {scanning ? <Suspense fallback={<p role="status">Loading scanner…</p>}><PaymentScanner onClose={() => setScanning(false)} /></Suspense> : <>
+          {scanning ? <ScannerPanel onClose={() => setScanning(false)} onScan={scanned} /> : <>
+            {scanNotice && <p role="status" className="rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-900">✓ QR captured. Opening this kiosk payment.</p>}
             {renderActiveScreen()}
-            <button type="button" onClick={() => setScanning(true)} className="mt-5 min-h-12 w-full rounded-2xl bg-orange-600 px-4 py-3 font-semibold text-white shadow-sm">Scan kiosk payment QR</button>
+            <button type="button" onFocus={() => { loadScanner().catch(() => {}); }} onPointerEnter={() => { loadScanner().catch(() => {}); }} onPointerDown={() => { loadScanner().catch(() => {}); }} onClick={() => setScanning(true)} className="mt-5 min-h-12 w-full rounded-2xl bg-orange-600 px-4 py-3 font-semibold text-white shadow-sm">Scan kiosk payment QR</button>
           </>}
         </div>
       </main>

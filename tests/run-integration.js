@@ -12,6 +12,10 @@ const bundle = await build({
   alias: { react: resolve('node_modules/react'), 'react-dom': resolve('node_modules/react-dom'), ...(process.argv[2]?.endsWith('payment-identity-browser.jsx') ? {html2canvas:resolve('tests/story-capture-fixture.js'), 'html-to-image':resolve('tests/story-capture-fixture.js')} : {}), mqtt: resolve('tests/mqtt-fixture.js') },
   loader: { '.mp4': 'empty', '.png': 'dataurl', '.jpeg': 'dataurl', '.svg': 'dataurl', '.css': 'empty', '.ttf': 'empty' },
   plugins: [
+    { name: 'scanner-fixture', setup(build) {
+      if (process.argv[2]?.endsWith('payment-scanner-browser.jsx'))
+        build.onResolve({filter: /paymentScannerEngine$/}, () => ({path:resolve('tests/scanner-fixture.js')}));
+    } },
     {
       name: 'raw-html',
       setup(build) {

@@ -10,7 +10,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "audio:reports": "node scripts/generate_report_audio.mjs"
+    "audio:reports": "node scripts/generate_report_audio.mjs",
+    "test:scanner": "node --test customer-web/test/payment-qr.test.js customer-web/test/scanner-tuning.test.js customer-web/test/payment-qr-decode.test.js && node tests/run-integration.js tests/payment-scanner-browser.jsx"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
