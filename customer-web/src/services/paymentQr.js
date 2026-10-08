@@ -1,3 +1,12 @@
+// Recognition is feedback only: demo JSON must never enter payment checkout.
+export function isDemoPaymentQr(value) {
+  if (typeof value !== 'string' || value.length > 24000) return false;
+  try {
+    const sample = JSON.parse(value);
+    return sample?.type === 'RELIV_DEMO_SAMPLE' && sample?.status === 'NOT_PAYABLE';
+  } catch { return false; }
+}
+
 // Never navigate to a scanned host. Transfer only a recognized payment package
 // to our own checkout; the bridge still verifies its signature and expiry.
 export function paymentPathFromQr(value, origin) {
