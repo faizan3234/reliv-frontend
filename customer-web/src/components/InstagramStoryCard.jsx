@@ -1,3 +1,4 @@
+import { fitStoryCard } from './fitStoryCard';
 import React, { useLayoutEffect, useRef } from 'react';
 import solo from './templates/solo.html?raw';
 import friends from './templates/friends.html?raw';
@@ -28,6 +29,19 @@ export const InstagramStoryCard = React.forwardRef(function InstagramStoryCard(
     host.querySelectorAll('[data-field]').forEach(el => {
       el.textContent = fields[el.dataset.field] || '';
     });
+    const canvas = host.querySelector('.reference-art');
+    const layout = document.createElement('div');
+    layout.className = canvas.className.replace(/\breference-art\b|\bh-full\b|\bmin-h-full\b/g, '') + ' reference-layout';
+    while (canvas.firstChild) layout.appendChild(canvas.firstChild);
+    canvas.className = 'reference-art';
+    canvas.appendChild(layout);
+    let active = true;
+    const fit = () => { if (active) fitStoryCard(canvas); };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(layout);
+    document.fonts?.ready.then(fit);
+    return () => { active = false; observer.disconnect(); };
   }, [selected, name, partner, score, win, focus, note]);
 
   return (

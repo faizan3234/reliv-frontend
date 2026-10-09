@@ -96,3 +96,48 @@
 .reliv-reference h4 {
   line-height: 1.4;
 }
+
+/* Fixed story dimensions cannot inherit the phone's viewport height. */
+.reliv-reference .reference-art {
+  min-height: 0 !important;
+  padding: 0 !important;
+  display: block;
+}
+.reliv-reference .reference-layout {
+  position: absolute;
+  width: 420px;
+  min-height: 746.6666667px;
+  height: auto;
+  overflow: visible;
+  transform-origin: top left;
+  background: transparent !important;
+}
+.reliv-reference .reference-layout > * { flex-shrink: 0; }
+.reliv-reference [data-purpose="header-section"],
+.reliv-reference [data-purpose="brand-header"] {
+  min-height: 245px;
+}
+.reliv-reference [data-drag-id="note-top-left"],
+.reliv-reference [data-drag-id="note-top-right"] {
+  top: 145px !important;
+}
+.reliv-reference [data-field="quote"] {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.reliv-reference img {
+  object-fit: contain;
+  transform: none !important;
+}
+.reliv-reference .reference-layout * {
+  animation: none !important;
+  transition: none !important;
+}
+/* Keep the background warm in canvas renderers and decorative texture clear
+   of the social footer. Photo stickers themselves remain visible. */
+.reliv-reference[data-design="solo"] .reference-art {
+  background-image: linear-gradient(135deg, #f5efe6, #ede3d4);
+}
+.reliv-reference .reference-layout > .absolute.bottom-1 {
+  display: none;
+}

@@ -6,6 +6,13 @@ window.__scanners=[];
 Object.defineProperty(window,'isSecureContext',{value:true});
 Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:async()=>({})}});
 const vibrations=[],orders=[],checks=[];
+let chimes=0;
+window.AudioContext=class {
+ constructor(){this.state='suspended';this.currentTime=0;this.destination={};}
+ async resume(){this.state='running';}
+ createOscillator(){return {frequency:{setValueAtTime(){}},connect(){},disconnect(){},start(){chimes++;},stop(){this.onended?.();}};}
+ createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
+};
 navigator.vibrate=duration=>{vibrations.push(duration);return true;};
 window.fetch=async(url,options={})=>{if(String(url).endsWith('/create-order'))orders.push(JSON.parse(options.body).package);return {ok:true,status:200,json:async()=>({requestId:'new-request',orderId:'test-order',amount:1700,keyId:'fixture',serviceType:'HEALTH_CHECKUP',status:'CREATED'})};};
 const root=createRoot(document.getElementById('app'));
@@ -16,13 +23,16 @@ async function run(){
  localStorage.clear();sessionStorage.clear();window.history.replaceState(null,'','/scan');
  await act(async()=>root.render(<App/>));await wait();
  let scanner=window.__scanners.at(-1);assert(scanner,'direct scan route opens scanner');
+ await act(async()=>button('Enable scan sound').click());
+ assert(chimes===1&&button('Sound enabled · test'),'sound can be enabled and tested from direct scan route');
  assert(scanner.options.maxScansPerSecond===25,'scan attempts capped at camera-friendly 25fps');
  await act(async()=>{for(let i=0;i<3;i++)scanner.onDecode({data:'https://evil.example/pay#p=bad'});});
- assert(!vibrations.length&&!orders.length,'untrusted QR never vibrates or creates an order');
+ assert(!vibrations.length&&!orders.length&&chimes===1,'untrusted QR never acknowledges or creates an order');
  const qr='https://reliv7.vercel.app/pay#p=current_encrypted-package';
  await act(async()=>{scanner.onDecode({data:qr});scanner.onDecode({data:qr});});await wait();
  assert(vibrations.length===1&&vibrations[0]===1000,'exactly one one-second vibration per accepted QR');
  assert(scanner.destroyed,'camera decoder destroyed before checkout');
+ assert(chimes===2,'accepted payment plays exactly one confirmation chime');
  assert(location.pathname==='/pay'&&location.hash==='#p=current_encrypted-package','package transferred without leaving current origin');
  assert(orders.length===1&&orders[0]==='current_encrypted-package','only scanned package creates an order, exactly once');
  assert(document.body.textContent.includes('QR captured'),'visible scan confirmation without a page reload');
