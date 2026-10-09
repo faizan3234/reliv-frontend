@@ -1,7 +1,8 @@
+import { prepareScanSound, playScanSound } from '../services/scanFeedback';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import QrScanner from '../services/paymentScannerEngine';
 import { paymentPathFromQr, isDemoPaymentQr } from '../services/paymentQr';
-import { densePaymentScanRegion, acknowledgePaymentScan } from '../services/scannerTuning';
+import { densePaymentScanRegion, acknowledgePaymentScan, tunePaymentCamera } from '../services/scannerTuning';
 
 export function PaymentScanner({ onClose, onScan }) {
   const video = useRef(null);
@@ -16,6 +17,7 @@ export function PaymentScanner({ onClose, onScan }) {
   const [failed, setFailed] = useState(false);
   const [flash, setFlash] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
 
   const rejected = useRef({ value: null, count: 0 });
   const accept = useCallback((value) => {
@@ -27,6 +29,7 @@ export function PaymentScanner({ onClose, onScan }) {
       setError('');
       setDemoDetected(true);
       acknowledgePaymentScan(navigator);
+      playScanSound();
       return;
     }
     try {
@@ -36,6 +39,7 @@ export function PaymentScanner({ onClose, onScan }) {
       scanner.current = null;
       setStatus('QR captured. Opening your payment…');
       acknowledgePaymentScan(navigator);
+      playScanSound();
       // Same-origin navigation preserves standalone PWA mode and initializes
       // the existing recovery/session boundary exactly like an external QR.
       if (onScan) onScan(path);
@@ -73,11 +77,7 @@ export function PaymentScanner({ onClose, onScan }) {
     Promise.resolve().then(() => disposed ? undefined : instance.start()).then(async () => {
       if (disposed) { instance.destroy(); return; }
       const track = video.current?.srcObject?.getVideoTracks()[0];
-      if (track?.applyConstraints) {
-        const caps = track.getCapabilities?.() || {};
-        await track.applyConstraints({ width: { ideal: 1920 }, height: { ideal: 1080 },
-          ...(caps.focusMode?.includes('continuous') ? { advanced: [{ focusMode: 'continuous' }] } : {}) }).catch(() => {});
-      }
+      await tunePaymentCamera(track);
       if (disposed || accepted.current) return;
       setStatus('Point at the kiosk payment QR');
       const available = await instance.hasFlash().catch(() => false);
@@ -92,7 +92,10 @@ export function PaymentScanner({ onClose, onScan }) {
     const visibility = () => {
       if (document.hidden) pause();
       else if (!disposed && !accepted.current) instance.start().then(() => {
-        if (!disposed) setStatus('Point at the kiosk payment QR');
+        if (!disposed && !accepted.current) {
+          setStatus('Point at the kiosk payment QR');
+          void tunePaymentCamera(video.current?.srcObject?.getVideoTracks()[0]);
+        }
       }).catch(() => { if (!disposed) { setFailed(true); setError('Tap Retry camera to resume scanning.'); } });
     };
     document.addEventListener('visibilitychange', visibility);
@@ -125,7 +128,7 @@ export function PaymentScanner({ onClose, onScan }) {
         setAttempt(value => value + 1);
       }}>Scan another QR</button>
     </div> : <>
-    <p className="text-sm text-slate-600">Fit the kiosk QR and its white border inside the frame. Tap “Enlarge QR” on the kiosk for dense codes; avoid screen reflections. Your payment opens here automatically.</p>
+    <p className="text-sm text-slate-600">Show the whole QR anywhere in the camera view. No need to centre it. Payment opens automatically when it is read.</p>
     <div className="relative overflow-hidden rounded-3xl bg-slate-950 aspect-square">
       <video ref={video} muted playsInline autoPlay aria-label="Live camera preview" className="w-full h-full object-contain" />
       <div className="absolute inset-3 border-2 border-white/70 rounded-2xl pointer-events-none" aria-hidden="true" />
@@ -133,13 +136,21 @@ export function PaymentScanner({ onClose, onScan }) {
     <p role="status" className="text-sm font-semibold text-center">{status}</p>
     {error && <p role="alert" className="text-sm text-red-800 bg-red-50 rounded-xl p-3">{error}</p>}
     <div className="flex flex-wrap gap-3">
+      <button type="button" className="min-h-11 px-4 rounded-xl border border-orange-200" onClick={async () => { const enabled = await prepareScanSound(); if (mounted.current) setSoundEnabled(enabled); if (enabled) playScanSound(); }}>{soundEnabled ? 'Sound enabled · test' : 'Enable scan sound'}</button>
+      {!failed && <button type="button" className="min-h-11 px-4 rounded-xl border border-orange-200" onClick={() => {
+        prepareScanSound();
+        setStatus('Starting camera…');
+        setAttempt(value => value + 1);
+      }}>Refresh camera</button>}
       {failed && <button type="button" className="min-h-11 px-4 rounded-xl bg-orange-600 text-white" onClick={() => setAttempt(a => a+1)}>Retry camera</button>}
       {flash && <button type="button" className="min-h-11 px-4 rounded-xl border border-orange-200" aria-pressed={flashOn} onClick={async () => {
-        try { await scanner.current?.toggleFlash(); setFlashOn(Boolean(scanner.current?.isFlashOn())); }
+        try { prepareScanSound(); await scanner.current?.toggleFlash(); setFlashOn(Boolean(scanner.current?.isFlashOn()));
+          await tunePaymentCamera(video.current?.srcObject?.getVideoTracks()[0], {resolution:false}); }
         catch { setError('Torch is unavailable on this camera.'); }
       }}>{flashOn ? 'Turn off torch' : 'Turn on torch'}</button>}
     </div>
     </>}
+    <p className="text-xs text-slate-500">If blurry, move slightly back or tap Enlarge QR on the kiosk. Avoid bright reflections.</p>
     <p className="text-xs text-slate-500">Camera permission is required for live scanning. Frames are decoded on your device. Internet is needed to pay.</p>
   </section>;
 }

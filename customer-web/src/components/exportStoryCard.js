@@ -1,4 +1,5 @@
 import html2canvas from 'html2canvas';
+import { fitStoryCard, STORY_WIDTH, STORY_HEIGHT } from './fitStoryCard';
 
 // Capture an unscaled clone fitted exactly to 1080 × 1920 9:16 Instagram Story.
 // No outer rounded borders, no letterbox bars, full-bleed edge-to-edge.
@@ -6,13 +7,14 @@ export async function exportStoryCard(node) {
   const source = node?.querySelector('.reference-art');
   if (!source) throw new Error('Card is not ready');
 
-  const width = 420;
-  const height = 746.67; // exactly 9:16 aspect ratio (420 * 16 / 9)
+  const width = STORY_WIDTH;
+  const height = STORY_HEIGHT; // exactly 9:16 aspect ratio (420 * 16 / 9)
   const ratio = 1080 / width; // 2.57142857
 
   const host = document.createElement('div');
   host.className = node.className;
   host.dataset.design = node.dataset.design;
+  host.dataset.cardExport = 'true';
   Object.assign(host.style, {
     position: 'fixed',
     left: '-10000px',
@@ -40,9 +42,12 @@ export async function exportStoryCard(node) {
 
   try {
     await Promise.all([...clone.querySelectorAll('img')].map(async img => {
-      if (img.src?.startsWith('data:')) return;
       if (typeof window !== 'undefined' && window.navigator?.userAgent?.includes('jsdom')) return;
-      const response = await fetch(img.src, { cache: 'force-cache' });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      let response;
+      try { response = await fetch(img.currentSrc || img.src, { cache: 'force-cache', signal: controller.signal }); }
+      finally { clearTimeout(timeout); }
       if (!response.ok) throw new Error('Card photo could not load');
       const blob = typeof response.blob === 'function' ? await response.blob() : new Blob(['image'], { type: 'image/png' });
       if (blob.type && !blob.type.startsWith('image/')) throw new Error('Card photo unavailable');
@@ -53,10 +58,23 @@ export async function exportStoryCard(node) {
         reader.readAsDataURL(blob);
       });
       if (typeof img.decode === 'function') {
-        try { await img.decode(); } catch {}
+        await img.decode();
       }
       if (img.naturalWidth === 0 && !window.navigator?.userAgent?.includes('jsdom')) {
         throw new Error('Card photo unavailable');
+      }
+      if (img.naturalWidth > 0) {
+        const w = img.clientWidth, h = img.clientHeight;
+        if (w && h) {
+          const photo = document.createElement('canvas');
+          photo.width = Math.ceil(w * ratio); photo.height = Math.ceil(h * ratio);
+          const context = photo.getContext('2d');
+          const fit = Math.min(photo.width / img.naturalWidth, photo.height / img.naturalHeight);
+          const pw = img.naturalWidth * fit, ph = img.naturalHeight * fit;
+          context.drawImage(img, (photo.width-pw)/2, (photo.height-ph)/2, pw, ph);
+          img.src = photo.toDataURL('image/png');
+          await img.decode();
+        }
       }
     }));
 
@@ -65,6 +83,8 @@ export async function exportStoryCard(node) {
       await document.fonts.ready;
     }
 
+    fitStoryCard(clone);
+
     const art = await html2canvas(clone, {
       scale: ratio,
       width,
@@ -72,7 +92,12 @@ export async function exportStoryCard(node) {
       backgroundColor: '#f7f2ea',
       logging: false,
       imageTimeout: 15000,
+      scrollX: 0, scrollY: 0,
       onclone: doc => {
+        // Rasterize at the clone document origin. Negative offscreen coordinates
+        // combined with mobile page scroll caused missing text in saved PNGs.
+        const exportHost = doc.querySelector('[data-card-export="true"]');
+        if (exportHost) { exportHost.style.left = '0'; exportHost.style.top = '0'; }
         doc.querySelectorAll('.reference-art').forEach(el => {
           el.style.setProperty('transform', 'none', 'important');
           el.style.setProperty('border', 'none', 'important');

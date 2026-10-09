@@ -18,3 +18,19 @@ export function acknowledgePaymentScan(device) {
   // Safari/iOS may expose no vibration API; feedback must never block checkout.
   try { device.vibrate?.(1000); } catch { /* Visual confirmation remains available. */ }
 }
+
+// Apply independently: rejecting a resolution must not skip focus/exposure.
+export async function tunePaymentCamera(track, { resolution = true } = {}) {
+  if (!track?.applyConstraints || track.readyState === 'ended') return;
+  if (resolution) {
+    try { await track.applyConstraints({width:{ideal:1920},height:{ideal:1080}}); } catch { /* Keep working camera. */ }
+  }
+  let caps;
+  try { caps = track.getCapabilities?.() || {}; } catch { return; }
+  for (const mode of ['focusMode', 'exposureMode', 'whiteBalanceMode']) {
+    if (track.readyState === 'ended') return;
+    if (caps[mode]?.includes('continuous')) {
+      try { await track.applyConstraints({advanced:[{[mode]:'continuous'}]}); } catch { /* Optional per camera. */ }
+    }
+  }
+}
