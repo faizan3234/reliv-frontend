@@ -1,4 +1,4 @@
-import { CheckinCard } from '../../components/CheckinCard';
+import { ShareCardPanel } from '../../components/ShareCardPanel';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   createPaymentV2Order,
@@ -648,11 +648,11 @@ function PaymentAttempt({ sessionStore }) {
           </div>
 
           <div className="rounded-3xl border border-orange-200 bg-white p-6 shadow-md space-y-5 text-center">
-            <div className="flex justify-center items-center gap-3 py-2">
+            <div className="flex justify-center items-center gap-2 py-2">
               {digits.map((digit, idx) => (
                 <div
                   key={idx}
-                  className="w-14 h-16 sm:w-16 sm:h-20 rounded-2xl bg-orange-500 border-2 border-orange-600 text-white font-extrabold text-3xl sm:text-4xl flex items-center justify-center shadow-md font-mono"
+                  className="min-w-0 max-w-16 flex-1 h-16 sm:h-20 rounded-2xl bg-orange-500 border-2 border-orange-600 text-white font-extrabold text-3xl sm:text-4xl flex items-center justify-center shadow-md font-mono"
                 >
                   {digit}
                 </div>
@@ -689,11 +689,11 @@ function PaymentAttempt({ sessionStore }) {
 
         {/* 4-Digit Kiosk Code Card */}
         <div className="rounded-3xl border border-orange-200 bg-white p-6 shadow-md space-y-5 text-center">
-          <div className="flex justify-center items-center gap-3 py-2">
+          <div className="flex justify-center items-center gap-2 py-2">
             {digits.map((digit, idx) => (
               <div
                 key={idx}
-                className="w-14 h-16 sm:w-16 sm:h-20 rounded-2xl bg-orange-500 border-2 border-orange-600 text-white font-extrabold text-3xl sm:text-4xl flex items-center justify-center shadow-md font-mono"
+                className="min-w-0 max-w-16 flex-1 h-16 sm:h-20 rounded-2xl bg-orange-500 border-2 border-orange-600 text-white font-extrabold text-3xl sm:text-4xl flex items-center justify-center shadow-md font-mono"
               >
                 {digit}
               </div>
@@ -719,7 +719,7 @@ function PaymentAttempt({ sessionStore }) {
           )}
         </div>
 
-        {isHealthCheckup && <CheckinCard onChange={setStoryCard} summary={storySummary} />}
+        {isHealthCheckup && <ShareCardPanel onChange={setStoryCard} summary={storySummary} />}
         {/* Directly Underneath: Payment Receipt Section */}
         <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
           <div className="text-center space-y-0.5">

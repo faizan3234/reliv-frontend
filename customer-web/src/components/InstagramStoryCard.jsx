@@ -38,10 +38,11 @@ export const InstagramStoryCard = React.forwardRef(function InstagramStoryCard(
     let active = true;
     const fit = () => { if (active) fitStoryCard(canvas); };
     fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(layout);
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+    observer?.observe(layout);
+    window.addEventListener('resize', fit);
     document.fonts?.ready.then(fit);
-    return () => { active = false; observer.disconnect(); };
+    return () => { active = false; observer?.disconnect(); window.removeEventListener('resize', fit); };
   }, [selected, name, partner, score, win, focus, note]);
 
   return (

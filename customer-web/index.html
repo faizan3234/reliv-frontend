@@ -10,11 +10,56 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Reliv Health Kiosk — Mobile Checkout</title>
     <meta name="description" content="Secure mobile customer portal for Reliv Health Kiosk service selection, details, and Razorpay payment handoff." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      html,body{margin:0;min-height:100%;background:#fffdf9;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#18313c}
+      #reliv-boot{box-sizing:border-box;min-height:100vh;min-height:100dvh;max-width:480px;margin:auto;padding:48px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(#fff7ed,#fffdf9)}
+      #reliv-boot h1{color:#18313c;font-weight:700;font-size:23px;margin:26px 0 10px}#reliv-boot p{font-size:16px;line-height:1.6;max-width:300px;margin:0;color:#586575}
+      .boot-dots{display:flex;gap:9px;margin:25px 0}.boot-dots span{width:9px;height:9px;background:#f97316;border-radius:50%;animation:reliv-breathe 1.1s ease-in-out infinite}.boot-dots span:nth-child(2){animation-delay:.15s}.boot-dots span:nth-child(3){animation-delay:.3s}
+      @keyframes reliv-breathe{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(-7px)}}
+      @media(prefers-reduced-motion:reduce){.boot-dots span{animation:none}}
+      #reliv-boot button{font:inherit;margin-top:22px;min-height:48px;border:0;border-radius:14px;padding:12px 24px;background:#ea580c;color:white;font-weight:650}
+      #reliv-boot [hidden]{display:none}#reliv-boot small{display:block;margin-top:18px;max-width:300px;line-height:1.6;color:#586575}
+    </style>
   </head>
   <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-orange-500 selection:text-white min-h-screen">
+    <section id="reliv-boot" aria-label="Reliv is loading">
+      <img src="/reliv-logo.svg" alt="Reliv" width="140" height="58" />
+      <h1>A little moment for your health</h1>
+      <p id="reliv-boot-message" role="status" aria-live="polite">Opening your Reliv companion…</p>
+      <div class="boot-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <button id="reliv-boot-retry" type="button" hidden>Try loading again</button>
+      <small id="reliv-boot-help" hidden>Check your connection or try an updated Chrome or Safari browser. Your saved payment stays on this phone until its expiry. If you already paid, do not pay again.</small>
+      <noscript><p>Please enable JavaScript in your browser to use Reliv.</p></noscript>
+    </section>
+    <script>
+      (function () {
+        var done = false;
+        var message = document.getElementById('reliv-boot-message');
+        var retry = document.getElementById('reliv-boot-retry');
+        function slow() {
+          if (done) return;
+          message.textContent = navigator.onLine === false ? 'You’re offline. Reconnect and try again.' : 'Taking a little longer. We’re still opening Reliv.';
+          retry.hidden = false;
+          document.getElementById('reliv-boot-help').hidden = false;
+        }
+        var early = setTimeout(function () { if (!done) message.textContent = 'Still loading. Your health journey will be here shortly…'; }, 3500);
+        var late = setTimeout(slow, 12000);
+        retry.onclick = function () { window.location.reload(); };
+        window.addEventListener('offline', slow);
+        window.relivBootReady = function ready() {
+          var style = document.querySelector('link[data-reliv-style]');
+          if (style && !style.sheet) {
+            style.addEventListener('load', ready, { once: true });
+            style.addEventListener('error', slow, { once: true });
+            return;
+          }
+          done = true; clearTimeout(early); clearTimeout(late);
+          window.removeEventListener('offline', slow);
+          var boot = document.getElementById('reliv-boot');
+          if (boot) boot.remove();
+        };
+      }());
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

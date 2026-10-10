@@ -30,10 +30,11 @@ export function CheckinCard({ onChange, summary }) {
         setScale(width / 1080);
       }
     };
-    const observer = new ResizeObserver(updateScale);
-    observer.observe(previewRef.current);
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(updateScale) : null;
+    observer?.observe(previewRef.current);
+    window.addEventListener('resize', updateScale);
     updateScale();
-    return () => observer.disconnect();
+    return () => { observer?.disconnect(); window.removeEventListener('resize', updateScale); };
   }, []);
 
   // Initialize alias from verified check-in name
