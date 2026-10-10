@@ -65,3 +65,19 @@ body { margin: 0; overflow-x: hidden; overscroll-behavior-y: contain; }
 .reliv-app input, .reliv-app textarea, .reliv-app [contenteditable] { -webkit-user-select: text; user-select: text; font-size: max(16px, 1em); }
 .reliv-app img { -webkit-user-drag: none; }
 .reliv-app button, .reliv-app a { touch-action: manipulation; }
+
+/* Small phones, notches, large text and landscape still use native scrolling. */
+.reliv-app { width: 100%; min-height: 100vh; min-height: 100dvh; }
+.reliv-app main { min-width: 0; }
+.reliv-app h1, .reliv-app h2, .reliv-app h3, .reliv-app p, .reliv-app button { overflow-wrap: break-word; }
+.reliv-app button { min-height: 44px; }
+@media (max-width: 340px) {
+  .reliv-app > main { padding-inline: 12px; }
+  .reliv-app .rounded-3xl { padding-inline: 16px; }
+}
+@media (orientation: landscape) {
+  .reliv-app { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reliv-app *, .reliv-app *::before, .reliv-app *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

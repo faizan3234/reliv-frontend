@@ -1,3 +1,4 @@
+import { StartupBoundary, StartupReady } from './components/StartupBoundary';
 import { startPwaUpdates } from './services/pwaRuntime';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -6,7 +7,7 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <StartupBoundary><StartupReady><App /></StartupReady></StartupBoundary>
   </React.StrictMode>
 );
 

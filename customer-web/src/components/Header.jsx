@@ -8,7 +8,7 @@ export function Header({ kioskId, onRefresh }) {
       <div className="max-w-md mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <Logo className="h-7 w-auto" />
-          <div className="flex items-center space-x-1 text-[10px] text-slate-500 font-medium pl-1 border-l border-slate-200">
+          <div className="hidden min-[360px]:flex items-center space-x-1 text-[10px] text-slate-500 font-medium pl-1 border-l border-slate-200">
             <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
             <span>Secure Health</span>
           </div>
