@@ -35,15 +35,15 @@ function PaymentAttempt({ sessionStore }) {
   // Extract encrypted package from URL hash first, then state, then recovery, then active paid session
   const urlPackage = extractPaymentPackage();
   const recoverySession = getPaymentRecovery(urlPackage || state.encryptedPackage);
-  const activePaidSession = !urlPackage ? getPaidSession() : getPaidSession(urlPackage);
+  const activePaidSession = getPaidSession(urlPackage || state.encryptedPackage || undefined);
   const encryptedPackage = urlPackage || state.encryptedPackage || recoverySession?.encryptedPackage || activePaidSession?.encryptedPackage;
 
   const [loadingState, setLoadingState] = useState(() => {
-    if (!urlPackage && activePaidSession?.confirmationCode) return 'SUCCESS';
+    if (activePaidSession?.confirmationCode) return 'SUCCESS';
     return 'INIT';
   });
   const [orderData, setOrderData] = useState(() => {
-    if (!urlPackage && activePaidSession) {
+    if (activePaidSession) {
       return {
         requestId: activePaidSession.requestId,
         orderId: activePaidSession.orderId,
@@ -54,14 +54,14 @@ function PaymentAttempt({ sessionStore }) {
     return null;
   });
   const [confirmationCode, setConfirmationCode] = useState(() => {
-    if (!urlPackage && activePaidSession?.confirmationCode) {
+    if (activePaidSession?.confirmationCode) {
       return activePaidSession.confirmationCode;
     }
     return '';
   });
   const [errorMessage, setErrorMessage] = useState('');
   const [activeRequestId, setActiveRequestId] = useState(() => {
-    if (!urlPackage && activePaidSession?.requestId) {
+    if (activePaidSession?.requestId) {
       return activePaidSession.requestId;
     }
     return '';
@@ -69,7 +69,7 @@ function PaymentAttempt({ sessionStore }) {
 
   // Receipt state: 'idle' | 'sending' | 'sent' | 'already_sent' | 'error'
   const [storyCard, setStoryCard] = useState(null);
-  const [storySummary, setStorySummary] = useState(null);
+  const [storySummary, setStorySummary] = useState(activePaidSession?.storySummary || null);
   const [receiptEmail, setReceiptEmail] = useState('');
   const [receiptStatus, setReceiptStatus] = useState('idle');
   const [receiptError, setReceiptError] = useState('');
@@ -77,6 +77,10 @@ function PaymentAttempt({ sessionStore }) {
   const [reportScanNumber, setReportScanNumber] = useState(1);
   const [reportTotalScans, setReportTotalScans] = useState(1);
   const [reportDownloadStatus, setReportDownloadStatus] = useState('idle');
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('reliv-payment-status', { detail: loadingState }));
+  }, [loadingState]);
 
   const isSyncingRef = useRef(false);
   const checkoutOpenRef = useRef(false);
@@ -479,19 +483,28 @@ function PaymentAttempt({ sessionStore }) {
     }
   };
 
-  // 3-minute hard deadline: clear session when user stays for 3 mins after payment
+  // Absolute deadline also works after the browser suspends background timers.
   useEffect(() => {
     if (loadingState !== 'SUCCESS') return;
-    const interval = setInterval(() => {
-      const current = getPaidSession(encryptedPackage);
-      if (!current) {
-        clearPaidSession(encryptedPackage);
-        setConfirmationCode('');
-        resetSession();
-        setLoadingState('IDLE');
-      }
-    }, 1000);
-    return () => clearInterval(interval);
+    window.history.replaceState(null, '', '/pay');
+    const deadline = getPaidSession(encryptedPackage)?.expiresAt || Date.now() + 5 * 60 * 1000;
+    const expire = () => {
+      if (Date.now() < deadline) return;
+      clearPaidSession(encryptedPackage);
+      clearPaymentRecovery(encryptedPackage);
+      window.history.replaceState(null, '', '/');
+      setConfirmationCode('');
+      resetSession();
+      setLoadingState('IDLE');
+    };
+    const interval = setInterval(expire, 1000);
+    window.addEventListener('pageshow', expire);
+    document.addEventListener('visibilitychange', expire);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('pageshow', expire);
+      document.removeEventListener('visibilitychange', expire);
+    };
   }, [loadingState, encryptedPackage, resetSession]);
 
   const handleDone = () => {
@@ -499,7 +512,7 @@ function PaymentAttempt({ sessionStore }) {
     clearPendingVerification(activeRequestId || orderData?.requestId);
     clearPaymentRecovery(encryptedPackage);
     resetSession();
-    window.location.href = window.location.origin + window.location.pathname;
+    window.history.replaceState(null, '', '/');
   };
 
   // Helper for human-readable amount in Rupees
@@ -694,7 +707,7 @@ function PaymentAttempt({ sessionStore }) {
             <p className="text-slate-600">
               {isAdCampaign
                 ? 'Enter it on the kiosk to activate or schedule your advertisement.'
-                : 'Your service will begin immediately upon verification.'}
+                : 'Your service will begin after kiosk verification. This code stays on this phone for 5 minutes after payment confirmation.'}
             </p>
           </div>
 

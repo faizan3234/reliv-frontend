@@ -1,7 +1,7 @@
 import React,{act} from 'react';
 import {createRoot} from 'react-dom/client';
 import PayAd from '../src/pages/PayAd';
-import {savePaymentRecovery,savePendingVerification,getPendingVerification} from '../customer-web/src/services/session';
+import {savePaymentRecovery,savePendingVerification,getPendingVerification,clearPaidSession} from '../customer-web/src/services/session';
 window.IS_REACT_ACT_ENVIRONMENT=true;
 let root,resolveOld; const calls=[],checks=[];
 const result=document.getElementById('results'),wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -46,9 +46,10 @@ async function run(){
  await scan('slow');await scan('newer');await act(async()=>resolveOld());await flush();
  assert(!document.body.textContent.includes('1111'),'late old-QR response cannot reveal a code on new QR');
  assert(calls.at(-1).body.package==='newer','current QR is the authoritative package');
+ clearPaidSession('paid');
  await scan('paid');assert(document.body.textContent.includes('0042'),'server-paid current QR reveals leading-zero code');
  await mount('paid');assert(document.body.textContent.includes('0042'),'refresh reopens the same paid request');
- assert(!localStorage.getItem('reliv_payment_recovery_v2')?.includes('0042'),'activation code never persisted');
+ assert(!localStorage.getItem('reliv_payment_recovery_v2')?.includes('0042'),'activation code excluded from unpaid recovery record');
  await act(async()=>root.unmount());result.textContent=checks.join('\n')+'\nALL '+checks.length+' BROWSER CHECKS PASSED';
 }
 run().catch(e=>{result.textContent=checks.join('\n')+'\nFAIL '+e.stack;});
