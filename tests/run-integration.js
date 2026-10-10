@@ -13,7 +13,7 @@ const bundle = await build({
   loader: { '.mp4': 'empty', '.png': 'dataurl', '.jpeg': 'dataurl', '.svg': 'dataurl', '.css': 'empty', '.ttf': 'empty' },
   plugins: [
     { name: 'scanner-fixture', setup(build) {
-      if (process.argv[2]?.endsWith('payment-scanner-browser.jsx'))
+      if (['payment-scanner-browser.jsx', 'customer-pwa-browser.jsx'].some(name => process.argv[2]?.endsWith(name)))
         build.onResolve({filter: /paymentScannerEngine$/}, () => ({path:resolve('tests/scanner-fixture.js')}));
     } },
     {

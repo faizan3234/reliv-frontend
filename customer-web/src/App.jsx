@@ -1,3 +1,5 @@
+import { InstallApp } from './components/InstallApp';
+import { setAppIdle, checkForAppUpdate, refreshApp } from './services/pwaRuntime';
 import { prepareScanSound } from './services/scanFeedback';
 import React, { useState, useEffect, useCallback } from 'react';
 let scannerModule;
@@ -35,6 +37,25 @@ export function App() {
   const sessionStore = useSessionStore();
   const { state } = sessionStore;
   const [scanNotice, setScanNotice] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('IDLE');
+  const [refreshNotice, setRefreshNotice] = useState('');
+  useEffect(() => {
+    const status = event => setPaymentStatus(event.detail);
+    window.addEventListener('reliv-payment-status', status);
+    return () => window.removeEventListener('reliv-payment-status', status);
+  }, []);
+  useEffect(() => {
+    setAppIdle(!scanning && !state.encryptedPackage && !extractPaymentPackage() && !getPendingVerification() && !getPaymentRecovery() && !getPaidSession());
+    return () => setAppIdle(false);
+  }, [scanning, state, paymentStatus]);
+  const refresh = async () => {
+    if (scanning || state.encryptedPackage || extractPaymentPackage() || getPendingVerification() || getPaidSession()) {
+      await checkForAppUpdate();
+      setRefreshNotice('Your active session stays open safely. Updates apply when it finishes.');
+      return;
+    }
+    refreshApp();
+  };
   // Warm only code, not the camera. A user action still opens the scanner.
   useEffect(() => {
     const timer = setTimeout(() => { loadScanner().catch(() => {}); }, 400);
@@ -62,7 +83,7 @@ export function App() {
     );
   }
 
-  // Detect Payment V2 URL route /pay, #p=..., active pending verification, stored recovery session, or active 3-min paid session
+  // Detect Payment V2 URL route /pay, #p=..., active pending verification, stored recovery session, or active 5-min paid session
   const pendingVerification = getPendingVerification();
   const paymentRecovery = getPaymentRecovery();
   const paidSession = getPaidSession();
@@ -95,11 +116,13 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-orange-50 via-white to-white text-slate-900 selection:bg-orange-500 selection:text-white">
-      <Header />
+    <div className="reliv-app min-h-screen flex flex-col bg-gradient-to-b from-orange-50 via-white to-white text-slate-900 selection:bg-orange-500 selection:text-white">
+      <Header onRefresh={refresh} />
       
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 space-y-4">
         <div className="pb-8">
+          {refreshNotice && <p role="status" className="mb-3 text-sm text-slate-600">{refreshNotice}</p>}
+          <div hidden={scanning || hasPackage} className="mb-5"><InstallApp /></div>
           {scanning ? <ScannerPanel onClose={() => setScanning(false)} onScan={scanned} /> : <>
             {scanNotice && <p role="status" className="rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-900">✓ QR captured. Opening this kiosk payment.</p>}
             {renderActiveScreen()}

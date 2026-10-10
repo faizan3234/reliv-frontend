@@ -199,7 +199,8 @@ async function run() {
   assert(document.querySelector('#app').textContent.includes('Payment Successful'), 'signed-package flow displays success from an authoritative paid response');
   assert(document.querySelector('#app').textContent.includes('Enter this activation code'), 'verified ad payment has ad-specific activation instructions');
   assert(!findButton('Pay ₹117'), 'already-paid ad never opens another checkout');
-  assert(!JSON.stringify(localStorage).includes('0042'), 'verified code is not persisted');
+  const retained = JSON.parse(localStorage.getItem('reliv_paid_session_v2') || 'null');
+  assert(retained?.confirmationCode === '0042' && retained.expiresAt - retained.paidAt === 300000, 'verified ad code has a bounded five-minute device-local reopening window');
   await act(async () => root.unmount());
   result.textContent = checks.join('\n') + '\n\nALL ' + checks.length + ' BROWSER CHECKS PASSED';
 }

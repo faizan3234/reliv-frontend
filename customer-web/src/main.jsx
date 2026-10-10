@@ -1,3 +1,4 @@
+import { startPwaUpdates } from './services/pwaRuntime';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -9,9 +10,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
-// Do not intercept the dev server or payment APIs.
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
-}
+if (import.meta.env.PROD) startPwaUpdates();

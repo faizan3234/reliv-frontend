@@ -3,15 +3,18 @@ import { extractPaymentPackage, getPaymentRecovery, getPendingVerification, getP
 
 export const INITIAL_STATE = { encryptedPackage: '', requestId: '', confirmationCode: '', amount: 0, currency: 'INR', paymentState: 'IDLE', error: null, isLoaded: false };
 export function initialPaymentState() {
+  getPaidSession(); // Prune expired code and its URL before restoring a route.
   const pkg = extractPaymentPackage();
   const saved = getPaymentRecovery(pkg);
-  const paid = !pkg ? getPaidSession() : getPaidSession(pkg);
-  // A QR is the session boundary. Never attach a different request/code to it.
-  const encryptedPackage = pkg || saved?.encryptedPackage || paid?.encryptedPackage || '';
-  return { ...INITIAL_STATE, encryptedPackage, requestId: saved?.requestId || paid?.requestId || '',
-    confirmationCode: !pkg && paid?.confirmationCode ? paid.confirmationCode : '',
-    amount: saved?.amount || paid?.amount || 0, currency: saved?.currency || paid?.currency || 'INR',
-    paymentState: encryptedPackage || getPendingVerification()?.requestId || paid?.confirmationCode ? 'PAYMENT_V2_FLOW' : 'IDLE', isLoaded: true };
+  const paid = pkg ? getPaidSession(pkg) : getPaidSession();
+  // Without a new QR, resume the most recent confirmed code before an older
+  // unfinished recovery slot. Never mix identity fields from different slots.
+  const source = paid || saved;
+  const encryptedPackage = pkg || source?.encryptedPackage || '';
+  return { ...INITIAL_STATE, encryptedPackage, requestId: source?.requestId || '',
+    confirmationCode: paid?.confirmationCode || '',
+    amount: source?.amount || 0, currency: source?.currency || 'INR',
+    paymentState: encryptedPackage || getPendingVerification()?.requestId ? 'PAYMENT_V2_FLOW' : 'IDLE', isLoaded: true };
 }
 export function useSessionStore() {
   const [state, setState] = useState(initialPaymentState);

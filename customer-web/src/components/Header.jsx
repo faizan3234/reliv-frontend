@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, RefreshCw } from 'lucide-react';
 import { Logo } from './Logo';
 
-export function Header({ kioskId }) {
+export function Header({ kioskId, onRefresh }) {
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-orange-100 px-4 py-3 shadow-sm">
       <div className="max-w-md mx-auto flex items-center justify-between">
@@ -14,6 +14,7 @@ export function Header({ kioskId }) {
           </div>
         </div>
 
+        <button type="button" onClick={onRefresh} aria-label="Refresh Reliv" title="Refresh Reliv" className="flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-orange-700 active:bg-orange-50"><RefreshCw className="h-4 w-4" />Refresh</button>
         {Boolean(kioskId) && (
           <div className="flex items-center space-x-2">
             <div className="px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200 text-[11px] font-mono text-orange-700 font-medium flex items-center space-x-1.5">

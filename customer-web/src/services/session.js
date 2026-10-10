@@ -188,122 +188,73 @@ export function extractPaymentPackage(hashStr = typeof window !== 'undefined' ? 
 }
 
 export const PAID_SESSION_STORAGE_KEY = 'reliv_paid_session_v2';
-export const PAID_SESSION_TTL_MS = 3 * 60 * 1000; // 3 minutes = 180,000 ms
-
-/**
- * Persists the paid session and confirmation code locally on this device.
- * Hard deadline: exactly 3 minutes from payment completion.
- * Reopening the PWA reads this session without resetting or extending the timer.
- */
-export function savePaidSession(data) {
-  if (typeof window === 'undefined') return;
-  if (!data || !data.confirmationCode) return;
-  const serviceType = data.serviceType || 'HEALTH_CHECKUP';
-  if (['AD_CAMPAIGN', 'RELIV_AD_CAMPAIGN'].includes(serviceType)) {
-    // Ad campaign activation codes are one-time kiosk secrets and not persisted in browser simulation
-    return;
-  }
-
-  try {
-    const now = Date.now();
-    const paidAt = data.paidAt || now;
-    const expiresAt = data.expiresAt || (paidAt + PAID_SESSION_TTL_MS);
-    const payload = {
-      confirmationCode: String(data.confirmationCode).trim(),
-      requestId: data.requestId || '',
-      orderId: data.orderId || '',
-      encryptedPackage: data.encryptedPackage || '',
-      amount: data.amount || 0,
-      currency: data.currency || 'INR',
-      serviceType: data.serviceType || 'HEALTH_CHECKUP',
-      storySummary: data.storySummary || null,
-      paidAt,
-      expiresAt,
-    };
-    const serialized = JSON.stringify(payload);
-    if (window.localStorage) {
-      window.localStorage.setItem(PAID_SESSION_STORAGE_KEY, serialized);
-      if (payload.encryptedPackage) {
-        window.localStorage.setItem(PAID_SESSION_STORAGE_KEY + ':' + payload.encryptedPackage, serialized);
-      }
-    }
-    if (window.sessionStorage) {
-      window.sessionStorage.setItem(PAID_SESSION_STORAGE_KEY, serialized);
-    }
-  } catch (e) {
-    console.warn('[Session] Failed to save paid session:', e);
-  }
+export const PAID_SESSION_TTL_MS = 5 * 60 * 1000;
+let memoryPaid = null;
+function paidStores() {
+  if (typeof window === 'undefined') return [];
+  return ['localStorage', 'sessionStorage'].flatMap(name => {
+    try { return window[name] ? [window[name]] : []; } catch { return []; }
+  });
 }
 
-/**
- * Retrieves valid unexpired paid session on this device.
- * Returns null if 3 minutes have passed or if session is missing.
- */
+// Device-local convenience cache, never proof of payment. Only callers that
+// have verified paid:true with the bridge may save a code. No server/public cache.
+export function savePaidSession(data) {
+  if (typeof window === 'undefined' || !/^\d{4}$/.test(String(data?.confirmationCode || '')) || !data.requestId || !data.encryptedPackage) return;
+  const existing = getPaidSession(data.encryptedPackage);
+  const same = existing?.requestId === data.requestId;
+  const paidAt = same ? existing.paidAt : Date.now();
+  const previous = getPaidSession();
+  if (previous && !same) clearPaidSession(previous.encryptedPackage);
+  const payload = {
+    confirmationCode: String(data.confirmationCode), requestId: data.requestId,
+    orderId: data.orderId || '', encryptedPackage: data.encryptedPackage,
+    amount: data.amount || 0, currency: data.currency || 'INR',
+    serviceType: data.serviceType || 'HEALTH_CHECKUP', storySummary: data.storySummary || null,
+    paidAt, expiresAt: paidAt + PAID_SESSION_TTL_MS,
+  };
+  memoryPaid = payload;
+  for (const storage of paidStores()) {
+    try {
+      storage.setItem(PAID_SESSION_STORAGE_KEY, JSON.stringify(payload));
+      storage.setItem(PAID_SESSION_STORAGE_KEY + ':' + payload.encryptedPackage, JSON.stringify(payload));
+    } catch { /* Memory still keeps the displayed code alive if storage is full. */ }
+  }
+  return payload;
+}
+
 export function getPaidSession(encryptedPackage) {
   if (typeof window === 'undefined') return null;
-
-  try {
-    let raw = null;
-    if (encryptedPackage) {
-      raw = window.localStorage?.getItem(PAID_SESSION_STORAGE_KEY + ':' + encryptedPackage);
-      if (!raw) {
-        const generic = window.localStorage?.getItem(PAID_SESSION_STORAGE_KEY);
-        if (generic) {
-          const parsedGeneric = JSON.parse(generic);
-          if (parsedGeneric?.encryptedPackage === encryptedPackage) {
-            raw = generic;
-          }
-        }
-      }
-    } else {
-      raw = (window.localStorage && window.localStorage.getItem(PAID_SESSION_STORAGE_KEY)) ||
-            (window.sessionStorage && window.sessionStorage.getItem(PAID_SESSION_STORAGE_KEY));
-    }
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.confirmationCode) return null;
-
-    // Strict 3-minute expiry check: does NOT reset timer on reopen
-    const now = Date.now();
-    if (parsed.expiresAt && now > parsed.expiresAt) {
-      clearPaidSession(encryptedPackage || parsed.encryptedPackage);
-      return null;
-    }
-
-    // A specific QR hash must never show another package's code
-    if (encryptedPackage && parsed.encryptedPackage && parsed.encryptedPackage !== encryptedPackage) {
-      return null;
-    }
-
-    if (['AD_CAMPAIGN', 'RELIV_AD_CAMPAIGN'].includes(parsed.serviceType)) {
-      return null;
-    }
-
-    return parsed;
-  } catch (e) {
-    console.warn('[Session] Failed to read paid session:', e);
+  let parsed = null;
+  for (const storage of paidStores()) {
+    try {
+      const key = PAID_SESSION_STORAGE_KEY + (encryptedPackage ? ':' + encryptedPackage : '');
+      const candidate = JSON.parse(storage.getItem(key) || storage.getItem(PAID_SESSION_STORAGE_KEY) || 'null');
+      if (candidate && (!encryptedPackage || candidate.encryptedPackage === encryptedPackage)) { parsed = candidate; break; }
+    } catch { /* Try the other local storage, then memory. */ }
   }
-  return null;
+  parsed ||= (!encryptedPackage || memoryPaid?.encryptedPackage === encryptedPackage) ? memoryPaid : null;
+  if (!parsed || !/^\d{4}$/.test(String(parsed.confirmationCode)) || !parsed.requestId || !parsed.encryptedPackage) return null;
+  if (!Number.isFinite(parsed.paidAt) || !Number.isFinite(parsed.expiresAt) ||
+      Date.now() >= Math.min(parsed.expiresAt, parsed.paidAt + PAID_SESSION_TTL_MS)) {
+    clearPaidSession(parsed.encryptedPackage);
+    clearPaymentRecovery(parsed.encryptedPackage);
+    if (extractPaymentPackage() === parsed.encryptedPackage) window.history.replaceState(null, '', '/');
+    return null;
+  }
+  return parsed;
 }
 
-/**
- * Clears paid session from local storage (e.g. when Done is tapped or after 3 minutes).
- */
 export function clearPaidSession(encryptedPackage) {
-  if (typeof window === 'undefined') return;
-  try {
-    if (encryptedPackage) {
-      window.localStorage?.removeItem(PAID_SESSION_STORAGE_KEY + ':' + encryptedPackage);
-    }
-    for (const storage of [window.localStorage, window.sessionStorage]) {
-      const saved = JSON.parse(storage?.getItem(PAID_SESSION_STORAGE_KEY) || 'null');
+  if (!encryptedPackage || memoryPaid?.encryptedPackage === encryptedPackage) memoryPaid = null;
+  for (const storage of paidStores()) {
+    try {
+      if (encryptedPackage) storage.removeItem(PAID_SESSION_STORAGE_KEY + ':' + encryptedPackage);
+      const saved = JSON.parse(storage.getItem(PAID_SESSION_STORAGE_KEY) || 'null');
       if (!encryptedPackage || saved?.encryptedPackage === encryptedPackage) {
-        storage?.removeItem(PAID_SESSION_STORAGE_KEY);
+        if (saved?.encryptedPackage) storage.removeItem(PAID_SESSION_STORAGE_KEY + ':' + saved.encryptedPackage);
+        storage.removeItem(PAID_SESSION_STORAGE_KEY);
       }
-    }
-  } catch (e) {
-    console.warn('[Session] Failed to clear paid session:', e);
+    } catch { /* Storage may be unavailable in private browsing. */ }
   }
 }
-

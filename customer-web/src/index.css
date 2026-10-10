@@ -57,3 +57,11 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* One phone-width experience, including when a browser requests desktop mode. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; overflow-x: hidden; overscroll-behavior-y: contain; }
+.reliv-app { max-width: 480px; margin-inline: auto; min-height: 100dvh; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.reliv-app input, .reliv-app textarea, .reliv-app [contenteditable] { -webkit-user-select: text; user-select: text; font-size: max(16px, 1em); }
+.reliv-app img { -webkit-user-drag: none; }
+.reliv-app button, .reliv-app a { touch-action: manipulation; }

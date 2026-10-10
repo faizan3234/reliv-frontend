@@ -19,3 +19,19 @@ self.addEventListener('fetch', event => {
     })));
   }
 });
+
+// Every live tab must agree before replacing its worker. Never interrupt UPI.
+self.addEventListener('message', event => {
+  if (event.data?.type !== 'RELIV_ACTIVATE_IF_IDLE') return;
+  event.waitUntil((async () => {
+    const tabs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const answers = await Promise.all(tabs.map(tab => new Promise(resolve => {
+      const channel = new MessageChannel();
+      const finish = value => { clearTimeout(timer); channel.port1.close(); resolve(value); };
+      const timer = setTimeout(() => finish(false), 1500);
+      channel.port1.onmessage = reply => finish(reply.data?.idle === true);
+      tab.postMessage({ type: 'RELIV_CAN_UPDATE' }, [channel.port2]);
+    })));
+    if (answers.every(Boolean)) await self.skipWaiting();
+  })());
+});
