@@ -101,6 +101,7 @@ export function SpeechProvider({ children }) {
   const audioManifestRef = useRef(null);
   const manifestReadyRef = useRef(Promise.resolve());
   const activeAudioRef = useRef(null);
+  const unlockContextRef = useRef(null);
   const cancelPlaybackRef = useRef(null);
   const retryPlaybackRef = useRef(null);
   const volumeRef = useRef(volume);
@@ -230,8 +231,11 @@ export function SpeechProvider({ children }) {
           fetchController?.abort();
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           retryPlaybackRef.current = null;
-          if (audio) audio.onended = audio.onerror = audio.ontimeupdate = audio.onloadedmetadata = null;
-          if (utterance) utterance.onend = utterance.onerror = null;
+          if (audio) {
+            audio.onended = audio.onerror = audio.ontimeupdate = audio.onloadedmetadata = null;
+            audio.pause();
+          }
+          if (utterance) utterance.onstart = utterance.onend = utterance.onerror = null;
           if (requestId === playbackRequestRef.current) {
             setSpeakerGate(false);
             activeAudioRef.current = null;
@@ -323,6 +327,13 @@ export function SpeechProvider({ children }) {
           if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
             fail(new Error('Speech synthesis not available.'));
             return;
+          }
+          // A rejected play() promise can arrive after the element has started.
+          // Release that channel before switching to SpeechSynthesis.
+          if (audio) {
+            audio.onended = audio.onerror = audio.ontimeupdate = audio.onloadedmetadata = null;
+            audio.pause();
+            if (activeAudioRef.current === audio) activeAudioRef.current = null;
           }
           synthesisStarted = true;
           const allVoices = (window.speechSynthesis?.getVoices() || []).filter(voice => voice.localService !== false);
@@ -498,8 +509,8 @@ export function SpeechProvider({ children }) {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
-        const ctx = new AudioCtx();
-        if (ctx.state === 'suspended') ctx.resume();
+        const ctx = unlockContextRef.current || (unlockContextRef.current = new AudioCtx());
+        if (ctx.state === 'suspended') Promise.resolve(ctx.resume()).catch(() => {});
       }
     } catch { /* AudioContext can be restricted */ }
   }, []);
@@ -515,7 +526,9 @@ export function SpeechProvider({ children }) {
   }, [stop]);
 
   const setVol = useCallback((v) => {
-    const clamped = Math.max(0, Math.min(1, v));
+    if (!Number.isFinite(Number(v))) return;
+    const clamped = Math.max(0, Math.min(1, Number(v)));
+    if (activeAudioRef.current) activeAudioRef.current.volume = clamped;
     setVolume(clamped);
   }, []);
 
@@ -531,6 +544,9 @@ export function SpeechProvider({ children }) {
       window.removeEventListener("pointerdown", retry);
       window.removeEventListener("keydown", retry);
       stop();
+      const ctx = unlockContextRef.current;
+      unlockContextRef.current = null;
+      if (ctx) Promise.resolve(ctx.close()).catch(() => {});
     };
   }, [stop]);
 
