@@ -40,7 +40,7 @@ export const getMedicineImageUrl = (kit) => {
     return imagePath;
   }
 
-  return `${API_BASE}${imagePath}`;
+  return `${API_BASE}${imagePath.startsWith('/medicine-images/') ? '/api' : ''}${imagePath}`;
 };
 
 // --- Quantity & Stock Helpers ---

@@ -22,7 +22,8 @@ export default function OrderSuccess() {
   const [snapshot, setSnapshot] = useState(null);
   const [retry, setRetry] = useState(0);
   const [delayed, setDelayed] = useState(false);
-  const instruction = w[`${state}Text`];
+  const visibleState = delayed && ['checking','waiting','dispensing','offline'].includes(state) ? 'review' : state;
+  const instruction = w[`${visibleState}Text`];
   useVoicePage({ onHelp: () => speakText(instruction, {langHint:language}), idleEnabled:false });
   useEffect(() => {
     setState('checking'); setSnapshot(null);
@@ -46,6 +47,7 @@ export default function OrderSuccess() {
     return () => { controller.abort(); clearTimeout(pollTimer); };
   }, [sessionId, retry]);
   useEffect(() => {
+    setDelayed(false);
     const timer = setTimeout(() => setDelayed(true), 90000);
     return () => clearTimeout(timer);
   }, [sessionId]);
@@ -53,7 +55,7 @@ export default function OrderSuccess() {
     <section className="mx-auto max-w-3xl rounded-3xl bg-white p-6 shadow-sm sm:p-10">
       <Logo />
       <p className="mt-5 text-orange-800">{w.title}</p>
-      <h1 className="mt-2 text-3xl font-bold" role="status">{w[state]}</h1>
+      <h1 className="mt-2 text-3xl font-bold" role="status">{w[visibleState]}</h1>
       <SpokenGuide text={instruction} language={language} autoSpeak />
       {snapshot?.jobsCount > 0 && <p className="my-4 text-xl">{w.confirmed}: {snapshot.jobsCompleted} / {snapshot.jobsCount}</p>}
       {delayed && ['waiting','dispensing','offline'].includes(state) && <p className="rounded-xl bg-amber-100 p-4" role="alert">{w.delayed}</p>}

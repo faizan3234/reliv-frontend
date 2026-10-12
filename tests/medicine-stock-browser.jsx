@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import {MemoryRouter,Routes,Route} from 'react-router-dom';
 import {HealthProvider,useHealth} from '../src/context/HealthContext';
 import {SpeechProvider} from '../src/context/SpeechContext';
-import MedicineDispensing,{getAvailableQuantity} from '../src/pages/MedicineDispensing';
+import MedicineDispensing,{getAvailableQuantity,getMedicineImageUrl} from '../src/pages/MedicineDispensing';
 window.IS_REACT_ACT_ENVIRONMENT=true;
 const wait=window.setTimeout.bind(window);let poll,health;
 const interval=window.setInterval.bind(window);
@@ -22,6 +22,7 @@ const card=name=>[...document.querySelectorAll('.product-grid .glass-card')].fin
 const checkout=()=>document.querySelector('.luxury-pay-btn');
 const click=async button=>{assert(button,'control exists');await act(async()=>button.click());await flush();};
 async function run(){
+ assert(getMedicineImageUrl({image_path:'/medicine-images/item.png'}).endsWith('/api/medicine-images/item.png'),'medicine and admin image helper uses nginx API proxy');
  sessionStorage.clear();const root=createRoot(document.getElementById('app'));
  await act(async()=>root.render(<MemoryRouter><HealthProvider><SpeechProvider><Routes><Route path="/" element={<Probe/>}/><Route path="/checkout" element={<p id="checkout-page">Review order</p>}/></Routes></SpeechProvider></HealthProvider></MemoryRouter>));await flush();
  assert(card('Kit A').textContent.includes('2 available'),'display available stock after reservations');

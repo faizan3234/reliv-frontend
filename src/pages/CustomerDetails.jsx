@@ -8,7 +8,7 @@ import { useHealth } from '../context/HealthContext';
 import { useSpeech } from '../context/SpeechContext';
 import { useVoicePage } from '../hooks/useVoicePage';
 import { API_BASE } from '../config/api';
-import { saveKioskCustomer, saveKioskHealthProfile, openKioskReportReview } from '../utils/kioskSession';
+import { saveKioskCustomer, selectKioskMedicine, saveKioskHealthProfile, openKioskReportReview } from '../utils/kioskSession';
 import { requestJSON } from '../utils/request';
 import { reviewCopy } from '../voice/reviewGuidance';
 import { entryCopy } from '../voice/entryGuide';
@@ -37,9 +37,10 @@ export default function CustomerDetails(){
   try{
    const patient={name:form.name.trim(),age:Number(form.age),gender:form.gender};
    const result=reviewMode?await openKioskReportReview(API_BASE,{name:patient.name,pin}):mode==='medicine'?await saveKioskCustomer(API_BASE,patient):await saveKioskHealthProfile(API_BASE,{...patient,mode,pin});
+   if(mode==='medicine'&&!reviewMode) await selectKioskMedicine(API_BASE,result);
    if(!mounted.current)return;
    update({sessionId:result.sessionId,patient:result.customerData||patient});setPin('');
-   navigate(reviewMode?'/report-1':'/two-options',{state:{sessionId:result.sessionId}});
+   navigate(reviewMode?'/report-1':mode==='medicine'?'/medicine-dispensing':'/two-options',{state:{sessionId:result.sessionId}});
   }catch(e){if(mounted.current)setError(e.code==='NO_SAVED_REPORT'?r.noReport:[401,403].includes(e.status)?w.wrong:w.error);}
   finally{lock.current=false;if(mounted.current)setBusy(false);}
  };
@@ -47,7 +48,7 @@ export default function CustomerDetails(){
  if(!featuresReady)return <main className="p-12 text-2xl" role="status">{w.saving}</main>;
  return <main className={`min-h-screen bg-[#f3f7f8] p-6 text-slate-900 touch-pan-y ${keyboard?'pb-96':'pb-12'}`}>
   <header className="mx-auto mb-8 flex max-w-6xl items-center justify-between"><button type="button" disabled={busy} onClick={()=>{stop();if(step>0){setStep(step-1);setKeyboard('');setError('');}else if(mode&&!reviewMode)choose(null);else navigate('/');}} className="min-h-14 rounded-xl border border-slate-300 bg-white px-6 font-bold">← {w.back}</button><Logo size="text-4xl"/></header>
-  <div className="mx-auto max-w-6xl">{reviewMode&&<p className="mb-4 rounded-xl bg-amber-100 p-4 font-semibold" role="status">{r.banner}</p>}<h1 className="mb-6 text-4xl font-bold">{!mode?w.welcome:step===0?w.name:isPin?(mode==='returning'?w.returnPin:w.pin):w.details}</h1>
+  <div className="mx-auto max-w-6xl">{reviewMode&&<div className="mb-4 rounded-xl bg-amber-100 p-4 font-semibold"><p role="status">{r.banner}</p><button type="button" disabled={busy} onClick={()=>{setReviewMode(false);choose('medicine');}} className="mt-3 min-h-14 rounded-xl border border-slate-500 bg-white px-5">{w.medicine} — {language==='hi'?'PIN की ज़रूरत नहीं':language==='bn'?'PIN লাগবে না':'No PIN needed'}</button></div>}<h1 className="mb-6 text-4xl font-bold">{!mode?w.welcome:step===0?w.name:isPin?(mode==='returning'?w.returnPin:w.pin):w.details}</h1>
    {!mode?<div className="grid gap-5 md:grid-cols-3">{[[UserPlus,'new',w.new,w.newHint],[History,'returning',w.returning,w.returnHint],[Pill,'medicine',w.medicine,w.medicineHint]].map(([Icon,value,title,hint])=><button type="button" key={value} onClick={()=>choose(value)} className="min-h-64 rounded-3xl border-2 border-slate-200 bg-white p-8 text-left shadow-sm focus:border-teal-700">{createElement(Icon,{size:42,className:'mb-6 text-teal-700'})}<span className="block text-2xl font-bold">{title}</span><span className="mt-3 block text-lg text-slate-600">{hint}</span><ArrowRight className="mt-6 text-teal-700"/></button>)}</div>:<section className="grid gap-8 rounded-3xl border border-slate-200 bg-white p-8 lg:grid-cols-[1fr_1fr]">
     <div><p className="mb-5 text-lg font-semibold text-teal-800">{w.step} {step+1} / {mode==='new'?3:2}</p>
      {step===0&&<><label htmlFor="visitor-name" className="mb-3 block text-xl">{w.name}</label><input id="visitor-name" name="name" autoComplete="off" value={form.name} onFocus={()=>setKeyboard('name')} onClick={()=>setKeyboard('name')} onChange={e=>change('name',e.target.value)} maxLength={80} className="min-h-20 w-full rounded-2xl border-2 border-slate-300 p-5 text-3xl"/></>}
