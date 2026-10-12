@@ -47,46 +47,29 @@ export const getMedicineImageUrl = (kit) => {
 // eslint-disable-next-line react-refresh/only-export-components
 export const getAvailableQuantity = (kit) => {
   if (!kit) return 0;
-  return Number(
-    kit.available_quantity ??
-    (Number(kit.stock_quantity ?? kit.quantity ?? 0) -
-     Number(kit.reserved_quantity ?? 0))
-  );
+  const value = Number(kit.available_quantity ??
+    (Number(kit.stock_quantity ?? kit.quantity ?? 0) - Number(kit.reserved_quantity ?? 0)));
+  return Number.isSafeInteger(value) && value > 0 ? value : 0;
 };
-
-const computeStockLabel = (qty, expiryDate) => {
-  if (expiryDate && new Date(expiryDate) < new Date()) return "Expired";
-  if (qty <= 0) return "Out of Stock";
-  if (qty <= 5) return "Low Stock";
-  return "In Stock";
+const stockWords = {
+  en: { available:n=>`${n} available`, empty:'Out of stock', expired:'Unavailable', add:'Add', refresh:'Refresh stock', checking:'Checking stock…', offline:'Stock could not be checked. Please refresh before choosing items.', changed:'Stock changed. Please review your selection before continuing.', hint:'The number on each item shows available stock. Use + or − to change your quantity. Out-of-stock items cannot be selected.', selected:'Selected', increase:'Increase quantity', decrease:'Decrease quantity' },
+  hi: { available:n=>`${n} उपलब्ध हैं`, empty:'स्टॉक खत्म', expired:'उपलब्ध नहीं', add:'जोड़ें', refresh:'स्टॉक फिर जाँचें', checking:'स्टॉक जाँच रहे हैं…', offline:'स्टॉक जाँचा नहीं जा सका। चुनने से पहले स्टॉक फिर जाँचें।', changed:'स्टॉक बदल गया है। आगे बढ़ने से पहले अपनी चुनी हुई मात्रा जाँच लें।', hint:'हर सामान पर बची हुई मात्रा दिखती है। + या − से अपनी मात्रा बदलें। जिसका स्टॉक खत्म है, उसे नहीं चुन सकते।', selected:'चुना हुआ', increase:'मात्रा बढ़ाएँ', decrease:'मात्रा घटाएँ' },
+  bn: { available:n=>`${n}টি পাওয়া যাচ্ছে`, empty:'স্টক শেষ', expired:'পাওয়া যাচ্ছে না', add:'যোগ করুন', refresh:'স্টক আবার দেখুন', checking:'স্টক দেখা হচ্ছে…', offline:'স্টক দেখা যায়নি। বেছে নেওয়ার আগে আবার দেখুন।', changed:'স্টক বদলেছে। এগোনোর আগে আপনার বেছে নেওয়া পরিমাণ দেখুন।', hint:'প্রতিটি জিনিসে কতটা পাওয়া যাচ্ছে দেখানো আছে। + বা − দিয়ে নিজের পরিমাণ বদলান। স্টক শেষ হলে বেছে নেওয়া যাবে না।', selected:'বেছে নেওয়া', increase:'পরিমাণ বাড়ান', decrease:'পরিমাণ কমান' },
 };
-
-const computeStockClass = (qty, expiryDate) => {
-  const label = computeStockLabel(qty, expiryDate);
-  switch (label) {
-    case "In Stock":
-      return "stock in";
-    case "Low Stock":
-      return "stock low";
-    case "Out of Stock":
-      return "stock out";
-    case "Expired":
-      return "stock expired";
-    default:
-      return "stock out";
-  }
+const isUnavailable = kit => {
+  const expiry = kit?.expiryDate || kit?.expiry_date;
+  return getAvailableQuantity(kit) === 0 || (expiry && (!Number.isFinite(Date.parse(expiry)) || Date.parse(expiry) < Date.now()));
 };
-
-const StockBadge = ({ quantity, expiryDate }) => {
-  const stock = computeStockLabel(quantity, expiryDate);
-  const stockClass = computeStockClass(quantity, expiryDate);
-  return <span className={stockClass}>{stock}</span>;
+const parseKits = data => {
+  const kits = Array.isArray(data) ? data : data?.kits;
+  if (!Array.isArray(kits)) throw new Error('Invalid inventory response');
+  return kits.filter(kit => kit && getKitId(kit));
 };
 
 // --- Customer Kit Card Component ---
-const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart }) => {
+const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, words, blocked }) => {
   const available = getAvailableQuantity(kit);
-  const isOutOfStock = available <= 0 || ((kit.expiryDate || kit.expiry_date) && new Date(kit.expiryDate || kit.expiry_date) < new Date());
+  const isOutOfStock = isUnavailable(kit);
 
   const kitId = getKitId(kit);
   const cartItem = cart?.find((item) => getKitId(item) === kitId);
@@ -110,13 +93,9 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart }) => {
 
       {/* Badges */}
       <div className="card-top">
-        {isOutOfStock ? (
-          <span className="stock out" style={{ fontSize: "11px", padding: "5px 10px" }}>
-            Restocking soon
-          </span>
-        ) : (
-          <StockBadge quantity={available} expiryDate={kit.expiryDate || kit.expiry_date} />
-        )}
+        <span className={`stock ${isOutOfStock ? 'out' : available <= 5 ? 'low' : 'in'}`}>
+          {isOutOfStock ? (available === 0 ? `${words.empty} · 0` : words.expired) : words.available(available)}
+        </span>
 
 
       </div>
@@ -141,15 +120,17 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart }) => {
           <span className="price">{formatINR(kit.price)}</span>
         </div>
 
+        {isOutOfStock && <button className="add-cart-btn" disabled>{available === 0 ? words.empty : words.expired}</button>}
         {/* Add to Cart button */}
         {!isOutOfStock && cartQty === 0 && (
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => onAddToCart(kit)}
             className="add-cart-btn"
+            disabled={blocked}
           >
             <Plus size={18} />
-            <span>Add</span>
+            <span>{words.add}</span>
           </motion.button>
         )}
 
@@ -163,16 +144,18 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart }) => {
                   ? onUpdateQty(kitId, cartQty - 1)
                   : onRemoveFromCart(kitId)
               }
+              aria-label={`${words.decrease}: ${kit.name}`}
               className="card-qty-btn card-qty-minus"
             >
               <Minus size={18} />
             </motion.button>
-            <span className="card-qty-value">{cartQty}</span>
+            <span className="card-qty-value" aria-label={words.selected}>{cartQty}</span>
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => onUpdateQty(kitId, cartQty + 1)}
               className="card-qty-btn card-qty-plus"
-              disabled={cartQty >= available}
+              aria-label={`${words.increase}: ${kit.name}`}
+              disabled={blocked || cartQty >= available}
             >
               <Plus size={18} />
             </motion.button>
@@ -221,6 +204,10 @@ function EnabledMedicineDispensing() {
   const { data: health } = useHealth();
   const language = health.language || 'en';
   const words = medicineGuide[language] || medicineGuide.en;
+  const stockCopy = stockWords[language] || stockWords.en;
+  const [stockNotice, setStockNotice] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const inventoryRequest = useRef(null);
   const [loadError, setLoadError] = useState('');
   const [checking, setChecking] = useState(false);
   const checkoutRef = useRef(false);
@@ -229,25 +216,34 @@ function EnabledMedicineDispensing() {
   const { fromPaymentGate, cart: cartFromPrevPage } = location.state || {};
   const [medicalKits, setMedicalKits] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [cart, setCart] = useState(cartFromPrevPage || []);
+  const [cart, setCart] = useState(Array.isArray(cartFromPrevPage) ? cartFromPrevPage : []);
 
   // Fetch Inventory from Kiosk Backend
   const fetchKits = useCallback(async () => {
+    if (inventoryRequest.current || checkoutRef.current) return;
+    const controller = new AbortController();
+    inventoryRequest.current = controller;
+    setRefreshing(true);
     try {
+      const data = await requestJSON(`${API_BASE}/api/kits`, { cache: "no-store", timeoutMs:8000, signal:controller.signal });
+      if (controller.signal.aborted) return;
+      const kits = parseKits(data);
       setLoadError('');
-      const data = await requestJSON(`${API_BASE}/api/kits`, { cache: "no-store", timeoutMs:8000 });
-      const kits = Array.isArray(data) ? data : data.kits || [];
       setMedicalKits(kits);
     } catch (err) {
-      setLoadError(words.offlineText);
+      if (controller.signal.aborted) return;
+      setLoadError(stockCopy.offline);
       if (import.meta.env.DEV) console.warn('Inventory unavailable', err.message);
     } finally {
-      setIsLoading(false);
+      if (inventoryRequest.current === controller) inventoryRequest.current = null;
+      if (!controller.signal.aborted) { setIsLoading(false); setRefreshing(false); }
     }
-  }, [words.offlineText]);
+  }, [stockCopy.offline]);
 
   useEffect(() => {
     fetchKits();
+    const timer = setInterval(() => { if (!document.hidden) fetchKits(); }, 15000);
+    return () => { clearInterval(timer); inventoryRequest.current?.abort(); inventoryRequest.current = null; };
   }, [fetchKits]);
 
   // Load / Persist Cart
@@ -255,7 +251,7 @@ function EnabledMedicineDispensing() {
     if (!cartFromPrevPage) {
       try {
         const saved = sessionStorage.getItem("reliv_cart");
-        if (saved) setCart(JSON.parse(saved));
+        if (saved) { const parsed = JSON.parse(saved); if (Array.isArray(parsed)) setCart(parsed.filter(item => item && getKitId(item) && Number.isSafeInteger(item.cartQuantity) && item.cartQuantity > 0)); }
       } catch { /* Ignore malformed stale cart data. */ }
     }
   }, [cartFromPrevPage]);
@@ -267,7 +263,7 @@ function EnabledMedicineDispensing() {
   // Cart operations with normalized IDs and robust removal
   const handleAddToCart = (kit) => {
     const kitId = getKitId(kit);
-    if (!kitId) return;
+    if (!kitId || loadError || checking || isUnavailable(kit)) return;
 
     setCart((prev) => {
       const existing = prev.find((item) => getKitId(item) === kitId);
@@ -275,7 +271,7 @@ function EnabledMedicineDispensing() {
         const currentKit = medicalKits.find((k) => getKitId(k) === kitId) || existing;
         const maxAvailable = getAvailableQuantity(currentKit);
         if (existing.cartQuantity >= maxAvailable) {
-          alert(`Only ${maxAvailable} units currently available in stock`);
+          setStockNotice(stockCopy.changed);
           return prev;
         }
         return prev.map((item) =>
@@ -300,11 +296,11 @@ function EnabledMedicineDispensing() {
         .map((item) => {
           if (getKitId(item) === kitId) {
             const currentKit = medicalKits.find((k) => getKitId(k) === kitId) || item;
-            const maxAvailable = getAvailableQuantity(currentKit);
+            const maxAvailable = isUnavailable(currentKit) ? 0 : getAvailableQuantity(currentKit);
             const clampedQty = Math.min(newQuantity, maxAvailable);
 
             if (newQuantity > maxAvailable) {
-              alert(`Only ${maxAvailable} units currently available in stock`);
+              setStockNotice(stockCopy.changed);
             }
 
             return { ...item, id: kitId, kit_id: kitId, cartQuantity: clampedQty, availableStock: maxAvailable };
@@ -322,7 +318,7 @@ function EnabledMedicineDispensing() {
 
   const handleClearCart = () => {
     setCart([]);
-    sessionStorage.removeItem("reliv_cart");
+    writeBrowserStorage("reliv_cart", "[]", "sessionStorage");
   };
 
   const { totalItems, totalPrice } = useMemo(() => {
@@ -333,18 +329,19 @@ function EnabledMedicineDispensing() {
 
   // Re-verify inventory and navigate to CHECKOUT (not payment directly)
   const handleCheckout = async () => {
-    if (cart.length === 0 || checkoutRef.current) return;
+    if (cart.length === 0 || checkoutRef.current || refreshing || loadError) return;
     checkoutRef.current = true; setChecking(true); setLoadError('');
     try {
       const latestKits = await requestJSON(`${API_BASE}/api/kits`, { cache: "no-store", timeoutMs:8000 });
       {
-        const kitList = Array.isArray(latestKits) ? latestKits : latestKits.kits || [];
+        const kitList = parseKits(latestKits);
+        setMedicalKits(kitList);
 
         const validCart = cart
           .filter((cartItem) => {
             const itemKitId = getKitId(cartItem);
             const kit = kitList.find((k) => getKitId(k) === itemKitId);
-            return kit && getAvailableQuantity(kit) >= (cartItem.cartQuantity || 1) && (!(kit.expiryDate || kit.expiry_date) || new Date(kit.expiryDate || kit.expiry_date) >= new Date());
+            return kit && !isUnavailable(kit);
           })
           .map((cartItem) => {
             const itemKitId = getKitId(cartItem);
@@ -353,20 +350,16 @@ function EnabledMedicineDispensing() {
               ...cartItem,
               id: itemKitId,
               kit_id: itemKitId,
+              cartQuantity: Math.min(cartItem.cartQuantity, getAvailableQuantity(kit)),
               price: kit.price,
               availableStock: getAvailableQuantity(kit),
             };
           });
 
-        if (validCart.length === 0 && cart.length > 0) {
-          alert("Items in your cart are no longer available in stock. Please select from available kits.");
-          setCart([]);
-          return;
-        }
-
-        if (validCart.length < cart.length) {
-          alert("Some items in your cart were updated or removed due to inventory changes.");
+        if (validCart.length !== cart.length || validCart.some((item,index) => item.cartQuantity !== cart[index].cartQuantity || Number(item.price) !== Number(cart[index].price))) {
           setCart(validCart);
+          setStockNotice(stockCopy.changed);
+          return;
         }
 
         const validTotalPrice = validCart.reduce(
@@ -380,7 +373,7 @@ function EnabledMedicineDispensing() {
       }
     } catch (err) {
       if (import.meta.env.DEV) console.warn("Failed to re-verify inventory before checkout:", err);
-      setLoadError(words.offlineText);
+      setLoadError(stockCopy.offline);
     } finally { checkoutRef.current = false; setChecking(false); }
   };
 
@@ -419,7 +412,9 @@ function EnabledMedicineDispensing() {
         <header className="kiosk-header">
           <Logo />
           <h2>{words.choose}</h2>
-          <SpokenGuide text={words.chooseText} language={language} autoSpeak />
+          <SpokenGuide text={`${stockCopy.hint} ${words.chooseText}`} language={language} autoSpeak />
+          <button className="stock-refresh" type="button" onClick={fetchKits} disabled={refreshing || checking}>{refreshing ? stockCopy.checking : stockCopy.refresh}</button>
+          {stockNotice && <p role="status">{stockNotice}</p>}
           {loadError && <div role="alert"><p>{loadError}</p><button type="button" onClick={fetchKits}>{words.retry}</button></div>}
         </header>
 
@@ -433,6 +428,8 @@ function EnabledMedicineDispensing() {
               onUpdateQty={handleUpdateQuantity}
               onRemoveFromCart={handleRemoveFromCart}
               cart={cart}
+              words={stockCopy}
+              blocked={Boolean(loadError) || checking}
             />
           ))}
         </main>
@@ -508,7 +505,7 @@ function EnabledMedicineDispensing() {
                       <div className="luxury-item-details">
                         <h3 className="luxury-item-name">{item.name}</h3>
                         <p className="luxury-item-meta">
-                          <span>SANITIZED</span>
+                          <span>{stockCopy.available(getAvailableQuantity(medicalKits.find(kit => getKitId(kit) === getKitId(item))))}</span>
                           <span aria-hidden="true" style={{ margin: "0 4px" }}>•</span>
                           <span>{words.title}</span>
                         </p>
@@ -516,7 +513,7 @@ function EnabledMedicineDispensing() {
                     </div>
 
                     <div className="luxury-qty-section">
-                      <span className="qty-label">QUANTITY</span>
+                      <span className="qty-label">{stockCopy.selected}</span>
                       <div className="luxury-qty-controls">
                         <button
                           onClick={() => handleUpdateQuantity(getKitId(item), item.cartQuantity - 1)}
@@ -531,7 +528,8 @@ function EnabledMedicineDispensing() {
                         <button
                           onClick={() => handleUpdateQuantity(getKitId(item), item.cartQuantity + 1)}
                           className="luxury-qty-btn"
-                          title="Increase quantity"
+                          title={stockCopy.increase}
+                          disabled={Boolean(loadError) || checking || isUnavailable(medicalKits.find(kit => getKitId(kit) === getKitId(item))) || item.cartQuantity >= getAvailableQuantity(medicalKits.find(kit => getKitId(kit) === getKitId(item)))}
                         >
                           +
                         </button>
@@ -564,7 +562,7 @@ function EnabledMedicineDispensing() {
               <div className="luxury-cart-footer">
                 <PrimaryButton
                   onClick={handleCheckout}
-                  disabled={checking || Boolean(loadError)}
+                  disabled={checking || refreshing || Boolean(loadError)}
                   className="luxury-pay-btn"
                 >
                   <span>Proceed to Checkout ({formatINR(totalPrice)})</span>
