@@ -24,7 +24,7 @@ export default function CustomerDetails(){
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const lock=useRef(false),mounted=useRef(false);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
- const isPin=mode==='returning'?step===1:step===2;
+ const isPin=mode==='returning'?step===1:mode==='new'&&step===2;
  const guide=reviewMode&&!busy&&!error&&step===0?r.intro:busy?w.saving:error?error:!mode?w.choose:step===0?w.nameHelp:isPin?(mode==='returning'?w.returnHelp:w.pinHelp):w.detailsHelp;
  useVoicePage({idleEnabled:false,onHelp:()=>speakText(guide,{langHint:language})});
  const ready=step===0?form.name.trim().length>=2:isPin?pin.length===6:Number(form.age)>=1&&Number(form.age)<=120&&!!form.gender;
@@ -41,7 +41,7 @@ export default function CustomerDetails(){
    if(!mounted.current)return;
    update({sessionId:result.sessionId,patient:result.customerData||patient});setPin('');
    navigate(reviewMode?'/report-1':mode==='medicine'?'/medicine-dispensing':'/two-options',{state:{sessionId:result.sessionId}});
-  }catch(e){if(mounted.current)setError(e.code==='NO_SAVED_REPORT'?r.noReport:[401,403].includes(e.status)?w.wrong:w.error);}
+  }catch(e){if(mounted.current)setError(e.code==='NO_SAVED_REPORT'?r.noReport:mode!=='medicine'&&[401,403].includes(e.status)?w.wrong:w.error);}
   finally{lock.current=false;if(mounted.current)setBusy(false);}
  };
  const choose=value=>{stop();setMode(value);setStep(0);setPin('');setShowPin(false);setError('');setKeyboard('');};

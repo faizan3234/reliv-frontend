@@ -57,7 +57,7 @@ export default function OrderSuccess() {
       <p className="mt-5 text-orange-800">{w.title}</p>
       <h1 className="mt-2 text-3xl font-bold" role="status">{w[visibleState]}</h1>
       <SpokenGuide text={instruction} language={language} autoSpeak />
-      {snapshot?.jobsCount > 0 && <p className="my-4 text-xl">{w.confirmed}: {snapshot.jobsCompleted} / {snapshot.jobsCount}</p>}
+      {snapshot?.jobsCount > 0 && <p className="my-4 text-xl">{Number.isInteger(snapshot.itemsCount)?w.itemsConfirmed:w.confirmed}: {snapshot.itemsCompleted ?? snapshot.jobsCompleted} / {snapshot.itemsCount ?? snapshot.jobsCount}</p>}
       {delayed && ['waiting','dispensing','offline'].includes(state) && <p className="rounded-xl bg-amber-100 p-4" role="alert">{w.delayed}</p>}
       <p className="my-4 break-all text-sm text-slate-600">{w.reference}: {sessionId || '—'}</p>
       {state === 'complete' ? <button type="button" onClick={() => { resetHealth(); navigate('/feedback', {replace:true}); }} className="min-h-14 w-full rounded-xl bg-orange-700 px-5 py-4 font-bold text-white">{w.finish}</button>
