@@ -1,3 +1,4 @@
+import MedicineImage from '../components/MedicineImage';
 // src/pages/AdminMedicinePage.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -676,7 +677,7 @@ export default function AdminMedicinePage() {
                     {/* Picture Thumbnail */}
                     <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 shrink-0 overflow-hidden flex items-center justify-center">
                       {imgUrl ? (
-                        <img src={imgUrl} alt={kit.name} className="w-full h-full object-cover" />
+                        <MedicineImage src={imgUrl} alt={kit.name} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-xs font-black text-slate-400 uppercase">
                           {(kit.name || "M").slice(0, 2)}
@@ -1010,3 +1011,4 @@ export default function AdminMedicinePage() {
     </div>
   );
 }
+

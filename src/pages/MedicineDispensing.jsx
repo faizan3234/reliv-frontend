@@ -1,3 +1,5 @@
+import MedicineImage from '../components/MedicineImage';
+import { medicineImageUrl } from '../utils/medicineImage';
 // src/pages/MedicineDispensing.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -24,24 +26,7 @@ export const getKitId = (kit) => {
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const getMedicineImageUrl = (kit) => {
-  const imagePath = kit?.image_path || kit?.imageUrl || "";
-
-  if (!imagePath) {
-    return "";
-  }
-
-  if (
-    imagePath.startsWith("http://") ||
-    imagePath.startsWith("https://") ||
-    imagePath.startsWith("data:") ||
-    imagePath.startsWith("blob:")
-  ) {
-    return imagePath;
-  }
-
-  return `${API_BASE}${imagePath}`;
-};
+export const getMedicineImageUrl = (kit) => medicineImageUrl(kit, API_BASE);
 
 // --- Quantity & Stock Helpers ---
 // eslint-disable-next-line react-refresh/only-export-components
@@ -124,7 +109,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart }) => {
       {/* Image */}
       <div className="product-img">
         {getMedicineImageUrl(kit) ? (
-          <img src={getMedicineImageUrl(kit)} alt={kit.name} />
+          <MedicineImage src={getMedicineImageUrl(kit)} alt={kit.name} />
         ) : (
           <span>{(kit.name || "Medicine").split(" ")[0]}</span>
         )}
@@ -577,3 +562,4 @@ function EnabledMedicineDispensing() {
     </AuraBackground>
   );
 }
+

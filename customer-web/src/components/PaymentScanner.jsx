@@ -67,7 +67,7 @@ export function PaymentScanner({ onClose, onScan }) {
     const instance = new QrScanner(video.current, result => {
       if (!disposed) accept(result.data);
     }, {
-      preferredCamera: 'environment', maxScansPerSecond: 25,
+      preferredCamera: 'environment', maxScansPerSecond: 8,
       returnDetailedScanResult: true, onDecodeError: () => {},
       // Dense encrypted kiosk QRs need more pixels than the 400px default.
       calculateScanRegion: densePaymentScanRegion,

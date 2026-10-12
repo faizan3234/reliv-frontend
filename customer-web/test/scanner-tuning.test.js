@@ -6,8 +6,8 @@ test('dense QR sampling matches entire visible frame without losing native detai
   const r=densePaymentScanRegion({videoWidth:w,videoHeight:h});
   assert.equal(r.width,w);assert.equal(r.height,h);
   assert.equal(r.x+r.width/2,w/2);assert.equal(r.y+r.height/2,h/2);
-  assert.equal(r.downScaledWidth,Math.round(w*Math.min(1,1920/Math.max(w,h))));
-  assert.equal(r.downScaledHeight,Math.round(h*Math.min(1,1920/Math.max(w,h))));
+  assert.equal(r.downScaledWidth,Math.round(w*Math.min(1,2560/Math.max(w,h))));
+  assert.equal(r.downScaledHeight,Math.round(h*Math.min(1,2560/Math.max(w,h))));
  }
  assert.equal(densePaymentScanRegion({}).width,1);
 });
@@ -27,4 +27,15 @@ test('rejected resolution does not skip supported focus and exposure controls',a
  calls.length=0;await tunePaymentCamera(track,{resolution:false});assert.equal(calls.length,2);
  track.readyState='ended';calls.length=0;await tunePaymentCamera(track);assert.equal(calls.length,0);
  await assert.doesNotReject(()=>tunePaymentCamera({applyConstraints:async()=>{},getCapabilities:()=>{throw Error('Not exposed');}}));
+});
+
+test('cached scan region follows camera resize and rotation after tuning',()=>{
+ const video={videoWidth:640,videoHeight:480};
+ const region=densePaymentScanRegion(video);
+ video.videoWidth=2560;video.videoHeight=1440;
+ assert.equal(region.width,2560);assert.equal(region.height,1440);
+ assert.equal(region.downScaledWidth,2560);
+ video.videoWidth=1440;video.videoHeight=2560;
+ assert.equal(region.width,1440);assert.equal(region.height,2560);
+ assert.equal(region.downScaledHeight,2560);
 });

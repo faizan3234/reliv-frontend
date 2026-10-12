@@ -25,7 +25,7 @@ async function run(){
  let scanner=window.__scanners.at(-1);assert(scanner,'direct scan route opens scanner');
  await act(async()=>button('Enable scan sound').click());
  assert(chimes===1&&button('Sound enabled · test'),'sound can be enabled and tested from direct scan route');
- assert(scanner.options.maxScansPerSecond===25,'scan attempts capped at camera-friendly 25fps');
+ assert(scanner.options.maxScansPerSecond===8,'scan attempts capped at 8fps to bound high-resolution capture work');
  await act(async()=>{for(let i=0;i<3;i++)scanner.onDecode({data:'https://evil.example/pay#p=bad'});});
  assert(!vibrations.length&&!orders.length&&chimes===1,'untrusted QR never acknowledges or creates an order');
  const qr='https://reliv7.vercel.app/pay#p=current_encrypted-package';
