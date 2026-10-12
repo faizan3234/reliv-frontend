@@ -1,6 +1,6 @@
 // Cache only the app shell and same-origin static assets. Payment API requests,
 // personal reports and Razorpay responses must always use the network.
-const CACHE = 'reliv-customer-shell-v1';
+const CACHE = 'reliv-customer-shell-v2';
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'])));
 });

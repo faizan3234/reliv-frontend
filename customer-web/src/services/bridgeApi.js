@@ -256,7 +256,9 @@ export async function emailHealthReport({ requestId, email, storyCard }) {
       sent: Boolean(data.sent),
       alreadySent: Boolean(data.alreadySent || data.already_sent),
       scanNumber: Number(data.scanNumber || data.scan_number || 1),
-      totalScans: Number(data.totalScans || data.total_scans || data.scanNumber || 1),
+      // Older bridges returned the number of retained emails here. A report
+      // cannot have fewer total scans than its authoritative scan number.
+      totalScans: Math.max(Number(data.scanNumber || data.scan_number || 1), Number(data.totalScans || data.total_scans || 1)),
       downloadToken: data.downloadToken || data.download_token || '',
       downloadTokenExpiresAt:
         data.downloadTokenExpiresAt || data.download_token_expires_at || null,
