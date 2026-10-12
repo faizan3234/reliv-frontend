@@ -464,6 +464,20 @@ async function run() {
   }
   requests.length = 0;
   await mount('/customer-details');
+  await act(async()=>[...document.querySelectorAll('#app button')].find(el=>el.textContent.includes('medicine')||el.textContent.includes('Medicine')).click());
+  await act(async()=>document.querySelector('input[name="name"]').click());
+  for (const key of 'namita') await keyPress(key);
+  await keyPress('{close}'); await click('Continue →');
+  await act(async()=>document.querySelector('#visitor-age').click());
+  for (const key of ['4','0','{close}']) await keyPress(key);
+  await click('Female');
+  assert(!document.querySelector('[aria-label="PIN keypad"]'),'medicine entry does not request a profile PIN');
+  await click('Continue →');
+  assert(controls.path==='/medicine-dispensing','medicine entry goes directly to medicines without service chooser');
+  assert(requests.some(r=>r.url.endsWith('/service')&&r.body.serviceType==='MEDICINE'),'direct medicine flow selects backend service');
+  assert(!requests.some(r=>r.url.endsWith('/health-profile')),'medicine purchase never creates a health profile');
+  requests.length = 0;
+  await mount('/customer-details');
   await click('I have checked here beforeUse your name and PIN');
   assert(!document.querySelector('#customer-email') && !!document.querySelector('#visitor-name'), 'returning visitor has a short name and PIN form');
   await act(async () => document.querySelector('input[name="name"]').click());

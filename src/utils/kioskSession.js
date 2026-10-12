@@ -141,3 +141,11 @@ export async function openKioskReportReview(base, details) {
   sessionStorage.setItem('reliv_report_review',JSON.stringify({sessionId:result.sessionId,expiresAt:result.expiresAt}));
   return result;
 }
+
+export async function selectKioskMedicine(base, session) {
+  if (!isCurrentKioskSession(session)) throw new Error('The kiosk session changed. Please retry.');
+  await post(base, `/api/sessions/${encodeURIComponent(session.sessionId)}/service`, {
+    pairingToken: session.pairingToken, serviceType: 'MEDICINE',
+  });
+  if (!isCurrentKioskSession(session)) throw new Error('The kiosk session changed. Please retry.');
+}
