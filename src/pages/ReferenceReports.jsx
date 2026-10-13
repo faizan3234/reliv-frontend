@@ -1,3 +1,4 @@
+import DeliveryHelp from '../components/DeliveryHelp';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import SpeechControl from '../components/SpeechControl';
 import WeightReferenceCard from '../components/WeightReferenceCard';
@@ -33,5 +34,6 @@ export default function ReferenceReports() {
   <p className="reference-note">Measured readings and calculated estimates are different. Body score, bone mass, body fat, muscle and calorie estimates are screening information—not diagnoses or direct tissue measurements.</p>
   {(page===1||page===2||page===5)&&<WeightReferenceCard data={data} language={spokenLanguage}/>}
   <Page key={`${data.sessionId}-${page}`} />
+  <DeliveryHelp key={data.sessionId} sessionId={data.sessionId} language={lang} />
  </main>;
 }

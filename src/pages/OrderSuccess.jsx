@@ -1,3 +1,4 @@
+import DeliveryHelp from '../components/DeliveryHelp';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
@@ -62,6 +63,8 @@ export default function OrderSuccess() {
       <p className="my-4 break-all text-sm text-slate-600">{w.reference}: {sessionId || '—'}</p>
       {state === 'complete' ? <button type="button" onClick={() => { resetHealth(); navigate('/feedback', {replace:true}); }} className="min-h-14 w-full rounded-xl bg-orange-700 px-5 py-4 font-bold text-white">{w.finish}</button>
         : <button type="button" onClick={() => setRetry(n=>n+1)} className="min-h-14 rounded-xl border border-orange-400 px-5 py-4 font-bold">{w.retry}</button>}
+      <DeliveryHelp key={sessionId} sessionId={sessionId} language={language} />
     </section>
   </main>;
 }
+
