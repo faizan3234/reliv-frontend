@@ -1,3 +1,4 @@
+import AdminSupport from '../components/AdminSupport';
 import MedicineImage from '../components/MedicineImage';
 // src/pages/AdminMedicinePage.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -585,6 +586,7 @@ export default function AdminMedicinePage() {
 
       {/* ── Main Container (Max-width for phone ergonomics) ───────────────── */}
       <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
+        <AdminSupport />
         <AdminAdSettings />
 
         {/* Top Summary Metrics */}

@@ -1,3 +1,4 @@
+import { DeliverySupport } from '../../components/DeliverySupport';
 import { ShareCardPanel } from '../../components/ShareCardPanel';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -687,6 +688,7 @@ function PaymentAttempt({ sessionStore }) {
           </p>
         </div>
 
+        <DeliverySupport requestId={activeRequestId || orderData?.requestId} />
         {/* 4-Digit Kiosk Code Card */}
         <div className="rounded-3xl border border-orange-200 bg-white p-6 shadow-md space-y-5 text-center">
           <div className="flex justify-center items-center gap-2 py-2">

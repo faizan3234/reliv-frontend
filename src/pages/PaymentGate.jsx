@@ -1,3 +1,4 @@
+import DeliveryHelp from '../components/DeliveryHelp';
 // src/pages/PaymentGate.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -1181,6 +1182,7 @@ export default function PaymentGate() {
         )}
       </div>
 
+      <DeliveryHelp key={activeSessionId} sessionId={activeSessionId} language={selectedLang} />
       {/* Minimal Footer */}
       <div className="relative z-10 w-full text-center text-[10px] text-slate-400 py-1">
         Reliv Health System • Secure Offline Payment Gateway
