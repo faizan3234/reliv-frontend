@@ -67,7 +67,7 @@ export function PaymentScanner({ onClose, onScan }) {
     const instance = new QrScanner(video.current, result => {
       if (!disposed) accept(result.data);
     }, {
-      preferredCamera: 'environment', maxScansPerSecond: 8,
+      preferredCamera: 'environment', maxScansPerSecond: 12,
       returnDetailedScanResult: true, onDecodeError: () => {},
       // Dense encrypted kiosk QRs need more pixels than the 400px default.
       calculateScanRegion: densePaymentScanRegion,
@@ -78,6 +78,7 @@ export function PaymentScanner({ onClose, onScan }) {
       if (disposed) { instance.destroy(); return; }
       const track = video.current?.srcObject?.getVideoTracks()[0];
       await tunePaymentCamera(track);
+      if (!disposed) instance.refreshCaptureRegion();
       if (disposed || accepted.current) return;
       setStatus('Point at the kiosk payment QR');
       const available = await instance.hasFlash().catch(() => false);

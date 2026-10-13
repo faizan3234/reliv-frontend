@@ -10,4 +10,17 @@ QrScanner.createQrEngine = async (...args) => {
   engine.terminate();
   return new Worker(new URL('./paymentQr.worker.js', import.meta.url), {type:'module'});
 };
-export default QrScanner;
+// qr-scanner 1.4.2 recalculates its capture area on loadedmetadata/play,
+// but not on video resize after applyConstraints or camera rotation.
+// Keep this version-specific adapter here; the decoder must see the whole frame.
+export default class PaymentQrScanner extends QrScanner {
+  constructor(video, onDecode, options) {
+    super(video, onDecode, options);
+    this.refreshCaptureRegion = () => this._onLoadedMetaData();
+    video.addEventListener('resize', this.refreshCaptureRegion);
+  }
+  destroy() {
+    this.$video.removeEventListener('resize', this.refreshCaptureRegion);
+    super.destroy();
+  }
+}

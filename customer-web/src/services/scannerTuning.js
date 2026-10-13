@@ -6,17 +6,12 @@ export const PAYMENT_READER_OPTIONS = {
 };
 
 export function densePaymentScanRegion(video) {
-  // qr-scanner caches this object at loadedmetadata. applyConstraints can
-  // subsequently resize the live stream without another loadedmetadata event.
-  // Read current dimensions each frame or a 640px top-left crop can replace
-  // the visible 1920px camera view and miss the QR entirely.
-  const width = () => Math.max(1, video.videoWidth || 1);
-  const height = () => Math.max(1, video.videoHeight || 1);
-  const scale = () => Math.min(1, 2560 / Math.max(width(), height()));
-  return { x: 0, y: 0,
-    get width() { return width(); }, get height() { return height(); },
-    get downScaledWidth() { return Math.max(1, Math.round(width() * scale())); },
-    get downScaledHeight() { return Math.max(1, Math.round(height() * scale())); } };
+  const width = Math.max(1, video.videoWidth || 1);
+  const height = Math.max(1, video.videoHeight || 1);
+  const scale = Math.min(1, 1920 / Math.max(width, height));
+  return { x: 0, y: 0, width, height,
+    downScaledWidth: Math.max(1, Math.round(width * scale)),
+    downScaledHeight: Math.max(1, Math.round(height * scale)) };
 }
 
 export function acknowledgePaymentScan(device) {
@@ -28,7 +23,7 @@ export function acknowledgePaymentScan(device) {
 export async function tunePaymentCamera(track, { resolution = true } = {}) {
   if (!track?.applyConstraints || track.readyState === 'ended') return;
   if (resolution) {
-    try { await track.applyConstraints({width:{ideal:2560},height:{ideal:1440}}); } catch { /* Keep working camera. */ }
+    try { await track.applyConstraints({width:{ideal:1920},height:{ideal:1080}}); } catch { /* Keep working camera. */ }
   }
   let caps;
   try { caps = track.getCapabilities?.() || {}; } catch { return; }

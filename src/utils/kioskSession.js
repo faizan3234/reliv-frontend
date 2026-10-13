@@ -142,10 +142,10 @@ export async function openKioskReportReview(base, details) {
   return result;
 }
 
-export async function selectKioskService(base, session, serviceType) {
-  if (!isCurrentKioskSession(session)) throw new Error('The kiosk session changed. Please start again.');
-  await post(base, '/api/sessions/' + encodeURIComponent(session.sessionId) + '/service', {
-    pairingToken: session.pairingToken, serviceType,
+export async function selectKioskMedicine(base, session) {
+  if (!isCurrentKioskSession(session)) throw new Error('The kiosk session changed. Please retry.');
+  await post(base, `/api/sessions/${encodeURIComponent(session.sessionId)}/service`, {
+    pairingToken: session.pairingToken, serviceType: 'MEDICINE',
   });
-  if (!isCurrentKioskSession(session)) throw new Error('The kiosk session changed. Please start again.');
+  if (!isCurrentKioskSession(session)) throw new Error('The kiosk session changed. Please retry.');
 }

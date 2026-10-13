@@ -9,8 +9,9 @@ import SpokenGuide from '../src/components/SpokenGuide';
 
 window.IS_REACT_ACT_ENVIRONMENT = true;
 const wait = window.setTimeout.bind(window);
+let expireDelivery;
 // Trigger speech deliberately; do not let route prompts obscure button checks.
-window.setTimeout = (fn, ms, ...args) => ms === 450 ? -1 : wait(fn, ms, ...args);
+window.setTimeout = (fn, ms, ...args) => ms === 90000 ? (expireDelivery=fn,-2) : ms === 450 ? -1 : wait(fn, ms, ...args);
 window.WebSocket = class { static OPEN=1; readyState=0; send() {} close() {} };
 window.speechSynthesis = { getVoices:()=>[], cancel(){}, addEventListener(){}, removeEventListener(){}, speak(){throw new Error('Cloud/unknown voice must not run');} };
 window.SpeechSynthesisUtterance = class {};
@@ -52,6 +53,8 @@ async function run(){
   await click('Listen to this guide');
   assert(speechRequests.at(-1).language==='en'&&played.at(-1)==='blob:local-speech','missing browser voice plays audio prepared by local backend');
   assert(revoked.length>0,'completed audio URL released');
+  await act(async()=>expireDelivery());
+  assert(document.body.textContent.includes('Please ask a staff member')&&!document.body.textContent.includes('Preparing your items'),'missing ACK exits preparing state without claiming delivery');
   status={...status,jobsCompleted:1};await click('Check status again');
   assert(document.body.textContent.includes('1 / 2')&&!document.body.textContent.includes('I have collected'),'partial ACK remains pending');
   status={...status,status:'dispense_complete',dispenseStatus:'COMPLETED',jobsCompleted:2};await click('Check status again');
