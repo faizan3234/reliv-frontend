@@ -16,3 +16,13 @@ Each profile has an auto-save opt-in. While unlocked, later verified scans for t
 - Browser QA: mobile paid page, save/unlock/lock, feature off, six card variants (solo/couple/friends with short/long text), full-bleed 1080x1920 export.
 
 Live Oracle SMTP delivery, real phone installation/storage, payment, offline Pi and physical motor/drop sensing require on-site tests. An ESP acknowledgement is not proof that a packet reached the customer.
+
+## Finding the save option / October 16 visibility fix
+
+The paid health screen now places **Send my health report to my app** directly below the four-digit code and before the share card. A disabled flag leaves an explanatory disabled control; an unreachable/older bridge shows an unavailable message and retry. This does not bypass the server flag or change payment/email behavior. Check availability again picks up an operator flag change without rescanning.
+
+The live bridge was checked on October 16, 2026 and returned `{"appReportSync":false}` from `https://80.225.243.51/api/v2/app-features`. Reliv7's deployed JavaScript contained the saving feature and the same bridge address. This explains the absent control in the customer's screenshots; it was not evidence of lost records. No production setting was changed remotely.
+
+On Oracle (not the offline Pi), set `RELIV_APP_REPORT_SYNC=true` in the bridge environment/.env, restart its existing service, then verify the endpoint returns true. Refresh Reliv7 or use Check availability again. Setting false disables new saving; existing saved records remain available. Email report delivery is a separate user action. This operator switch is not controlled by knowing an email address.
+
+Validation: 11 new visibility integration checks (off/on/retry/network failure/no automatic export), 19 payment identity checks, vault tests, lint and production builds. No real payment, SMTP delivery or physical dispensing was performed. Old Pi-only scans are not backfilled by installing the app; future QR-transferred saved scans accumulate locally by private profile.
