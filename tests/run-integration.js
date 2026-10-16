@@ -37,7 +37,7 @@ console.on('jsdomError', (error) => errors.push(error.message));
 console.on('error', (...args) => errors.push(args.map(String).join(' ')));
 console.on('warn', (...args) => process.stderr.write('WARN ' + args.map(String).join(' ') + '\n'));
 const dom = new JSDOM('<!doctype html><html><body><pre id="results">Running...</pre><div id="app"></div></body></html>', {
-  url: 'http://localhost/tests/browser.html', runScripts: 'dangerously',
+  url: process.argv[2]?.endsWith('android-payment-browser.jsx') ? 'https://reliv7.vercel.app/tests/browser.html' : 'http://localhost/tests/browser.html', runScripts: 'dangerously',
   pretendToBeVisual: true, virtualConsole: console,
 });
 const channels = [];

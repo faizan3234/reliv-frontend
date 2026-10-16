@@ -1,3 +1,4 @@
+import { AndroidPaymentHelp } from '../../components/AndroidPaymentHelp';
 import { AppReportSave } from '../../components/AppReportSave';
 import { DeliverySupport } from '../../components/DeliverySupport';
 import { ShareCardPanel } from '../../components/ShareCardPanel';
@@ -10,7 +11,7 @@ import {
   downloadHealthReport,
   recoverPaymentV2,
 } from '../../services/bridgeApi';
-import { openRazorpayCheckout } from '../../services/razorpay';
+import { openRazorpayCheckout, loadRazorpayScript } from '../../services/razorpay';
 import {
   extractPaymentPackage,
   savePendingVerification,
@@ -86,6 +87,12 @@ function PaymentAttempt({ sessionStore }) {
 
   const isSyncingRef = useRef(false);
   const checkoutOpenRef = useRef(false);
+  const checkoutAbortRef = useRef(null);
+  useEffect(() => () => checkoutAbortRef.current?.abort(), []);
+  // Start loading before Pay is tapped; a ready SDK opens synchronously in the tap.
+  useEffect(() => {
+    if (loadingState === 'ORDER_READY') loadRazorpayScript().catch(() => {});
+  }, [loadingState]);
   const emailSendingRef = useRef(false);
   const orderDataRef = useRef(orderData);
   orderDataRef.current = orderData;
@@ -315,6 +322,8 @@ function PaymentAttempt({ sessionStore }) {
 
     try {
       checkoutOpenRef.current = true;
+      const controller = new AbortController();
+      checkoutAbortRef.current = controller;
       setLoadingState('PAYING');
 
       // Update recovery state to PAYING
@@ -330,6 +339,7 @@ function PaymentAttempt({ sessionStore }) {
       });
 
       await openRazorpayCheckout({
+        signal: controller.signal,
         orderId: orderData.orderId,
         amount: orderData.amount, // in paise
         currency: orderData.currency || 'INR',
@@ -378,7 +388,7 @@ function PaymentAttempt({ sessionStore }) {
         onDismiss: () => {
           if (!isCurrent()) return;
           checkoutOpenRef.current = false;
-          setLoadingState('ORDER_READY');
+          void syncWithOracle();
         },
         onError: (err) => {
           if (!isCurrent()) return;
@@ -390,6 +400,7 @@ function PaymentAttempt({ sessionStore }) {
       });
     } catch (checkoutErr) {
       checkoutOpenRef.current = false;
+      if (!isCurrent()) return;
       console.error('[PaymentV2] Checkout modal error:', checkoutErr.message || checkoutErr);
       setErrorMessage(checkoutErr.message || 'Could not open payment checkout modal.');
       setLoadingState('ERROR');
@@ -620,11 +631,12 @@ function PaymentAttempt({ sessionStore }) {
           </p>
           {hasPendingPayment && (
             <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 text-center">
-              Your payment was received. Tap <strong>Try Again</strong> to re-verify without paying again.
+              Payment confirmation is saved. Tap <strong>Try Again</strong> to check it with the payment service; do not pay again.
             </div>
           )}
         </div>
 
+        <AndroidPaymentHelp encryptedPackage={encryptedPackage} />
         <div className="space-y-3">
           <Button onClick={handleRetry} icon={RefreshCw}>
             Try Again
@@ -919,6 +931,7 @@ function PaymentAttempt({ sessionStore }) {
         </div>
       </div>
 
+      <AndroidPaymentHelp encryptedPackage={encryptedPackage} busy={loadingState === 'PAYING'} />
       <div className="space-y-3">
         <Button
           onClick={handlePayClick}
@@ -936,10 +949,10 @@ function PaymentAttempt({ sessionStore }) {
         {/* Customer Reassurance & Auto-Return / Rescan Recovery Notice */}
         <div className="rounded-2xl bg-orange-50/80 border border-orange-100 p-3.5 text-center space-y-1 mt-2">
           <p className="text-xs font-semibold text-slate-800">
-            Complete payment in your UPI app. You'll automatically return here for your confirmation code.
+            Complete payment in your UPI app, then return to this page for your confirmation code.
           </p>
           <p className="text-[11px] text-slate-500 leading-normal">
-            Didn't return? Reopen this page or scan the kiosk QR again. You won't be charged twice.
+            Keep this page open. If money was deducted, return here and let Reliv check the same payment before trying again.
           </p>
         </div>
       </div>
