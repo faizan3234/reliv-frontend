@@ -8,6 +8,7 @@ export function InstallApp() {
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
   const android = /Android/i.test(navigator.userAgent);
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   useEffect(() => {
     const offer = event => { event.preventDefault(); setPrompt(event); };
     const done = () => { setInstalled(true); setPrompt(null); setHelp(''); };
@@ -18,9 +19,10 @@ export function InstallApp() {
       window.removeEventListener('appinstalled', done);
     };
   }, []);
-  if (!android || installed) return null;
+  if ((!android && !ios) || installed) return null;
   const install = async () => {
     if (locked.current) return;
+    if (ios) { setHelp('Open this page in Safari. Tap Share → Add to Home Screen, then open Reliv. If your records are not there, scan the same paid kiosk QR in the installed app and tap Save. You will not be charged again.'); return; }
     if (!prompt) {
       setHelp('In Chrome, open the ⋮ menu and choose “Install app” or “Add to Home screen”. If you opened this inside another app, open it in Chrome first.');
       return;
@@ -37,9 +39,10 @@ export function InstallApp() {
   return <aside className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
     <div className="flex items-center gap-3">
       <img src="/icon-192.png" alt="" className="h-12 w-12 rounded-xl bg-white" />
-      <div className="min-w-0 flex-1"><p className="font-semibold">Reliv on your home screen</p><p className="text-xs text-slate-600">Open your scanner and recent kiosk code easily.</p></div>
+      <div className="min-w-0 flex-1"><p className="font-semibold">Reliv on your home screen</p><p className="text-xs text-slate-600">Keep Reliv and your saved scans on your home screen. Your scan is saved here before installation.</p></div>
     </div>
     <button type="button" disabled={busy} onClick={install} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 font-semibold text-white disabled:opacity-60"><Download size={18}/>{busy ? 'Opening install…' : 'Install Reliv'}</button>
     {help && <p role="status" className="mt-3 text-sm text-slate-700">{help}</p>}
   </aside>;
 }
+

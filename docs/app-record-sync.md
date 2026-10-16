@@ -1,32 +1,13 @@
-# Optional private app records
+# Password-free app records
 
-Deploy the matching backend PR to Oracle and this customer-web build to Reliv7. Set `RELIV_APP_REPORT_SYNC=true` in the **Oracle bridge environment** and restart that bridge to enable Save to my app. The default is off. Set it to `false` and restart to stop new transfers; normal payment, code display, optional email and existing phone records remain available. This is an operator environment flag, not a switch controlled by an email address or a frontend secret.
+On Oracle keep `RELIV_APP_REPORT_SYNC=true` to permit structured paid-record export. Setting it false disables new transfers without changing payment, code display, email or existing phone records. No backend change is required for password-free storage.
 
-After a paid health check, the customer can save readings and text (not a PDF) below the code/card. The exact signed payment package is required; name/email alone cannot retrieve records. The stored scan number and score come from the same snapshot/summary used by the report/card. Profiles group by kiosk private profile ID, never by name. Old packages without a profile ID remain separate.
+Tap **Send my health report to my app** once. It saves readings/text, original scan number, private profile key and verified summary; it does not store a PDF. The same profile's later paid scans auto-save when their QR is opened here. Auto-save can be switched off in My saved health records. Duplicate request IDs do not duplicate scans. Different private profiles are not merged by name.
 
-Records are encrypted locally using AES-GCM and a password-derived key (PBKDF2 SHA-256, 250,000 iterations). The password and key are not sent to the server. Use the Lock button on shared phones. There is no password recovery or cloud account. Clearing site data removes records; an encrypted backup can be downloaded/imported into an empty browser/app. The 500-record limit fails visibly rather than deleting old scans.
+Records reopen without any password. Anyone using the unlocked phone/browser can view them. New records use `reliv-device-records-v2`; legacy encrypted `reliv-private-records-v1` is never deleted or overwritten. Legacy encrypted data cannot be decrypted without its original password; this change does not silently migrate it.
 
-Each profile has an auto-save opt-in. While unlocked, later verified scans for that profile save once, by payment request ID. Every new offline kiosk scan still must reach Oracle through its QR; installation does not create a connection to the offline Pi. Opening an old QR does not backfill scans that were never transferred. Browser and installed-PWA storage may differ, particularly on iPhone: install first and scan inside the installed app, or transfer the encrypted backup. OS confirmation is required to install; websites cannot silently install apps.
+Saving happens before installation, so cancelling installation cannot lose an already saved scan. Android offers Install Reliv; iPhone shows Safari Add to Home Screen instructions. The OS requires approval, and a website cannot force installation or guarantee browser/PWA storage sharing. If an installed app has separate storage, open the same paid QR inside it and tap Save; do not pay again. Later scans must also reach that app via their QR. There is no background channel from the offline Pi and no cross-device account sync.
 
-## Validation
+The browser is asked for persistent storage, but may refuse. Records survive ordinary restarts; clearing storage, uninstall behavior, browser eviction or phone loss can remove them. Download records backup is a plaintext JSON export containing health data. Storage failures show an error; old scans are not silently removed to make room.
 
-- `npm run lint`, `npm run build`, `npm --prefix customer-web run build`
-- `npm run test:app-records`: encryption, wrong password, profile isolation, actual ordinal, duplicate save, consent, quota, concurrent-write rejection, deletion and encrypted backup/import.
-- Existing medicine-stock and payment-identity integration suites.
-- Browser QA: mobile paid page, save/unlock/lock, feature off, six card variants (solo/couple/friends with short/long text), full-bleed 1080x1920 export.
-
-Live Oracle SMTP delivery, real phone installation/storage, payment, offline Pi and physical motor/drop sensing require on-site tests. An ESP acknowledgement is not proof that a packet reached the customer.
-
-## Finding the save option / October 16 visibility fix
-
-The paid health screen now places **Send my health report to my app** directly below the four-digit code and before the share card. A disabled flag leaves an explanatory disabled control; an unreachable/older bridge shows an unavailable message and retry. This does not bypass the server flag or change payment/email behavior. Check availability again picks up an operator flag change without rescanning.
-
-The live bridge was checked on October 16, 2026 and returned `{"appReportSync":false}` from `https://80.225.243.51/api/v2/app-features`. Reliv7's deployed JavaScript contained the saving feature and the same bridge address. This explains the absent control in the customer's screenshots; it was not evidence of lost records. No production setting was changed remotely.
-
-On Oracle (not the offline Pi), set `RELIV_APP_REPORT_SYNC=true` in the bridge environment/.env, restart its existing service, then verify the endpoint returns true. Refresh Reliv7 or use Check availability again. Setting false disables new saving; existing saved records remain available. Email report delivery is a separate user action. This operator switch is not controlled by knowing an email address.
-
-Validation: 11 new visibility integration checks (off/on/retry/network failure/no automatic export), 19 payment identity checks, vault tests, lint and production builds. No real payment, SMTP delivery or physical dispensing was performed. Old Pi-only scans are not backfilled by installing the app; future QR-transferred saved scans accumulate locally by private profile.
-
-## Simplified records screen
-
-The customer file-upload/import control has been removed. My saved health records appears only when this browser actually contains a saved vault; turning the server feature on alone no longer opens an empty records/password screen. Payment never requires a records password or uploaded file. Existing encrypted data, unlock, scan comparisons and backup download remain. Browser-to-installed-app import is no longer offered in the customer UI; use the original browser for its previously saved records.
+Validation: password-free save/reopen, scans 1–7, deduplication, profile separation, original encrypted data preserved, storage failure and concurrent same-document saves. JSX compiled separately. Real Android/iOS installation and cross-container storage need device verification.
