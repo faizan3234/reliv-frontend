@@ -1,3 +1,4 @@
+import { MyRecords } from './components/MyRecords';
 import { InstallApp } from './components/InstallApp';
 import { setAppIdle, checkForAppUpdate, refreshApp } from './services/pwaRuntime';
 import { prepareScanSound } from './services/scanFeedback';
@@ -126,6 +127,7 @@ export function App() {
           {scanning ? <ScannerPanel onClose={() => setScanning(false)} onScan={scanned} /> : <>
             {scanNotice && <p role="status" className="rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-900">✓ QR captured. Opening this kiosk payment.</p>}
             {renderActiveScreen()}
+            <MyRecords />
             <button type="button" onFocus={() => { loadScanner().catch(() => {}); }} onPointerEnter={() => { loadScanner().catch(() => {}); }} onPointerDown={() => { loadScanner().catch(() => {}); }} onClick={() => { prepareScanSound(); setScanning(true); }} className="mt-5 min-h-12 w-full rounded-2xl bg-orange-600 px-4 py-3 font-semibold text-white shadow-sm">Scan kiosk payment QR</button>
           </>}
         </div>
