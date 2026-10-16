@@ -85,6 +85,7 @@ const BodyTemperaturePage = () => {
 
   const [autoProceeding, setAutoProceeding] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [saveConflict, setSaveConflict] = useState(null);
 
   const { data, update } = useHealth();
   const navigate = useNavigate();
@@ -222,7 +223,7 @@ const BodyTemperaturePage = () => {
 
   // ── Start measurement ────────────────────────────────────
   const startMeasurement = () => {
-    if (sessionExpired || measurementStarted.current || completionController.current) return;
+    if (sessionExpired || saveConflict || measurementStarted.current || completionController.current) return;
     if (!isFullyConnected || !mqttClient.current?.connected) {
       setMeasurementState("error");
       setStatusMessage("Device not connected — cannot start measurement");
@@ -337,8 +338,14 @@ const BodyTemperaturePage = () => {
       if (import.meta.env.DEV) console.warn('[Reliv] Measurements were not saved:', error.message);
 
       const expired = error.status === 410 || error.data?.code === 'SESSION_EXPIRED';
+      const conflict = [400, 401, 403, 404, 409].includes(error.status);
+      setSaveConflict(conflict ? { resume: error.data?.resume || null } : null);
       setSessionExpired(expired);
-      setStatusMessage(expired
+      setStatusMessage(conflict
+        ? (error.data?.resume
+          ? 'Results are already saved. Continue with those results to resume your existing payment.'
+          : 'This checkup has already advanced and cannot be edited. Ask the kiosk administrator to recover it. If you paid, do not pay again.')
+        : expired
         ? 'This checkup session has expired. Please start a new checkup; retrying this session will not work.'
         : `${error.message || 'Could not save your measurements.'} Tap Save & Proceed to retry.`);
 
@@ -353,7 +360,7 @@ const BodyTemperaturePage = () => {
 
   // ── Proceed ──────────────────────────────────────────────
   const handleProceed = async () => {
-    if (temperatureF === null || autoProceeding || sessionExpired) {
+    if (temperatureF === null || autoProceeding || sessionExpired || saveConflict) {
       return;
     }
 
@@ -378,7 +385,7 @@ const BodyTemperaturePage = () => {
     }
   }, [measurementState, temperatureF, completeMeasurementsAndNavigate, stopSpeech]);
   const canProceed =
-    measurementState === "completed" && temperatureF !== null && !sessionExpired;
+    measurementState === "completed" && temperatureF !== null && !sessionExpired && !saveConflict;
 
   // ── Button label ─────────────────────────────────────────
   const getButtonText = () => {
@@ -586,10 +593,10 @@ const BodyTemperaturePage = () => {
                 <button
                   onClick={startMeasurement}
                   disabled={
-                    measurementState === "measuring" || !isFullyConnected || autoProceeding || sessionExpired
+                    measurementState === "measuring" || !isFullyConnected || autoProceeding || sessionExpired || saveConflict
                   }
                   className={`w-full font-semibold text-lg py-4 px-6 rounded-full shadow-lg transition-all duration-300 ${
-                    measurementState === "measuring" || !isFullyConnected || autoProceeding || sessionExpired
+                    measurementState === "measuring" || !isFullyConnected || autoProceeding || sessionExpired || saveConflict
                       ? "bg-gray-400 text-white cursor-not-allowed opacity-70"
                       : "bg-gradient-to-r from-[#F06922] to-[#E85C25] hover:from-[#E85C25] hover:to-[#D45513] text-white transform hover:scale-105"
                   }`}
@@ -599,6 +606,26 @@ const BodyTemperaturePage = () => {
                     : getButtonText()}
                 </button>
 
+                {saveConflict?.resume && (
+                  <button
+                    onClick={() => {
+                      const saved = saveConflict.resume;
+                      const current = readKioskSession();
+                      if (!current?.sessionId || saved.sessionId !== current.sessionId) {
+                        setSaveConflict({ resume: null });
+                        setStatusMessage('The kiosk session changed. Ask the administrator for help; do not pay again.');
+                        return;
+                      }
+                      update(saved.healthData);
+                      navigate('/payment', { replace: true, state: {
+                        fromPaymentGate: true, sessionId: saved.sessionId, cart: [], totalPrice: 0,
+                      } });
+                    }}
+                    className="w-full rounded-full bg-green-600 px-6 py-4 text-lg font-semibold text-white"
+                  >
+                    Continue with saved results →
+                  </button>
+                )}
                 {sessionExpired && (
                   <button onClick={() => navigate('/')} className="w-full rounded-full bg-orange-600 px-6 py-4 text-lg font-semibold text-white">
                     Start a new checkup
@@ -761,4 +788,5 @@ export default function BodyTemperature() {
     </>
   );
 }
+
 
