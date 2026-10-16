@@ -1,3 +1,4 @@
+import { AppReportSave } from '../../components/AppReportSave';
 import { DeliverySupport } from '../../components/DeliverySupport';
 import { ShareCardPanel } from '../../components/ShareCardPanel';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -722,6 +723,7 @@ function PaymentAttempt({ sessionStore }) {
         </div>
 
         {isHealthCheckup && <ShareCardPanel onChange={setStoryCard} summary={storySummary} />}
+        {isHealthCheckup && <AppReportSave encryptedPackage={encryptedPackage} />}
         {/* Directly Underneath: Payment Receipt Section */}
         <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm space-y-3.5">
           <div className="text-center space-y-0.5">

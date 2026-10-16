@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { unlockVault, lockVault, readVault, saveRecord, setAutoSave, deleteRecord, exportVault, importVault } from '../src/services/reportVault.js';
+test('private records: encryption, identity, ordinal, consent, replay, quota, concurrent writes and backup', async () => {
+ const store = new Map(); let quota = false;
+ globalThis.localStorage = { getItem:k => store.get(k) ?? null, setItem:(k,v) => { if(quota)throw Error('Quota exceeded');store.set(k,v); } };
+ const record = { version:1,id:'scan-eight',profileKey:'private-A',scanNumber:8,patient:{name:'Asha'},vitals:{oxygen:98},summary:{score:98} };
+ await unlockVault('private-password'); await saveRecord(record,true); await saveRecord(record,true);
+ assert.equal(readVault().records.length,1);assert.equal(readVault().records[0].scanNumber,8);assert.ok(readVault().autoProfiles.includes('private-A'));
+ const backup=exportVault();assert.ok(!backup.includes('Asha'));assert.ok(!backup.includes('oxygen'));
+ lockVault();assert.throws(readVault,/Unlock/);await assert.rejects(unlockVault('wrong-password'),/Password/);await unlockVault('private-password');
+ await saveRecord({...record,id:'second-person',profileKey:'private-B'},false);assert.equal(readVault().records.length,2);
+ await assert.rejects(saveRecord({...record,profileKey:'private-B'}),/identity/);
+ quota=true;await assert.rejects(saveRecord({...record,id:'quota'}),/Quota/);quota=false;assert.equal(readVault().records.length,2);
+ await setAutoSave('private-A',false);assert.equal(readVault().autoProfiles.length,0);
+ const concurrent=await Promise.allSettled([saveRecord({...record,id:'race-a'}),saveRecord({...record,id:'race-b'})]);assert.equal(concurrent.filter(r=>r.status==='rejected').length,1);
+ await deleteRecord('second-person');assert.ok(!readVault().records.some(r=>r.profileKey==='private-B'));
+ store.set('reliv-private-records-v1',backup);await assert.rejects(saveRecord({...record,id:'stale'}),/changed/);
+ assert.throws(()=>importVault(backup),/overwrite/);store.clear();lockVault();importVault(backup);await unlockVault('private-password');assert.equal(readVault().records[0].scanNumber,8);
+});
