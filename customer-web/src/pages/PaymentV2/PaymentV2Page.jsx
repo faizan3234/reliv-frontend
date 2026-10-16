@@ -29,7 +29,7 @@ import { Logo } from '../../components/Logo';
 import { CheckCircle2, Lock, AlertCircle, RefreshCw, Mail, ShieldCheck } from 'lucide-react';
 
 export function PaymentV2Page({ sessionStore }) {
-  const pkg = sessionStore.state.encryptedPackage || extractPaymentPackage() || '';
+  const pkg = extractPaymentPackage() || sessionStore.state.encryptedPackage || '';
   return <PaymentAttempt key={pkg} sessionStore={sessionStore} />;
 }
 function PaymentAttempt({ sessionStore }) {

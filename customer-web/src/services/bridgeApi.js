@@ -81,7 +81,10 @@ export async function createPaymentV2Order({ encryptedPackage }) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || errorData.message || `Failed to create payment order (HTTP ${response.status})`);
+      const message = errorData.error || errorData.message || `Failed to create payment order (HTTP ${response.status})`;
+      const hint = errorData.code === 'REQUEST_EXPIRED' && !message.includes('clock')
+        ? ' If a fresh QR also fails immediately, ask staff to check the kiosk date and time. Refreshing alone will not fix a wrong clock. Do not pay again if money was deducted.' : '';
+      throw Object.assign(new Error(message + hint), { code: errorData.code, paymentTiming: errorData.paymentTiming });
     }
 
     const data = await response.json();
