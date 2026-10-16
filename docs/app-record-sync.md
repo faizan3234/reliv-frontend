@@ -26,3 +26,7 @@ The live bridge was checked on October 16, 2026 and returned `{"appReportSync":f
 On Oracle (not the offline Pi), set `RELIV_APP_REPORT_SYNC=true` in the bridge environment/.env, restart its existing service, then verify the endpoint returns true. Refresh Reliv7 or use Check availability again. Setting false disables new saving; existing saved records remain available. Email report delivery is a separate user action. This operator switch is not controlled by knowing an email address.
 
 Validation: 11 new visibility integration checks (off/on/retry/network failure/no automatic export), 19 payment identity checks, vault tests, lint and production builds. No real payment, SMTP delivery or physical dispensing was performed. Old Pi-only scans are not backfilled by installing the app; future QR-transferred saved scans accumulate locally by private profile.
+
+## Simplified records screen
+
+The customer file-upload/import control has been removed. My saved health records appears only when this browser actually contains a saved vault; turning the server feature on alone no longer opens an empty records/password screen. Payment never requires a records password or uploaded file. Existing encrypted data, unlock, scan comparisons and backup download remain. Browser-to-installed-app import is no longer offered in the customer UI; use the original browser for its previously saved records.

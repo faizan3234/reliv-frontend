@@ -63,6 +63,7 @@ function PaymentAttempt({ sessionStore }) {
     return '';
   });
   const [errorMessage, setErrorMessage] = useState('');
+  const [paymentTiming, setPaymentTiming] = useState(null);
   const [activeRequestId, setActiveRequestId] = useState(() => {
     if (activePaidSession?.requestId) {
       return activePaidSession.requestId;
@@ -177,6 +178,7 @@ function PaymentAttempt({ sessionStore }) {
       if (!activePackage) { setLoadingState('IDLE'); return; }
       setLoadingState('INIT');
       setErrorMessage('');
+      setPaymentTiming(null);
       const order = await createPaymentV2Order({ encryptedPackage: activePackage });
       if (!isCurrent()) return;
       if (!order.requestId) throw new Error('The payment service returned no request ID.');
@@ -270,10 +272,11 @@ function PaymentAttempt({ sessionStore }) {
         err.code === 'REQUEST_EXPIRED' ||
         String(err.message || '').toLowerCase().includes('expired');
 
+      setPaymentTiming(err.paymentTiming || null);
       if (isExpired) {
         clearPaymentRecovery(encryptedPackage);
         // Keep pending proof for support/recovery even when the QR expires; never erase a payment callback.
-        setErrorMessage('This payment request has expired. Please refresh the QR on the kiosk.');
+        setErrorMessage(err.message || 'This QR is no longer valid. If it was just generated, ask staff to check the kiosk date and time before generating another QR. If money was deducted, do not pay again.');
       } else {
         setErrorMessage(err.message || 'Unable to prepare payment. Please check your connection or scan the kiosk QR again.');
       }
@@ -629,6 +632,12 @@ function PaymentAttempt({ sessionStore }) {
           <p className="text-sm text-slate-600 leading-relaxed text-center">
             {errorMessage || 'Unable to complete payment verification. Please try again.'}
           </p>
+          {paymentTiming && <details className="rounded-xl border border-orange-200 p-3 text-xs text-slate-700">
+            <summary className="cursor-pointer font-semibold">Payment timing · show kiosk staff</summary>
+            <p className="mt-2 break-all">Request: {paymentTiming.requestId || 'Unavailable'}</p>
+            {[['QR created (kiosk clock)', paymentTiming.kioskIssuedAt], ['QR expires (kiosk clock)', paymentTiming.kioskExpiresAt], ['Payment server time', paymentTiming.serverNow]].map(([label, value]) => <p key={label}>{label}: {Number.isSafeInteger(value) && Math.abs(value) <= 8640000000000000 ? new Date(value).toISOString() : 'Unavailable'}</p>)}
+            <p className="mt-2">A newly generated QR that already appears expired may mean the kiosk clock is wrong. Refreshing the phone cannot correct the kiosk clock.</p>
+          </details>}
           {hasPendingPayment && (
             <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 text-center">
               Payment confirmation is saved. Tap <strong>Try Again</strong> to check it with the payment service; do not pay again.
