@@ -131,6 +131,31 @@ async function run() {
   assert(!!button(/Start a new checkup/),'terminal expiry provides an explicit restart action');
   assert(!button(/Save & Proceed/),'terminal expiry cannot keep retrying the dead session');
   assert(document.getElementById('app').textContent.includes('99'),'failed save retains the measured temperature');
+  const frozen = { patient: { name: 'Saved patient' }, vitals: { temperature: 98.2, height: 172, weight: 65 } };
+  window.fetch = async (url, options) => {
+    if (!String(url).endsWith('/measurements-complete')) return normalFetch(url, options);
+    attempts++;
+    return {ok:false,status:409,json:async()=>({ok:false,code:'HEALTH_SNAPSHOT_MISMATCH',
+      resume:{sessionId:'KSK-SENSOR-TEST',healthData:frozen}})};
+  };
+  client = await mount(BodyTemperature);
+  await click(/Measure Temperature/);
+  await emit(client,'kiosk/sensor/temperature',{temperature_f:99.5});
+  assert(!button(/Save & Proceed/),'frozen results conflict stops the impossible save retry');
+  assert(!!button(/Continue with saved results/),'frozen results offer explicit payment recovery');
+  const beforeResume = attempts;
+  await click(/Continue with saved results/);
+  assert(attempts===beforeResume,'continuing does not resubmit or change the frozen snapshot');
+  assert(JSON.parse(localStorage.getItem('healthData')).vitals.temperature===98.2,'recovery restores saved temperature rather than later sensor reading');
+  window.fetch = async (url, options) => {
+    if (!String(url).endsWith('/measurements-complete')) return normalFetch(url, options);
+    return {ok:false,status:409,json:async()=>({ok:false,code:'MEASUREMENTS_CONFLICT',resume:null})};
+  };
+  client = await mount(BodyTemperature);
+  await click(/Measure Temperature/);
+  await emit(client,'kiosk/sensor/temperature',{temperature_f:99});
+  assert(!button(/Save & Proceed|Continue with saved results/),'non-resumable conflict offers neither save nor unsafe payment recovery');
+  assert(document.getElementById('app').textContent.includes('do not pay again'),'non-resumable conflict explains administrator recovery');
   window.fetch = normalFetch;
   client = await mount(HealthCheckup);
   await checkConnection(client, /Measure Blood Pressure/);
