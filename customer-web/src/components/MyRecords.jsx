@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { requestJSON } from '../../../src/utils/request';
-import { PAYMENT_API_BASE } from '../services/bridgeApi';
-import { readVault, unlockVault, lockVault, vaultOpen, vaultExists, exportVault, importVault, setAutoSave, deleteRecord } from '../services/reportVault';
+import { readVault, unlockVault, lockVault, vaultOpen, vaultExists, exportVault, setAutoSave, deleteRecord } from '../services/reportVault';
 const labels = { systolic: 'BP systolic (mmHg)', diastolic: 'BP diastolic (mmHg)', oxygen: 'Oxygen (%)', bpm: 'Pulse (bpm)', temperature: 'Temperature (°C)', weight: 'Weight (kg)', height: 'Height (cm)', bodyFat: 'Body fat estimate (%)', bodyWater: 'Body water estimate (%)', muscleMass: 'Muscle mass estimate', boneMass: 'Bone mass estimate' };
 export function MyRecords() {
     const [available, setAvailable] = useState(() => { try { return vaultExists(); } catch { return false; } });
     const [open, setOpen] = useState(false), [password, setPassword] = useState(''), [data, setData] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState(false), [profile, setProfile] = useState('');
     const pending = useRef(false);
     useEffect(() => {
-        const controller = new AbortController();
-        requestJSON(`${PAYMENT_API_BASE}/api/v2/app-features`, { signal: controller.signal, cache: 'no-store', timeoutMs: 10000 }).then(result => { if (!controller.signal.aborted && result.appReportSync === true) setAvailable(true); }).catch(() => {});
         const update = () => { try { if (vaultExists()) setAvailable(true); setData(vaultOpen() ? readVault() : null); } catch { setData(null); } };
         const external = () => lockVault();
         window.addEventListener('reliv-records-changed', update); window.addEventListener('storage', external);
-        return () => { controller.abort(); window.removeEventListener('reliv-records-changed', update); window.removeEventListener('storage', external); };
+        return () => { window.removeEventListener('reliv-records-changed', update); window.removeEventListener('storage', external); };
     }, []);
     const action = async operation => {
         if (pending.current) return; pending.current = true; setBusy(true); setError('');
@@ -29,7 +25,6 @@ export function MyRecords() {
     return <section className="rounded-2xl border border-orange-200 bg-white p-4 space-y-3">
         <button type="button" className="min-h-12 w-full font-semibold" onClick={() => { setOpen(!open); if (vaultOpen()) setData(readVault()); }}>My saved health records</button>
         {open && (!data ? <><p>Unlock records saved on this phone.</p>
-            <label className="block text-sm">Moving from a browser to the installed app? Import your encrypted backup here.<input type="file" accept="application/json,.json" disabled={busy} onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void action(async () => { if (file.size > 2500000) throw Error('Backup too large.'); importVault(await file.text()); setError('Backup imported. Unlock with its original password.'); }); }} /></label>
             <input aria-label="Records password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="min-h-12 w-full rounded-lg border p-3" />
             <button disabled={busy} onClick={() => action(async () => { await unlockVault(password); setPassword(''); })} className="min-h-12 px-4 rounded-lg bg-orange-700 text-white">{busy ? 'Unlocking…' : 'Unlock'}</button>
         </> : <><button type="button" disabled={busy} className="min-h-12 px-4 border rounded-lg" onClick={backup}>Download encrypted backup</button>
