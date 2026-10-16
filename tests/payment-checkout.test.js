@@ -38,6 +38,7 @@ test('checkout loading times out and retries; background taps never dismiss or o
       constructor(value) { options = value; }
       on(_event, handler) { failure = handler; }
       open() {}
+      close() {}
     };
     document.querySelector('script').dispatchEvent(new window.Event('load'));
     await retry;
@@ -50,6 +51,24 @@ test('checkout loading times out and retries; background taps never dismiss or o
     const result = { razorpay_order_id: 'order_test', razorpay_payment_id: 'pay_test', razorpay_signature: 'synthetic' };
     options.handler(result); options.handler(result); options.modal.ondismiss(); failure({ error: {} });
     assert.equal(successes, 1); assert.equal(dismissals, 0); assert.equal(errors, 0);
+    let opened = 0, closed = 0;
+    window.Razorpay = class {
+      constructor(value) { options = value; }
+      on(_event, handler) { failure = handler; }
+      open() { opened++; }
+      close() { closed++; options.modal.ondismiss(); }
+    };
+    const controller = new AbortController();
+    const opening = openRazorpayCheckout({orderId:'order_test',amount:536,keyId:'synthetic',signal:controller.signal,
+      onSuccess:()=>successes++,onDismiss:()=>dismissals++,onError:()=>errors++});
+    assert.equal(opened,1,'ready SDK opens during the user tap, before an await');
+    await opening;controller.abort();options.handler(result);failure({error:{}});
+    assert.equal(closed,1);assert.equal(successes,1);assert.equal(errors,0);assert.equal(dismissals,0);
+    await openRazorpayCheckout({orderId:'order_test',amount:536,keyId:'synthetic',signal:controller.signal});
+    assert.equal(opened,1,'aborted page never opens another modal');
+    await openRazorpayCheckout({orderId:'order_test',amount:536,keyId:'synthetic',onError:()=>errors++,onDismiss:()=>dismissals++});
+    failure({error:{message:'declined'}});failure({error:{}});options.modal.ondismiss();
+    assert.equal(errors,1);assert.equal(dismissals,0);assert.equal(closed,2,'failed modal closed before retry');
   } finally {
     Object.assign(globalThis, old); dom.window.close();
   }

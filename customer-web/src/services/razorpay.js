@@ -45,14 +45,24 @@ export async function openRazorpayCheckout({
   onSuccess,
   onDismiss,
   onError,
+  signal,
 }) {
-  await loadRazorpayScript();
+  if (!window.Razorpay) await loadRazorpayScript();
+  if (signal?.aborted) return null;
 
   if (!window.Razorpay) {
     throw new Error('Razorpay SDK is not available in browser window.');
   }
 
   let completed = false;
+  let rzp;
+  const detach = () => signal?.removeEventListener('abort', cancel);
+  const cancel = () => { completed = true; detach(); rzp?.close(); };
+  const fail = error => {
+    if (completed) return;
+    completed = true; detach(); rzp?.close();
+    onError?.(error);
+  };
   const options = {
     key: keyId,
     amount: amount, // in paise
@@ -72,9 +82,7 @@ export async function openRazorpayCheckout({
     handler: function (response) {
       if (completed) return;
       if (!response) {
-        if (onError) {
-          onError(new Error('Invalid Razorpay callback: empty response received.'));
-        }
+        fail(new Error('Invalid Razorpay callback: empty response received.'));
         return;
       }
 
@@ -88,14 +96,13 @@ export async function openRazorpayCheckout({
         typeof signature === 'string' && signature.trim().length > 0;
 
       if (!isValid) {
-        if (onError) {
-          onError(new Error('Invalid Razorpay callback: orderId, paymentId, and signature are required.'));
-        }
+        fail(new Error('Invalid Razorpay callback: orderId, paymentId, and signature are required.'));
         return;
       }
 
       if (onSuccess) {
         completed = true;
+        detach();
         onSuccess({
           orderId: orderId.trim(),
           paymentId: paymentId.trim(),
@@ -111,17 +118,19 @@ export async function openRazorpayCheckout({
       escape: false,
       backdropclose: false,
       ondismiss: function () {
-        if (!completed && onDismiss) onDismiss();
+        if (completed) return;
+        completed = true; detach();
+        onDismiss?.();
       },
     },
   };
 
-  const rzp = new window.Razorpay(options);
+  rzp = new window.Razorpay(options);
   rzp.on('payment.failed', function (response) {
-    if (!completed && onError) {
-      onError(response.error || { message: 'Payment failed' });
-    }
+    fail(response?.error || { message: 'Payment failed' });
   });
 
-  rzp.open();
+  signal?.addEventListener('abort', cancel, { once: true });
+  try { rzp.open(); } catch (error) { cancel(); throw error; }
+  return { close: cancel };
 }
