@@ -1,3 +1,4 @@
+import { MyHealth } from './components/MyHealth';
 import { MyRecords } from './components/MyRecords';
 import { InstallApp } from './components/InstallApp';
 import { setAppIdle, checkForAppUpdate, refreshApp } from './services/pwaRuntime';
@@ -37,6 +38,9 @@ export function App() {
   const [scanning, setScanning] = useState(window.location.pathname === '/scan');
   const sessionStore = useSessionStore();
   const { state } = sessionStore;
+  const [section, setSection] = useState(() => window.location.pathname === '/scan' ? 'scan' : (state.encryptedPackage || getPendingVerification() || getPaidSession() ? 'payment' : 'health'));
+  useEffect(() => { if (state.encryptedPackage) { setSection('payment'); setScanning(false); } }, [state.encryptedPackage]);
+  const chooseSection = next => { setSection(next); setScanning(next === 'scan'); if (next === 'scan') { prepareScanSound(); loadScanner().catch(() => {}); } };
   const [scanNotice, setScanNotice] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('IDLE');
   const [refreshNotice, setRefreshNotice] = useState('');
@@ -73,7 +77,7 @@ export function App() {
     window.history.pushState(null, '', path);
     window.dispatchEvent(new HashChangeEvent('hashchange'));
     setScanNotice(true);
-    setScanning(false);
+    setScanning(false); setSection('payment');
   }, []);
 
   if (!state.isLoaded) {
@@ -123,13 +127,18 @@ export function App() {
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 space-y-4">
         <div className="pb-8">
           {refreshNotice && <p role="status" className="mb-3 text-sm text-slate-600">{refreshNotice}</p>}
-          <div hidden={scanning || hasPackage} className="mb-5"><InstallApp /></div>
-          {scanning ? <ScannerPanel onClose={() => setScanning(false)} onScan={scanned} /> : <>
+          <nav aria-label="Reliv sections" className="mb-6 grid grid-cols-3 gap-1 rounded-2xl border border-orange-100 bg-white p-1 shadow-sm">
+            {[['health','My Health'],['scan','Scan QR'],['records','Health Records']].map(([key,label]) => <button key={key} type="button" aria-current={section === key ? 'page' : undefined} onClick={() => chooseSection(key)} className={`min-h-14 rounded-xl px-2 py-3 text-sm font-semibold ${section === key ? 'bg-orange-600 text-white' : 'text-slate-600 hover:bg-orange-50'}`}>{label}</button>)}
+          </nav>
+          {section === 'health' && <><MyHealth onScan={() => chooseSection('scan')} onRecords={() => chooseSection('records')} /><div className="mt-5"><InstallApp /></div></>}
+          {section === 'records' && <MyRecords standalone />}
+          {scanning && <ScannerPanel onClose={() => chooseSection(hasPackage ? 'payment' : 'health')} onScan={scanned} />}
+          {hasPackage && section !== 'payment' && <button type="button" onClick={() => chooseSection('payment')} className="mt-5 min-h-12 w-full rounded-xl border border-orange-300 bg-white px-4 font-semibold text-orange-800">Return to payment / kiosk code</button>}
+          {/* Keep active checkout mounted while browsing records; switching sections must not recreate an order. */}
+          <div hidden={section !== 'payment'}>
             {scanNotice && <p role="status" className="rounded-xl bg-emerald-50 p-3 font-semibold text-emerald-900">✓ QR captured. Opening this kiosk payment.</p>}
-            {renderActiveScreen()}
-            <MyRecords />
-            <button type="button" onFocus={() => { loadScanner().catch(() => {}); }} onPointerEnter={() => { loadScanner().catch(() => {}); }} onPointerDown={() => { loadScanner().catch(() => {}); }} onClick={() => { prepareScanSound(); setScanning(true); }} className="mt-5 min-h-12 w-full rounded-2xl bg-orange-600 px-4 py-3 font-semibold text-white shadow-sm">Scan kiosk payment QR</button>
-          </>}
+            {(isPayRoute || hasPackage || section === 'payment') && renderActiveScreen()}
+          </div>
         </div>
       </main>
 
@@ -141,3 +150,4 @@ export function App() {
 }
 
 export default App;
+
