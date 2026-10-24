@@ -1,0 +1,18 @@
+{
+  "name": "Reliv Care — My Health",
+  "short_name": "Reliv Care",
+  "start_url": "/reliv-health-demo.html",
+  "scope": "/reliv-health-demo.html",
+  "display": "standalone",
+  "background_color": "#fffaf6",
+  "theme_color": "#ff7900",
+  "description": "Your health, your way. Private, personal health tracking.",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
