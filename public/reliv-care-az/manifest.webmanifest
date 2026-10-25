@@ -1,0 +1,20 @@
+{
+  "name": "Reliv Care — A to Z Demo",
+  "short_name": "Reliv Care",
+  "description": "Interactive orange-and-white Reliv Care complete experience showcase (sample data)",
+  "id": "/reliv-care-az/",
+  "start_url": "/reliv-care-az/index.html",
+  "scope": "/reliv-care-az/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff9f4",
+  "theme_color": "#ff7900",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
