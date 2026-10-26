@@ -1,7 +1,9 @@
 import DeliveryHelp from '../components/DeliveryHelp';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Logo from '../components/Logo';
+import CommerceHeader from '../components/CommerceHeader';
+import {Package,Check,AlertTriangle} from 'lucide-react';
+import './KioskCommerce.css';
 import SpokenGuide from '../components/SpokenGuide';
 import { useHealth } from '../context/HealthContext';
 import { useVoicePage } from '../hooks/useVoicePage';
@@ -14,7 +16,7 @@ import { deliveryState, medicineGuide } from '../voice/medicineGuide';
 export default function OrderSuccess() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { data, resetHealth } = useHealth();
+  const { data } = useHealth();
   const { speakText } = useSpeech();
   const language = data.language || 'en';
   const w = medicineGuide[language] || medicineGuide.en;
@@ -52,17 +54,18 @@ export default function OrderSuccess() {
     const timer = setTimeout(() => setDelayed(true), 90000);
     return () => clearTimeout(timer);
   }, [sessionId]);
-  return <main className="min-h-screen touch-pan-y bg-orange-50 px-5 py-10 text-slate-900">
-    <section className="mx-auto max-w-3xl rounded-3xl bg-white p-6 shadow-sm sm:p-10">
-      <Logo />
+  return <main className="commerce-screen">
+    <CommerceHeader language={language} step={2}/>
+    <section className="commerce-order" data-state={visibleState}>
+      <div className="commerce-order-icon" aria-hidden="true">{state==='complete'?<Check size={36}/>:visibleState==='review'?<AlertTriangle size={36}/>:<Package size={36}/>}</div>
       <p className="mt-5 text-orange-800">{w.title}</p>
       <h1 className="mt-2 text-3xl font-bold" role="status">{w[visibleState]}</h1>
       <SpokenGuide text={instruction} language={language} autoSpeak />
-      {snapshot?.jobsCount > 0 && <p className="my-4 text-xl">{Number.isInteger(snapshot.itemsCount)?w.itemsConfirmed:w.confirmed}: {snapshot.itemsCompleted ?? snapshot.jobsCompleted} / {snapshot.itemsCount ?? snapshot.jobsCount}</p>}
+      {snapshot?.jobsCount > 0 && <p className="commerce-order-count">{Number.isInteger(snapshot.itemsCount)?w.itemsConfirmed:w.confirmed}: {snapshot.itemsCompleted ?? snapshot.jobsCompleted} / {snapshot.itemsCount ?? snapshot.jobsCount}</p>}
       {delayed && ['waiting','dispensing','offline'].includes(state) && <p className="rounded-xl bg-amber-100 p-4" role="alert">{w.delayed}</p>}
-      <p className="my-4 break-all text-sm text-slate-600">{w.reference}: {sessionId || '—'}</p>
-      {state === 'complete' ? <button type="button" onClick={() => { resetHealth(); navigate('/feedback', {replace:true}); }} className="min-h-14 w-full rounded-xl bg-orange-700 px-5 py-4 font-bold text-white">{w.finish}</button>
-        : <button type="button" onClick={() => setRetry(n=>n+1)} className="min-h-14 rounded-xl border border-orange-400 px-5 py-4 font-bold">{w.retry}</button>}
+      <p className="commerce-reference">{w.reference}: {sessionId || '—'}</p>
+      {state === 'complete' ? <button type="button" onClick={() => { navigate('/feedback', {replace:true,state:{medicineOrder:true,language}}); }} className="commerce-primary">{w.finish}</button>
+        : <button type="button" onClick={() => setRetry(n=>n+1)} className="commerce-quiet">{w.retry}</button>}
       <DeliveryHelp key={sessionId} sessionId={sessionId} language={language} />
     </section>
   </main>;

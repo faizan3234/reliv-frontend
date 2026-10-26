@@ -18,8 +18,8 @@ window.URL.createObjectURL=()=> 'blob:test';window.URL.revokeObjectURL=()=>{};
 export function Probe(){health=useHealth();return <MedicineDispensing/>;}
 const checks=[];const assert=(ok,text)=>{if(!ok)throw new Error(text);checks.push('PASS '+text);};
 const flush=()=>act(async()=>new Promise(r=>wait(r,30)));
-const card=name=>[...document.querySelectorAll('.product-grid .glass-card')].find(c=>c.querySelector('h3').textContent===name);
-const checkout=()=>document.querySelector('.luxury-pay-btn');
+const card=name=>[...document.querySelectorAll('.commerce-products .glass-card')].find(c=>c.querySelector('h3').textContent===name);
+const checkout=()=>document.querySelector('.commerce-summary .commerce-primary');
 const click=async button=>{assert(button,'control exists');await act(async()=>button.click());await flush();};
 async function run(){
  assert(getMedicineImageUrl({image_path:'/medicine-images/item.png'}).endsWith('/api/medicine-images/item.png'),'medicine and admin image helper uses nginx API proxy');
@@ -30,7 +30,7 @@ async function run(){
  assert(card('Kit C').querySelector('button').disabled&&getAvailableQuantity({quantity:Infinity})===0,'invalid stock cannot be purchased');
  await click(card('Kit A').querySelector('.add-cart-btn'));await click(card('Kit A').querySelector('.card-qty-plus'));
  assert(card('Kit A').querySelector('.card-qty-plus').disabled,'card quantity cannot exceed stock');
- assert(document.querySelector('.luxury-qty-controls button:last-child').disabled,'cart quantity cannot exceed stock');
+ assert(document.querySelector('.commerce-summary').textContent.includes('2 × Kit A'),'summary reflects selected quantity');
  kits=[{...kits[0],available_quantity:1},kits[1],kits[2]];await act(async()=>poll());await flush();
  assert(card('Kit A').textContent.includes('1 available'),'automatic refresh updates actual count');
  await click(checkout());assert(!document.querySelector('#checkout-page')&&document.body.textContent.includes('Stock changed'),'stock decrease requires review, never silently navigates');

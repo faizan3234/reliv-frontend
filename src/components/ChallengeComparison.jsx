@@ -1,4 +1,4 @@
-import relivLogo from "../assets/relivlogo.jpeg";
+import relivLogo from "../../shared/reliv-wordmark.svg";
 // src/components/ChallengeComparison.jsx — HEALTH DUEL & COUPLE STORY CARD
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars
@@ -116,7 +116,7 @@ export default function ChallengeComparison({
     // Top Brand Badge
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 44px Arial, sans-serif";
-    ctx.drawImage(logoImage, 90, 330, 840, 285, 90, 65, 300, 102);
+    ctx.drawImage(logoImage, 90, 55, 270, 110);
 
     ctx.fillStyle = isChallenge ? "#fdba74" : "#fbcfe8";
     ctx.font = "bold 30px Arial, sans-serif";

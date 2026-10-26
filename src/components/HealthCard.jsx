@@ -1,5 +1,6 @@
 // src/components/HealthCard.jsx
 // Premium Instagram-story-sized health card (1080×1920 ratio)
+import wordmark from "../../shared/reliv-wordmark.svg";
 import React, { forwardRef } from "react";
 
 const HealthCard = forwardRef(function HealthCard(
@@ -86,26 +87,7 @@ const HealthCard = forwardRef(function HealthCard(
 
       {/* Logo */}
       <div style={{ marginTop: 48, textAlign: "center" }}>
-        <div style={{ fontSize: 42, fontWeight: 800, letterSpacing: "-0.02em" }}>
-          <span style={{ color: "#F97316" }}>Re</span>
-          <span style={{ color: "#ffffff" }}>l</span>
-          <span style={{ color: "#ffffff", position: "relative", display: "inline-block" }}>
-            ı
-            <span
-              style={{
-                position: "absolute",
-                left: "50%",
-                top: "0.08em",
-                transform: "translateX(-50%)",
-                width: "0.22em",
-                height: "0.22em",
-                backgroundColor: "#F97316",
-                borderRadius: "50%",
-              }}
-            />
-          </span>
-          <span style={{ color: "#ffffff" }}>v</span>
-        </div>
+        <div style={{display:'inline-flex',background:'#fff',padding:'10px 18px',borderRadius:18}}><img src={wordmark} alt="Reliv" style={{width:150,height:62,objectFit:'contain'}}/></div>
         <div
           style={{
             fontSize: 11,
