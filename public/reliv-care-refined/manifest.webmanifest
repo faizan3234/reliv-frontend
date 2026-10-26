@@ -1,8 +1,8 @@
 {
   "id": "/reliv-care-refined/",
-  "name": "Reliv Care — Flagship Experience",
+  "name": "Reliv Care — Refined Interactive Preview",
   "short_name": "Reliv Care",
-  "description": "Personal health & Reliv Store interactive preview with sample data",
+  "description": "Accessible, mobile-first Reliv Care health and Store interactive sample-data showcase",
   "start_url": "/reliv-care-refined/index.html",
   "scope": "/reliv-care-refined/",
   "display": "standalone",
