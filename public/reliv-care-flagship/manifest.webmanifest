@@ -1,0 +1,20 @@
+{
+  "id": "/reliv-care-flagship/",
+  "name": "Reliv Care — Flagship Experience",
+  "short_name": "Reliv Care",
+  "description": "Personal health & Reliv Store interactive preview with sample data",
+  "start_url": "/reliv-care-flagship/index.html",
+  "scope": "/reliv-care-flagship/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF9F6",
+  "theme_color": "#F47600",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
