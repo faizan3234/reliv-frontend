@@ -196,30 +196,7 @@ const Splash = () => {
 
           {/* CENTER LOGO & TEXT */}
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-4">
-            <h1
-              className={`text-3xl md:text-5xl lg:text-6xl font-extrabold leading-tight transition-opacity duration-[2500ms] ease-in-out ${textVisible ? "opacity-100" : "opacity-0"
-                }`}
-            >
-              <span className="text-orange-500">Re</span>
-              <span className="text-black">
-                l
-                <span className="relative inline-block">
-                  ı
-                  <span
-                    className="absolute left-1/2"
-                    style={{
-                      top: "0.123em",
-                      transform: "translateX(-50%)",
-                      width: "0.2em",
-                      height: "0.2em",
-                      backgroundColor: "#F97316",
-                      borderRadius: "50%",
-                    }}
-                  />
-                </span>
-                v
-              </span>
-            </h1>
+            <Logo size="text-5xl md:text-6xl lg:text-7xl" className={`transition-opacity duration-500 ${textVisible ? 'opacity-100' : 'opacity-0'}`} />
 
             <div className="relative mt-3 h-10 flex items-center justify-center w-full">
               <p

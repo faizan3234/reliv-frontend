@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "audio:reports": "node scripts/generate_report_audio.mjs",
     "test:scanner": "node --test customer-web/test/scanner-region.test.js customer-web/test/payment-qr.test.js customer-web/test/scanner-tuning.test.js customer-web/test/payment-qr-decode.test.js && node tests/run-integration.js tests/payment-scanner-browser.jsx",
-    "test:app-records": "node --test customer-web/test/report-vault.test.js"
+    "test:app-records": "node --test customer-web/test/report-vault.test.js",
+    "test:commerce": "node tests/run-integration.js tests/commerce-browser.jsx && node tests/run-integration.js tests/medicine-stock-browser.jsx && node tests/run-integration.js tests/offline-voice-browser.jsx"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

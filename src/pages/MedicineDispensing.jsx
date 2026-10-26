@@ -3,12 +3,12 @@ import { medicineImageUrl } from '../utils/medicineImage';
 // src/pages/MedicineDispensing.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion"; // eslint-disable-line no-unused-vars -- used by JSX member tags
-import { ShoppingCart, Plus, Minus, Sparkles, X, ArrowLeft, Heart, ShieldCheck, Trash2 } from "lucide-react";
+import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars -- used by JSX member tags
+import { Plus, Minus } from "lucide-react";
 import Logo from "../components/Logo";
-import PrimaryButton from "../components/PrimaryButton";
-import AuraBackground from "../components/AuraBackground";
-import "./RelivKiosk.css";
+import CommerceHeader, {commerceCopy} from "../components/CommerceHeader";
+
+import "./KioskCommerce.css";
 import { API_BASE } from "../config/api";
 import SpokenGuide from '../components/SpokenGuide';
 import { useHealth } from '../context/HealthContext';
@@ -63,19 +63,8 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, words,
 
   return (
     <motion.div
-      whileHover={{ y: -6 }}
       className={`glass-card lift-hover ${isOutOfStock ? "disabled" : ""}`}
     >
-      {/* Sparkle Effect Layer */}
-      <div className="sparkle-layer">
-        <motion.div
-          initial={{ x: "-100%" }}
-          animate={{ x: "200%" }}
-          transition={{ repeat: Infinity, duration: 3.5, ease: "linear", repeatDelay: 2 }}
-          className="shimmer-sweep"
-        />
-      </div>
-
       {/* Badges */}
       <div className="card-top">
         <span className={`stock ${isOutOfStock ? 'out' : available <= 5 ? 'low' : 'in'}`}>
@@ -189,6 +178,7 @@ function EnabledMedicineDispensing() {
   const { data: health } = useHealth();
   const language = health.language || 'en';
   const words = medicineGuide[language] || medicineGuide.en;
+  const c = commerceCopy[language] || commerceCopy.en;
   const stockCopy = stockWords[language] || stockWords.en;
   const [stockNotice, setStockNotice] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -362,201 +352,21 @@ function EnabledMedicineDispensing() {
     } finally { checkoutRef.current = false; setChecking(false); }
   };
 
-  if (isLoading) {
-    return (
-      <AuraBackground>
-        <div className="flex min-h-[100dvh] h-auto items-center justify-center overflow-y-auto scrollable-container touch-pan-y">
-          <div className="text-center space-y-4">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-              className="w-14 h-14 border-4 border-orange-500 border-t-transparent rounded-full mx-auto"
-            />
-            <div className="text-lg font-bold text-gray-700">Loading medicines...</div>
-          </div>
-        </div>
-      </AuraBackground>
-    );
-  }
-
-  return (
-    <AuraBackground>
-      <div className={`kiosk-content ${cart.length === 0 ? "no-cart" : ""}`}>
-
-        {/* Back Button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="kiosk-back-btn"
-          aria-label="Go back"
-        >
-          <ArrowLeft size={22} />
-          <span>Back</span>
-        </button>
-
-        {/* Header Branding */}
-        <header className="kiosk-header">
-          <Logo />
-          <h2>{words.choose}</h2>
-          <SpokenGuide text={`${stockCopy.hint} ${words.chooseText}`} language={language} autoSpeak />
-          <button className="stock-refresh" type="button" onClick={fetchKits} disabled={refreshing || checking}>{refreshing ? stockCopy.checking : stockCopy.refresh}</button>
-          {stockNotice && <p role="status">{stockNotice}</p>}
-          {loadError && <div role="alert"><p>{loadError}</p><button type="button" onClick={fetchKits}>{words.retry}</button></div>}
-        </header>
-
-        {/* 3-by-3 Product Grid (3 kits top row, 3 kits bottom row) */}
-        <main className="product-grid">
-          {medicalKits.map((kit, index) => (
-            <KitCard
-              key={kit.kit_id || kit.id || index}
-              kit={kit}
-              onAddToCart={handleAddToCart}
-              onUpdateQty={handleUpdateQuantity}
-              onRemoveFromCart={handleRemoveFromCart}
-              cart={cart}
-              words={stockCopy}
-              blocked={Boolean(loadError) || checking}
-            />
-          ))}
-        </main>
-
-        {/* Luxury Slide-up Cart Drawer */}
-        <AnimatePresence>
-          {totalItems > 0 && (
-            <motion.div
-              initial={{ y: 120, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 120, opacity: 0 }}
-              className="luxury-cart-drawer"
-            >
-              <div className="cart-silk-wave" />
-
-              {/* Cart Header */}
-              <div className="luxury-cart-header">
-                <div className="luxury-cart-title">
-                  <span className="cart-label">YOUR SELECTION</span>
-                  <span className="cart-count">
-                    {totalItems} {totalItems === 1 ? "ITEM" : "ITEMS"}
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  <button
-                    onClick={handleClearCart}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      background: "rgba(239, 68, 68, 0.1)",
-                      color: "#dc2626",
-                      border: "1px solid rgba(239, 68, 68, 0.2)",
-                      borderRadius: "10px",
-                      padding: "6px 12px",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      cursor: "pointer"
-                    }}
-                    title="Clear entire cart"
-                  >
-                    <Trash2 size={14} />
-                    <span>CLEAR</span>
-                  </button>
-                  <div className="luxury-cart-total">
-                    <span className="total-label">TOTAL</span>
-                    <span className="total-price">{formatINR(totalPrice)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cart Items List */}
-              <div className="luxury-cart-items">
-                {cart.map((item) => (
-                  <motion.div
-                    key={item.kit_id || item.id}
-                    className="luxury-cart-item"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "14px", width: "100%" }}>
-                      <div className="luxury-item-image">
-                        <div className="item-image-glow" />
-                        {getMedicineImageUrl(item) ? (
-                          <MedicineImage src={getMedicineImageUrl(item)} alt={item.name} />
-                        ) : (
-                          <span className="item-placeholder">
-                            {(item.name || "M").split(" ")[0]}
-                          </span>
-                        )}
-                      </div>
-                      <div className="luxury-item-details">
-                        <h3 className="luxury-item-name">{item.name}</h3>
-                        <p className="luxury-item-meta">
-                          <span>{stockCopy.available(getAvailableQuantity(medicalKits.find(kit => getKitId(kit) === getKitId(item))))}</span>
-                          <span aria-hidden="true" style={{ margin: "0 4px" }}>•</span>
-                          <span>{words.title}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="luxury-qty-section">
-                      <span className="qty-label">{stockCopy.selected}</span>
-                      <div className="luxury-qty-controls">
-                        <button
-                          onClick={() => handleUpdateQuantity(getKitId(item), item.cartQuantity - 1)}
-                          className="luxury-qty-btn"
-                          title={item.cartQuantity <= 1 ? "Remove item" : "Decrease quantity"}
-                        >
-                          {item.cartQuantity <= 1 ? <Trash2 size={13} style={{ color: "#ef4444" }} /> : "−"}
-                        </button>
-                        <span className="luxury-qty-value">
-                          {String(item.cartQuantity).padStart(2, "0")}
-                        </span>
-                        <button
-                          onClick={() => handleUpdateQuantity(getKitId(item), item.cartQuantity + 1)}
-                          className="luxury-qty-btn"
-                          title={stockCopy.increase}
-                          disabled={Boolean(loadError) || checking || isUnavailable(medicalKits.find(kit => getKitId(kit) === getKitId(item))) || item.cartQuantity >= getAvailableQuantity(medicalKits.find(kit => getKitId(kit) === getKitId(item)))}
-                        >
-                          +
-                        </button>
-                      </div>
-                      <span className="luxury-item-subtotal">
-                        {formatINR(item.price * item.cartQuantity)}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveFromCart(getKitId(item))}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#94a3b8",
-                          cursor: "pointer",
-                          padding: "4px",
-                          display: "flex",
-                          alignItems: "center"
-                        }}
-                        title="Remove from cart"
-                        aria-label="Remove item"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Proceed Action Button */}
-              <div className="luxury-cart-footer">
-                <PrimaryButton
-                  onClick={handleCheckout}
-                  disabled={checking || refreshing || Boolean(loadError)}
-                  className="luxury-pay-btn"
-                >
-                  <span>Proceed to Checkout ({formatINR(totalPrice)})</span>
-                </PrimaryButton>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+  if (isLoading) return <main className="commerce-screen"><CommerceHeader language={language}/><p role="status">{stockCopy.checking}</p></main>;
+  return <main className="commerce-screen">
+    <CommerceHeader language={language} onBack={()=>navigate(-1)}/>
+    <div className="commerce-layout"><section>
+      <div className="commerce-intro"><h1>{words.choose}</h1><SpokenGuide text={stockCopy.hint} language={language} autoSpeak/>
+        <button className="stock-refresh commerce-quiet" onClick={fetchKits} disabled={refreshing||checking}>{refreshing?stockCopy.checking:stockCopy.refresh}</button>
+        {stockNotice&&<p className="commerce-alert" role="status">{stockNotice}</p>}
+        {loadError&&<div className="commerce-alert" role="alert">{loadError}</div>}
       </div>
-    </AuraBackground>
-  );
+      <div className="commerce-products">{medicalKits.map((kit,index)=><KitCard key={getKitId(kit)||index} kit={kit} cart={cart} words={stockCopy} onAddToCart={handleAddToCart} onUpdateQty={handleUpdateQuantity} onRemoveFromCart={handleRemoveFromCart} blocked={Boolean(loadError)||checking}/>)}</div>
+    </section><aside className="commerce-summary"><h2>{c.basket} · {totalItems}</h2>
+      {!cart.length?<p>{c.empty}</p>:<ul>{cart.map(item=><li key={getKitId(item)}><span>{item.cartQuantity} × {item.name}</span><strong>{formatINR(item.price*item.cartQuantity)}</strong></li>)}</ul>}
+      <div className="commerce-total"><span>{c.subtotal}</span><strong>{formatINR(totalPrice)}</strong></div><p className="commerce-note">{c.fees}</p>
+      <button className="commerce-primary" onClick={handleCheckout} disabled={!cart.length||checking||refreshing||Boolean(loadError)}>{checking?stockCopy.checking:c.review} →</button>
+      {cart.length>0&&<button className="commerce-quiet" onClick={handleClearCart}>{c.clear}</button>}
+    </aside></div>
+  </main>;
 }

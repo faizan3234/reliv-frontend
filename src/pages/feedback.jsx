@@ -1,37 +1,19 @@
 // src/pages/Feedback.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used by JSX member tags
 import VirtualKeyboard from '../components/VirtualKeyboard';
 import { usePageSpeech } from "../context/SpeechContext";
 import { API_BASE } from "../config/api";
 
-const Logo = ({ className = "", size = "text-4xl md:text-5xl" }) => (
-  <div className={`inline-flex items-center justify-center ${className}`} aria-hidden="true">
-    <h1 className={`${size} font-extrabold leading-tight tracking-tight`}>
-      <span className="text-orange-500">Re</span>
-      <span className="text-black relative">
-        l
-        <span className="relative inline-block">
-          ı
-          <span
-            className="absolute left-1/2 top-[0.18em]"
-            style={{
-              transform: "translateX(-51%)",
-              width: "0.20em",
-              height: "0.20em",
-              backgroundColor: "#F97316",
-              borderRadius: "50%",
-            }}
-          />
-        </span>
-        v
-      </span>
-    </h1>
-  </div>
-);
-
+import Logo from '../components/Logo';
+import MedicineFinish from './MedicineFinish';
 export default function Feedback() {
+ const location=useLocation();
+ return location.state?.medicineOrder ? <MedicineFinish language={location.state.language}/> : <FullFeedback/>;
+}
+
+function FullFeedback() {
   usePageSpeech("feedback");
   const navigate = useNavigate();
 
