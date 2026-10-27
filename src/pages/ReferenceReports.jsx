@@ -32,7 +32,7 @@ export default function ReferenceReports() {
   <div className="reference-page-track" role="img" aria-label={`Report page ${page} of 5`}>{[1,2,3,4,5].map(step=><span key={step} data-current={step===page} data-complete={step<page}/>)}</div>
   {page>1 && page<5 && <nav className="reference-back"><button type="button" onClick={()=>{navigate(`/report-${page-1}`);window.scrollTo(0,0);}}>← {lang==="hi"?"पिछला पेज":lang==="bn"?"আগের পাতা":"Previous page"}</button></nav>}
   <p className="reference-note">Measured readings and calculated estimates are different. Body score, bone mass, body fat, muscle and calorie estimates are screening information—not diagnoses or direct tissue measurements.</p>
-  {(page===1||page===2||page===5)&&<WeightReferenceCard data={data} language={spokenLanguage}/>}
+  {(page===1||page===2||page===5)&&<details className="reference-weight-details"><summary>{lang==='hi'?'मेरी लंबाई के हिसाब से वज़न की जानकारी':lang==='bn'?'আমার উচ্চতা অনুযায়ী ওজনের তথ্য':'Weight range for my height'} <span aria-hidden="true">＋</span></summary><WeightReferenceCard data={data} language={spokenLanguage}/></details>}
   <Page key={`${data.sessionId}-${page}`} />
   <DeliveryHelp key={data.sessionId} sessionId={data.sessionId} language={lang} />
  </main>;

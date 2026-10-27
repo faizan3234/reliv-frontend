@@ -1,3 +1,4 @@
+import {MAX_ORDER_UNITS,medicineUnitCount,dispenseLimitCopy} from '../utils/dispenseLimits';
 import MedicineImage from '../components/MedicineImage';
 import { medicineImageUrl } from '../utils/medicineImage';
 // src/pages/MedicineDispensing.jsx
@@ -101,7 +102,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, words,
             whileTap={{ scale: 0.95 }}
             onClick={() => onAddToCart(kit)}
             className="add-cart-btn"
-            disabled={blocked}
+            disabled={blocked || medicineUnitCount(cart)>=MAX_ORDER_UNITS}
           >
             <Plus size={18} />
             <span>{words.add}</span>
@@ -129,7 +130,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, words,
               onClick={() => onUpdateQty(kitId, cartQty + 1)}
               className="card-qty-btn card-qty-plus"
               aria-label={`${words.increase}: ${kit.name}`}
-              disabled={blocked || cartQty >= Math.min(available, 10)}
+              disabled={blocked || cartQty >= Math.min(available, MAX_ORDER_UNITS) || medicineUnitCount(cart)>=MAX_ORDER_UNITS}
             >
               <Plus size={18} />
             </motion.button>
@@ -241,6 +242,7 @@ function EnabledMedicineDispensing() {
     if (!kitId || loadError || checking || isUnavailable(kit)) return;
 
     setCart((prev) => {
+      if(medicineUnitCount(prev)>=MAX_ORDER_UNITS)return prev;
       const existing = prev.find((item) => getKitId(item) === kitId);
       if (existing) {
         const currentKit = medicalKits.find((k) => getKitId(k) === kitId) || existing;
@@ -271,14 +273,14 @@ function EnabledMedicineDispensing() {
         .map((item) => {
           if (getKitId(item) === kitId) {
             const currentKit = medicalKits.find((k) => getKitId(k) === kitId) || item;
-            const maxAvailable = isUnavailable(currentKit) ? 0 : Math.min(10, getAvailableQuantity(currentKit));
+            const maxAvailable = isUnavailable(currentKit) ? 0 : Math.min(MAX_ORDER_UNITS-medicineUnitCount(prev)+item.cartQuantity, getAvailableQuantity(currentKit));
             const clampedQty = Math.min(newQuantity, maxAvailable);
 
             if (newQuantity > maxAvailable) {
               setStockNotice(stockCopy.changed);
             }
 
-            return { ...item, id: kitId, kit_id: kitId, cartQuantity: clampedQty, availableStock: maxAvailable };
+            return { ...item, id: kitId, kit_id: kitId, cartQuantity: clampedQty, availableStock: getAvailableQuantity(currentKit) };
           }
           return item;
         })
@@ -304,6 +306,7 @@ function EnabledMedicineDispensing() {
 
   // Re-verify inventory and navigate to CHECKOUT (not payment directly)
   const handleCheckout = async () => {
+    if(medicineUnitCount(cart)>MAX_ORDER_UNITS){setStockNotice(dispenseLimitCopy[language]||dispenseLimitCopy.en);return;}
     if (cart.length === 0 || checkoutRef.current || refreshing || loadError) return;
     checkoutRef.current = true; setChecking(true); setLoadError('');
     try {
@@ -362,7 +365,7 @@ function EnabledMedicineDispensing() {
         {loadError&&<div className="commerce-alert" role="alert">{loadError}</div>}
       </div>
       <div className="commerce-products">{medicalKits.map((kit,index)=><KitCard key={getKitId(kit)||index} kit={kit} cart={cart} words={stockCopy} onAddToCart={handleAddToCart} onUpdateQty={handleUpdateQuantity} onRemoveFromCart={handleRemoveFromCart} blocked={Boolean(loadError)||checking}/>)}</div>
-    </section><aside className="commerce-summary"><h2>{c.basket} · {totalItems}</h2>
+    </section><aside className="commerce-summary"><h2>{c.basket} · {totalItems}</h2><p className="commerce-note">{dispenseLimitCopy[language]||dispenseLimitCopy.en}</p>
       {!cart.length?<p>{c.empty}</p>:<ul>{cart.map(item=><li key={getKitId(item)}><span>{item.cartQuantity} × {item.name}</span><strong>{formatINR(item.price*item.cartQuantity)}</strong></li>)}</ul>}
       <div className="commerce-total"><span>{c.subtotal}</span><strong>{formatINR(totalPrice)}</strong></div><p className="commerce-note">{c.fees}</p>
       <button className="commerce-primary" onClick={handleCheckout} disabled={!cart.length||checking||refreshing||Boolean(loadError)}>{checking?stockCopy.checking:c.review} →</button>

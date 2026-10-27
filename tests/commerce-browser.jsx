@@ -23,12 +23,14 @@ async function run(){
  assert(!document.body.textContent.includes('Launch Price')&&!document.body.textContent.includes('Platform Fee'),'no fabricated discount or optional server fee');
  await click('+');assert(document.querySelector('.commerce-qty button:last-child').disabled,'quantity capped at verified stock');
  await click('Continue to payment');const next=JSON.parse(document.querySelector('#payment').textContent);assert(next.cart[0].cartQuantity===2&&next.totalPrice===64,'payment receives cart; backend remains authoritative for payable total');
+ sessionStorage.setItem('reliv_cart','old customer');
  await mount('/feedback',{medicineOrder:true,language:'en'},<Feedback/>);await click('Skip');
  assert(document.body.textContent.includes('Thank you for visiting Reliv.')&&!document.body.textContent.includes('Sanitizing')&&posts===0,'skip shows honest reset without feedback request');
- await act(async()=>finish());assert(document.querySelector('#home'),'animation ends at home');
+ await act(async()=>finish());assert(document.querySelector('#home'),'animation ends at home');assert(sessionStorage.getItem('reliv_cart')===null,'completed visit removes previous cart');
  await mount('/feedback',{medicineOrder:true,language:'bn'},<Feedback/>);await click('খুব ভালো');fail=true;await click('ফিডব্যাক পাঠান');
+ const failedId=lastBody.feedbackId;assert(/^FB-[a-f0-9]{32}$/.test(failedId),'offline HTTP kiosk creates idempotency key without randomUUID');
  assert(document.querySelector('[role="alert"]'),'offline feedback error recoverable');
- fail=false;await click('ফিডব্যাক পাঠান');assert(lastBody.mood===6,'rating matches backend mood contract');await act(async()=>finish());assert(document.querySelector('#home'),'successful feedback returns home');
+ fail=false;await click('ফিডব্যাক পাঠান');assert(lastBody.mood===6,'rating matches backend mood contract');assert(lastBody.feedbackId===failedId,'retry reuses feedback reference instead of making duplicates');await act(async()=>finish());assert(document.querySelector('#home'),'successful feedback returns home');
  await act(async()=>root.unmount());document.getElementById('results').textContent=checks.join('\n')+'\nALL '+checks.length+' BROWSER CHECKS PASSED';
 }
 run().catch(e=>document.getElementById('results').textContent=checks.join('\n')+'\nFAIL '+e.stack);

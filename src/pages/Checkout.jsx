@@ -1,3 +1,4 @@
+import {MAX_ORDER_UNITS,medicineUnitCount,dispenseLimitCopy} from '../utils/dispenseLimits';
 import {useEffect,useRef,useState} from 'react';
 import {useLocation,useNavigate} from 'react-router-dom';
 import {useHealth} from '../context/HealthContext';
@@ -21,10 +22,10 @@ export default function Checkout(){
  });
  useEffect(()=>{writeBrowserStorage('reliv_cart',JSON.stringify(cart),'sessionStorage');},[cart]);
  const subtotal=cart.reduce((sum,item)=>sum+Math.round(Number(item.price)*100)*item.cartQuantity,0)/100;
- const stock=item=>Math.min(10,Math.max(0,Number(item.availableStock??item.maxStock??getAvailableQuantity(item))||0));
+ const stock=item=>Math.min(MAX_ORDER_UNITS-medicineUnitCount(cart)+item.cartQuantity,Math.max(0,Number(item.availableStock??item.maxStock??getAvailableQuantity(item))||0));
  const change=(id,delta)=>setCart(prev=>prev.map(item=>getKitId(item)===id?{...item,cartQuantity:Math.min(stock(item),item.cartQuantity+delta)}:item).filter(item=>item.cartQuantity>0));
  const remove=id=>setCart(prev=>prev.filter(item=>getKitId(item)!==id));
- const go=()=>{if(navigating.current||(!cart.length&&!fromPaymentGate))return;navigating.current=true;navigate('/payment',{state:{cart,totalPrice:subtotal,fromPaymentGate}});};
+ const go=()=>{if(navigating.current||medicineUnitCount(cart)>MAX_ORDER_UNITS||(!cart.length&&!fromPaymentGate))return;navigating.current=true;navigate('/payment',{state:{cart,totalPrice:subtotal,fromPaymentGate}});};
  return <main className="commerce-screen"><CommerceHeader language={language} step={1} onBack={()=>navigate('/medicine-dispensing',{state:{cart,fromPaymentGate}})}/>
   <div className="commerce-layout"><section><div className="commerce-intro"><h1>{c.reviewTitle}</h1><SpokenGuide text={c.reviewText} language={language} autoSpeak/></div>
    {cart.length===0&&<p>{c.empty}</p>}
@@ -35,7 +36,7 @@ export default function Checkout(){
    </article>)}
    <button className="commerce-quiet" onClick={()=>navigate('/medicine-dispensing',{state:{cart,fromPaymentGate}})}>+ {c.more}</button>
   </section><aside className="commerce-summary"><h2>{c.basket}</h2><div className="commerce-total"><span>{c.subtotal}</span><strong>{formatINR(subtotal)}</strong></div>
-   <p className="commerce-note">{c.fees}</p><button className="commerce-primary" disabled={!cart.length&&!fromPaymentGate} onClick={go}>{c.pay} →</button>
+   <p className="commerce-note">{c.fees}</p><p className="commerce-note">{dispenseLimitCopy[language]||dispenseLimitCopy.en}</p><button className="commerce-primary" disabled={medicineUnitCount(cart)>MAX_ORDER_UNITS||(!cart.length&&!fromPaymentGate)} onClick={go}>{c.pay} →</button>
   </aside></div>
  </main>;
 }
