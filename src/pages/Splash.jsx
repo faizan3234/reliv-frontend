@@ -1,3 +1,4 @@
+import './SplashPolish.css';
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
@@ -178,7 +179,7 @@ const Splash = () => {
 
   return (
     <>
-      <div className="min-h-[100dvh] h-auto bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container touch-pan-y">
+      <div className="reliv-splash min-h-[100dvh] h-auto bg-gray-100 flex items-center justify-center font-sans overflow-y-auto scrollable-container touch-pan-y">
         <div className="w-full min-h-[100dvh] relative overflow-x-hidden overflow-y-visible">
 
           {/* TOP WAVE */}
@@ -195,7 +196,7 @@ const Splash = () => {
           </div>
 
           {/* CENTER LOGO & TEXT */}
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-4">
+          <div className="splash-brand absolute inset-0 z-10 flex flex-col items-center justify-center px-4">
             <Logo size="text-5xl md:text-6xl lg:text-7xl" className={`transition-opacity duration-500 ${textVisible ? 'opacity-100' : 'opacity-0'}`} />
 
             <div className="relative mt-3 h-10 flex items-center justify-center w-full">

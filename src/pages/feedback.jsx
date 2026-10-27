@@ -1,3 +1,6 @@
+import {feedbackId} from '../utils/feedbackId';
+import {requestJSON} from '../utils/request';
+import {useHealth} from '../context/HealthContext';
 // src/pages/Feedback.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -16,6 +19,22 @@ export default function Feedback() {
 function FullFeedback() {
   usePageSpeech("feedback");
   const navigate = useNavigate();
+  const {resetHealth}=useHealth();
+  const home=useCallback(()=>{resetHealth();navigate('/',{replace:true});},[resetHealth,navigate]);
+  const [submissionId]=useState(feedbackId), [collaborationId]=useState(feedbackId);
+  const [sending,setSending]=useState(false), [sendError,setSendError]=useState('');
+  const request=useRef(null), followup=useRef(null);
+  useEffect(()=>()=>{request.current?.abort();clearTimeout(followup.current);},[]);
+  const send=async(payload)=>{
+    if(request.current)return false;
+    const controller=new AbortController();request.current=controller;setSending(true);setSendError('');
+    try {
+      const result=await requestJSON(`${API_BASE}/api/feedback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal,timeoutMs:10000});
+      if(result?.ok!==true)throw new Error('Feedback could not be saved.');
+      return !controller.signal.aborted;
+    } catch(error){if(!controller.signal.aborted)setSendError(error.message);return false;}
+    finally{if(request.current===controller)request.current=null;if(!controller.signal.aborted)setSending(false);}
+  };
 
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
@@ -48,8 +67,8 @@ function FullFeedback() {
     if (submitted) return;
     
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => navigate('/'), INACTIVITY_TIMEOUT);
-  }, [submitted, navigate]);
+    timerRef.current = setTimeout(home, INACTIVITY_TIMEOUT);
+  }, [submitted, home]);
 
   // Stop timer when feedback is submitted
   useEffect(() => {
@@ -88,7 +107,7 @@ function FullFeedback() {
 
   useEffect(() => {
     if (showKeyboard) {
-      setTimeout(() => {
+      const timer=setTimeout(() => {
         const refMap = {
           name: nameInputRef,
           comment: commentInputRef,
@@ -99,6 +118,7 @@ function FullFeedback() {
           refMap[activeInput].current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 150);
+      return ()=>clearTimeout(timer);
     }
   }, [showKeyboard, activeInput]);
 
@@ -149,22 +169,12 @@ function FullFeedback() {
       submittedAt: new Date().toISOString(),
     };
     
-    // Send feedback to backend (email sent silently)
-    try {
-      await fetch(`${API_BASE}/api/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(feedbackData)
-      });
-    } catch (err) {
-      console.error('Feedback submission error:', err);
-      // Continue anyway - don't block user experience
-    }
-    
+    if (!await send({...feedbackData,feedbackId:submissionId})) return;
+
     setSubmitted(true);
 
     // Show collaboration prompt after thank you animation
-    setTimeout(() => {
+    followup.current=setTimeout(() => {
       setShowCollabPrompt(true);
     }, 4500);
   };
@@ -172,35 +182,15 @@ function FullFeedback() {
   const handleCollabChoice = (choice) => {
     setWantsToCollaborate(choice);
     if (!choice) {
-      setTimeout(() => navigate('/'), 7000);
+      followup.current=setTimeout(home, 7000);
     }
     resetTimer();
   };
 
   const handleCollabSubmit = async () => {
-    // Send collaboration interest with feedback data
-    try {
-      await fetch(`${API_BASE}/api/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          role: isFaculty ? 'Faculty' : 'Student',
-          stream: isFaculty ? null : stream,
-          mood,
-          positives,
-          comment: comment.trim(),
-          submittedAt: new Date().toISOString(),
-          collaboration: {
-            email: email.trim(),
-            phone: phone.trim()
-          }
-        })
-      });
-    } catch (err) {
-      console.error('Collaboration submission error:', err);
-    }
-    setTimeout(() => navigate('/'), 4000);
+    if (!await send({feedbackId:collaborationId,name:name.trim(),role:isFaculty?'Faculty':'Student',
+      stream:isFaculty?null:stream,mood,positives,comment:comment.trim(),collaboration:{email:email.trim(),phone:phone.trim()}})) return;
+    followup.current=setTimeout(home,4000);
   };
 
   const openKeyboard = (field) => {
@@ -233,6 +223,8 @@ function FullFeedback() {
   return (
     <div className="min-h-screen h-auto w-full bg-gradient-to-br from-orange-50 to-gray-100 flex flex-col items-center justify-center p-6 overflow-y-auto scrollable-container touch-pan-y">
       <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 max-w-3xl w-full relative overflow-hidden border border-orange-100">
+        {sendError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">{sendError} Please retry or return home.</p>}
+        {sendError && <button onClick={home} className="min-h-12 underline">Return home without feedback</button>}
         {/* Logo */}
         <div className="flex justify-center mb-10 mt-4">
           <Logo size="text-5xl md:text-6xl" />
@@ -416,6 +408,7 @@ function FullFeedback() {
                   />
                   <div className="flex justify-end">
                     <button
+                      disabled={sending}
                       onClick={handleSubmit}
                       className="py-6 px-14 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold text-2xl shadow-lg hover:from-orange-600 hover:to-amber-700"
                     >
@@ -517,7 +510,7 @@ function FullFeedback() {
               <div className="flex justify-center mt-12">
                 <button
                   onClick={handleCollabSubmit}
-                  disabled={!email.trim() || !phone.trim()}
+                  disabled={sending || !email.trim() || !phone.trim()}
                   className="py-6 px-16 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold text-2xl shadow-lg hover:from-orange-600 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Submit Details & Go Back

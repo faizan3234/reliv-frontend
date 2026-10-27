@@ -1,0 +1,7 @@
+.reliv-splash { background:#fffaf5; font-family:system-ui,-apple-system,'Segoe UI','Reliv devanagari','Reliv bengali',sans-serif; }
+.reliv-splash .splash-brand p { font-style:normal; color:#475569; letter-spacing:.01em; }
+.reliv-splash button { min-height:48px; touch-action:manipulation; }
+.reliv-splash button:focus-visible { outline:3px solid #7c2d12; outline-offset:4px; }
+.reliv-splash .splash-brand { padding-bottom:50px; }
+@media(max-width:440px) { .reliv-splash .splash-brand p { white-space:normal; max-width:90%; } }
+@media(prefers-reduced-motion:reduce) { .reliv-splash * { transition:none!important; animation:none!important; } }

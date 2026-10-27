@@ -385,7 +385,7 @@ const Report1 = () => {
               TODAY • 2 min scan • No needles
             </p>
 
-            <div className="relative w-[220px] h-[220px] mb-4" role="button" tabIndex={0}
+            <div className="report-score-ring relative w-[220px] h-[220px] mb-4" role="button" tabIndex={0}
               aria-label="Explain my estimated body score"
               onClick={() => handleCardSpeak('bodyScore')}
               onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleCardSpeak('bodyScore');}}}
@@ -444,7 +444,7 @@ const Report1 = () => {
                     </div>
                   </div>
                 ) : (
-                  <span className="text-5xl font-medium text-gray-300">Unavailable</span>
+                  <span className="text-xl font-medium text-gray-500">Unavailable</span>
                 )}
               </div>
             </div>

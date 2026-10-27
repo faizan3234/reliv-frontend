@@ -1,3 +1,4 @@
+import AdminFeedback from '../components/AdminFeedback';
 import AdminSupport from '../components/AdminSupport';
 import MedicineImage from '../components/MedicineImage';
 // src/pages/AdminMedicinePage.jsx
@@ -587,6 +588,7 @@ export default function AdminMedicinePage() {
       {/* ── Main Container (Max-width for phone ergonomics) ───────────────── */}
       <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
         <AdminSupport />
+        <AdminFeedback />
         <AdminAdSettings />
 
         {/* Top Summary Metrics */}
