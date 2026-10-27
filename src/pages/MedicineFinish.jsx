@@ -1,3 +1,4 @@
+import {feedbackId} from '../utils/feedbackId';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Meh,Smile,Laugh} from 'lucide-react';
 import {useNavigate} from 'react-router-dom';
@@ -10,6 +11,7 @@ import './KioskCommerce.css';
 export default function MedicineFinish({language='en'}){
  const navigate=useNavigate(),{resetHealth}=useHealth();const c=commerceCopy[language]||commerceCopy.en;
  const [rating,setRating]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(false),[done,setDone]=useState(false);
+ const [submissionId]=useState(feedbackId);
  const request=useRef(null);
  useEffect(()=>()=>request.current?.abort(),[]);
  const home=useCallback(()=>{resetHealth();navigate('/',{replace:true});},[resetHealth,navigate]);
@@ -17,7 +19,7 @@ export default function MedicineFinish({language='en'}){
  const send=async()=>{
   if(rating===null||request.current)return;
   const controller=new AbortController();request.current=controller;setBusy(true);setError(false);
-  try{const result=await requestJSON(`${API_BASE}/api/feedback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mood:[1,4,6][rating],role:'Medicine customer',submittedAt:new Date().toISOString()}),signal:controller.signal,timeoutMs:5000});if(!controller.signal.aborted){if(result?.ok===false)throw new Error('Feedback rejected');setDone(true);}}
+  try{const result=await requestJSON(`${API_BASE}/api/feedback`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feedbackId:submissionId,mood:[1,4,6][rating],role:'Medicine customer',submittedAt:new Date().toISOString()}),signal:controller.signal,timeoutMs:5000});if(!controller.signal.aborted){if(result?.ok===false)throw new Error('Feedback rejected');setDone(true);}}
   catch{if(!controller.signal.aborted)setError(true);}
   finally{if(request.current===controller)request.current=null;if(!controller.signal.aborted)setBusy(false);}
  };

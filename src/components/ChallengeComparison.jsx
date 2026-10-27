@@ -1,3 +1,4 @@
+import {comparisonReading,comparisonLabel} from '../utils/comparisonReadings';
 import relivLogo from "../../shared/reliv-wordmark.svg";
 // src/components/ChallengeComparison.jsx — HEALTH DUEL & COUPLE STORY CARD
 import React, { useState, useEffect, useRef } from "react";
@@ -31,13 +32,13 @@ export default function ChallengeComparison({
       const raw = localStorage.getItem("reliv_challenge");
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed.expiresAt < Date.now()) {
+      if (!Number.isFinite(parsed.expiresAt) || parsed.expiresAt < Date.now()) {
         localStorage.removeItem("reliv_challenge");
         return;
       }
       setChallenge(parsed);
     } catch {
-      localStorage.removeItem("reliv_challenge");
+      try { localStorage.removeItem("reliv_challenge"); } catch { /* Storage unavailable. */ }
     }
   }, []);
 
@@ -45,22 +46,22 @@ export default function ChallengeComparison({
   const {
     mode = "challenge",
     challengerName = "Player 1",
-    challengerScore = 75,
-    challengerMetabolicAge = 26,
-    challengerBodyWater = 56,
-    challengerVisceralFat = 4
+    challengerScore,
+    challengerMetabolicAge,
+    challengerBodyWater,
+    challengerVisceralFat
   } = challenge || {};
 
   const nameA = challengerName || "Player 1";
   const nameB = challengerB_Name || "Player 2";
-  const scoreA = Number(challengerScore) || 75;
-  const scoreB = Number(challengerB_Score) || 75;
-  const metaA = Number(challengerMetabolicAge) || 26;
-  const metaB = Number(challengerB_MetabolicAge) || 25;
-  const waterA = Number(challengerBodyWater) || 56;
-  const waterB = Number(challengerB_BodyWater) || 57;
-  const viscA = Number(challengerVisceralFat) || 4;
-  const viscB = Number(challengerB_VisceralFat) || 4;
+  const scoreA = comparisonReading(challengerScore);
+  const scoreB = comparisonReading(challengerB_Score);
+  const metaA = comparisonReading(challengerMetabolicAge);
+  const metaB = comparisonReading(challengerB_MetabolicAge);
+  const waterA = comparisonReading(challengerBodyWater);
+  const waterB = comparisonReading(challengerB_BodyWater);
+  const viscA = comparisonReading(challengerVisceralFat);
+  const viscB = comparisonReading(challengerB_VisceralFat);
 
   const isChallenge = mode === "challenge";
   const tied = scoreA === scoreB;
@@ -81,7 +82,7 @@ export default function ChallengeComparison({
   };
 
   const handleDone = () => {
-    localStorage.removeItem("reliv_challenge");
+    try { localStorage.removeItem("reliv_challenge"); } catch { /* Still allow exit. */ }
     onContinue();
   };
 
@@ -179,9 +180,9 @@ export default function ChallengeComparison({
     ctx.fillText("METABOLIC AGE", 430, 805, 880);
     ctx.font = "900 38px monospace";
     ctx.fillStyle = metaA <= metaB ? "#4ade80" : "#cbd5e1";
-    ctx.fillText(`${metaA} yrs`, 140, 810, 880);
+    ctx.fillText(`${comparisonLabel(metaA)} yrs`, 140, 810, 880);
     ctx.fillStyle = metaB <= metaA ? "#4ade80" : "#cbd5e1";
-    ctx.fillText(`${metaB} yrs`, 820, 810, 880);
+    ctx.fillText(`${comparisonLabel(metaB)} yrs`, 820, 810, 880);
 
     // Metric 3: Body Water %
     ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
@@ -191,9 +192,9 @@ export default function ChallengeComparison({
     ctx.fillText("BODY WATER %", 440, 915, 880);
     ctx.font = "900 38px monospace";
     ctx.fillStyle = waterA >= 50 ? "#38bdf8" : "#cbd5e1";
-    ctx.fillText(`${waterA}%`, 140, 920, 880);
+    ctx.fillText(`${comparisonLabel(waterA)}%`, 140, 920, 880);
     ctx.fillStyle = waterB >= 50 ? "#38bdf8" : "#cbd5e1";
-    ctx.fillText(`${waterB}%`, 850, 920, 880);
+    ctx.fillText(`${comparisonLabel(waterB)}%`, 850, 920, 880);
 
     // Metric 4: Visceral Fat Level
     ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
@@ -203,9 +204,9 @@ export default function ChallengeComparison({
     ctx.fillText("VISCERAL FAT", 440, 1025, 880);
     ctx.font = "900 38px monospace";
     ctx.fillStyle = viscA <= viscB ? "#a78bfa" : "#cbd5e1";
-    ctx.fillText(`Lvl ${viscA}`, 140, 1030, 880);
+    ctx.fillText(`Lvl ${comparisonLabel(viscA)}`, 140, 1030, 880);
     ctx.fillStyle = viscB <= viscA ? "#a78bfa" : "#cbd5e1";
-    ctx.fillText(`Lvl ${viscB}`, 830, 1030, 880);
+    ctx.fillText(`Lvl ${comparisonLabel(viscB)}`, 830, 1030, 880);
 
     // Loser Buys Coffee & Instagram Tag Box
     ctx.fillStyle = isChallenge ? "rgba(234, 88, 12, 0.25)" : "rgba(219, 39, 119, 0.25)";
@@ -276,6 +277,9 @@ export default function ChallengeComparison({
   };
 
   if (!challenge) return null;
+  if (![scoreA,scoreB].every(value=>Number.isFinite(value)&&value>=0&&value<=100)) {
+    return <section className="rounded-3xl border bg-white p-8 text-center"><h2 className="text-2xl font-bold">Comparison unavailable</h2><p>Both people need a saved score. Missing readings have not been replaced with example numbers.</p><button onClick={handleDone} className="mt-6 min-h-14 rounded-xl bg-orange-700 px-8 text-white">Continue to my report</button></section>;
+  }
 
   return (
     <AnimatePresence>
@@ -436,8 +440,8 @@ export default function ChallengeComparison({
                     <span style={{ fontSize: 10, color: "#94a3b8" }}>(Younger is better)</span>
                   </div>
                   <div style={{ display: "flex", gap: 24, fontSize: 13, fontWeight: 800, fontFamily: "monospace" }}>
-                    <span style={{ color: metaA <= metaB ? "#16a34a" : "#64748b" }}>{metaA} yrs {metaA <= metaB ? "⚡" : ""}</span>
-                    <span style={{ color: metaB <= metaA ? "#16a34a" : "#64748b" }}>{metaB} yrs {metaB <= metaA ? "⚡" : ""}</span>
+                    <span style={{ color: metaA <= metaB ? "#16a34a" : "#64748b" }}>{comparisonLabel(metaA)} yrs {metaA <= metaB ? "⚡" : ""}</span>
+                    <span style={{ color: metaB <= metaA ? "#16a34a" : "#64748b" }}>{comparisonLabel(metaB)} yrs {metaB <= metaA ? "⚡" : ""}</span>
                   </div>
                 </div>
 
@@ -449,8 +453,8 @@ export default function ChallengeComparison({
                     <span style={{ fontSize: 10, color: "#94a3b8" }}>(Hydration)</span>
                   </div>
                   <div style={{ display: "flex", gap: 24, fontSize: 13, fontWeight: 800, fontFamily: "monospace" }}>
-                    <span style={{ color: waterA >= 50 ? "#0284c7" : "#64748b" }}>{waterA}%</span>
-                    <span style={{ color: waterB >= 50 ? "#0284c7" : "#64748b" }}>{waterB}%</span>
+                    <span style={{ color: waterA >= 50 ? "#0284c7" : "#64748b" }}>{comparisonLabel(waterA)}%</span>
+                    <span style={{ color: waterB >= 50 ? "#0284c7" : "#64748b" }}>{comparisonLabel(waterB)}%</span>
                   </div>
                 </div>
 
@@ -462,8 +466,8 @@ export default function ChallengeComparison({
                     <span style={{ fontSize: 10, color: "#94a3b8" }}>(Organ fat)</span>
                   </div>
                   <div style={{ display: "flex", gap: 24, fontSize: 13, fontWeight: 800, fontFamily: "monospace" }}>
-                    <span style={{ color: viscA <= viscB ? "#16a34a" : "#ea580c" }}>Lvl {viscA}</span>
-                    <span style={{ color: viscB <= viscA ? "#16a34a" : "#ea580c" }}>Lvl {viscB}</span>
+                    <span style={{ color: viscA <= viscB ? "#16a34a" : "#ea580c" }}>Lvl {comparisonLabel(viscA)}</span>
+                    <span style={{ color: viscB <= viscA ? "#16a34a" : "#ea580c" }}>Lvl {comparisonLabel(viscB)}</span>
                   </div>
                 </div>
               </div>

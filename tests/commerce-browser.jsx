@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Standalone integration entry, not a hot-reloaded application module. */
 import React,{act} from 'react';
 import {createRoot} from 'react-dom/client';
 import {MemoryRouter,Routes,Route,useLocation} from 'react-router-dom';

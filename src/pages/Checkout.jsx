@@ -21,7 +21,7 @@ export default function Checkout(){
  });
  useEffect(()=>{writeBrowserStorage('reliv_cart',JSON.stringify(cart),'sessionStorage');},[cart]);
  const subtotal=cart.reduce((sum,item)=>sum+Math.round(Number(item.price)*100)*item.cartQuantity,0)/100;
- const stock=item=>Math.max(0,Number(item.availableStock??item.maxStock??getAvailableQuantity(item))||0);
+ const stock=item=>Math.min(10,Math.max(0,Number(item.availableStock??item.maxStock??getAvailableQuantity(item))||0));
  const change=(id,delta)=>setCart(prev=>prev.map(item=>getKitId(item)===id?{...item,cartQuantity:Math.min(stock(item),item.cartQuantity+delta)}:item).filter(item=>item.cartQuantity>0));
  const remove=id=>setCart(prev=>prev.filter(item=>getKitId(item)!==id));
  const go=()=>{if(navigating.current||(!cart.length&&!fromPaymentGate))return;navigating.current=true;navigate('/payment',{state:{cart,totalPrice:subtotal,fromPaymentGate}});};

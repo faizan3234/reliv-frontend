@@ -6,17 +6,21 @@ let pendingCreation = null;
 let sessionGeneration = 0;
 
 function stores() {
-  return [localStorage, sessionStorage];
+  return ['localStorage', 'sessionStorage'].flatMap(key => {
+    try { return [globalThis[key]]; } catch { return []; }
+  }).filter(Boolean);
 }
 
 export function readKioskSession() {
   // Never combine an ID from one storage area with a token from another.
   for (const storage of stores()) {
+    try {
     const sessionId = (storage.getItem(SESSION_KEY) || "").trim();
     const pairingToken = (storage.getItem(TOKEN_KEY) || "").trim();
     if (sessionId && pairingToken && !INVALID_IDS.has(sessionId)) {
       return { sessionId, pairingToken };
     }
+    } catch { /* Try the other storage area. */ }
   }
   return null;
 }
@@ -25,11 +29,20 @@ export function clearKioskSession() {
   sessionGeneration += 1;
   pendingCreation = null;
   for (const storage of stores()) {
-    storage.removeItem(SESSION_KEY);
-    storage.removeItem(TOKEN_KEY);
+    for (const key of [SESSION_KEY, TOKEN_KEY, PROFILE_ACCESS_KEY, 'reliv_report_review']) {
+      try { storage.removeItem(key); } catch { /* Continue clearing remaining keys/stores. */ }
+    }
   }
-  sessionStorage.removeItem(PROFILE_ACCESS_KEY);
-  sessionStorage.removeItem("reliv_report_review");
+}
+
+// Explicit end-of-visit only; checkout session creation must retain selected medicines.
+export function clearKioskVisit() {
+  clearKioskSession();
+  for (const storage of stores()) {
+    for (const key of ['healthData', 'reliv_cart']) {
+      try { storage.removeItem(key); } catch { /* Other storage and in-memory state still reset. */ }
+    }
+  }
 }
 
 export function readProfileAccess(sessionId) {
@@ -55,10 +68,17 @@ export function storeKioskSession(data) {
   if (!sessionId || !pairingToken || INVALID_IDS.has(sessionId)) {
     throw new Error("The kiosk did not return a valid session and pairing token. Please retry.");
   }
+  let persisted = false;
   for (const storage of stores()) {
-    storage.setItem(SESSION_KEY, sessionId);
-    storage.setItem(TOKEN_KEY, pairingToken);
+    try {
+      storage.setItem(SESSION_KEY, sessionId);
+      storage.setItem(TOKEN_KEY, pairingToken);
+      persisted = true;
+    } catch {
+      try { storage.removeItem(SESSION_KEY); storage.removeItem(TOKEN_KEY); } catch { /* Storage unavailable. */ }
+    }
   }
+  if (!persisted) throw new Error('Browser storage is unavailable. Ask staff to enable it before starting a new visit.');
   return { sessionId, pairingToken };
 }
 

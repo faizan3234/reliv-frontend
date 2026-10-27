@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { clearKioskSession } from "../utils/kioskSession";
+import { clearKioskVisit } from "../utils/kioskSession";
 
 // Missing measurements must stay missing, never be replaced by a demo patient.
 // eslint-disable-next-line react-refresh/only-export-components
@@ -94,10 +94,7 @@ export function HealthProvider({ children }) {
   }, []);
 
   const resetHealth = useCallback(() => {
-    try {
-      localStorage.removeItem("healthData");
-      clearKioskSession();
-    } catch { /* Storage may be unavailable. */ }
+    clearKioskVisit();
     setData(defaultData);
   }, []);
 

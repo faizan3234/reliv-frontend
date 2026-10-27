@@ -1,0 +1,24 @@
+.customer-details { font-family:system-ui,-apple-system,'Segoe UI','Reliv devanagari','Reliv bengali',sans-serif; overflow-wrap:anywhere; }
+.customer-details > header { padding:4px 0 18px; border-bottom:1px solid #f4e4d8; }
+.customer-details h1 { font-size:clamp(28px,3.2vw,40px); line-height:1.25; letter-spacing:-.025em; }
+.customer-details button { touch-action:manipulation; transition:background-color .15s,border-color .15s,box-shadow .15s; }
+.customer-details button:focus-visible,.customer-details input:focus-visible { outline:3px solid #c2410c; outline-offset:4px; }
+.customer-details button:disabled { cursor:not-allowed; }
+.customer-details section,.customer-details .md\:grid-cols-3 > button { box-shadow:0 6px 24px #43140706; border-color:#ecdfd5; }
+.customer-details .md\:grid-cols-3 > button { position:relative; border-radius:24px; }
+.customer-details .md\:grid-cols-3 > button:hover { border-color:#f97316; background:#fffaf5; }
+.customer-details input { min-width:0; font-variant-numeric:tabular-nums; background:#fffcfa; }
+.customer-details [aria-label="PIN keypad"] button { background:#fff4e9; color:#7c2d12; border:1px solid #f3dfcc; }
+@media (min-width:900px) and (max-height:850px) {
+ .customer-details { padding-top:18px; }
+ .customer-details > header { margin-bottom:22px; }
+ .customer-details section { gap:28px; padding:26px; }
+ .customer-details .md\:grid-cols-3 > button { padding:26px; min-height:240px; }
+}
+@media(max-width:600px) {
+ .customer-details { padding:18px; }
+ .customer-details section { padding:20px; }
+ .customer-details fieldset > div { flex-wrap:wrap; }
+ .customer-details fieldset button { flex-basis:100px; }
+}
+@media(prefers-reduced-motion:reduce) { .customer-details * { transition:none!important; } }

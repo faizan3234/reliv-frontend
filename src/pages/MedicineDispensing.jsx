@@ -129,7 +129,7 @@ const KitCard = ({ kit, onAddToCart, onUpdateQty, onRemoveFromCart, cart, words,
               onClick={() => onUpdateQty(kitId, cartQty + 1)}
               className="card-qty-btn card-qty-plus"
               aria-label={`${words.increase}: ${kit.name}`}
-              disabled={blocked || cartQty >= available}
+              disabled={blocked || cartQty >= Math.min(available, 10)}
             >
               <Plus size={18} />
             </motion.button>
@@ -244,7 +244,7 @@ function EnabledMedicineDispensing() {
       const existing = prev.find((item) => getKitId(item) === kitId);
       if (existing) {
         const currentKit = medicalKits.find((k) => getKitId(k) === kitId) || existing;
-        const maxAvailable = getAvailableQuantity(currentKit);
+        const maxAvailable = Math.min(10, getAvailableQuantity(currentKit));
         if (existing.cartQuantity >= maxAvailable) {
           setStockNotice(stockCopy.changed);
           return prev;
@@ -271,7 +271,7 @@ function EnabledMedicineDispensing() {
         .map((item) => {
           if (getKitId(item) === kitId) {
             const currentKit = medicalKits.find((k) => getKitId(k) === kitId) || item;
-            const maxAvailable = isUnavailable(currentKit) ? 0 : getAvailableQuantity(currentKit);
+            const maxAvailable = isUnavailable(currentKit) ? 0 : Math.min(10, getAvailableQuantity(currentKit));
             const clampedQty = Math.min(newQuantity, maxAvailable);
 
             if (newQuantity > maxAvailable) {

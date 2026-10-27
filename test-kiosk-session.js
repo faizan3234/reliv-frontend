@@ -101,3 +101,18 @@ test("an expired old customer request cannot clear a newer session", async () =>
   await rejected;
   assert.deepEqual(readKioskSession(), next);
 });
+
+test('end of visit clears cart and credentials when one storage area is blocked', async () => {
+ const {clearKioskVisit}=await import('./src/utils/kioskSession.js');storeKioskSession(session);
+ for(const key of ['reliv_cart','healthData','reliv_profile_access'])sessionStorage.setItem(key,'private');
+ sessionStorage.setItem('language','hi');
+ Object.defineProperty(globalThis,'localStorage',{get(){throw Error('blocked');},configurable:true});
+ assert.doesNotThrow(clearKioskVisit);
+ for(const key of ['reliv_cart','healthData','reliv_profile_access','reliv_session_id','reliv_pairing_token'])assert.equal(sessionStorage.getItem(key),null);
+ assert.equal(sessionStorage.getItem('language'),'hi');
+});
+test('creating a checkout session keeps the chosen cart; only explicit exit clears it',async()=>{
+ const {clearKioskVisit}=await import('./src/utils/kioskSession.js');sessionStorage.setItem('reliv_cart','selected');
+ globalThis.fetch=async()=>response(session);await ensureKioskSession('');assert.equal(sessionStorage.getItem('reliv_cart'),'selected');
+ clearKioskVisit();assert.equal(sessionStorage.getItem('reliv_cart'),null);
+});
