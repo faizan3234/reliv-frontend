@@ -936,7 +936,7 @@ export default function PaymentGate() {
             <div className="flex items-center justify-between w-full max-w-[440px] px-1">
               <div>
                 <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Scan to Pay</h1>
-                <p className="text-xs text-slate-500">Scan with your phone camera or Google Lens</p>
+                <p className="text-xs text-slate-500">Open QR scanner</p>
               </div>
               {authoritativeAmount !== null && (
                 <div className="inline-flex items-center px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-orange-500 text-white font-extrabold text-lg sm:text-xl shadow-md shadow-orange-500/20">
@@ -948,7 +948,7 @@ export default function PaymentGate() {
             {qrExpanded && paymentQr && <div role="dialog" aria-modal="true" aria-label="Large payment QR" className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center gap-3 p-4" onKeyDown={e => { if (e.key === 'Escape') setQrExpanded(false); }}>
               <button autoFocus type="button" onClick={() => setQrExpanded(false)} className="px-6 py-3 rounded-xl border border-slate-300 font-bold">Close large QR</button>
               <QRCodeSVG value={paymentQr.value} size={900} level={paymentQr.level} marginSize={6} boostLevel={false} fgColor="#000000" bgColor="#ffffff" style={{ width:'min(90vw, 72vh, 900px)', height:'auto', flexShrink:0 }} />
-              <p className="text-center text-slate-700">Keep the entire QR and white border inside your phone camera.</p>
+              <p className="text-center text-slate-700">Keep the entire QR and white border inside your QR scanner’s frame.</p>
             </div>}
             <button type="button" onClick={() => setQrExpanded(true)} className="px-5 py-3 rounded-xl bg-orange-600 text-white font-bold">Enlarge QR for easier scanning</button>
             {/* Universal high-contrast QR: SVG stays sharp at every kiosk scale. */}
@@ -973,7 +973,7 @@ export default function PaymentGate() {
                     }}
                     role="img"
                     aria-label="Secure Reliv payment QR code"
-                    title="Open secure payment with your phone camera or Google Lens"
+                    title="Open secure payment with your QR scanner"
                   />
                 </div>
               ) : (
@@ -984,7 +984,7 @@ export default function PaymentGate() {
 
               {/* Subtitle & Countdown Badge */}
               <div className="mt-3 flex items-center justify-between w-full px-2 text-xs">
-                <span className="font-bold text-slate-700 text-sm">Scan with Camera / Google Lens</span>
+                <span className="font-bold text-slate-700 text-sm">Open QR scanner</span>
                 <div className="flex items-center gap-1.5 font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200 shadow-sm">
                   <Clock size={13} className="text-orange-500 animate-pulse" />
                   <span>{formatTime(timeLeft)}</span>
