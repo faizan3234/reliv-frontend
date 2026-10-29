@@ -1,0 +1,20 @@
+{
+  "name": "Reliv Care — Hybrid Mobile Demo",
+  "short_name": "Reliv Care",
+  "description": "Interactive 5-tab Reliv Care prototype with sample measurements, charts, reports, diary, scanner, AI, and reminders",
+  "id": "/reliv-care-hybrid/",
+  "start_url": "/reliv-care-hybrid/index.html",
+  "scope": "/reliv-care-hybrid/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f4f5",
+  "theme_color": "#ff7a00",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
