@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Reliv Care Hybrid Demo</title>
+<meta name="theme-color" content="#ff7a00" />
+<style>
+  :root{
+    --bg:#f4f4f5;
+    --bg2:#fff7f1;
+    --card:#ffffff;
+    --line:#ececec;
+    --text:#162033;
+    --muted:#6f7785;
+    --orange:#ff7a00;
+    --orange2:#ff9e2b;
+    --soft:#fff0e2;
+    --soft2:#fdf8f4;
+    --green:#1fa86a;
+    --red:#db5b5b;
+    --blue:#3279f6;
+    --shadow:0 10px 30px rgba(15,23,42,.08);
+    --radius:24px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:linear-gradient(180deg,#fbfbfb 0%,#f1f2f4 100%);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--text)}
+  body{display:flex;justify-content:center}
+  .phone{width:100%;max-width:430px;min-height:100vh;padding:18px 14px 96px;background:transparent;position:relative}
+  .topbar{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.5);border-radius:28px;padding:12px 14px;box-shadow:var(--shadow);position:sticky;top:12px;z-index:8;margin-bottom:14px}
+  .brand{width:44px;height:44px;border-radius:16px;background:#fff4ea;display:grid;place-items:center;color:var(--orange);font-weight:900;font-size:17px;flex:0 0 auto}
+  .titleWrap{min-width:0;flex:1}
+  .title{font-size:19px;font-weight:800;line-height:1.1}
+  .subtitle{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pillBtn{border:none;background:linear-gradient(135deg,var(--orange),var(--orange2));color:#fff;font-weight:800;border-radius:18px;padding:12px 18px;box-shadow:0 10px 20px rgba(255,122,0,.25);font-size:15px}
+  .avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#5b3d2a,#ad7a52);display:grid;place-items:center;color:#fff;font-weight:800;border:3px solid #fff;overflow:hidden;flex:0 0 auto}
+  .segment{display:flex;gap:8px;background:#fff;border:1px solid var(--line);padding:6px;border-radius:18px;margin-bottom:14px;overflow:auto;scrollbar-width:none}
+  .segment button{border:none;background:transparent;padding:10px 12px;border-radius:14px;color:var(--muted);font-size:13px;font-weight:700;white-space:nowrap}
+  .segment button.active{background:var(--text);color:#fff}
+  .stack{display:grid;gap:14px}
+  .card{background:var(--card);border:1px solid rgba(0,0,0,.04);border-radius:28px;padding:18px;box-shadow:var(--shadow)}
+  .softCard{background:linear-gradient(180deg,#fff 0%,#fffbf7 100%)}
+  .row{display:flex;align-items:center;gap:10px}
+  .between{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #f4cba5;border-radius:13px;background:#fff6ed;color:#b56000;font-size:13px;font-weight:800}
+  .micro{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:12px;background:#f7f7f8;color:#576071;font-size:12px;font-weight:700}
+  .name{font-size:17px;color:#4d5565;margin-top:6px}
+  .heroName{font-size:23px;font-weight:900;margin:2px 0 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .goalBox{border:1px solid #ece8e3;background:linear-gradient(180deg,#fff 0%,#fff8f2 100%);padding:16px;border-radius:22px;margin-top:12px}
+  .goalTitle{font-size:13px;font-weight:900;letter-spacing:.02em}
+  .goalEta{color:var(--orange);font-size:13px;font-weight:900}
+  .bar{height:10px;border-radius:999px;background:#e9e9ea;overflow:hidden;margin:12px 0 10px}
+  .fill{height:100%;background:linear-gradient(90deg,var(--orange),#ffbe5d);border-radius:999px}
+  .progressRow{display:flex;justify-content:space-between;color:#5d6573;font-size:12px}
+  .focusCard{padding:14px;border-radius:22px;background:linear-gradient(180deg,#fff8f1,#fff);border:1px solid #f4d6ba}
+  .cta{width:100%;border:none;border-radius:18px;padding:14px 16px;font-weight:900;font-size:14px;cursor:pointer}
+  .cta.primary{background:linear-gradient(135deg,var(--orange),#ffab22);color:#fff}
+  .cta.secondary{background:#fff;color:var(--orange);border:1px solid #ffd6b0}
+  .small{font-size:12px;color:var(--muted)}
+  .sectionTitle{font-size:14px;letter-spacing:.08em;color:#636c7d;text-transform:uppercase;font-weight:800}
+  .bigSection{font-size:19px;font-weight:900;margin-top:2px}
+  .list{display:grid;gap:10px;margin-top:10px}
+  .listItem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;border:1px solid #eee;border-radius:20px;background:#fff}
+  .listMain{display:flex;align-items:center;gap:12px;min-width:0}
+  .iconCircle{width:36px;height:36px;border-radius:12px;background:#fff4ea;display:grid;place-items:center;font-size:18px;flex:0 0 auto}
+  .itemTitle{font-size:13px;font-weight:800}
+  .itemSub{font-size:12px;color:var(--muted);margin-top:2px}
+  .check{width:26px;height:26px;border:2px solid #e4e4e6;border-radius:9px;background:#fff}
+  .check.done{background:var(--orange);border-color:var(--orange);position:relative}
+  .check.done:after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px}
+  .statGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .statCard{padding:14px;border-radius:20px;background:#fff;border:1px solid var(--line)}
+  .statLabel{font-size:12px;color:var(--muted);font-weight:700}
+  .statValue{font-size:22px;font-weight:900;margin-top:6px}
+  .statHint{font-size:11px;color:var(--muted);margin-top:5px}
+  .timeline{display:grid;gap:10px}
+  .timeline .entry{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid #f0f0f0}
+  .timeline .entry:last-child{border-bottom:none}
+  .tag{font-size:11px;padding:6px 9px;border-radius:999px;background:#fff4ea;color:var(--orange);font-weight:800}
+  .chartWrap{display:grid;gap:14px}
+  .chartCard{border:1px solid var(--line);border-radius:22px;padding:14px;background:#fff}
+  .chartTitle{font-size:14px;font-weight:900;margin-bottom:8px}
+  svg.chart{width:100%;height:150px;display:block}
+  .axisLabel{font-size:10px;fill:#99a1af}
+  .seriesLabel{font-size:12px;color:var(--muted)}
+  .tabPanel{display:none}
+  .tabPanel.active{display:block}
+  .bottomNav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);width:min(402px,calc(100vw - 20px));background:rgba(255,255,255,.96);backdrop-filter:blur(18px);border:1px solid rgba(0,0,0,.05);border-radius:30px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0));box-shadow:0 20px 40px rgba(0,0,0,.12);display:grid;grid-template-columns:repeat(5,1fr);z-index:20}
+  .navBtn{border:none;background:transparent;display:grid;justify-items:center;gap:4px;color:#5f6879;padding:6px 4px;font-size:11px;font-weight:800}
+  .navBtn .ico{font-size:20px;line-height:1}
+  .navBtn.active{color:var(--orange)}
+  .navBtn.scan .icoWrap{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--orange),#ffb22a);color:#fff;box-shadow:0 10px 24px rgba(255,122,0,.28)}
+  .navBtn.scan{transform:translateY(-12px)}
+  .diaryGrid{display:grid;gap:12px}
+  .mealGroup{border:1px solid var(--line);background:#fff;border-radius:22px;padding:14px}
+  .mealHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+  .mealList{display:grid;gap:8px}
+  .mealItem{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed #eee}
+  .mealItem:last-child{border-bottom:none}
+  .scanHero{background:linear-gradient(135deg,#fff7ef,#fff);border:1px solid #f7dcc0;border-radius:28px;padding:18px;text-align:center}
+  .qrBox{height:170px;border-radius:24px;background:repeating-linear-gradient(45deg,#fff 0 10px,#fafafa 10px 20px);border:1px dashed #ffd2a6;display:grid;place-items:center;margin:12px 0 14px}
+  .qrInner{width:118px;height:118px;border-radius:18px;background:conic-gradient(from 90deg,#111 0 25%,#fff 0 50%,#111 0 75%,#fff 0);background-size:28px 28px;box-shadow:0 10px 20px rgba(0,0,0,.12)}
+  .scanOptions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .option{padding:14px;border-radius:18px;border:1px solid var(--line);background:#fff;text-align:left}
+  .optionTitle{font-size:13px;font-weight:900}
+  .optionSub{font-size:11px;color:var(--muted);margin-top:4px}
+  .chat{display:grid;gap:10px}
+  .bubble{max-width:88%;padding:12px 14px;border-radius:20px;line-height:1.35}
+  .bubble.ai{background:#fff;border:1px solid var(--line);border-top-left-radius:8px}
+  .bubble.user{justify-self:end;background:linear-gradient(135deg,var(--orange),#ffaf26);color:#fff;border-top-right-radius:8px}
+  .quickPrompts{display:flex;flex-wrap:wrap;gap:8px}
+  .quickPrompts button{border:none;background:#fff4ea;color:var(--orange);padding:10px 12px;border-radius:14px;font-weight:800;font-size:12px}
+  .inputRow{display:flex;gap:10px;align-items:center}
+  .inputRow input,.inputRow textarea,.searchInput{width:100%;border:1px solid var(--line);border-radius:16px;padding:13px 14px;font-size:14px;background:#fff}
+  textarea{min-height:88px;resize:vertical}
+  .settingsList{display:grid;gap:10px}
+  .setting{padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:#fff;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .settingTitle{font-size:14px;font-weight:800}
+  .toggle{width:46px;height:28px;border-radius:999px;background:#d8dbe3;position:relative;flex:0 0 auto}
+  .toggle.on{background:#ffae67}
+  .toggle:after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+  .toggle.on:after{left:21px}
+  .topTools{display:flex;gap:8px;flex-wrap:wrap}
+  .topTools button{border:none;border-radius:16px;padding:10px 12px;background:#fff4ea;color:var(--orange);font-size:12px;font-weight:800}
+  .reportItem{padding:14px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .muted{color:var(--muted)}
+  .footerSpace{height:20px}
+  .floatingNote{position:fixed;top:22px;left:50%;transform:translateX(-50%);background:#142033;color:#fff;padding:12px 16px;border-radius:14px;font-size:13px;font-weight:700;box-shadow:0 10px 25px rgba(0,0,0,.18);z-index:100;display:none}
+  .floatingNote.show{display:block}
+  @media (max-width:360px){
+    .title{font-size:17px}
+    .pillBtn{padding:11px 14px;font-size:14px}
+    .statValue{font-size:20px}
+    .bigSection{font-size:17px}
+  }
+</style>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Reliv Care">
+</head>
+<body>
+<div class="phone">
+  <div class="floatingNote" id="toast"></div>
+  <header class="topbar">
+    <div class="brand">Reliv</div>
+    <div class="titleWrap">
+      <div class="title" id="screenTitle">Overview</div>
+      <div class="subtitle" id="screenSubtitle">Wellness Companion</div>
+    </div>
+    <button class="pillBtn" id="logBtn">+ Log</button>
+    <div class="avatar">FK</div>
+  </header>
+
+  <div id="overviewTopTabs" class="segment">
+    <button class="active" data-overview-tab="dashboard">Dashboard</button>
+    <button data-overview-tab="charts">Charts</button>
+    <button data-overview-tab="reports">Reports</button>
+    <button data-overview-tab="snapshots">Snapshots</button>
+  </div>
+
+  <main>
+    <section id="screen-overview" class="screen"></section>
+    <section id="screen-diary" class="screen" hidden></section>
+    <section id="screen-scan" class="screen" hidden></section>
+    <section id="screen-ai" class="screen" hidden></section>
+    <section id="screen-more" class="screen" hidden></section>
+    <div class="footerSpace"></div>
+  </main>
+</div>
+
+<nav class="bottomNav">
+  <button class="navBtn active" data-screen="overview"><div class="ico">⌂</div><div>Overview</div></button>
+  <button class="navBtn" data-screen="diary"><div class="ico">☰</div><div>Diary</div></button>
+  <button class="navBtn scan" data-screen="scan"><div class="icoWrap"><div class="ico">⌘</div></div><div>Scan</div></button>
+  <button class="navBtn" data-screen="ai"><div class="ico">✦</div><div>AI</div></button>
+  <button class="navBtn" data-screen="more"><div class="ico">⋯</div><div>More</div></button>
+</nav>
+
+<script>
+const state={
+  user:{name:'Faizan',goal:'Gain to 75 kg',currentWeight:68,targetWeight:75,eta:'~14–22 weeks',streak:11,avatar:'FK'},
+  waterMl:750,
+  waterGoal:2800,
+  calories:1310,
+  calorieGoal:2908,
+  protein:66,
+  proteinGoal:143,
+  bloodPressure:[118,120,121,119,117,116,118],
+  weightSeries:[66.8,67.2,67.3,67.8,68.0,68.1,68.0],
+  spo2Series:[97,98,98,97,99,98,98],
+  reports:[
+    {date:'Today · 2:18 PM',title:'Health Report',bp:'118 / 76',weight:'68.0 kg',bmi:'22.3',spo2:'98%',pulse:'74 bpm',temp:'98.4°F'},
+    {date:'Yesterday · 5:41 PM',title:'Weight Check-in',bp:'120 / 78',weight:'67.8 kg',bmi:'22.2',spo2:'98%',pulse:'76 bpm',temp:'98.5°F'},
+    {date:'Oct 28 · 1:06 PM',title:'Vitals Summary',bp:'121 / 79',weight:'67.3 kg',bmi:'22.0',spo2:'97%',pulse:'78 bpm',temp:'98.2°F'}
+  ],
+  priorities:[
+    {icon:'💧',title:'Morning Hydration (250ml)',sub:'Keep water target moving',done:true},
+    {icon:'🍳',title:'Calorie & Meal Fuel Check',sub:'Have breakfast or brunch',done:false},
+    {icon:'💪',title:'Hit Protein Benchmark',sub:'66 / 143 g logged',done:false},
+    {icon:'🏃',title:'Daily Movement / Training',sub:'Walk, gym or yoga when done',done:false}
+  ],
+  meals:{
+    breakfast:[{name:'2 eggs + 2 roti',cal:320,pro:18,time:'8:10 AM'}],
+    lunch:[{name:'Rice, dal, chicken curry',cal:540,pro:28,time:'1:35 PM'}],
+    snacks:[{name:'Banana + peanut shake',cal:290,pro:20,time:'5:20 PM'}],
+    dinner:[]
+  },
+  ai:[
+    {role:'ai',text:'Hi Faizan — based on your current goal, your next best action is to log one more protein-rich meal and finish at least 1.5 L more water today.'},
+    {role:'user',text:'What should I eat tonight if I want to gain weight but keep it simple?'},
+    {role:'ai',text:'Try a simple dinner: rice, dal, paneer or chicken, and curd. Aim for ~700–900 kcal and ~30–40 g protein. I can log it for you if you want.'}
+  ],
+  reminders:{breakfast:true,lunch:true,dinner:true,water:false,sleep:true},
+  overviewTab:'dashboard'
+};
+
+const el=id=>document.getElementById(id);
+const screenMeta={
+  overview:['Overview','Wellness Companion'],
+  diary:['Diary','Meals, hydration & activity'],
+  scan:['Scan','Payment, health and food scan'],
+  ai:['Reliv AI','Coach, planner & logger'],
+  more:['More','Profile, goals & settings']
+};
+
+function toast(msg){const t=el('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),1800)}
+function pct(a,b){return Math.max(0,Math.min(100,Math.round((a/b)*100)))}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+function renderOverview(){
+  const overview=el('screen-overview');
+  const tab=state.overviewTab;
+  const completion=state.priorities.filter(p=>p.done).length;
+  const goalProgress=pct(state.user.currentWeight-(state.user.targetWeight-7),7);
+  const dashboard=`
+    <div class="stack">
+      <div class="card softCard">
+        <div class="between">
+          <div class="chip">🌙 Night · Wind Down & Rest</div>
+          <div class="chip">🔥 ${state.user.streak} day streak</div>
+        </div>
+        <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
+          <div class="micro">23h cycle · 7h 0m left</div>
+          <div class="micro">Daily progress · ${pct(state.calories,state.calorieGoal)}% today</div>
+        </div>
+        <div class="name">Rest well</div>
+        <div class="heroName">${state.user.name}</div>
+        <div class="goalBox">
+          <div class="between"><div class="goalTitle">${state.user.goal.toUpperCase()}</div><div class="goalEta">Estimated: ${state.user.eta}</div></div>
+          <div class="bar"><div class="fill" style="width:${goalProgress}%"></div></div>
+          <div class="progressRow"><span>Current: ${state.user.currentWeight} kg</span><span>Target: ${state.user.targetWeight} kg</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="focusCard">
+          <div class="chip">NEXT UP</div>
+          <div class="row" style="margin-top:10px;align-items:flex-start">
+            <div style="font-size:34px;line-height:1">💧</div>
+            <div>
+              <div style="font-size:18px;font-weight:900">Morning Hydration</div>
+              <div class="small" style="font-size:13px">Drink a 250 ml glass of water to kickstart metabolism.</div>
+            </div>
+          </div>
+          <button class="cta primary" onclick="quickAddWater(250)" style="margin-top:14px">Log 250ml Water</button>
+        </div>
+        <div class="between" style="margin-top:18px"><div><div class="sectionTitle">Today's priorities</div><div class="bigSection">Daily Habit Loop</div></div><div style="font-size:15px"><b>${completion} / ${state.priorities.length}</b> done</div></div>
+        <div class="list">${state.priorities.map((p,i)=>`
+          <div class="listItem" onclick="togglePriority(${i})">
+            <div class="listMain"><div class="iconCircle">${p.icon}</div><div><div class="itemTitle">${p.title}</div><div class="itemSub">${p.sub}</div></div></div>
+            <div class="check ${p.done?'done':''}"></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card statCard"><div class="statLabel">Current weight</div><div class="statValue">${state.user.currentWeight} kg</div><div class="statHint">Latest log: today</div></div>
+        <div class="card statCard"><div class="statLabel">Blood pressure</div><div class="statValue">118/76</div><div class="statHint">Healthy today</div></div>
+        <div class="card statCard"><div class="statLabel">Calories</div><div class="statValue">${state.calories}</div><div class="statHint">of ${state.calorieGoal} kcal</div></div>
+        <div class="card statCard"><div class="statLabel">Protein</div><div class="statValue">${state.protein} g</div><div class="statHint">of ${state.proteinGoal} g</div></div>
+      </div>
+    </div>`;
+  const charts=`
+    <div class="chartWrap stack">
+      ${chartCard('Weight trend (kg)', state.weightSeries, '#ff7a00', ['Oct 24','Oct 25','Oct 26','Oct 27','Oct 28','Oct 29','Oct 30'])}
+      ${chartCard('Blood pressure (systolic)', state.bloodPressure, '#ff9f36', ['24','25','26','27','28','29','30'])}
+      ${chartCard('SpO₂ trend (%)', state.spo2Series, '#f4692b', ['24','25','26','27','28','29','30'])}
+    </div>`;
+  const reports=`
+    <div class="stack">${state.reports.map((r,idx)=>`
+      <div class="reportItem">
+        <div class="between"><div><div class="itemTitle">${r.title}</div><div class="small">${r.date}</div></div><span class="tag">Saved</span></div>
+        <div class="split" style="margin-top:12px">
+          <div class="small"><b>BP</b><br>${r.bp}</div><div class="small"><b>Weight</b><br>${r.weight}</div>
+          <div class="small"><b>SpO₂</b><br>${r.spo2}</div><div class="small"><b>Pulse</b><br>${r.pulse}</div>
+        </div>
+        <div class="topTools" style="margin-top:12px"><button onclick="toast('Opened detailed report')">Open</button><button onclick="toast('Demo PDF preview opened')">PDF</button><button onclick="toast('Report shared')">Share</button></div>
+      </div>`).join('')}
+    </div>`;
+  const snapshots=`
+    <div class="stack">
+      <div class="card">
+        <div class="sectionTitle">Current snapshot</div>
+        <div class="statGrid" style="margin-top:12px">
+          <div class="statCard"><div class="statLabel">BMI</div><div class="statValue">22.3</div><div class="statHint">Healthy range</div></div>
+          <div class="statCard"><div class="statLabel">Water</div><div class="statValue">${(state.waterMl/1000).toFixed(1)} L</div><div class="statHint">of ${(state.waterGoal/1000).toFixed(1)} L</div></div>
+          <div class="statCard"><div class="statLabel">Sleep</div><div class="statValue">7h 22m</div><div class="statHint">Last night</div></div>
+          <div class="statCard"><div class="statLabel">Mood</div><div class="statValue">Good</div><div class="statHint">Check-in complete</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="between"><div><div class="sectionTitle">Weekly highlights</div><div class="bigSection">This week</div></div><span class="tag">Demo data</span></div>
+        <div class="timeline" style="margin-top:10px">
+          <div class="entry"><div><b>Weight change</b><div class="small">+1.2 kg since Oct 24</div></div><div class="goalEta">On track</div></div>
+          <div class="entry"><div><b>Best hydration day</b><div class="small">2.7 L on Wednesday</div></div><div>💧</div></div>
+          <div class="entry"><div><b>Most active day</b><div class="small">52 min strength training</div></div><div>🏋️</div></div>
+        </div>
+      </div>
+    </div>`;
+  overview.innerHTML = {dashboard,charts,reports,snapshots}[tab];
+}
+
+function chartCard(title, arr, color, labels){
+  const min=Math.min(...arr)-((Math.max(...arr)-Math.min(...arr))*.2||1), max=Math.max(...arr)+((Math.max(...arr)-Math.min(...arr))*.2||1);
+  const points=arr.map((v,i)=>{
+    const x=20 + (i*(260/(arr.length-1||1)));
+    const y=120 - ((v-min)/(max-min||1))*90;
+    return `${x},${y}`;
+  }).join(' ');
+  const dots=arr.map((v,i)=>{
+    const x=20 + (i*(260/(arr.length-1||1))); const y=120 - ((v-min)/(max-min||1))*90;
+    return `<circle cx="${x}" cy="${y}" r="4" fill="${color}"></circle>`;
+  }).join('');
+  const xLabels=labels.map((l,i)=>`<text x="${20 + (i*(260/(labels.length-1||1)))}" y="142" class="axisLabel" text-anchor="middle">${l}</text>`).join('');
+  return `<div class="chartCard"><div class="chartTitle">${title}</div><svg viewBox="0 0 300 150" class="chart"><line x1="20" y1="120" x2="280" y2="120" stroke="#ececec"/><line x1="20" y1="30" x2="20" y2="120" stroke="#ececec"/><polyline fill="none" stroke="${color}" stroke-width="4" points="${points}" stroke-linecap="round" stroke-linejoin="round"></polyline>${dots}${xLabels}</svg></div>`;
+}
+
+function renderDiary(){
+  const d=el('screen-diary');
+  d.innerHTML=`
+    <div class="stack">
+      <div class="card softCard">
+        <div class="between"><div><div class="sectionTitle">Today</div><div class="bigSection">Food & Daily Log</div></div><button class="cta secondary" style="width:auto;padding:10px 14px" onclick="openLog('food')">+ Add</button></div>
+        <div class="statGrid" style="margin-top:12px">
+          <div class="statCard"><div class="statLabel">Calories</div><div class="statValue">${state.calories}</div><div class="statHint">/${state.calorieGoal} kcal</div></div>
+          <div class="statCard"><div class="statLabel">Protein</div><div class="statValue">${state.protein} g</div><div class="statHint">/${state.proteinGoal} g</div></div>
+          <div class="statCard"><div class="statLabel">Water</div><div class="statValue">${(state.waterMl/1000).toFixed(2)} L</div><div class="statHint">/${(state.waterGoal/1000).toFixed(1)} L</div></div>
+          <div class="statCard"><div class="statLabel">Weight</div><div class="statValue">${state.user.currentWeight} kg</div><div class="statHint">Logged today</div></div>
+        </div>
+      </div>
+      <div class="card diaryGrid">
+        ${renderMealGroup('Breakfast','breakfast')}
+        ${renderMealGroup('Lunch','lunch')}
+        ${renderMealGroup('Snacks','snacks')}
+        ${renderMealGroup('Dinner','dinner')}
+        <div class="mealGroup">
+          <div class="mealHeader"><div><div class="itemTitle">Hydration</div><div class="itemSub">Quick add water</div></div><button class="cta secondary" style="width:auto;padding:10px 14px" onclick="quickAddWater(250)">+250 ml</button></div>
+          <div class="bar"><div class="fill" style="width:${pct(state.waterMl,state.waterGoal)}%"></div></div>
+          <div class="progressRow"><span>${state.waterMl} ml</span><span>${state.waterGoal} ml goal</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+function renderMealGroup(title,key){
+  const items=state.meals[key];
+  return `<div class="mealGroup"><div class="mealHeader"><div><div class="itemTitle">${title}</div><div class="itemSub">${items.length?items.length+' entry'+(items.length>1?'ies':''):'Nothing logged yet'}</div></div><button class="cta secondary" style="width:auto;padding:10px 14px" onclick="openLog('food','${key}')">+ Food</button></div><div class="mealList">${items.length?items.map((m,idx)=>`<div class="mealItem"><div><div class="itemTitle">${escapeHtml(m.name)}</div><div class="itemSub">${m.time} · ${m.pro} g protein</div></div><div style="text-align:right"><div class="itemTitle">${m.cal} kcal</div><div class="small">logged</div></div></div>`).join(''):`<div class="small">Use + Food to add a meal, or ask AI to log it for you.</div>`}</div></div>`;
+}
+
+function renderScan(){
+  const s=el('screen-scan');
+  s.innerHTML=`
+    <div class="stack">
+      <div class="scanHero">
+        <div class="sectionTitle" style="text-align:center">Center action</div>
+        <div class="bigSection">Scan anything with Reliv</div>
+        <div class="small" style="margin-top:8px">Middle button can be used for payment QR, health QR, food scan or quick logging.</div>
+        <div class="qrBox"><div class="qrInner"></div></div>
+        <div class="scanOptions">
+          <button class="option" onclick="toast('Payment QR scanned — demo only')"><div class="optionTitle">Payment QR</div><div class="optionSub">Scan kiosk payment and continue on phone</div></button>
+          <button class="option" onclick="toast('Health QR imported')"><div class="optionTitle">Health QR</div><div class="optionSub">Import blood pressure, weight, SpO₂ and more</div></button>
+          <button class="option" onclick="toast('Food scan opened')"><div class="optionTitle">Food Scan</div><div class="optionSub">Snap or scan food and estimate nutrition</div></button>
+          <button class="option" onclick="toast('Weight log opened')"><div class="optionTitle">Weight Check</div><div class="optionSub">Use kiosk or manual entry</div></button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="between"><div><div class="sectionTitle">Latest imported data</div><div class="bigSection">Health data from scan</div></div><span class="tag">2:18 PM</span></div>
+        <div class="split" style="margin-top:12px">
+          <div class="statCard"><div class="statLabel">Blood pressure</div><div class="statValue" style="font-size:18px">118/76</div><div class="statHint">Normal</div></div>
+          <div class="statCard"><div class="statLabel">Weight</div><div class="statValue" style="font-size:18px">68.0 kg</div><div class="statHint">Up 0.2 this week</div></div>
+          <div class="statCard"><div class="statLabel">SpO₂</div><div class="statValue" style="font-size:18px">98%</div><div class="statHint">Good</div></div>
+          <div class="statCard"><div class="statLabel">Pulse</div><div class="statValue" style="font-size:18px">74 bpm</div><div class="statHint">Resting</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderAI(){
+  const a=el('screen-ai');
+  a.innerHTML=`
+    <div class="stack">
+      <div class="card softCard">
+        <div class="between"><div><div class="sectionTitle">Reliv AI</div><div class="bigSection">Coach, logger & planner</div></div><span class="tag">Demo data</span></div>
+        <div class="quickPrompts" style="margin-top:14px">
+          <button onclick="aiPrompt('Log my lunch')">Log my lunch</button>
+          <button onclick="aiPrompt('Show my weight trend')">Show weight trend</button>
+          <button onclick="aiPrompt('Set a 9 PM dinner reminder')">Set dinner reminder</button>
+          <button onclick="aiPrompt('Suggest 40g protein dinner')">Suggest dinner</button>
+        </div>
+      </div>
+      <div class="card chat">${state.ai.map(m=>`<div class="bubble ${m.role}">${escapeHtml(m.text)}</div>`).join('')}</div>
+      <div class="card">
+        <div class="inputRow"><input id="aiInput" placeholder="Ask Reliv anything or tell it what you ate..." /><button class="cta primary" style="width:auto;padding:13px 16px" onclick="sendAI()">Send</button></div>
+        <div class="small" style="margin-top:8px">Examples: “I ate biryani and 2 eggs”, “Track my blood pressure”, “Show my report”</div>
+      </div>
+    </div>`;
+}
+
+function renderMore(){
+  const m=el('screen-more');
+  m.innerHTML=`
+    <div class="stack">
+      <div class="card softCard">
+        <div class="between"><div><div class="heroName" style="font-size:19px">${state.user.name}</div><div class="small">faizan@example.com</div></div><button class="cta secondary" style="width:auto;padding:10px 14px" onclick="toast('Profile editor opened')">Edit profile</button></div>
+        <div class="topTools" style="margin-top:12px"><button onclick="toast('Goal editor opened')">Target goals</button><button onclick="toast('Reports opened')">Reports</button><button onclick="toast('Charts opened')">Charts</button><button onclick="toast('Export preview opened')">Export data</button></div>
+      </div>
+      <div class="card">
+        <div class="sectionTitle">Reminders</div>
+        <div class="settingsList" style="margin-top:10px">
+          ${renderToggle('Breakfast reminder','breakfast')}
+          ${renderToggle('Lunch reminder','lunch')}
+          ${renderToggle('Dinner reminder','dinner')}
+          ${renderToggle('Water reminder','water')}
+          ${renderToggle('Sleep reminder','sleep')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="sectionTitle">More tools</div>
+        <div class="settingsList" style="margin-top:10px">
+          ${['Profile & personal details','Target goals & ETA','Display & timestamp settings','Privacy & permissions','Connected devices','Help & support','About Reliv Care'].map(t=>`<div class="setting"><div class="settingTitle">${t}</div><div class="muted">›</div></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+function renderToggle(title,key){return `<div class="setting" onclick="toggleReminder('${key}')"><div><div class="settingTitle">${title}</div><div class="small">${state.reminders[key]?'Enabled':'Off'}</div></div><div class="toggle ${state.reminders[key]?'on':''}"></div></div>`}
+
+function rerender(){renderOverview();renderDiary();renderScan();renderAI();renderMore();}
+function switchScreen(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.hidden=true);
+  el('screen-'+screen).hidden=false;
+  document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active', b.dataset.screen===screen));
+  const [title,sub]=screenMeta[screen]; el('screenTitle').textContent=title; el('screenSubtitle').textContent=sub;
+  el('overviewTopTabs').style.display=screen==='overview'?'flex':'none';
+}
+function togglePriority(i){state.priorities[i].done=!state.priorities[i].done; renderOverview();}
+function quickAddWater(ml){state.waterMl += ml; if(state.waterMl>state.waterGoal) state.waterMl=state.waterGoal; toast(`${ml} ml water logged`); rerender();}
+function openLog(type='food',meal=''){const mealLabel = meal?` (${meal})`:''; toast(`Quick log opened${mealLabel}`); switchScreen('diary');}
+function aiPrompt(text){state.ai.push({role:'user',text}); state.ai.push({role:'ai',text: aiReply(text)}); renderAI();}
+function aiReply(text){const t=text.toLowerCase(); if(t.includes('weight')) return 'Your weight has moved from 66.8 kg to 68.0 kg this week. That keeps you on track for your 75 kg goal.'; if(t.includes('dinner')||t.includes('protein')) return 'Have a protein-rich dinner like rice, dal and chicken or paneer. Target around 35–40 g protein.'; if(t.includes('reminder')) return 'Done — I prepared a reminder suggestion. You can enable it inside More → Reminders.'; if(t.includes('lunch')||t.includes('ate')) return 'I can log that for you. For this demo, I would estimate calories, protein and add it to your diary.'; return 'I can help you log meals, understand reports, set goals, or guide your next action.'; }
+function sendAI(){const input=el('aiInput'); const v=input.value.trim(); if(!v) return; aiPrompt(v); input.value='';}
+function toggleReminder(k){state.reminders[k]=!state.reminders[k]; renderMore(); toast(`${k.charAt(0).toUpperCase()+k.slice(1)} reminder ${state.reminders[k]?'enabled':'disabled'}`)}
+
+document.querySelectorAll('.navBtn').forEach(b=>b.addEventListener('click',()=>switchScreen(b.dataset.screen)));
+document.querySelectorAll('#overviewTopTabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#overviewTopTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.overviewTab=b.dataset.overviewTab;renderOverview();}));
+el('logBtn').addEventListener('click',()=>toast('Quick Log menu opened'));
+rerender();switchScreen('overview');
+</script>
+<script>if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{})}</script>
+</body>
+</html>
