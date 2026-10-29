@@ -1,0 +1,18 @@
+{
+  "name": "Reliv Care Adaptive Demo",
+  "short_name": "Reliv Care",
+  "id": "/reliv-care-adaptive/",
+  "start_url": "/reliv-care-adaptive/index.html",
+  "scope": "/reliv-care-adaptive/",
+  "display": "standalone",
+  "background_color": "#fffbf8",
+  "theme_color": "#ff7900",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
