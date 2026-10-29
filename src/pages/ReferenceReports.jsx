@@ -26,14 +26,15 @@ export default function ReferenceReports() {
  // Reset every scroll ancestor before painting the next report page.
  useLayoutEffect(()=>{reportRoot.current?.scrollIntoView?.({block:"start",behavior:"instant"});},[page]);
  const count=getScanCount(data);
+ const tabs={en:['Overview','Body balance','Body profile','Your trends','Next steps'],hi:['एक नज़र','शरीर का संतुलन','शरीर की जानकारी','पिछले स्कैन','आगे क्या करें'],bn:['এক নজরে','শরীরের ভারসাম্য','শরীরের তথ্য','আগের স্ক্যান','এরপর কী করবেন']}[lang]||['Overview','Body balance','Body profile','Your trends','Next steps'];
  const Page=[Report1,Report2,Report3,Report4,Report5][page-1];
  return <main ref={reportRoot} className="reference-reports" aria-label="Health screening report">
-  <header className="reference-progress"><strong>📋 Scan {count} · Report {page} / 5</strong><span>{count<7?`${7-count} scans left in your seven-scan journey`:'✓ Seven-scan journey complete'}</span><SpeechControl inline/></header>
-  <div className="reference-page-track" role="img" aria-label={`Report page ${page} of 5`}>{[1,2,3,4,5].map(step=><span key={step} data-current={step===page} data-complete={step<page}/>)}</div>
-  {page>1 && page<5 && <nav className="reference-back"><button type="button" onClick={()=>{navigate(`/report-${page-1}`);window.scrollTo(0,0);}}>← {lang==="hi"?"पिछला पेज":lang==="bn"?"আগের পাতা":"Previous page"}</button></nav>}
-  <p className="reference-note">Measured readings and calculated estimates are different. Body score, bone mass, body fat, muscle and calorie estimates are screening information—not diagnoses or direct tissue measurements.</p>
-  {(page===1||page===2||page===5)&&<details className="reference-weight-details"><summary>{lang==='hi'?'मेरी लंबाई के हिसाब से वज़न की जानकारी':lang==='bn'?'আমার উচ্চতা অনুযায়ী ওজনের তথ্য':'Weight range for my height'} <span aria-hidden="true">＋</span></summary><WeightReferenceCard data={data} language={spokenLanguage}/></details>}
-  <Page key={`${data.sessionId}-${page}`} />
+  <header className="reference-progress"><div><small className="reference-person">{data.patient?.name || "Your health report"}</small><strong>Scan {count} · Report {page} / 5</strong></div><span>{count<7?`${7-count} scans left in your seven-scan journey`:'✓ Seven-scan journey complete'}</span><SpeechControl inline/></header>
+  <nav className="reference-page-track" aria-label="Report pages">{tabs.map((label,index)=><button key={label} type="button" aria-current={index+1===page?"page":undefined} onClick={()=>navigate(`/report-${index+1}`)}><span>{index+1}</span>{label}</button>)}</nav>
+  {page>1 && <nav className="reference-back"><button type="button" onClick={()=>{navigate(`/report-${page-1}`);window.scrollTo(0,0);}}>← {lang==="hi"?"पिछला पेज":lang==="bn"?"আগের পাতা":"Previous page"}</button></nav>}
+  <p className="reference-note">{lang==="hi"?"यह स्वास्थ्य की शुरुआती जाँच है। शरीर के स्कोर, चर्बी, मांसपेशियों और कैलोरी के आँकड़े अनुमान हैं, बीमारी का निदान नहीं।":lang==="bn"?"এটি স্বাস্থ্যের প্রাথমিক পরীক্ষা। শরীরের স্কোর, চর্বি, পেশি ও ক্যালোরির হিসাব আনুমানিক, রোগ নির্ণয় নয়।":"Health screening, not a diagnosis. Body score, body fat, muscle, bone mass and calorie figures are calculated estimates."}</p>
+  {(page===1||page===2||page===5)&&<details className="reference-weight-details"><summary>{lang==='hi'?'मेरी लंबाई के हिसाब से वज़न की जानकारी':lang==='bn'?'আমার উচ্চতা অনুযায়ী ওজনের তথ্য':'Weight range for my height'} <span aria-hidden="true">+</span></summary><WeightReferenceCard data={data} language={spokenLanguage}/></details>}
+  <div className="reference-report-content"><Page key={`${data.sessionId}-${page}`} /></div>
   <DeliveryHelp key={data.sessionId} sessionId={data.sessionId} language={lang} />
  </main>;
 }

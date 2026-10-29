@@ -72,3 +72,39 @@
 .reference-weight-details[open] > summary span { transform:rotate(45deg); }
 .reference-weight-details > summary:focus-visible { outline:3px solid #c2410c; outline-offset:4px; }
 .reference-weight-details section { border:0; margin:0; max-width:none; background:transparent; }
+
+/* Touch-first reading layout for the 1280 × 800 Reliv kiosk. */
+.reference-reports{background:#f5f6f8;padding-bottom:32px;overflow-wrap:break-word}
+.reference-progress{position:relative;max-width:1120px;margin:0 auto;padding:20px 24px;gap:14px;flex-wrap:wrap;border-radius:0 0 20px 20px}
+.reference-progress>div:first-child{display:flex;flex-direction:column;gap:5px;min-width:0}
+.reference-person{font-size:14px;color:#657184;max-width:420px;overflow-wrap:anywhere}
+.reference-progress strong{font-size:18px;letter-spacing:-.02em}
+.reference-reports .reference-page-track{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding-top:18px}
+.reference-page-track button{display:flex;align-items:center;gap:9px;padding:12px;border:1px solid #dfe4eb;border-radius:12px;background:white;color:#536174;font-weight:600;text-align:left;line-height:1.3;min-width:0}
+.reference-page-track button>span{flex:none;display:grid;place-items:center;width:25px;height:25px;background:#edf0f4;border-radius:8px;font-size:13px}
+.reference-page-track button[aria-current=page]{background:#fff2e5;border-color:#efae78;color:#983f0b}
+.reference-page-track button[aria-current=page]>span{background:#ec6819;color:white}
+.reference-note{max-width:1072px;margin:12px auto;padding:12px 18px;font-size:13px;background:white;border:1px solid #e0e5eb;border-radius:12px;box-shadow:none}
+.reference-report-content{max-width:1120px;margin:auto}
+.reference-report-content>.scrollable-container{min-height:0!important;padding:24px!important;background:transparent!important}
+.reference-reports h1{font-size:clamp(26px,3vw,34px)!important;line-height:1.2}
+.reference-reports .report-score-ring{width:200px;height:200px;background:#fff}
+.reference-reports .report-score-ring .text-6xl{font-size:54px}
+.reference-reports .report-score-ring .text-sm{font-size:14px}
+.reference-reports .report-score-ring .text-xs{font-size:11px}
+.reference-reports .report-score-caption{font-size:13px;font-weight:650;color:#9c490e;background:#fff3e8;border:1px solid #ffdfc2;border-radius:999px;padding:8px 16px;margin:0 0 16px}
+.reference-reports .report-card:hover,.reference-reports .reference-back button:hover{transform:none;box-shadow:none}
+.reference-report-content [class*='hover:scale']:hover{transform:none!important}
+.reference-report-content [style*='backdrop-filter']{backdrop-filter:none!important}
+.reference-reports canvas{touch-action:pan-y}
+@media(max-width:700px){.reference-reports .reference-page-track{grid-template-columns:repeat(2,minmax(0,1fr))}.reference-progress{padding:16px}.reference-report-content>.scrollable-container{padding:16px!important}.reference-person{max-width:100%}}
+/* Legacy ring styling painted a white disc over the SVG arc. */
+.reference-reports .report-score-ring{padding:0}
+.reference-reports .report-score-ring>div{background:transparent;gap:0}
+.reference-progress{padding:12px 24px}
+.reference-reports .reference-page-track{padding-top:12px}
+.reference-report-content>.scrollable-container{padding:12px 24px!important}
+.reference-report-content .mb-12{margin-bottom:24px}
+.reference-report-content .mb-16{margin-bottom:28px}
+.reference-report-content .mt-12{margin-top:24px}
+.reference-reports button{font-family:system-ui,'Reliv devanagari','Reliv bengali',sans-serif}

@@ -6,7 +6,7 @@ import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import { useLocation, useNavigate } from "react-router-dom";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import Logo from "../components/Logo";
-import Confetti from "react-confetti";
+
 import { useSpeech } from "../context/SpeechContext";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { useVoicePage } from "../hooks/useVoicePage";
@@ -60,7 +60,7 @@ const Report1 = () => {
     }
   });
 
-  const [showTooltip, setShowTooltip] = useState(false);
+
 
   // ─────────────────────────────────────────────────────────────────────
   // AUTHORITATIVE PAID REPORT ACCESS
@@ -319,7 +319,7 @@ const Report1 = () => {
     }
   }
 
-  const showConfetti = bodyScoreData.score !== null && bodyScoreData.score >= 90;
+
 
   const handleCardSpeak = (metricKey) => {
     window.dispatchEvent(new CustomEvent('reliv_speak_metric', { detail: metricKey }));
@@ -331,7 +331,7 @@ const Report1 = () => {
 
   return (
     <div className="min-h-screen h-auto w-full bg-white overflow-y-auto scrollable-container touch-pan-y">
-      {showConfetti && <Confetti />}
+
 
       {/* Challenge / Couple comparison overlay */}
       {showChallenge && (
@@ -349,7 +349,7 @@ const Report1 = () => {
           <Logo className="mb-2" size="text-2xl" />
 
           <p className="text-xs uppercase tracking-[0.28em] text-gray-500 font-medium mb-2">
-            SCAN COMPLETED • 4 PARAMETERS ANALYZED • 2 INSIGHTS GENERATED
+            RECORDED READINGS • CALCULATED ESTIMATES
           </p>
 
           <p className="text-xs text-gray-400 font-light">
@@ -372,9 +372,9 @@ const Report1 = () => {
         />
 
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: "easeOut" }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
           className="bg-white rounded-xl shadow-[0_15px_50px_-15px_rgba(0,0,0,0.07)] p-5 relative cursor-pointer hover:shadow-2xl hover:scale-[1.008] transition-all group"
         >
           <div className="flex flex-col items-center">
@@ -382,10 +382,10 @@ const Report1 = () => {
               YOUR CURRENT HEALTH SNAPSHOT
             </p>
             <p className="text-[10px] text-gray-400 mb-3">
-              TODAY • 2 min scan • No needles
+              BASED ON THIS VISIT’S MEASUREMENTS
             </p>
 
-            <div className="report-score-ring relative w-[220px] h-[220px] mb-4" role="button" tabIndex={0}
+            <div className="report-score-ring relative w-[200px] h-[200px] mb-4" role="button" tabIndex={0}
               aria-label="Explain my estimated body score"
               onClick={() => handleCardSpeak('bodyScore')}
               onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handleCardSpeak('bodyScore');}}}
@@ -415,33 +415,16 @@ const Report1 = () => {
                       <span className="text-6xl font-extrabold text-gray-900 tracking-tighter leading-none">
                         {bodyScoreData.score}
                       </span>
-                      <div className="relative">
-                        <span
-                          className="text-2xl text-gray-400 cursor-help"
-                          onMouseEnter={() => setShowTooltip(true)}
-                          onMouseLeave={() => setShowTooltip(false)}
-                        >
-                          ⓘ
-                        </span>
 
-                        {showTooltip && (
-                          <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-80 bg-gray-900 text-white text-sm rounded-lg p-4 shadow-xl z-10">
-                            An estimate from body measurements, not a direct measurement of overall health.
-                          </div>
-                        )}
-                      </div>
                     </div>
 
-                    <span className="mt-3 text-base uppercase tracking-wide font-semibold text-gray-500">
+                    <span className="mt-2 text-sm uppercase tracking-wide font-semibold text-gray-500">
                       Body score
                     </span>
-                    <span className="mt-1.5 text-xs uppercase tracking-widest text-gray-400">
+                    <span className="mt-1 text-xs uppercase tracking-wide text-gray-400">
                       OUT OF 100
                     </span>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200 mt-2 inline-flex group-hover:bg-orange-100 transition-colors">
-                      <span>🔊</span>
-                      <span>Estimate</span>
-                    </div>
+
                   </div>
                 ) : (
                   <span className="text-xl font-medium text-gray-500">Unavailable</span>
@@ -449,17 +432,18 @@ const Report1 = () => {
               </div>
             </div>
 
-            <p className="text-base text-gray-600 text-center max-w-3xl mb-12 leading-relaxed">
+            <p className="report-score-caption">Calculated estimate · Tap the circle to hear</p>
+            <p className="text-base text-gray-600 text-center max-w-3xl mb-6 leading-relaxed">
               This body-score estimate uses your height, weight and body-fat calculation. It is not a diagnosis.
               Your blood pressure, oxygen and temperature are shown separately.
             </p>
 
-            <h1 className="text-4xl font-semibold text-gray-900 text-center mb-16 leading-tight max-w-4xl">
+            <h1 className="text-3xl font-semibold text-gray-900 text-center mb-8 leading-tight max-w-4xl">
               {comment}
             </h1>
 
             {bodyScoreData.score !== null && (
-              <div className="w-full max-w-4xl mb-16 relative">
+              <div className="w-full max-w-4xl mb-8 relative">
                 <div className="flex justify-between items-end mb-6">
                   <div className="text-left">
                     <div className="text-base uppercase tracking-wider text-gray-500 font-medium mb-2">YOU</div>

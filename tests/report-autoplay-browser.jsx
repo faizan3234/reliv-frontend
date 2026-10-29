@@ -42,7 +42,7 @@ async function run(){
    if(page===1){const items=spoken.slice(beforeSpoken);const index=items.indexOf(personalizedReportCopy.en.score);assert(index>=0 && document.body.textContent.includes(items[index+1]),'actual displayed score is spoken on report one');}
    assert(speechRequests.length===beforeRequests && spoken.includes(String(count)), `report ${page} narrates actual visit count without runtime TTS`);
    assert(document.querySelector('.reference-progress').textContent.includes(`Scan ${count}`),`original layout page ${page} keeps scan ${count}`);
-   assert(Boolean(document.querySelector('.reference-back')) === (page>1&&page<5), 'Back available only on report pages 2–4');
+   assert(Boolean(document.querySelector('.reference-back')) === (page>1), 'Back available on report pages 2–5');
    if(page===4&&count>=6)assert(document.querySelectorAll('.journey-details tbody tr').length===7,'scan six adds seven bounded measured comparisons');
    assert(!document.body.textContent.includes('Previous Person'),'no previous patient leaks');
    assert(!document.body.textContent.includes('NaN')&&!document.body.textContent.includes('Infinity'),'numbers remain finite');

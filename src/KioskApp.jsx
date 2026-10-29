@@ -1,3 +1,4 @@
+import KioskMaintenance from './components/KioskMaintenance';
 // src/App.jsx
 import React, { useEffect } from "react";
 import { Navigate, Routes, Route } from "react-router-dom";
@@ -54,7 +55,8 @@ export default function KioskApp() {
     return (
       <VoiceAssistantProvider>
         <div className="app-screen">
-          <KioskAdPlayer />
+          <KioskMaintenance />
+      <KioskAdPlayer />
           <KioskGuardian /><IdleReturn />
           <KioskSafetyManager />
           <SpeechControl />

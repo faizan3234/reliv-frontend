@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import React from 'react';
 import { Mic, MicOff, Loader2, Volume2 } from 'lucide-react';
 import { useVoiceAssistant } from '../context/VoiceAssistantContext';
@@ -12,7 +13,8 @@ const labels = {
 export default function VoiceAssistantOverlay() {
   const { isConnected, micDevice, assistantSpeaking, isSpeaking, isProcessing, listeningPaused, guidanceAvailable } = useVoiceAssistant();
   const { data } = useHealth();
-  if (!guidanceAvailable) return null;
+  const { pathname } = useLocation();
+  if (!guidanceAvailable || /^\/(report-|admin)/.test(pathname)) return null;
   const text = labels[data?.language] || labels.en;
   const micReady = isConnected && micDevice && !listeningPaused;
   const status = assistantSpeaking ? 'speaking' : !micReady ? 'unavailable'
