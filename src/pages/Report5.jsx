@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHealth, EMPTY_REPORT } from "../context/HealthContext";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
-import confetti from "canvas-confetti";
+
 import Logo from "../components/Logo";
 import * as bodyCompositionUtils from "../utils/bodyComposition";
 import { useSpeech } from "../context/SpeechContext";
@@ -499,7 +499,7 @@ export default function Report5() {
   const ecoStats = null;
   const [speechPlaying, setSpeechPlaying] = useState(false);
 
-  const confettiRef = useRef(false);
+
   const reportContainerRef = useRef(null);
 
   // ── Dynamic speech: layman explanation in user's selected report voice language ──
@@ -700,14 +700,6 @@ export default function Report5() {
     setSpeechPlaying(true);
   };
 
-  // Confetti on scan 7 with all normal vitals
-  useEffect(() => {
-    if (scanCount === 7 && !confettiRef.current) {
-      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
-      confettiRef.current = true;
-    }
-  }, [scanCount]);
-
   // Check for missing health data after refresh
   const healthDataMissing = !data || !reportMeasurements(data.vitals).some(reading => reading.value !== null);
 
@@ -741,7 +733,7 @@ export default function Report5() {
         )}
         
         {/* Header with logo */}
-        <div style={{ position: "relative", textAlign: "center", marginBottom: "60px", minHeight: "180px" }}>
+        <div style={{ position: "relative", textAlign: "center", marginBottom: "20px" }}>
           <Logo size="text-6xl" />
 
         </div>
@@ -772,7 +764,7 @@ export default function Report5() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ textAlign: "center", marginBottom: "48px" }}
+          style={{ textAlign: "center", marginBottom: "28px" }}
         >
           <h1 style={{ fontSize: "48px", fontWeight: "900", marginBottom: "12px", color: "#111111" }}>
             Your Comprehensive Health Report
@@ -827,7 +819,7 @@ export default function Report5() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           style={{
-            marginBottom: "48px",
+            marginBottom: "28px",
             padding: "24px",
             background: "#f8fafc",
             borderRadius: "16px",
@@ -853,7 +845,7 @@ export default function Report5() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
             style={{
-              marginBottom: "48px",
+              marginBottom: "28px",
               padding: "32px",
               background: "#fff7ed",
               border: "2px solid #ffe8a3",
@@ -1014,7 +1006,7 @@ export default function Report5() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             style={{
-              marginBottom: "48px",
+              marginBottom: "28px",
               padding: "32px",
               background: "#fff7ed",
               borderRadius: "16px",
@@ -1060,7 +1052,7 @@ export default function Report5() {
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardSpeak('eyesight'); }}
             style={{
-              marginBottom: "48px",
+              marginBottom: "28px",
               padding: "28px",
               background: "linear-gradient(135deg, #fef3e8 0%, #fff5eb 100%)",
               border: "2px solid #fed7aa",
@@ -1126,7 +1118,7 @@ export default function Report5() {
               border: "2px solid #38bdf8",
               borderRadius: "16px",
               padding: "32px",
-              marginBottom: "48px"
+              marginBottom: "28px"
             }}
           >
             <div style={{ 
@@ -1913,7 +1905,7 @@ export default function Report5() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.28 }}
             style={{
-              marginBottom: "48px",
+              marginBottom: "28px",
               padding: "28px",
               background: "#ecfdf5",
               border: "2px solid #a7f3d0",
@@ -1938,7 +1930,7 @@ export default function Report5() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            style={{ marginBottom: "48px" }}
+            style={{ marginBottom: "28px" }}
           >
             <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px", color: "#111111" }}>
               Current Health Status
@@ -2020,7 +2012,7 @@ export default function Report5() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
             style={{
-              marginBottom: "48px",
+              marginBottom: "28px",
               padding: "24px",
               background: "#f0f9ff",
               border: "2px solid #bae6fd",
@@ -2124,7 +2116,7 @@ export default function Report5() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            style={{ marginBottom: "48px" }}
+            style={{ marginBottom: "28px" }}
           >
             <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px", color: "#111111" }}>
               Body Composition Reference Guide
@@ -2183,7 +2175,7 @@ export default function Report5() {
             border: "2px solid #86efac",
             borderRadius: "16px",
             padding: "32px",
-            marginBottom: "48px",
+            marginBottom: "28px",
           }}
         >
           <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "16px", color: "#111111" }}>
@@ -2205,7 +2197,7 @@ export default function Report5() {
               border: "3px solid #10b981",
               borderRadius: "20px",
               padding: "32px",
-              marginBottom: "48px",
+              marginBottom: "28px",
               textAlign: "center",
               boxShadow: "0 8px 24px rgba(16, 185, 129, 0.3)",
             }}
