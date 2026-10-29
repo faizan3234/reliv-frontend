@@ -1,0 +1,20 @@
+{
+  "name": "Reliv Care — Complete Hybrid Interactive Demo",
+  "short_name": "Reliv Care",
+  "description": "Populated five-tab health demo with 90 days of sample data",
+  "id": "/reliv-care-hybrid-complete/",
+  "start_url": "/reliv-care-hybrid-complete/index.html",
+  "scope": "/reliv-care-hybrid-complete/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f6f8",
+  "theme_color": "#ff7900",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
