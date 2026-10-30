@@ -1,0 +1,19 @@
+{
+  "name": "Reliv Care — Interactive Vision",
+  "short_name": "Reliv Care",
+  "id": "/reliv-care-vision/",
+  "start_url": "/reliv-care-vision/index.html",
+  "scope": "/reliv-care-vision/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f9fa",
+  "theme_color": "#ff670e",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
