@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Download } from 'lucide-react';
 
-export function InstallApp() {
+export function InstallApp({ availableOnly = false }) {
   const [prompt, setPrompt] = useState(null);
   const [installed, setInstalled] = useState(() => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true);
   const [help, setHelp] = useState('');
@@ -19,7 +19,7 @@ export function InstallApp() {
       window.removeEventListener('appinstalled', done);
     };
   }, []);
-  if ((!android && !ios) || installed) return null;
+  if (ios || !android || installed || (availableOnly && !prompt)) return null;
   const install = async () => {
     if (locked.current) return;
     if (ios) { setHelp('Open this page in Safari. Tap Share → Add to Home Screen, then open Reliv. If your records are not there, scan the same paid kiosk QR in the installed app and tap Save. You will not be charged again.'); return; }
