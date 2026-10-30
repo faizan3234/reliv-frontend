@@ -1,0 +1,20 @@
+{
+  "name": "Reliv Care — Investor Edition",
+  "short_name": "Reliv Care",
+  "description": "Interactive investor demonstration with fictional health, kiosk and commerce data",
+  "id": "/reliv-care-investor/",
+  "start_url": "/reliv-care-investor/index.html",
+  "scope": "/reliv-care-investor/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f9fb",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
