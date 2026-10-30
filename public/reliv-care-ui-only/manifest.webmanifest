@@ -1,0 +1,20 @@
+{
+  "name": "Reliv Care — UI/UX",
+  "short_name": "Reliv Care",
+  "description": "Reliv Care clean mobile frontend UI, no demo data",
+  "id": "/reliv-care-ui-only/",
+  "start_url": "/reliv-care-ui-only/index.html",
+  "scope": "/reliv-care-ui-only/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fffaf6",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
