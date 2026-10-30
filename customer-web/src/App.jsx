@@ -1,6 +1,6 @@
 import { MyHealth } from './components/MyHealth';
 import { MyRecords } from './components/MyRecords';
-import { InstallApp } from './components/InstallApp';
+import { CareHome, CareNavigation } from './care/CareHome';
 import { setAppIdle, checkForAppUpdate, refreshApp } from './services/pwaRuntime';
 import { prepareScanSound } from './services/scanFeedback';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -127,10 +127,8 @@ export function App() {
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 space-y-4">
         <div className="pb-8">
           {refreshNotice && <p role="status" className="mb-3 text-sm text-slate-600">{refreshNotice}</p>}
-          <nav aria-label="Reliv sections" className="mb-6 grid grid-cols-3 gap-1 rounded-2xl border border-orange-100 bg-white p-1 shadow-sm">
-            {[['health','My Health'],['scan','Scan QR'],['records','Health Records']].map(([key,label]) => <button key={key} type="button" aria-current={section === key ? 'page' : undefined} onClick={() => chooseSection(key)} className={`min-h-14 rounded-xl px-2 py-3 text-sm font-semibold ${section === key ? 'bg-orange-600 text-white' : 'text-slate-600 hover:bg-orange-50'}`}>{label}</button>)}
-          </nav>
-          {section === 'health' && <><MyHealth onScan={() => chooseSection('scan')} onRecords={() => chooseSection('records')} /><div className="mt-5"><InstallApp /></div></>}
+          {['health','diary','ai','me'].includes(section) && <CareHome section={section} onSection={chooseSection} onRecords={() => chooseSection('records')} onHealth={() => chooseSection('measurements')} />}
+          {section === 'measurements' && <MyHealth onScan={() => chooseSection('scan')} onRecords={() => chooseSection('records')} />}
           {section === 'records' && <MyRecords standalone />}
           {scanning && <ScannerPanel onClose={() => chooseSection(hasPackage ? 'payment' : 'health')} onScan={scanned} />}
           {hasPackage && section !== 'payment' && <button type="button" onClick={() => chooseSection('payment')} className="mt-5 min-h-12 w-full rounded-xl border border-orange-300 bg-white px-4 font-semibold text-orange-800">Return to payment / kiosk code</button>}
@@ -142,6 +140,7 @@ export function App() {
         </div>
       </main>
 
+      <CareNavigation section={section} onSection={chooseSection} />
       <footer className="py-4 text-center text-slate-400 text-xs border-t border-orange-100/80 bg-white/60">
         Secure payments powered by Razorpay • Reliv Health
       </footer>
