@@ -1,3 +1,6 @@
+import { CoachChat } from "./CoachChat";
+import { DiaryPanel, WaterCard } from "./DiaryPanel";
+import { foodRestriction, duplicateMeal, weightAnomaly, loggingStreak, goalProgress, weightProjection } from "./coachRules";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -170,6 +173,10 @@ function Setup({ profile, onSave, onClose }) {
         />{" "}
         I have used a Reliv kiosk
       </label>
+      <label>Food preference<select value={form.diet || 'none'} onChange={e=>setForm({...form,diet:e.target.value})}><option value="none">No restriction</option><option value="pure_veg">Pure vegetarian — no meat, fish or eggs</option><option value="veg">Vegetarian — dairy allowed, no eggs</option><option value="partial_veg">Vegetarian with eggs</option></select></label>
+      <label className="care-check"><input type="checkbox" checked={!!form.noBeef} onChange={e=>setForm({...form,noBeef:e.target.checked})}/>Avoid beef / veal</label>
+      <label className="care-check"><input type="checkbox" checked={!!form.noPork} onChange={e=>setForm({...form,noPork:e.target.checked})}/>Avoid pork products</label>
+      <small>Preferences are your choice. Ingredient checks cannot certify halal status or detect hidden ingredients.</small>
       <details>
         <summary>Optional daily logging targets</summary>
         <p>
@@ -218,6 +225,8 @@ export function CareHome({ section, onSection, onRecords, onHealth }) {
     [busy, setBusy] = useState(false);
   const lock = useRef(false),
     alive = useRef(true);
+  const [mealSlot, setMealSlot] = useState("snack");
+  const [mealText, setMealText] = useState("");
   const p = data.profile;
   useEffect(() => {
     alive.current = true;
@@ -285,7 +294,16 @@ export function CareHome({ section, onSection, onRecords, onHealth }) {
       if (alive.current) setBusy(false);
     }
   };
-  const save = (entries) => saveEntries(entries);
+  const save = async (entries) => {
+    for (const entry of entries) {
+      if (entry.kind === 'meal') {
+        const restriction = foodRestriction(entry.name, p); if (restriction) throw Error(restriction);
+        if (duplicateMeal(data.entries, entry) && !window.confirm('A similar meal was logged in the last 15 minutes. Is this another serving?')) throw Error('Duplicate entry not saved.');
+      }
+      if (entry.kind === 'weight') { const warning = weightAnomaly(data.entries, entry.amount); if (warning && !window.confirm(warning)) throw Error('Weight not saved. Check the value.'); }
+    }
+    return saveEntries(entries.map(e => e.kind === 'meal' ? {...e, meal: mealSlot} : e));
+  };
   const exportData = () => {
     const url = URL.createObjectURL(
       new Blob([JSON.stringify({ version: 1, ...data }, null, 2)], {
@@ -427,63 +445,9 @@ export function CareHome({ section, onSection, onRecords, onHealth }) {
               <InstallApp availableOnly />
             </>
           ) : section === "ai" ? (
-            <>
-              <div className="care-title">
-                <span className="care-eyebrow">RELIV ASSISTANT</span>
-                <h1>
-                  A little help,
-                  <br />
-                  when you need it.
-                </h1>
-                <p>Start with a food photo, or review today’s logs.</p>
-              </div>
-              <section className="care-card">
-                <h2>Your day so far</h2>
-                <p>
-                  You have logged {today.meals} meal entries,{" "}
-                  {Math.round(today.kcal)} kcal, {Math.round(today.protein)} g
-                  protein and {today.water} ml water today.
-                </p>
-                <small>
-                  Nutrition is estimated. This summary only describes your logs;
-                  it does not diagnose your health.
-                </small>
-                <button
-                  className="care-secondary"
-                  onClick={() => {
-                    if (!window.speechSynthesis) {
-                      setNotice(
-                        "Spoken responses are unavailable in this browser.",
-                      );
-                      return;
-                    }
-                    window.speechSynthesis.cancel();
-                    const speech = new SpeechSynthesisUtterance(
-                      `You have logged ${today.meals} meal entries, ${Math.round(today.kcal)} calories, ${Math.round(today.protein)} grams of protein and ${today.water} millilitres of water today. These are estimates from your logs.`,
-                    );
-                    speech.lang = "en-IN";
-                    speech.onerror = () =>
-                      setNotice(
-                        "Audio unavailable. Your summary is shown above.",
-                      );
-                    window.speechSynthesis.speak(speech);
-                  }}
-                >
-                  Read my summary
-                </button>
-                <button
-                  className="care-primary"
-                  onClick={() => setEditor("meal")}
-                >
-                  Open food logging assistant
-                </button>
-                <p>
-                  Use text, microphone or a photo to prepare a meal entry. This
-                  helper uses the nutrition service; it does not diagnose health
-                  or change logs without your confirmation.
-                </p>
-              </section>
-            </>
+            <CoachChat data={data} onPhoto={()=>{setMealText('');setEditor('meal');}} onMeal={text=>{setMealText(text);setEditor('meal');}}/>
+          ) : section === "diary" ? (
+            <><div className="care-title"><span className="care-eyebrow">YOUR DAILY DIARY</span><h1>Small steps. Real progress.</h1></div><DiaryPanel data={data} onMeal={slot=>{setMealSlot(slot);setMealText('');setEditor('meal');}} onWeight={()=>setEditor('weight')} onError={setError}/></>
           ) : (
             <>
               <div className="care-title">
@@ -537,6 +501,7 @@ export function CareHome({ section, onSection, onRecords, onHealth }) {
                   {section !== "diary" && (
                     <>
                       <section className="care-card care-goal">
+                        <div className="care-heading"><span className="care-tag">🔥 {loggingStreak(data.entries,dayKey())} day logging streak</span><small>Meal + water logged</small></div>
                         <div className="care-heading">
                           <h2>
                             {p.goal === "maintain" ? "Maintain" : "Your goal"} ·{" "}
@@ -557,6 +522,9 @@ export function CareHome({ section, onSection, onRecords, onHealth }) {
                         <p>
                           Start: {p.weight} kg · Goal: {p.target} kg
                         </p>
+                        <div className="goal-track" role="progressbar" aria-label="Progress toward your weight goal" aria-valuemin={0} aria-valuemax={100} aria-valuenow={goalProgress(p.weight,weight,p.target)}><span style={{width:`${goalProgress(p.weight,weight,p.target)}%`}}/></div>
+                        <p>Start: {p.weight} kg · Goal: {p.target} kg</p>
+                        {weightProjection(data.entries,p.target)&&<small>Recorded trend: {weightProjection(data.entries,p.target).rate} kg/week. Roughly {weightProjection(data.entries,p.target).weeks} weeks at that pace. An uncertain projection, not a recommended rate or promise.</small>}
                         <button
                           className="care-secondary"
                           onClick={() => setEditor("weight")}
@@ -567,7 +535,7 @@ export function CareHome({ section, onSection, onRecords, onHealth }) {
                       <div className="care-metrics">
                         {[
                           ["🔥", "Calories", today.kcal, p.calories, "kcal"],
-                          ["🥚", "Protein", today.protein, p.protein, "g"],
+                          ["🌱", "Protein", today.protein, p.protein, "g"],
                           ["🌾", "Carbs", today.carbs, null, "g"],
                           ["💧", "Water", today.water, p.water, "ml"],
                         ].map(([icon, label, value, target, unit]) => (
@@ -620,6 +588,7 @@ export function CareHome({ section, onSection, onRecords, onHealth }) {
                           </small>
                         </div>
                       </section>
+                      {!!p.trackers?.length && <section className="care-card"><h2>Your quick check-ins</h2><p>Personal habits, not a health score.</p><div className="coach-prompts">{p.trackers.map(t=><button key={t.id} disabled={busy} onClick={()=>action(async()=>{await saveEntries([{kind:'checkin',name:t.name,trackerId:t.id,source:'Self-reported'}]);setNotice(`${t.name} recorded.`);})}>＋ {t.name}</button>)}</div></section>}
                       {p.kiosk && (
                         <section className="care-card">
                           <h2>Your kiosk measurements</h2>
@@ -876,6 +845,7 @@ export function CareHome({ section, onSection, onRecords, onHealth }) {
           )}
           {editor === "meal" || editor === "recipe" ? (
             <MealEditor
+              initialText={mealText}
               assistant={section === "ai"}
               recipe={editor === "recipe"}
               onSave={save}

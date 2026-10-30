@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { nutrition, photoData } from "./nutrition";
 import { confirmedFood, number } from "./data";
 export function MealEditor({
+  initialText = "",
   onSave,
   onClose,
   recipe = false,
   assistant = false,
 }) {
-  const [query, setQuery] = useState(""),
+  const [query, setQuery] = useState(initialText),
     [matches, setMatches] = useState([]),
     [items, setItems] = useState([]),
     [error, setError] = useState(""),

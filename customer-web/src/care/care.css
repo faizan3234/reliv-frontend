@@ -409,3 +409,53 @@
 .care-weight-editor {
   scroll-margin-top: 90px;
 }
+/* Shared diary and coach treatment; readable phone inputs avoid focus zoom. */
+.care-primary { background:#c64d0b; }
+.care-card { box-shadow:0 5px 24px #18223704; scroll-margin-bottom:110px; }
+.care-nav .care-scan svg { border-radius:50%; width:54px; height:54px; padding:14px; margin-top:-20px; }
+.care-nav button:nth-child(4) svg { color:#be56cf; filter:drop-shadow(1px 1px 0 #f7b255); }
+.goal-track { height:8px;background:#e9eaf0;border-radius:10px;overflow:hidden;margin:16px 0 12px; }
+.goal-track span {display:block;background:linear-gradient(90deg,#f87522,#ffb24d);height:100%;border-radius:10px;}
+.diary-summary-values {display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;}
+.diary-summary-values>div {padding:12px 5px;border-radius:14px;background:#f8f9fb;text-align:center;}
+.diary-summary-values strong,.diary-summary-values small {display:block;}
+.diary-summary-values strong {font-size:20px;}
+.diary-water-title {display:flex;align-items:center;gap:10px;}
+.diary-water-title>span {font-size:32px;}
+.diary-water-title p {margin:4px 0;}
+.water-percent {color:#387ec2;background:#e9f2ff;padding:7px 10px;border-radius:20px;font-size:13px;font-weight:700;}
+.water-glasses {display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin:20px 0;}
+.water-glasses>div {height:44px;border:2px solid #b3d7e4;background:white;border-radius:4px 4px 9px 9px;position:relative;overflow:hidden;}
+.water-glasses span {position:absolute;bottom:0;left:0;right:0;background:linear-gradient(#9dd8e9,#4c9fc7);}
+.water-buttons {display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.water-buttons button {white-space:nowrap;padding:8px 10px;border-radius:15px;background:#fff4e8;color:#a84e1b;font-size:13px;}
+.water-buttons .care-primary {width:auto;margin:0;background:#c64d0b;color:white;}
+.diary-group-heading {display:flex!important;width:100%;justify-content:flex-start!important;gap:12px;text-align:left;}
+.diary-group-heading>span:nth-child(2) {flex:1;}
+.diary-group-heading strong,.diary-group-heading small {display:block;}
+.diary-group-heading strong {font-size:19px;}
+.diary-icon {font-size:28px;}
+.diary-meal {display:flex;align-items:center;gap:12px;margin:20px 0;}
+.meal-emoji {font-size:28px;background:#fff2df;border-radius:18px;padding:12px;}
+.diary-meal>div {flex:1;min-width:0;overflow-wrap:anywhere;}
+.diary-meal strong {font-size:14px;}
+.diary-meal p {margin:5px 0;}
+.diary-meal button {font-size:12px;color:#637085;background:#f2f3f6;border-radius:12px;padding:0 10px;}
+.diary-group>.care-secondary {background:#fff5eb;border:0;color:#a54716;}
+.coach-star {float:right;font-size:42px;background:linear-gradient(135deg,#f5993a,#b058d8,#5582eb);background-clip:text;color:transparent;}
+.coach-prompts {display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 25px;}
+.coach-prompts button {background:#fff;border:1px solid #e1e4eb;border-radius:24px;padding:10px 14px;font-size:12px;font-weight:500;}
+.coach-messages {display:flex;flex-direction:column;gap:16px;}
+.coach-bubble {max-width:95%;padding:16px 18px;border:1px solid #e8e9ed;border-radius:22px;background:white;position:relative;scroll-margin-bottom:110px;}
+.coach-bubble.user {align-self:flex-end;background:#fff0e4;border:0;border-bottom-right-radius:6px;}
+.coach-bubble.assistant {border-bottom-left-radius:6px;}
+.coach-bubble p {color:#263247;font-size:15px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;}
+.coach-tools {display:flex;gap:8px;margin-top:7px;}
+.coach-tools button {color:#637085;min-width:44px;}
+.coach-action {border-top:1px solid #eee;margin-top:12px;padding-top:12px;font-size:13px;}
+.coach-composer {position:relative;background:#fff;border:1px solid #e5e8ed;border-radius:22px;padding:14px;margin:24px 0;box-shadow:0 6px 24px #26324708;}
+.coach-composer textarea {width:100%;resize:vertical;min-height:60px;max-height:180px;border:0;font-size:16px;line-height:1.5;}
+.coach-composer>div {display:flex;gap:10px;align-items:center;}
+.coach-composer>div>button {min-width:44px;}
+.coach-composer>div>.care-primary {width:auto;margin-left:auto;padding:10px 16px;}
+.care textarea:focus-visible {outline:2px solid #ffb879;}

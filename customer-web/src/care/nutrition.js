@@ -2,7 +2,7 @@ const base = (import.meta.env.VITE_NUTRITION_API_URL || "").replace(/\/$/, "");
 export async function nutrition(path, body, signal) {
   if (!base)
     throw Error(
-      "Food recognition is not connected yet. You can enter a meal manually.",
+      "The nutrition and conversation service is not connected yet. You can still log manually.",
     );
   const url = new URL(base, location.origin);
   if (
@@ -40,18 +40,4 @@ export async function nutrition(path, body, signal) {
     signal?.removeEventListener("abort", cancel);
   }
 }
-export async function photoData(file) {
-  if (
-    !file ||
-    !/^image\/(jpeg|png|webp)$/.test(file.type) ||
-    file.size > 7000000
-  )
-    throw Error("Choose a JPEG, PNG or WebP photo under 7 MB.");
-  // No photo is retained in local diary storage.
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(Error("Could not read this photo."));
-    reader.readAsDataURL(file);
-  });
-}
+export { photoData } from "./imageUpload";

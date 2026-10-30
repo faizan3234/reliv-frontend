@@ -29,6 +29,9 @@ export function profileFrom(form) {
     );
   return {
     name,
+    diet: form.diet || "none",
+    noBeef: !!form.noBeef, noPork: !!form.noPork,
+    trackers: form.trackers || [],
     age: number(form.age, 18, 110, "age"),
     height: number(form.height, 100, 250, "height"),
     weight: number(form.weight, 25, 350, "weight"),
@@ -87,10 +90,12 @@ let connection;
 function database() {
   if (!connection)
     connection = new Promise((resolve, reject) => {
-      const req = indexedDB.open("reliv-fitness", 1);
+      const req = indexedDB.open("reliv-fitness", 2);
       req.onupgradeneeded = () => {
-        req.result.createObjectStore("profile");
-        req.result.createObjectStore("entries", { keyPath: "id" });
+        const db = req.result;
+        if (!db.objectStoreNames.contains("profile")) db.createObjectStore("profile");
+        if (!db.objectStoreNames.contains("entries")) db.createObjectStore("entries", { keyPath: "id" });
+        if (!db.objectStoreNames.contains("actions")) db.createObjectStore("actions", { keyPath: "id" });
       };
       req.onsuccess = () => {
         req.result.onversionchange = () => {
@@ -134,8 +139,9 @@ async function transaction(stores, mode, action) {
   });
 }
 export async function readCare() {
-  return transaction(["profile", "entries"], "readonly", (tx, done) => {
-    const result = { profile: null, entries: [] };
+  return transaction(["profile", "entries", "actions"], "readonly", (tx, done) => {
+    const result = { profile: null, entries: [], actions: [] };
+    tx.objectStore("actions").getAll().onsuccess = e => { result.actions = e.target.result.sort((a,b)=>a.at.localeCompare(b.at)); done(result); };
     tx.objectStore("profile").get("current").onsuccess = (e) => {
       result.profile = e.target.result || null;
       done(result);
@@ -179,9 +185,51 @@ export async function removeEntry(id) {
   notify();
 }
 export async function clearCare() {
-  await transaction(["profile", "entries"], "readwrite", (tx) => {
+  await transaction(["profile", "entries", "actions"], "readwrite", (tx) => {
+    tx.objectStore("actions").clear();
     tx.objectStore("profile").clear();
     tx.objectStore("entries").clear();
   });
   notify();
+}
+
+// Store the mutation and Undo record in one transaction. Confirm is idempotent.
+export async function applyCoachAction(proposal){
+ const id=proposal.id||crypto.randomUUID();
+ if(proposal.kind==='log'){
+   if(!['water','weight'].includes(proposal.entry?.kind))throw Error('Unsupported action.');
+   proposal={...proposal,entry:{...proposal.entry,amount:number(proposal.entry.amount,proposal.entry.kind==='weight'?25:1,proposal.entry.kind==='weight'?350:3000,'amount')}};
+ } else if(proposal.kind==='tracker'){
+   if(!String(proposal.name||'').trim()||String(proposal.name).length>60)throw Error('Use a tracker name under 60 characters.');
+ } else throw Error('Unsupported action.');
+ await transaction(['profile','entries','actions'],'readwrite',tx=>{
+  const actions=tx.objectStore('actions');actions.get(id).onsuccess=e=>{
+   if(e.target.result)return;const at=new Date().toISOString();
+   if(proposal.kind==='log'){
+    const entry={...proposal.entry,id,at,day:dayKey()};tx.objectStore('entries').add(entry);actions.add({id,kind:'log',entry,state:'applied',at});
+   }else tx.objectStore('profile').get('current').onsuccess=e=>{
+    const p=e.target.result;if(!p){tx.abort();return;}
+    const tracker={id,name:proposal.name.trim()};tx.objectStore('profile').put({...p,trackers:[...(p.trackers||[]),tracker]},'current');actions.add({id,kind:'tracker',tracker,state:'applied',at});
+   };
+  };
+ });notify();return id;
+}
+export async function toggleCoachAction(id,redo=false){
+ await transaction(['profile','entries','actions'],'readwrite',tx=>{
+  const store=tx.objectStore('actions');store.get(id).onsuccess=e=>{
+   const a=e.target.result;if(!a||a.state===(redo?'applied':'undone'))return;
+   if(a.kind==='log'){
+    const entries=tx.objectStore('entries');entries.get(id).onsuccess=e=>{
+      const current=e.target.result;if((!redo&&current?.editedAt)||(redo&&current)){tx.abort();return;}
+      if(redo)entries.add(a.entry);else entries.delete(id);
+    };
+   }else tx.objectStore('profile').get('current').onsuccess=e=>{
+    const p=e.target.result;if(!p){tx.abort();return;}const trackers=(p.trackers||[]).filter(t=>t.id!==id);tx.objectStore('profile').put({...p,trackers:redo?[...trackers,a.tracker]:trackers},'current');
+   };
+   store.put({...a,state:redo?'applied':'undone'});
+  };
+ });notify();
+}
+export async function editEntry(id,changes){
+ await transaction(['entries'],'readwrite',tx=>{const store=tx.objectStore('entries');store.get(id).onsuccess=e=>{if(e.target.result)store.put({...e.target.result,...changes,id,at:e.target.result.at,day:e.target.result.day,editedAt:new Date().toISOString()});};});notify();
 }
